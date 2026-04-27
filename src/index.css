@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-2xl font-semibold 
+           transition-all duration-200 shadow-lg shadow-brand-200 hover:shadow-xl 
+           hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-gray-200 text-gray-700 px-6 py-3 rounded-2xl font-semibold 
+           hover:border-brand-300 hover:text-brand-700 transition-all duration-200 
+           flex items-center justify-center gap-2;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6;
+  }
+
+  .input-field {
+    @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-sm 
+           focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 
+           transition-all duration-200 font-body;
+  }
+
+  .section-tag {
+    @apply text-brand-600 text-xs font-bold uppercase tracking-widest;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Remove number input arrows */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
