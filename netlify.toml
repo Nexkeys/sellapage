@@ -2,15 +2,10 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "VITE_CLOUDINARY_UPLOAD_PRESET"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-
-
-
-
-#   / **git add .
-# git commit -m "Fix: clean package-lock, add netlify.toml redirects"
-# git push */
