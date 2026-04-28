@@ -1,11 +1,13 @@
 import { ShoppingCart, MessageCircle } from 'lucide-react'
 import { buildOrderURL } from '../utils/whatsapp'
 
+
 export default function ProductCard({ product, whatsappNumber }) {
   const handleOrder = () => {
     const url = buildOrderURL(whatsappNumber, product.name, product.price)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
+
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
@@ -25,6 +27,7 @@ export default function ProductCard({ product, whatsappNumber }) {
           </div>
         )}
       </div>
+
 
       {/* Info */}
       <div className="p-3.5">

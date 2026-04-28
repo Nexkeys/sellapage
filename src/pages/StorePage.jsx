@@ -6,17 +6,21 @@ import { buildOrderURL, buildEnquiryURL } from '../utils/whatsapp'
 import LeadForm from '../components/LeadForm'
 import NotFound from './NotFound'
 
+
 // ─── Multi-image Product Card ─────────────────────────────────────────────────
+
 
 function ProductCard({ product, whatsappNumber }) {
   const [activeImg, setActiveImg] = useState(0)
   const images = product.imageUrls?.length ? product.imageUrls : []
   const hasMultiple = images.length > 1
 
+
   const handleOrder = () => {
     const url = buildOrderURL(whatsappNumber, product.name, product.price)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
+
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
@@ -68,6 +72,7 @@ function ProductCard({ product, whatsappNumber }) {
         )}
       </div>
 
+
       {/* Info */}
       <div className="p-3.5">
         <h3 className="font-display font-semibold text-gray-900 text-sm leading-tight mb-0.5 line-clamp-1">
@@ -95,7 +100,9 @@ function ProductCard({ product, whatsappNumber }) {
   )
 }
 
+
 // ─── Store Page ───────────────────────────────────────────────────────────────
+
 
 export default function StorePage() {
   const { storeName } = useParams()
@@ -103,6 +110,7 @@ export default function StorePage() {
   const [products, setProducts] = useState([])
   const [loading, setLoading]   = useState(true)
   const [notFound, setNotFound] = useState(false)
+
 
   useEffect(() => {
     const load = async () => {
@@ -121,6 +129,7 @@ export default function StorePage() {
     load()
   }, [storeName])
 
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -132,7 +141,9 @@ export default function StorePage() {
     )
   }
 
+
   if (notFound) return <NotFound />
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -147,15 +158,18 @@ export default function StorePage() {
             )}
           </div>
 
+
           <h1 className="font-display font-extrabold text-2xl text-white mb-2">
             {store.businessName}
           </h1>
+
 
           {store.description && (
             <p className="text-brand-100 text-sm max-w-xs mx-auto leading-relaxed mb-4">
               {store.description}
             </p>
           )}
+
 
           <a
             href={buildEnquiryURL(store.whatsappNumber, store.businessName)}
@@ -168,6 +182,7 @@ export default function StorePage() {
           </a>
         </div>
       </div>
+
 
       {/* Products */}
       <div className="max-w-lg mx-auto px-4 py-8">
@@ -197,6 +212,7 @@ export default function StorePage() {
           </>
         )}
 
+
         {/* Lead form */}
         <div className="mt-10">
           <LeadForm
@@ -205,6 +221,7 @@ export default function StorePage() {
             whatsappNumber={store.whatsappNumber}
           />
         </div>
+
 
         {/* Powered by */}
         <div className="text-center mt-8 pb-6">
