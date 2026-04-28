@@ -1,39 +1,41 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, AlertCircle, Store } from 'lucide-react'
-import { loginSeller, registerSeller } from '../firebase/auth'
+import { Eye, EyeOff, Loader2, AlertCircle, Store, CheckCircle, ArrowLeft } from 'lucide-react'
+import { loginSeller, registerSeller, resetPassword } from '../firebase/auth'
 
 const ERROR_MESSAGES = {
-  'auth/user-not-found':      'No account found with that email.',
-  'auth/wrong-password':      'Incorrect password. Please try again.',
-  'auth/invalid-credential':  'Email or password is incorrect.',
-  'auth/email-already-in-use':'An account with this email already exists.',
-  'auth/weak-password':       'Password must be at least 6 characters.',
-  'auth/invalid-email':       'Please enter a valid email address.',
-  'auth/too-many-requests':   'Too many attempts. Please wait a moment and try again.',
+  'auth/user-not-found':       'No account found with that email.',
+  'auth/wrong-password':       'Incorrect password. Please try again.',
+  'auth/invalid-credential':   'Email or password is incorrect.',
+  'auth/email-already-in-use': 'An account with this email already exists.',
+  'auth/weak-password':        'Password must be at least 6 characters.',
+  'auth/invalid-email':        'Please enter a valid email address.',
+  'auth/too-many-requests':    'Too many attempts. Please wait a moment and try again.',
 }
 
+// Modes: 'login' | 'register' | 'forgot'
 export default function Login() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState('login')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [mode, setMode]               = useState('login')
+  const [loading, setLoading]         = useState(false)
+  const [error, setError]             = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [resetSent, setResetSent]     = useState(false)
+  const [resetEmail, setResetEmail]   = useState('')
 
   const [form, setForm] = useState({
-    email:           '',
-    password:        '',
-    businessName:    '',
-    whatsappNumber:  '',
-    storeName:       '',
-    description:     '',
+    email:          '',
+    password:       '',
+    businessName:   '',
+    whatsappNumber: '',
+    storeName:      '',
+    description:    '',
   })
 
   const update = (e) => {
     const { name, value } = e.target
     setForm(prev => ({
       ...prev,
-      // storeName: lowercase, alphanumeric + hyphens only
       [name]: name === 'storeName'
         ? value.toLowerCase().replace(/[^a-z0-9-]/g, '')
         : value,
@@ -43,8 +45,29 @@ export default function Login() {
   const switchMode = (newMode) => {
     setMode(newMode)
     setError('')
+    setResetSent(false)
   }
 
+  // ── Forgot password handler ──────────────────────────────────────
+  const handleReset = async (e) => {
+    e.preventDefault()
+    if (!resetEmail.trim()) {
+      setError('Please enter your email address.')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      await resetPassword(resetEmail.trim())
+      setResetSent(true)
+    } catch (err) {
+      setError(ERROR_MESSAGES[err.code] || 'Could not send reset email. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Login / Register handler ─────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -57,7 +80,6 @@ export default function Login() {
     }
 
     setLoading(true)
-
     try {
       if (mode === 'login') {
         await loginSeller(form.email, form.password)
@@ -77,10 +99,113 @@ export default function Login() {
     }
   }
 
+  // ── Forgot Password Screen ───────────────────────────────────────
+  if (mode === 'forgot') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md">
+          <Link to="/" className="flex items-center justify-center gap-2.5 mb-8 group">
+            <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-md group-hover:bg-brand-600 transition-colors">
+              <Store size={20} className="text-white" />
+            </div>
+            <span className="font-display font-bold text-gray-900 text-2xl">Sellapage</span>
+          </Link>
+
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+            <button
+              onClick={() => switchMode('login')}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 text-sm font-medium mb-6 transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to sign in
+            </button>
+
+            {resetSent ? (
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle size={32} className="text-brand-500" />
+                </div>
+                <h2 className="font-display text-2xl font-extrabold text-gray-900 mb-2">
+                  Check your email
+                </h2>
+                <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                  We sent a password reset link to{' '}
+                  <span className="font-semibold text-gray-700">{resetEmail}</span>.
+                  Check your inbox and follow the link to reset your password.
+                </p>
+                <p className="text-gray-400 text-xs mb-6">
+                  Did not receive it? Check your spam folder, or{' '}
+                  <button
+                    onClick={() => setResetSent(false)}
+                    className="text-brand-600 hover:underline font-medium"
+                  >
+                    try again
+                  </button>.
+                </p>
+                <button
+                  onClick={() => switchMode('login')}
+                  className="w-full border-2 border-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-all"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="font-display text-2xl font-extrabold text-gray-900 mb-1">
+                  Reset your password
+                </h2>
+                <p className="text-gray-400 text-sm mb-6">
+                  Enter the email you signed up with and we will send you a reset link.
+                </p>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2.5 mb-5">
+                    <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-red-600 text-sm">{error}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleReset} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={e => setResetEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="input-field"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-brand-500 hover:bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-200"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Sending reset link...
+                      </>
+                    ) : (
+                      'Send Reset Link'
+                    )}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Login / Register Screen ──────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2.5 mb-8 group">
           <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-md group-hover:bg-brand-600 transition-colors">
             <Store size={20} className="text-white" />
@@ -123,7 +248,6 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <>
-                {/* Business name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Business Name *</label>
                   <input
@@ -133,11 +257,9 @@ export default function Login() {
                     onChange={update}
                     placeholder="E.g. Chioma's Fashion House"
                     className="input-field"
-                    autoComplete="organization"
                   />
                 </div>
 
-                {/* WhatsApp number */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">WhatsApp Number *</label>
                   <input
@@ -153,7 +275,6 @@ export default function Login() {
                   </p>
                 </div>
 
-                {/* Store URL */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Your Store URL *</label>
                   <div className="flex rounded-xl border border-gray-200 overflow-hidden focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
@@ -174,7 +295,6 @@ export default function Login() {
                   </p>
                 </div>
 
-                {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Short Description
@@ -192,7 +312,6 @@ export default function Login() {
               </>
             )}
 
-            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address *</label>
               <input
@@ -206,9 +325,19 @@ export default function Login() {
               />
             </div>
 
-            {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password *</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-gray-700">Password *</label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
+                    className="text-brand-600 hover:underline text-xs font-medium transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <input
                   name="password"

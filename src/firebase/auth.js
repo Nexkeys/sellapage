@@ -3,13 +3,13 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  sendPasswordResetEmail,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { auth, db } from './config'
 
 /**
  * Register a new seller and create their store document in Firestore.
- * storeData should include: businessName, whatsappNumber, storeName, description
  */
 export const registerSeller = async (email, password, storeData) => {
   const credential = await createUserWithEmailAndPassword(auth, email, password)
@@ -20,6 +20,7 @@ export const registerSeller = async (email, password, storeData) => {
     email,
     ownerId: user.uid,
     isActive: true,
+    plan: 'free',
     createdAt: new Date(),
   })
 
@@ -32,6 +33,14 @@ export const loginSeller = async (email, password) => {
 
 export const logoutSeller = async () => {
   return await signOut(auth)
+}
+
+/**
+ * Sends a password reset email via Firebase Auth.
+ * The user receives a link to reset their password.
+ */
+export const resetPassword = async (email) => {
+  return await sendPasswordResetEmail(auth, email)
 }
 
 export const getSellerStore = async (uid) => {
