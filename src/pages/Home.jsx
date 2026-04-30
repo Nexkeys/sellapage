@@ -10,58 +10,62 @@ import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
 import { saveWaitlistEmail } from '../firebase/leads'
 
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
+
 
 const steps = [
   {
     number: '01',
     title: 'Tell us about your business',
-    description: 'Share your products, prices, photos, and WhatsApp number. Takes about 10 minutes.',
+    description: 'Add what you sell or offer whether it\'s products, services, prices, photos, and your contact details. Takes about 2 minutes.',
   },
   {
     number: '02',
-    title: 'Your store goes live',
-    description: 'Your clean, professional store page is ready. You get a unique link to share anywhere.',
+    title: 'Your page goes live instantly',
+    description: 'Your clean, professional business page is ready. You get a unique link you can share anywhere online.',
   },
   {
     number: '03',
-    title: 'Share and start selling',
-    description: 'Drop the link in your WhatsApp status, Instagram bio, or send it directly. Customers browse, tap, and order.',
+    title: 'Share and start getting customers',
+    description: 'Drop the link in your WhatsApp status, Instagram bio, or send it directly to anyone. Customers browse, tap, and reach you.',
   },
 ]
+
 
 const features = [
   {
     icon: Smartphone,
-    title: 'Mobile-First Store',
-    description: 'Your store looks sharp on every phone. Customers shop from their hands, your page meets them there.',
+    title: 'Sharp on Every Phone',
+    description: 'Whether you sell clothes, offer a service, or run a food business — your page loads clean and fast on every phone. Customers browse comfortably from anywhere.',
   },
   {
     icon: MessageCircle,
-    title: 'One-Tap WhatsApp Orders',
-    description: 'Pre-filled order messages land straight in your WhatsApp. No missed orders, no back-and-forth confusion.',
+    title: 'Customers Contact You in One Tap',
+    description: 'Every product or service has a direct WhatsApp button. Customers tap once and a message lands in your phone — details already filled in. No missed enquiries.',
   },
   {
     icon: Package,
-    title: 'Clean Product Display',
-    description: 'Show your items with images, prices, and descriptions. Look professional without the Shopify price tag.',
+    title: 'Customers See Everything Before Messaging',
+    description: 'Show your items or services with photos, prices, and descriptions. Customers know what to expect before they reach out — conversations are shorter and cleaner.',
   },
   {
     icon: Share2,
-    title: 'One Shareable Link',
-    description: 'One link works everywhere — WhatsApp status, Instagram bio, Telegram, SMS. Your shop goes where you go.',
+    title: 'One Link That Works Everywhere',
+    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram — anywhere you promote yourself. One link. Every platform. All your customers.',
   },
   {
     icon: TrendingUp,
-    title: 'Lead Capture Built In',
-    description: "Customers who browse but don't order can drop their details. You follow up and close the sale.",
+    title: 'Never Lose an Interested Customer',
+    description: "When someone browses but doesn't reach out immediately, they can drop their contact details. You follow up and convert that interest into a sale.",
   },
   {
     icon: Zap,
-    title: 'Up and Running Fast',
-    description: 'No technical headaches. Create your account, add your products, and share your link the same day.',
+    title: 'Live the Same Day You Sign Up',
+    description: 'No technical setup. No waiting. Create your account, add your products or services, and share your link — all in the same session. Anyone can do it.',
   },
 ]
+
 
 const testimonials = [
   {
@@ -84,6 +88,7 @@ const testimonials = [
   },
 ]
 
+
 const faqs = [
   {
     q: 'Do my customers need to download anything?',
@@ -99,19 +104,21 @@ const faqs = [
   },
   {
     q: "What if I'm not good with technology?",
-    a: "Sellapage is built for everyday sellers, not tech people. If you can use WhatsApp, you can use this. It's that simple.",
+    a: "Sellapage is built for everyday people, not tech experts. If you can use WhatsApp, you can set this up. It's that simple.",
   },
   {
-    q: 'How do I share my store with customers?',
+    q: 'How do I share my page with customers?',
     a: 'You get a link like sellapage.com.ng/yourbrandname. Paste it in your WhatsApp status, Instagram bio, or send it directly to anyone.',
   },
   {
     q: 'Is it really free right now?',
-    a: 'Yes — completely free during our early access period. No card, no hidden fees. Paid plans are coming later with more advanced features, but your free store stays yours.',
+    a: 'Yes — completely free during our early access period. No card, no hidden fees. Paid plans are coming later with more advanced features, but your free page stays yours.',
   },
 ]
 
+
 // ─── Pricing Plans ────────────────────────────────────────────────────────────
+
 
 const plans = [
   {
@@ -119,16 +126,16 @@ const plans = [
     name: 'Starter',
     price: '₦0',
     period: 'Forever free',
-    description: 'Everything you need to start selling on WhatsApp today.',
+    description: 'Everything you need to start getting customers online today.',
     cta: 'Create Free Store',
     ctaStyle: 'outline',
     available: true,
     features: [
-      { text: 'Clean product store page', available: true },
-      { text: 'WhatsApp order button on every product', available: true },
-      { text: 'Up to 10 products', available: true },
+      { text: 'Clean business page', available: true },
+      { text: 'WhatsApp button on every product or service', available: true },
+      { text: 'Up to 10 listings', available: true },
       { text: 'Lead capture enquiry form', available: true },
-      { text: 'Unique shareable store link', available: true },
+      { text: 'Unique shareable link', available: true },
       { text: 'Store customisation', available: false },
       { text: 'Analytics & tracking', available: false },
       { text: 'Priority support', available: false },
@@ -140,16 +147,16 @@ const plans = [
     badge: 'Coming Soon',
     price: '₦5,000',
     period: 'per month',
-    description: 'For sellers who are growing and want more control over their store.',
+    description: 'For businesses that are growing and want more control over their page.',
     cta: 'Notify Me',
     ctaStyle: 'solid',
     available: false,
     features: [
       { text: 'Everything in Starter', available: true },
-      { text: 'Up to 50 products', available: true },
-      { text: 'Customise your store colours & logo', available: true },
-      { text: 'See how many people visited your store', available: true },
-      { text: 'Track which products get the most clicks', available: true },
+      { text: 'Up to 50 listings', available: true },
+      { text: 'Customise your page colours & logo', available: true },
+      { text: 'See how many people visited your page', available: true },
+      { text: 'Track which listings get the most clicks', available: true },
       { text: 'Manage store settings easily', available: true },
       { text: 'WhatsApp support', available: true },
       { text: 'Advanced order features', available: false },
@@ -161,15 +168,15 @@ const plans = [
     badge: 'Coming Soon',
     price: '₦12,000',
     period: 'per month',
-    description: 'For serious sellers who want the full package and maximum results.',
+    description: 'For serious businesses that want the full package and maximum results.',
     cta: 'Notify Me',
     ctaStyle: 'dark',
     available: false,
     features: [
       { text: 'Everything in Growth', available: true },
-      { text: 'Unlimited products', available: true },
+      { text: 'Unlimited listings', available: true },
       { text: 'Payment links via Paystack', available: true },
-      { text: 'Full sales analytics dashboard', available: true },
+      { text: 'Full analytics dashboard', available: true },
       { text: 'Order history & customer records', available: true },
       { text: 'Custom domain support', available: true },
       { text: 'Priority same-day support', available: true },
@@ -178,7 +185,9 @@ const plans = [
   },
 ]
 
+
 // ─── Component ────────────────────────────────────────────────────────────────
+
 
 export default function Home() {
   const [openFaq, setOpenFaq]         = useState(null)
@@ -204,18 +213,17 @@ export default function Home() {
     setNotifyEmail('')
   }
 
-    const submitNotify = async (e) => {
-     e.preventDefault()
-     try {
-     await saveWaitlistEmail(notifyEmail, notifyPlan)
-     setNotifyDone(true)
-     setNotifyEmail('')
-     } catch (err) {
-     console.error('Waitlist save failed:', err)
-     // Still show success to the user — don't block them on a network error
-     setNotifyDone(true)
-     }
+  const submitNotify = async (e) => {
+    e.preventDefault()
+    try {
+      await saveWaitlistEmail(notifyEmail, notifyPlan)
+      setNotifyDone(true)
+      setNotifyEmail('')
+    } catch (err) {
+      console.error('Waitlist save failed:', err)
+      setNotifyDone(true)
     }
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -246,16 +254,15 @@ export default function Home() {
           </div>
 
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 leading-[1.1] mb-6">
-            Your WhatsApp shop,{' '}
+            One link for everything{' '}
             <span className="text-brand-500 underline decoration-brand-300 decoration-[3px] underline-offset-4">
-              finally professional
+              you sell or offer
             </span>
           </h1>
 
           <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Show your products clearly and let customers order on WhatsApp.
-              <br />
-            Easy to use - Easy to Share, Made for both big & small sellers.
+            Create a clean page for your products, services, or brand.
+            Share one link anywhere. Let customers browse and reach you directly — no back and forth.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
@@ -263,7 +270,7 @@ export default function Home() {
               onClick={handleCTA}
               className="btn-primary text-lg px-8 py-4 rounded-2xl shadow-xl shadow-brand-200"
             >
-              {user ? 'Go to My Dashboard' : 'Create Your Free Store'}
+              {user ? 'Go to My Dashboard' : 'Create Your Free Page'}
               <ArrowRight size={20} />
             </button>
             <a href="#how-it-works" className="btn-secondary text-lg px-8 py-4 rounded-2xl">
@@ -293,7 +300,7 @@ export default function Home() {
               <p className="text-brand-500 text-xs font-semibold mt-0.5">↑ via WhatsApp</p>
             </div>
             <div className="absolute -right-4 md:-right-12 top-1/4 bg-white rounded-2xl shadow-xl border border-gray-100 p-3.5 w-36 md:w-44">
-              <p className="text-gray-400 text-xs mb-1">Store Views</p>
+              <p className="text-gray-400 text-xs mb-1">Page Views</p>
               <p className="font-display font-bold text-2xl text-gray-900">312</p>
               <p className="text-brand-500 text-xs font-semibold mt-0.5">↑ This week</p>
             </div>
@@ -309,7 +316,7 @@ export default function Home() {
           </div>
           <p className="text-amber-800 text-sm leading-relaxed">
             <span className="font-bold">You're joining early.</span>{' '}
-            Sellapage is free right now while we grow. Paid plans are coming with more features — but your free store stays yours, always.
+            Sellapage is free right now while we grow. Paid plans are coming with more features — but your free page stays yours, always.
           </p>
         </div>
       </section>
@@ -320,10 +327,10 @@ export default function Home() {
           <div className="text-center mb-16">
             <p className="section-tag mb-3">HOW IT WORKS</p>
             <h2 className="font-display text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">
-              Your store, live today
+              Your page, live today
             </h2>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              No technical skill needed. Create your account, add your products, share your link.
+              No technical skill needed. Create your account, add what you offer, share your link.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -347,11 +354,11 @@ export default function Home() {
             <div>
               <p className="section-tag mb-3">WHAT YOU GET</p>
               <h2 className="font-display text-3xl md:text-5xl font-extrabold text-gray-900">
-                Everything you need.<br />Nothing you don't.
+                Everything you need <br />&<br />  Nothing you don't.
               </h2>
             </div>
             <p className="text-gray-500 max-w-xs leading-relaxed md:text-right">
-              Built specifically for WhatsApp sellers who want to look professional and sell more.
+              Built for vendors, service providers, freelancers, and business owners who want to look professional and get more customers.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -417,7 +424,7 @@ export default function Home() {
               Free now. More coming.
             </h2>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              Start for free today. Paid plans are launching soon with features that will take your store to the next level.
+              Start for free today. Paid plans are launching soon with features that will take your business to the next level.
             </p>
           </div>
 
@@ -464,29 +471,29 @@ export default function Home() {
             {[
               {
                 icon: Palette,
-                title: 'Customise Your Store',
-                desc: 'Change your store colours, upload your logo, and make it look exactly like your brand.',
+                title: 'Customise Your Page',
+                desc: 'Change your page colours, upload your logo, and make it look exactly like your brand.',
                 tag: 'Growth Plan',
                 color: 'amber',
               },
               {
                 icon: BarChart2,
                 title: 'Store Analytics',
-                desc: 'See how many people visited your store, which products they clicked, and where they came from.',
+                desc: 'See how many people visited your page, which listings they clicked, and where they came from.',
                 tag: 'Growth Plan',
                 color: 'amber',
               },
               {
                 icon: Settings,
                 title: 'Store Settings & Control',
-                desc: 'Turn products on or off, set availability, and manage your store details all in one place.',
+                desc: 'Turn listings on or off, set availability, and manage your page details all in one place.',
                 tag: 'Growth Plan',
                 color: 'amber',
               },
               {
                 icon: TrendingUp,
                 title: 'Payment Integration',
-                desc: 'Accept payments directly through your store via Paystack. No more chasing transfers.',
+                desc: 'Accept payments directly through your page via Paystack. No more chasing transfers.',
                 tag: 'Pro Plan',
                 color: 'brand',
               },
@@ -564,16 +571,16 @@ export default function Home() {
             Free during Early Access
           </div>
           <h2 className="font-display text-3xl md:text-5xl font-extrabold text-white mb-4">
-            Start selling smarter today
+            Start showing up professionally today
           </h2>
           <p className="text-brand-100 text-lg mb-10 max-w-xl mx-auto">
-            It's free, it's fast, and your customers will immediately see the difference. No card. No stress. Just your store, live.
+            It's free, it takes minutes, and your customers will immediately see the difference. No card. No stress. Just your business, online.
           </p>
           <button
             onClick={handleCTA}
             className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
           >
-            {user ? 'Go to My Dashboard' : 'Create My Free Store'}
+            {user ? 'Go to My Dashboard' : 'Create My Free Page'}
             <ArrowRight size={20} />
           </button>
           {!user && (
@@ -645,7 +652,9 @@ export default function Home() {
   )
 }
 
+
 // ─── Pricing Card ─────────────────────────────────────────────────────────────
+
 
 function PricingCard({ plan, onCTA, user }) {
   const isHighlighted = plan.id === 'growth'

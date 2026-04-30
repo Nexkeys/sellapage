@@ -1,0 +1,191 @@
+import { useNavigate } from 'react-router-dom'
+import { Check, X, ArrowRight, AlertCircle } from 'lucide-react'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
+import { useAuth } from '../hooks/useAuth'
+
+
+const FEATURES = [
+  { label: 'Free to start',                       shopify: false, sellapage: true  },
+  { label: 'Set up in under 10 minutes',           shopify: false, sellapage: true  },
+  { label: 'Works with WhatsApp ordering',         shopify: false, sellapage: true  },
+  { label: 'No technical skills needed',           shopify: false, sellapage: true  },
+  { label: 'No domain or hosting needed',          shopify: false, sellapage: true  },
+  { label: 'Built for Nigerian sellers',           shopify: false, sellapage: true  },
+  { label: 'Sell physical products',               shopify: true,  sellapage: true  },
+  { label: 'Online payment processing',            shopify: true,  sellapage: false },
+  { label: 'Advanced inventory management',        shopify: true,  sellapage: false },
+]
+
+
+export default function VsShopify() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Navbar />
+
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-brand-50 via-white to-emerald-50 pt-28 pb-16 px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="section-tag mb-4">SELLAPAGE VS SHOPIFY</p>
+          <h1 className="font-display text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
+            Shopify is expensive and complex.<br />Sellapage gets you selling today.
+          </h1>
+          <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
+            Shopify is a powerful platform built for big businesses with a tech team and a budget.
+            Sellapage is built for everyday Nigerian sellers who want to start now, not next month.
+          </p>
+        </div>
+      </section>
+
+      {/* Cost callout */}
+      <section className="py-10 px-4 bg-white">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4">
+            <AlertCircle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-800 text-sm mb-1">The real cost of Shopify</p>
+              <p className="text-amber-700 text-sm leading-relaxed">
+                Shopify's basic plan starts at $29/month — that's roughly <strong>₦47,000+ every month</strong>,
+                plus domain fees, app add-ons, and payment transaction fees. For most Nigerian sellers,
+                that cost is not worth it.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature comparison */}
+      <section className="py-10 px-4 bg-white">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+            Side by Side
+          </h2>
+
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div />
+            <div className="bg-gray-100 rounded-xl py-3 text-center">
+              <p className="font-bold text-gray-500 text-sm">Shopify</p>
+            </div>
+            <div className="bg-brand-500 rounded-xl py-3 text-center">
+              <p className="font-bold text-white text-sm">Sellapage</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {FEATURES.map((row, i) => (
+              <div key={i} className="grid grid-cols-3 gap-3 items-center bg-gray-50 rounded-xl px-4 py-3">
+                <p className="text-gray-700 text-sm font-medium leading-snug">{row.label}</p>
+                <div className="flex justify-center">
+                  {row.shopify
+                    ? <Check size={18} className="text-green-500" />
+                    : <X     size={18} className="text-red-400"   />}
+                </div>
+                <div className="flex justify-center">
+                  {row.sellapage
+                    ? <Check size={18} className="text-brand-500" />
+                    : <X     size={18} className="text-red-400"   />}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Real-life scenario */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+            The Reality for Most Sellers
+          </h2>
+          <div className="grid md:grid-cols-2 gap-5">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <p className="font-bold text-gray-400 text-sm mb-1">Starting on Shopify</p>
+              <div className="w-8 h-1 bg-gray-200 rounded mb-4" />
+              <p className="text-gray-500 text-sm leading-relaxed">
+                You sign up. Then you need to pick a theme, buy a domain, connect a payment gateway,
+                set up product pages, configure shipping settings. Two weeks later, you're still figuring it out —
+                and you've already paid ₦47,000.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6">
+              <p className="font-bold text-brand-600 text-sm mb-1">Starting on Sellapage</p>
+              <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
+              <p className="text-gray-600 text-sm leading-relaxed">
+                You sign up. You add your products, prices, and photos. You copy your link and paste
+                it in your WhatsApp status. In under 30 minutes, customers are already browsing
+                and orders are coming in for free.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Who should use what */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+            Which One Is Right for You?
+          </h2>
+          <div className="grid md:grid-cols-2 gap-5">
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <p className="font-bold text-gray-600 mb-4">Use Shopify if...</p>
+              <ul className="space-y-2.5">
+                {[
+                  'You have ₦50,000+ per month for tools',
+                  'You have a developer on your team',
+                  'You need complex inventory and multi-currency checkout',
+                  "You're running a large, established e-commerce business",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-500">
+                    <span className="text-gray-300 flex-shrink-0 mt-0.5">→</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-brand-50 rounded-2xl border border-brand-100 p-6">
+              <p className="font-bold text-brand-700 mb-4">Use Sellapage if...</p>
+              <ul className="space-y-2.5">
+                {[
+                  'You sell via WhatsApp and want to look professional',
+                  'You want to start immediately without spending money',
+                  "You're a small business or individual seller",
+                  'Your customers already use WhatsApp to order',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-brand-700">
+                    <Check size={14} className="text-brand-500 flex-shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 px-4 bg-gradient-to-br from-brand-500 to-emerald-600">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="font-display font-extrabold text-white text-3xl mb-3">
+            Start free. Sell today.
+          </h2>
+          <p className="text-brand-100 mb-8 text-base">
+            No monthly fees. No complicated setup. Just your products and your customers.
+          </p>
+          <button
+            onClick={() => navigate(user ? '/dashboard' : '/login')}
+            className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
+          >
+            {user ? 'Go to My Dashboard' : 'Create Free Store'}
+            <ArrowRight size={18} />
+          </button>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  )
+}

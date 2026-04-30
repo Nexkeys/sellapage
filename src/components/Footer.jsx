@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Store } from 'lucide-react'
 
+
 export default function Footer() {
   return (
     <footer className="bg-gray-950 text-white">
@@ -44,16 +45,20 @@ export default function Footer() {
             <p className="font-display font-semibold text-white mb-4">Quick Links</p>
             <ul className="space-y-2.5">
               {[
-                { label: 'How It Works', href: '#how-it-works' },
-                { label: 'Features', href: '#features' },
-                { label: 'Pricing', href: '#pricing' },
+                { label: 'How It Works', href: '/#how-it-works' },
+                { label: 'Features',     href: '/#features' },
+                { label: 'Pricing',      href: '/#pricing' },
               ].map(l => (
                 <li key={l.label}>
-                  <a href={l.href} className="text-gray-400 hover:text-white text-sm transition-colors">{l.label}</a>
+                  <a href={l.href} className="text-gray-400 hover:text-white text-sm transition-colors">
+                    {l.label}
+                  </a>
                 </li>
               ))}
               <li>
-                <Link to="/login" className="text-gray-400 hover:text-white text-sm transition-colors">Sign In</Link>
+                <Link to="/login" className="text-gray-400 hover:text-white text-sm transition-colors">
+                  Sign In
+                </Link>
               </li>
             </ul>
           </div>
@@ -61,8 +66,17 @@ export default function Footer() {
           <div>
             <p className="font-display font-semibold text-white mb-4">Compare</p>
             <ul className="space-y-2.5">
-              {['vs. Linktree', 'vs. Shopify', 'vs. WhatsApp Business', 'vs. Instagram Bio'].map(t => (
-                <li key={t} className="text-gray-500 text-sm">{t}</li>
+              {[
+                { label: 'vs. Linktree',            to: '/compare/vs-linktree' },
+                { label: 'vs. Shopify',             to: '/compare/vs-shopify' },
+                { label: 'vs. WhatsApp Business',   to: '/compare/vs-whatsapp-business' },
+                { label: 'vs. Instagram Bio',       to: '/compare/vs-instagram-bio' },
+              ].map(item => (
+                <li key={item.label}>
+                  <Link to={item.to} className="text-gray-400 hover:text-white text-sm transition-colors">
+                    {item.label}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
@@ -70,9 +84,15 @@ export default function Footer() {
           <div>
             <p className="font-display font-semibold text-white mb-4">Legal</p>
             <ul className="space-y-2.5">
-              {['Privacy Policy', 'Terms of Service', 'Contact Us'].map(t => (
-                <li key={t}>
-                  <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">{t}</a>
+              {[
+                { label: 'Privacy Policy',   to: '/privacy-policy' },
+                { label: 'Terms of Service', to: '/terms' },
+                { label: 'Contact Us',       to: '/contact' },
+              ].map(item => (
+                <li key={item.label}>
+                  <Link to={item.to} className="text-gray-400 hover:text-white text-sm transition-colors">
+                    {item.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -81,7 +101,18 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Sellapage. All rights reserved.</p>
-          <p className="text-gray-500 text-sm">Built by <a href="https://nexkeysagency.netlify.app" className="text-gray-400 hover:text-white text-sm transition-colors">NexKeys Agency </a>Made For Nigerian sellers 🇳🇬</p>
+          <p className="text-gray-500 text-sm">
+            Built by{' '}
+            <a
+              href="https://nexkeysagency.netlify.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white text-sm transition-colors"
+            >
+              NexKeys Agency
+            </a>{' '}
+            — Made for Nigerian sellers 🇳🇬
+          </p>
         </div>
       </div>
     </footer>
