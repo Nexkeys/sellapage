@@ -1,24 +1,22 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   ShoppingBag, MessageCircle, Zap, ChevronDown, Check, X,
   Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
-  Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift
+  Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
 import { saveWaitlistEmail } from '../firebase/leads'
 
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
+// ─── Data ────────────────────────────────────────────────────────────────────
 
 const steps = [
   {
     number: '01',
     title: 'Tell us about your business',
-    description: 'Add what you sell or offer whether it\'s products, services, prices, photos, and your contact details. Takes about 2 minutes.',
+    description: 'Add what you sell or offer — products, services, prices, photos, and your contact details. Takes about 2 minutes.',
   },
   {
     number: '02',
@@ -32,62 +30,59 @@ const steps = [
   },
 ]
 
-
 const features = [
   {
     icon: Smartphone,
     title: 'Sharp on Every Phone',
-    description: 'Whether you sell clothes, offer a service, or run a food business — your page loads clean and fast on every phone. Customers browse comfortably from anywhere.',
+    description: 'Whether you sell clothes, offer a service, or run a food business — your page loads clean and fast on every phone.',
   },
   {
     icon: MessageCircle,
     title: 'Customers Contact You in One Tap',
-    description: 'Every product or service has a direct WhatsApp button. Customers tap once and a message lands in your phone — details already filled in. No missed enquiries.',
+    description: 'Every product or service has a direct WhatsApp button. Customers tap once and a message lands in your phone — details already filled in.',
   },
   {
     icon: Package,
     title: 'Customers See Everything Before Messaging',
-    description: 'Show your items or services with photos, prices, and descriptions. Customers know what to expect before they reach out — conversations are shorter and cleaner.',
+    description: 'Show your items or services with photos, prices, and descriptions. Customers know what to expect before they reach out.',
   },
   {
     icon: Share2,
     title: 'One Link That Works Everywhere',
-    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram — anywhere you promote yourself. One link. Every platform. All your customers.',
+    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram — anywhere you promote yourself.',
   },
   {
     icon: TrendingUp,
     title: 'Never Lose an Interested Customer',
-    description: "When someone browses but doesn't reach out immediately, they can drop their contact details. You follow up and convert that interest into a sale.",
+    description: "When someone browses but doesn't reach out immediately, they can drop their contact details. You follow up and close the sale.",
   },
   {
     icon: Zap,
     title: 'Live the Same Day You Sign Up',
-    description: 'No technical setup. No waiting. Create your account, add your products or services, and share your link — all in the same session. Anyone can do it.',
+    description: 'No technical setup. No waiting. Create your account, add your products or services, and share your link — all in the same session.',
   },
 ]
 
-
 const testimonials = [
   {
-    name: 'Chioma Adeyemi',
+    name: 'Stephen Promise',
     role: 'Fashion Seller, Lagos',
-    initials: 'CA',
+    avatar: '/avatar-1.png',
     text: "Before Sellapage, I was losing customers because they'd message and I'd forget to reply. Now they click my link, see everything, and order directly. My sales are up.",
   },
   {
     name: 'Emeka Nwosu',
-    role: 'Food Vendor, Abuja',
-    initials: 'EN',
+    role: 'Car DealerAbuja',
+    avatar: '/avatar-2.png',
     text: "I used to screenshot my menu and send it one by one. Now I send one link. Customers see everything, place their orders, and I get a clean WhatsApp message. Much easier.",
   },
   {
-    name: 'Fatima Aliyu',
-    role: 'Wine & Spirits, Kano',
-    initials: 'FA',
+    name: 'Peter Bron',
+    role: 'Wine & Spirits,  ',
+    avatar: '/avatar-3.png',
     text: 'My customers used to ask the same questions over and over. Now they see all the details on my page. Orders come in clean and clear. Worth every kobo.',
   },
 ]
-
 
 const faqs = [
   {
@@ -108,17 +103,13 @@ const faqs = [
   },
   {
     q: 'How do I share my page with customers?',
-    a: 'You get a link like sellapage.com.ng/yourbrandname. Paste it in your WhatsApp status, Instagram bio, or send it directly to anyone.',
+    a: "You get a link like sellapage.com.ng/yourbrandname. Paste it in your WhatsApp status, Instagram bio, or send it directly to anyone.",
   },
   {
     q: 'Is it really free right now?',
     a: 'Yes — completely free during our early access period. No card, no hidden fees. Paid plans are coming later with more advanced features, but your free page stays yours.',
   },
 ]
-
-
-// ─── Pricing Plans ────────────────────────────────────────────────────────────
-
 
 const plans = [
   {
@@ -185,20 +176,68 @@ const plans = [
   },
 ]
 
+const trustBadges = [
+  { icon: Zap, label: 'No Coding Needed', sub: 'Launch in Minutes' },
+  { icon: Smartphone, label: 'Mobile Friendly', sub: 'Looks Great Anywhere' },
+  { icon: BarChart2, label: 'Built for Sales', sub: 'Designed to Convert' },
+  { icon: MessageCircle, label: 'Orders', sub: 'Customers Can Chat & Order' },
+  { icon: Lock, label: 'Secure & Reliable', sub: 'Your Store, Always Online' },
+]
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const stats = [
+  { value: '2,000+', label: 'Active Stores' },
+  { value: '98%', label: 'Customer Satisfaction' },
+  { value: '3x+', label: 'More Orders' },
+  { value: '24/7', label: 'Always Open' },
+]
 
+const storeExamples = [
+  {
+    name: 'Tasty Meals – Food Store',
+    desc: 'Taking food orders across Lagos',
+    image: '/seehowotherssell-projectimage1.png',
+    tag: 'Tasty Meals',
+    tagline: 'Delicious food, delivered fast',
+    btnLabel: 'Order Now',
+  },
+  {
+    name: 'Gadgets Hub – Tech Store',
+    desc: 'Selling gadgets and accessories online',
+    image: '/seehowotherssell-projectimage2.png',
+    tag: 'Gadgets Hub',
+    tagline: 'Latest gadgets. Best prices.',
+    btnLabel: 'Shop Now',
+  },
+  {
+    name: 'Home & More – Home Essentials',
+    desc: 'Quality home products for every home',
+    image: '/seehowotherssell-projectimage3.png',
+    tag: 'Home & More',
+    tagline: 'Everything for your home',
+    btnLabel: 'Shop Now',
+  },
+]
+
+const comingFeatures = [
+  { icon: Palette, title: 'Custom Store Design', desc: 'Brand your store with your own colours and logo.' },
+  { icon: BarChart2, title: 'Analytics Dashboard', desc: 'See traffic, clicks, and what sells the most.' },
+  { icon: Gift, title: 'Discount & Promo Codes', desc: 'Run promotions and reward loyal customers.' },
+  { icon: Lock, title: 'Secure Payment Links', desc: 'Accept Paystack payments directly in your store.' },
+  { icon: Settings, title: 'Order Management', desc: 'Track, update, and fulfil orders from one place.' },
+  { icon: Sparkles, title: 'AI Product Descriptions', desc: 'Write sharp product copy in seconds with AI.' },
+]
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [openFaq, setOpenFaq]         = useState(null)
-  const [notifyPlan, setNotifyPlan]   = useState(null)
+  const [openFaq, setOpenFaq] = useState(null)
+  const [notifyPlan, setNotifyPlan] = useState(null)
   const [notifyEmail, setNotifyEmail] = useState('')
-  const [notifyDone, setNotifyDone]   = useState(false)
-  const { user }  = useAuth()
-  const navigate  = useNavigate()
+  const [notifyDone, setNotifyDone] = useState(false)
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
   const toggleFaq = (i) => setOpenFaq(openFaq === i ? null : i)
-
   const handleCTA = () => navigate(user ? '/dashboard' : '/login')
 
   const handleNotify = (planName) => {
@@ -226,187 +265,121 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white font-body">
       <Navbar />
 
-      {/* ── HERO ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-emerald-50 pt-28 pb-24 px-4">
-        <div className="absolute top-0 left-0 w-72 h-72 bg-brand-100 rounded-full blur-3xl opacity-40 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-emerald-100 rounded-full blur-3xl opacity-30 translate-x-1/3 translate-y-1/3 pointer-events-none" />
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section id="home" className="relative overflow-hidden bg-white pt-20 pb-0 lg:pt-24">
+        {/* subtle green blob top-right */}
+        <div className="pointer-events-none absolute -top-32 -right-32 w-[520px] h-[520px] rounded-full bg-brand-50 opacity-60 blur-3xl" />
+        <div className="pointer-events-none absolute top-1/2 -left-40 w-[340px] h-[340px] rounded-full bg-brand-100 opacity-40 blur-3xl" />
 
-        <div className="absolute top-28 left-6 md:left-20 w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center shadow-xl animate-float">
-          <ShoppingBag size={22} className="text-white" />
-        </div>
-        <div className="absolute top-40 right-6 md:right-20 w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-xl animate-float-delayed">
-          <MessageCircle size={22} className="text-white" />
-        </div>
-        <div className="absolute bottom-32 left-10 md:left-36 w-10 h-10 bg-white border-2 border-brand-200 rounded-xl flex items-center justify-center shadow-md animate-float-delayed">
-          <Package size={16} className="text-brand-500" />
-        </div>
-        <div className="absolute bottom-24 right-10 md:right-36 w-10 h-10 bg-white border-2 border-brand-200 rounded-xl flex items-center justify-center shadow-md animate-float">
-          <Store size={16} className="text-brand-500" />
-        </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
 
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-full text-sm font-semibold mb-8 gap-2">
-            <Gift size={14} />
-            Free during Early Access — no card needed
-          </div>
+            {/* Left */}
+            <div className="max-w-xl py-10 lg:py-16">
+              {/* pill badge */}
+              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 uppercase tracking-wide">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+                For Nigerian Business Owners
+              </div>
 
-          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 leading-[1.1] mb-6">
-            One link for everything{' '}
-            <span className="text-brand-500 underline decoration-brand-300 decoration-[3px] underline-offset-4">
-              you sell or offer
-            </span>
-          </h1>
+              <h1 className="font-display text-[2.6rem] sm:text-5xl lg:text-[3.25rem] font-extrabold leading-[1.1] tracking-tight text-gray-900 mb-6">
+                One link for<br />
+                <span className="text-brand-600">everything you</span><br />
+                sell or offer.
+              </h1>
 
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Create a clean page for your products, services, or brand.
-            Share one link anywhere. Let customers browse and reach you directly — no back and forth.
-          </p>
+              <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-md">
+                Create a clean page for your products. Share one link anywhere.
+                Let customers browse and order directly from your store.
+              </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <button
-              onClick={handleCTA}
-              className="btn-primary text-lg px-8 py-4 rounded-2xl shadow-xl shadow-brand-200"
-            >
-              {user ? 'Go to My Dashboard' : 'Create Your Free Page'}
-              <ArrowRight size={20} />
-            </button>
-            <a href="#how-it-works" className="btn-secondary text-lg px-8 py-4 rounded-2xl">
-              See How It Works
-            </a>
-          </div>
+              <div className="flex flex-wrap items-center gap-3 mb-8">
+                <button
+                  onClick={handleCTA}
+                  className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all duration-200 shadow-md shadow-brand-200"
+                >
+                  Create Your Free Page
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <a
+                  href="#examples"
+                  className="inline-flex items-center gap-2 text-gray-700 hover:text-brand-600 font-semibold text-sm px-5 py-3.5 rounded-xl border border-gray-200 hover:border-brand-300 bg-white transition-all duration-200"
+                >
+                  View Examples
+                  <span className="text-base">👁</span>
+                </a>
+              </div>
 
-          {/* Browser mockup */}
-          <div className="relative max-w-3xl mx-auto">
-            <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
-              <div className="bg-gray-50 h-9 flex items-center px-4 gap-1.5 border-b border-gray-100">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                <div className="w-3 h-3 rounded-full bg-green-400" />
-                <div className="flex-1 mx-6">
-                  <div className="bg-gray-200 rounded-full h-4 w-52 mx-auto text-[10px] text-gray-400 flex items-center justify-center">
-                    sellapage.com.ng/chiomasfashion
-                  </div>
+              {/* Social proof row */}
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-2.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <img
+                      key={n}
+                      src={`/avatar-${n}.png`}
+                      alt={`User avatar ${n}`}
+                      width={32}
+                      height={32}
+                      loading="lazy"
+                      className="w-8 h-8 rounded-full border-2 border-white object-cover"
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  ))}
+                  <span className="text-sm font-semibold text-gray-700 ml-1">5.0</span>
+                  <span className="text-sm text-gray-400 ml-1">Trusted by 100+ Nigerian Businesses</span>
                 </div>
               </div>
-              <img src="/hero-mockup.png" alt="Sellapage store preview" className="w-full" />
             </div>
 
-            <div className="absolute -left-4 md:-left-12 top-1/3 bg-white rounded-2xl shadow-xl border border-gray-100 p-3.5 w-36 md:w-44">
-              <p className="text-gray-400 text-xs mb-1">Orders Today</p>
-              <p className="font-display font-bold text-2xl text-gray-900">24</p>
-              <p className="text-brand-500 text-xs font-semibold mt-0.5">↑ via WhatsApp</p>
-            </div>
-            <div className="absolute -right-4 md:-right-12 top-1/4 bg-white rounded-2xl shadow-xl border border-gray-100 p-3.5 w-36 md:w-44">
-              <p className="text-gray-400 text-xs mb-1">Page Views</p>
-              <p className="font-display font-bold text-2xl text-gray-900">312</p>
-              <p className="text-brand-500 text-xs font-semibold mt-0.5">↑ This week</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── EARLY ACCESS BANNER ─────────────────────────────────── */}
-      <section className="bg-amber-50 border-y border-amber-100 py-5 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left">
-          <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Sparkles size={20} className="text-amber-600" />
-          </div>
-          <p className="text-amber-800 text-sm leading-relaxed">
-            <span className="font-bold">You're joining early.</span>{' '}
-            Sellapage is free right now while we grow. Paid plans are coming with more features — but your free page stays yours, always.
-          </p>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ────────────────────────────────────────── */}
-      <section id="how-it-works" className="py-24 px-4 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="section-tag mb-3">HOW IT WORKS</p>
-            <h2 className="font-display text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">
-              Your page, live today
-            </h2>
-            <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              No technical skill needed. Create your account, add what you offer, share your link.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {steps.map((step, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <div className="w-14 h-14 bg-brand-50 rounded-2xl flex items-center justify-center mb-5">
-                  <span className="font-display font-extrabold text-brand-600 text-xl">{step.number}</span>
+            {/* Right — hero images */}
+            <div className="relative flex justify-center items-end lg:items-center lg:justify-end h-[420px] sm:h-[500px] lg:h-[560px]">
+              {/* Main laptop */}
+              <img
+                src="/Herosection-mainlaptop.png"
+                alt="Sellapage dashboard on laptop"
+                width={620}
+                height={420}
+                loading="eager"
+                className="relative z-10 w-[85%] sm:w-[78%] lg:w-full max-w-[600px] object-contain drop-shadow-2xl"
+              />
+              {/* Phone overlay */}
+              <img
+                src="/Herosection-mobilephone.png"
+                alt="Sellapage store on mobile phone"
+                width={160}
+                height={280}
+                loading="eager"
+                className="absolute bottom-0 right-0 lg:-right-4 z-20 w-[28%] sm:w-[24%] lg:w-[30%] max-w-[180px] object-contain drop-shadow-xl animate-float"
+              />
+              {/* Floating badge — New Order */}
+              <div className="absolute top-8 left-4 sm:left-0 z-30 flex items-center gap-2 bg-white rounded-2xl shadow-lg px-3 py-2 border border-gray-100 animate-float-delayed">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-gray-900 leading-tight">New Order!</p>
+                  <p className="text-[10px] text-gray-400 leading-tight">via WhatsApp</p>
                 </div>
-                <h3 className="font-display font-bold text-gray-900 text-lg mb-2">{step.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{step.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURES ────────────────────────────────────────────── */}
-      <section id="features" className="py-24 px-4 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
-            <div>
-              <p className="section-tag mb-3">WHAT YOU GET</p>
-              <h2 className="font-display text-3xl md:text-5xl font-extrabold text-gray-900">
-                Everything you need <br />&<br />  Nothing you don't.
-              </h2>
-            </div>
-            <p className="text-gray-500 max-w-xs leading-relaxed md:text-right">
-              Built for vendors, service providers, freelancers, and business owners who want to look professional and get more customers.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map((f, i) => (
-              <div key={i} className="bg-white rounded-2xl p-7 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center mb-5">
-                  <f.icon size={22} className="text-brand-600" />
-                </div>
-                <h3 className="font-display font-bold text-gray-900 text-lg mb-2">{f.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{f.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ────────────────────────────────────────── */}
-      <section className="py-24 px-4 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-start gap-12">
-            <div className="md:w-64 flex-shrink-0">
-              <p className="section-tag mb-3">TESTIMONIALS</p>
-              <h2 className="font-display text-3xl md:text-4xl font-extrabold text-gray-900">
-                What sellers are saying
-              </h2>
-              <div className="hidden md:grid grid-cols-8 gap-1.5 mt-8 opacity-20">
-                {Array.from({ length: 64 }).map((_, i) => (
-                  <div key={i} className="w-1.5 h-1.5 rounded-full bg-brand-400" />
-                ))}
               </div>
             </div>
-            <div className="flex-1 space-y-4">
-              {testimonials.map((t, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow">
-                  <div className="flex mb-3 gap-0.5">
-                    {[1, 2, 3, 4, 5].map(s => (
-                      <Star key={s} size={15} className="text-yellow-400 fill-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-gray-700 text-sm leading-relaxed mb-5">"{t.text}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="font-display font-bold text-brand-700 text-xs">{t.initials}</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                      <p className="text-gray-400 text-xs">{t.role}</p>
-                    </div>
+          </div>
+        </div>
+
+        {/* ── Trust badges strip ── */}
+        <div className="mt-12 border-t border-gray-100 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+              {trustBadges.map((b) => (
+                <div key={b.label} className="flex items-center gap-2.5 min-w-[140px]">
+                  <b.icon className="w-5 h-5 text-brand-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-gray-800 leading-tight">{b.label}</p>
+                    <p className="text-[11px] text-gray-400 leading-tight">{b.sub}</p>
                   </div>
                 </div>
               ))}
@@ -415,107 +388,204 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── PRICING ─────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 px-4 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-6">
-            <p className="section-tag mb-3">PRICING</p>
-            <h2 className="font-display text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">
-              Free now. More coming.
+      {/* ── WHAT SELLAPAGE DOES ──────────────────────────────────────────── */}
+      <section id="features" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What Sellapage Does</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+              Everything You Need to Sell Online
             </h2>
-            <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              Start for free today. Paid plans are launching soon with features that will take your business to the next level.
+            <p className="text-gray-500 max-w-xl mx-auto text-base">
+              Built for vendors, service providers, freelancers, and business owners who want to look professional and get more customers.
             </p>
           </div>
 
-          <div className="flex items-center justify-center gap-3 mb-12">
-            <div className="h-px bg-gray-200 flex-1 max-w-24" />
-            <div className="inline-flex items-center bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-full text-xs font-bold gap-1.5">
-              <Gift size={13} />
-              Early Access — Starter is free, no time limit
-            </div>
-            <div className="h-px bg-gray-200 flex-1 max-w-24" />
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 items-start">
-            {plans.map((plan) => (
-              <PricingCard
-                key={plan.id}
-                plan={plan}
-                onCTA={plan.available ? handleCTA : () => handleNotify(plan.name)}
-                user={user}
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: Store, title: 'Create Your Storefront', desc: 'Build a beautiful store page in minutes. Add products, images, and prices.' },
+              { icon: Package, title: 'Manage Products', desc: 'Add, edit, and organise your products easily. Keep your store fresh and updated.' },
+              { icon: MessageCircle, title: 'Receive Orders', desc: 'Customers order directly from your page. Get notified and fulfil with ease.' },
+              { icon: TrendingUp, title: 'Track Performance', desc: "See what's working. Track visitors, orders, and sales all in one place." },
+            ].map((item) => (
+              <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md hover:border-brand-100 transition-all duration-200 group">
+                <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-4 group-hover:bg-brand-100 transition-colors">
+                  <item.icon className="w-5 h-5 text-brand-600" />
+                </div>
+                <h3 className="font-display font-bold text-gray-900 text-base mb-2">{item.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
+                <button className="mt-4 inline-flex items-center gap-1 text-brand-600 text-sm font-semibold hover:gap-2 transition-all duration-150">
+                  Learn More <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             ))}
           </div>
-
-          <p className="text-center text-gray-400 text-xs mt-8">
-            Prices are estimates and may change before launch. Early access users get a discount on paid plans.
-          </p>
         </div>
       </section>
 
-      {/* ── COMING SOON FEATURES ────────────────────────────────── */}
-      <section className="py-24 px-4 bg-white">
-        <div className="max-w-4xl mx-auto">
+      {/* ── MID-PAGE SHOWCASE — why choose sellapage ────────────────────── */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left copy */}
+            <div>
+              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Why Nigerian Businesses Choose Sellapage</span>
+              <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-6">
+                Simple, Fast &amp; Built<br />
+                for <span className="text-brand-600">Real Business.</span>
+              </h2>
+              <p className="text-gray-500 text-base leading-relaxed mb-8 max-w-md">
+                Sellapage helps you sell more with less stress. One link. More sales. Happier customers.
+              </p>
+
+              <ul className="space-y-3 mb-8">
+                {[
+                  'One link to showcase everything you sell',
+                  'Customers can browse and order instantly',
+                  'Accept orders via WhatsApp',
+                  'Perfect for products, services &amp; bookings',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3 h-3 text-white" />
+                    </span>
+                    <span className="text-gray-700 text-sm" dangerouslySetInnerHTML={{ __html: item }} />
+                  </li>
+                ))}
+              </ul>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                {stats.map((s) => (
+                  <div key={s.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                    <p className="font-display text-2xl font-extrabold text-brand-600 leading-none mb-1">{s.value}</p>
+                    <p className="text-xs text-gray-500">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleCTA}
+                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-colors shadow-md shadow-brand-200"
+              >
+                Create Your Free Page <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Right image */}
+            <div className="relative flex justify-center">
+              <img
+                src="/midpageshowcase-secondarylaptop.png"
+                alt="Sellapage store showcase"
+                width={560}
+                height={420}
+                loading="lazy"
+                className="w-full max-w-[520px] object-contain rounded-2xl drop-shadow-xl"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
+      <section id="how-it-works" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <p className="section-tag mb-3">WHAT'S COMING</p>
-            <h2 className="font-display text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-              We're just getting started
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">How It Works</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+              No technical skill needed
             </h2>
-            <p className="text-gray-500 max-w-xl mx-auto text-base">
-              These features are in the works. Early access users will be the first to get them.
+            <p className="text-gray-500 max-w-md mx-auto text-base">
+              Create your account, add what you offer, share your link. Done.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            {[
-              {
-                icon: Palette,
-                title: 'Customise Your Page',
-                desc: 'Change your page colours, upload your logo, and make it look exactly like your brand.',
-                tag: 'Growth Plan',
-                color: 'amber',
-              },
-              {
-                icon: BarChart2,
-                title: 'Store Analytics',
-                desc: 'See how many people visited your page, which listings they clicked, and where they came from.',
-                tag: 'Growth Plan',
-                color: 'amber',
-              },
-              {
-                icon: Settings,
-                title: 'Store Settings & Control',
-                desc: 'Turn listings on or off, set availability, and manage your page details all in one place.',
-                tag: 'Growth Plan',
-                color: 'amber',
-              },
-              {
-                icon: TrendingUp,
-                title: 'Payment Integration',
-                desc: 'Accept payments directly through your page via Paystack. No more chasing transfers.',
-                tag: 'Pro Plan',
-                color: 'brand',
-              },
-            ].map((item, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex gap-5 hover:shadow-md transition-shadow">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  item.color === 'brand' ? 'bg-brand-50' : 'bg-amber-50'
-                }`}>
-                  <item.icon size={22} className={item.color === 'brand' ? 'text-brand-600' : 'text-amber-600'} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
+            {/* connector line desktop */}
+            <div className="hidden sm:block absolute top-10 left-[calc(16.67%+12px)] right-[calc(16.67%+12px)] h-0.5 bg-brand-100 z-0" />
+            {steps.map((step, i) => (
+              <div key={step.number} className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-20 h-20 rounded-2xl bg-brand-600 flex flex-col items-center justify-center mb-6 shadow-lg shadow-brand-200">
+                  <span className="text-brand-100 text-xs font-bold uppercase tracking-wider">Step</span>
+                  <span className="text-white font-display text-2xl font-extrabold leading-none">{step.number}</span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <h3 className="font-display font-bold text-gray-900 text-base">{item.title}</h3>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      item.color === 'brand'
-                        ? 'bg-brand-50 text-brand-600'
-                        : 'bg-amber-50 text-amber-600'
-                    }`}>
-                      {item.tag}
-                    </span>
+                <h3 className="font-display font-bold text-gray-900 text-base mb-3">{step.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed max-w-xs">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES GRID ───────────────────────────────────────────────── */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What You Get</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+              Built to help you sell more
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((f) => (
+              <div key={f.title} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-brand-100 transition-all duration-200 group">
+                <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-4 group-hover:bg-brand-100 transition-colors">
+                  <f.icon className="w-5 h-5 text-brand-600" />
+                </div>
+                <h3 className="font-display font-bold text-gray-900 text-base mb-2">{f.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── REAL STORES (EXAMPLES) ──────────────────────────────────────── */}
+      <section id="examples" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Real Stores on Sellapage</span>
+              <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
+                See How Others Sell with Ease
+              </h2>
+            </div>
+            <a href="#" className="inline-flex items-center gap-1.5 text-brand-600 font-semibold text-sm hover:gap-2.5 transition-all duration-150">
+              View All Examples <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {storeExamples.map((store) => (
+              <div key={store.name} className="group overflow-hidden rounded-2xl border border-gray-100 hover:shadow-lg transition-all duration-300">
+                {/* image with overlay */}
+                <div className="relative overflow-hidden aspect-[4/3]">
+                  <img
+                    src={store.image}
+                    alt={store.name}
+                    width={480}
+                    height={360}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  {/* overlay label */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 flex items-center justify-between">
+                      <div>
+                        <p className="font-display font-bold text-gray-900 text-sm leading-tight">{store.tag}</p>
+                        <p className="text-gray-400 text-xs">{store.tagline}</p>
+                      </div>
+                      <button className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
+                        {store.btnLabel}
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
+                </div>
+                {/* card footer */}
+                <div className="px-4 py-3 bg-white">
+                  <p className="font-semibold text-gray-900 text-sm">{store.name}</p>
+                  <p className="text-gray-400 text-xs mt-0.5">{store.desc}</p>
                 </div>
               </div>
             ))}
@@ -523,38 +593,189 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section className="py-24 px-4 bg-gray-50">
-        <div className="max-w-3xl mx-auto">
+      {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <p className="section-tag mb-3">FAQ</p>
-            <h2 className="font-display text-3xl md:text-5xl font-extrabold text-gray-900">
-              Questions? We've got answers.
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What Our Users Say</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3">
+              Loved by Business Owners
+            </h2>
+            <p className="text-gray-400 text-base">Real sellers. Real results.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {testimonials.map((t) => (
+              <div key={t.name} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col">
+                {/* quote mark */}
+                <div className="text-brand-200 text-5xl font-serif leading-none mb-3 select-none">&ldquo;</div>
+                <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">{t.text}</p>
+                <div className="flex items-center gap-3 pt-4 border-t border-gray-50">
+                  <img
+                    src={t.avatar}
+                    alt={t.name}
+                    width={40}
+                    height={40}
+                    loading="lazy"
+                    className="w-10 h-10 rounded-full object-cover border-2 border-brand-100"
+                  />
+                  <div>
+                    <p className="font-display font-bold text-gray-900 text-sm">— {t.name}</p>
+                    <p className="text-gray-400 text-xs">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING ─────────────────────────────────────────────────────── */}
+      <section id="pricing" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Choose Your Plan</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+              Start free. Grow when you're ready.
+            </h2>
+            <p className="text-gray-400 text-sm max-w-md mx-auto">
+              Prices are estimates and may change before launch. Early access users get a discount on paid plans.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
+            {plans.map((plan) => {
+              const isGrowth = plan.id === 'growth'
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl p-6 border flex flex-col ${
+                    isGrowth
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-xl shadow-brand-200 scale-[1.02]'
+                      : 'bg-white border-gray-100 text-gray-900'
+                  }`}
+                >
+                  {isGrowth && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow">
+                      Most Popular
+                    </div>
+                  )}
+                  {plan.badge && !isGrowth && (
+                    <div className="inline-block bg-gray-100 text-gray-500 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3 self-start">
+                      {plan.badge}
+                    </div>
+                  )}
+                  {isGrowth && plan.badge && (
+                    <div className="inline-block bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3 self-start">
+                      {plan.badge}
+                    </div>
+                  )}
+
+                  <h3 className={`font-display font-extrabold text-xl mb-1 ${isGrowth ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
+                  <div className="flex items-end gap-1 mb-1">
+                    <span className={`font-display text-4xl font-extrabold ${isGrowth ? 'text-white' : 'text-gray-900'}`}>{plan.price}</span>
+                    <span className={`text-sm mb-1.5 ${isGrowth ? 'text-brand-100' : 'text-gray-400'}`}>/{plan.period}</span>
+                  </div>
+                  <p className={`text-sm mb-6 ${isGrowth ? 'text-brand-100' : 'text-gray-500'}`}>{plan.description}</p>
+
+                  <ul className="space-y-2.5 mb-8 flex-1">
+                    {plan.features.map((feat) => (
+                      <li key={feat.text} className="flex items-start gap-2.5">
+                        {feat.available ? (
+                          <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isGrowth ? 'text-brand-200' : 'text-brand-600'}`} />
+                        ) : (
+                          <X className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isGrowth ? 'text-brand-300/60' : 'text-gray-300'}`} />
+                        )}
+                        <span className={`text-sm ${feat.available ? (isGrowth ? 'text-white' : 'text-gray-700') : (isGrowth ? 'text-brand-300/60' : 'text-gray-300')}`}>
+                          {feat.text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {plan.available ? (
+                    <button
+                      onClick={handleCTA}
+                      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                        isGrowth
+                          ? 'bg-white text-brand-700 hover:bg-brand-50'
+                          : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-100'
+                      }`}
+                    >
+                      {plan.cta}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleNotify(plan.name)}
+                      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                        isGrowth
+                          ? 'bg-white text-brand-700 hover:bg-brand-50'
+                          : 'bg-gray-900 hover:bg-gray-700 text-white'
+                      }`}
+                    >
+                      {plan.cta}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── COMING SOON FEATURES ────────────────────────────────────────── */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What's Coming</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+              Features in the works
+            </h2>
+            <p className="text-gray-400 text-base max-w-sm mx-auto">
+              Early access users will be the first to get them.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+            {comingFeatures.map((item) => (
+              <div key={item.title} className="bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-md transition-all duration-200 group">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
+                  <item.icon className="w-5 h-5 text-brand-600" />
+                </div>
+                <h3 className="font-display font-bold text-gray-900 text-sm mb-1">{item.title}</h3>
+                <p className="text-gray-400 text-xs leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ─────────────────────────────────────────────────────────── */}
+      <section id="faq" className="py-20 bg-white">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">FAQ</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
+              Frequently Asked Questions
             </h2>
           </div>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
               <div
                 key={i}
-                className={`border rounded-2xl overflow-hidden transition-all duration-200 bg-white ${
-                  openFaq === i ? 'border-brand-300 shadow-sm' : 'border-gray-200'
-                }`}
+                className="border border-gray-100 rounded-2xl overflow-hidden"
               >
                 <button
                   onClick={() => toggleFaq(i)}
-                  className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
                 >
-                  <span className="font-semibold text-gray-900 text-sm md:text-base pr-4">{faq.q}</span>
+                  <span className="font-display font-semibold text-gray-900 text-sm">{faq.q}</span>
                   <ChevronDown
-                    size={20}
-                    className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
-                      openFaq === i ? 'rotate-180 text-brand-500' : ''
-                    }`}
+                    className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`}
                   />
                 </button>
                 {openFaq === i && (
-                  <div className="px-6 pb-5">
-                    <p className="text-gray-600 text-sm leading-relaxed">{faq.a}</p>
+                  <div className="px-5 pb-5 pt-0">
+                    <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
                   </div>
                 )}
               </div>
@@ -563,171 +784,110 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CTA BANNER ──────────────────────────────────────────── */}
-      <section className="py-24 px-4 bg-gradient-to-br from-brand-500 to-emerald-600">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold mb-6 gap-2">
-            <Gift size={14} />
-            Free during Early Access
+      {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
+      <section className="py-20 bg-brand-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+            {/* Left */}
+            <div className="flex items-center gap-5 max-w-xl">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <ShoppingBag className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h2 className="font-display font-extrabold text-white text-2xl sm:text-3xl leading-tight mb-1">
+                  Ready to start selling online?
+                </h2>
+                <p className="text-brand-100 text-sm leading-relaxed">
+                  Create your free store in minutes and start receiving orders from your customers today.
+                </p>
+              </div>
+            </div>
+
+            {/* Right */}
+            <div className="flex flex-col items-center gap-4 flex-shrink-0">
+              <button
+                onClick={handleCTA}
+                className="inline-flex items-center gap-2 bg-white hover:bg-brand-50 text-brand-700 font-bold text-sm px-8 py-4 rounded-xl transition-colors shadow-lg"
+              >
+                Create Your Free Page <ArrowRight className="w-4 h-4" />
+              </button>
+              {!user && (
+                <p className="text-brand-200 text-xs text-center">No credit card needed. Takes less than 5 minutes.</p>
+              )}
+              {/* social proof */}
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3, 4].map((n) => (
+                    <img
+                      key={n}
+                      src={`/avatar-${n}.png`}
+                      alt={`User ${n}`}
+                      width={28}
+                      height={28}
+                      loading="lazy"
+                      className="w-7 h-7 rounded-full border-2 border-brand-600 object-cover"
+                    />
+                  ))}
+                </div>
+                <span className="text-brand-100 text-xs">100+ Nigerian Businesses Trust Sellapage</span>
+              </div>
+            </div>
           </div>
-          <h2 className="font-display text-3xl md:text-5xl font-extrabold text-white mb-4">
-            Start showing up professionally today
-          </h2>
-          <p className="text-brand-100 text-lg mb-10 max-w-xl mx-auto">
-            It's free, it takes minutes, and your customers will immediately see the difference. No card. No stress. Just your business, online.
-          </p>
-          <button
-            onClick={handleCTA}
-            className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
-          >
-            {user ? 'Go to My Dashboard' : 'Create My Free Page'}
-            <ArrowRight size={20} />
-          </button>
-          {!user && (
-            <p className="text-brand-200 text-sm mt-4">No credit card needed. Takes less than 5 minutes.</p>
-          )}
         </div>
       </section>
 
       <Footer />
 
-      {/* ── NOTIFY MODAL ────────────────────────────────────────── */}
+      {/* ── NOTIFY MODAL ────────────────────────────────────────────────── */}
       {notifyPlan && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4"
-          onClick={closeModal}
-        >
-          <div
-            className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <h3 className="font-display font-bold text-gray-900 text-xl">
-                  {notifyDone ? "You're on the list! 🎉" : `Get notified — ${notifyPlan} Plan`}
-                </h3>
-                <p className="text-gray-500 text-sm mt-1">
-                  {notifyDone
-                    ? "We'll let you know as soon as this plan launches. Early users get a special discount."
-                    : "Drop your email and we'll notify you the moment this plan goes live. Early users get a discount."}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative">
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {notifyDone ? (
+              <div className="text-center py-4">
+                <div className="w-14 h-14 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-7 h-7 text-brand-600" />
+                </div>
+                <h3 className="font-display font-bold text-gray-900 text-lg mb-2">You're on the list!</h3>
+                <p className="text-gray-500 text-sm">
+                  We'll let you know as soon as this plan launches. Early users get a special discount.
                 </p>
               </div>
-              <button
-                onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 p-1 transition-colors flex-shrink-0 ml-4"
-              >
-                <X size={22} />
-              </button>
-            </div>
-
-            {!notifyDone ? (
-              <form onSubmit={submitNotify} className="space-y-3">
-                <input
-                  type="email"
-                  value={notifyEmail}
-                  onChange={e => setNotifyEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  required
-                  className="input-field"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-brand-500 hover:bg-brand-600 text-white py-3.5 rounded-xl font-bold text-sm transition-all"
-                >
-                  Notify Me When It Launches
-                </button>
-              </form>
             ) : (
-              <button
-                onClick={closeModal}
-                className="w-full border-2 border-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-all"
-              >
-                Close
-              </button>
+              <>
+                <h3 className="font-display font-bold text-gray-900 text-lg mb-1">
+                  Get notified for <span className="text-brand-600">{notifyPlan}</span>
+                </h3>
+                <p className="text-gray-500 text-sm mb-5">
+                  Drop your email and we'll notify you the moment this plan goes live. Early users get a discount.
+                </p>
+                <form onSubmit={submitNotify} className="flex flex-col gap-3">
+                  <input
+                    type="email"
+                    value={notifyEmail}
+                    onChange={(e) => setNotifyEmail(e.target.value)}
+                    required
+                    placeholder="your@email.com"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors"
+                  >
+                    Notify Me
+                  </button>
+                </form>
+              </>
             )}
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-
-// ─── Pricing Card ─────────────────────────────────────────────────────────────
-
-
-function PricingCard({ plan, onCTA, user }) {
-  const isHighlighted = plan.id === 'growth'
-
-  const ctaLabel = () => {
-    if (!plan.available) return 'Notify Me When Live'
-    return user ? 'Go to Dashboard' : plan.cta
-  }
-
-  const ctaClasses = () => {
-    if (!plan.available) {
-      return 'w-full py-3 rounded-xl font-semibold text-sm transition-all border-2 border-dashed border-gray-200 text-gray-400 hover:border-brand-300 hover:text-brand-600'
-    }
-    if (plan.ctaStyle === 'outline') {
-      return 'w-full py-3 rounded-xl font-semibold text-sm transition-all border-2 border-brand-500 text-brand-600 hover:bg-brand-50'
-    }
-    if (plan.ctaStyle === 'dark') {
-      return 'w-full py-3 rounded-xl font-bold text-sm transition-all bg-gray-900 text-white hover:bg-gray-800'
-    }
-    return 'w-full py-3 rounded-xl font-bold text-sm transition-all bg-brand-500 text-white hover:bg-brand-600'
-  }
-
-  return (
-    <div className={`rounded-2xl p-7 flex flex-col relative transition-all ${
-      isHighlighted
-        ? 'bg-brand-500 shadow-xl shadow-brand-200/50 md:scale-[1.03]'
-        : 'bg-white border border-gray-200 shadow-sm'
-    }`}>
-      {plan.badge && (
-        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-          isHighlighted ? 'bg-amber-400 text-amber-900' : 'bg-gray-100 text-gray-500'
-        }`}>
-          {plan.badge}
-        </div>
-      )}
-
-      <div className="mb-5">
-        <p className={`font-medium text-sm mb-2 ${isHighlighted ? 'text-brand-100' : 'text-gray-400'}`}>
-          {plan.name}
-        </p>
-        <div className="flex items-end gap-1.5 mb-1">
-          <span className={`font-display text-4xl font-extrabold ${isHighlighted ? 'text-white' : 'text-gray-900'}`}>
-            {plan.price}
-          </span>
-        </div>
-        <p className={`text-sm ${isHighlighted ? 'text-brand-200' : 'text-gray-400'}`}>{plan.period}</p>
-        <p className={`text-sm mt-3 leading-relaxed ${isHighlighted ? 'text-brand-100' : 'text-gray-500'}`}>
-          {plan.description}
-        </p>
-      </div>
-
-      <ul className="space-y-2.5 mb-7 flex-1">
-        {plan.features.map((feat, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-sm">
-            {feat.available ? (
-              <Check size={15} className={`flex-shrink-0 mt-0.5 ${isHighlighted ? 'text-brand-200' : 'text-brand-500'}`} />
-            ) : (
-              <Lock size={15} className={`flex-shrink-0 mt-0.5 ${isHighlighted ? 'text-brand-300/50' : 'text-gray-300'}`} />
-            )}
-            <span className={
-              feat.available
-                ? isHighlighted ? 'text-white' : 'text-gray-700'
-                : isHighlighted ? 'text-brand-300/60' : 'text-gray-300'
-            }>
-              {feat.text}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <button onClick={onCTA} className={ctaClasses()}>
-        {ctaLabel()}
-      </button>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, X, Store, LayoutDashboard, LogOut } from 'lucide-react'
+import { Menu, X, LayoutDashboard, LogOut } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { logoutSeller } from '../firebase/auth'
 
@@ -18,115 +18,114 @@ export default function Navbar() {
   const close = () => setOpen(false)
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/80">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-16">
 
-        {/* Logo */}
-        <Link to="/" onClick={close} className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shadow-md shadow-brand-200 group-hover:bg-brand-600 transition-colors">
-            <Store size={18} className="text-white" />
-          </div>
-          <span className="font-display font-bold text-gray-900 text-xl">Sellapage</span>
-        </Link>
+          {/* Logo */}
+          <Link
+            to="/"
+            onClick={close}
+            className="flex items-center gap-2 font-bold text-xl text-gray-900 hover:text-green-600 transition-colors"
+          >
+            <span className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm">
+              S
+            </span>
+            <span>sellapage</span>
+          </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
-          <a href="/#how-it-works" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">
-            How It Works
-          </a>
-          <a href="/#features" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">
-            Features
-          </a>
-          <a href="/#pricing" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">
-            Pricing
-          </a>
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
+            <a href="/#how-it-works" className="hover:text-gray-900 transition-colors">How It Works</a>
+            <a href="/#features" className="hover:text-gray-900 transition-colors">Features</a>
+            <a href="/#pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
 
-          {user ? (
-            /* Logged-in state */
-            <div className="flex items-center gap-3">
-              <Link
-                to="/dashboard"
-                className="flex items-center gap-2 text-gray-700 hover:text-brand-600 text-sm font-semibold transition-colors"
-              >
-                <LayoutDashboard size={16} />
-                Dashboard
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 text-sm font-medium transition-colors"
-              >
-                <LogOut size={15} />
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            /* Logged-out state */
-            <div className="flex items-center gap-3">
-              <Link
-                to="/login"
-                className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/login"
-                className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md"
-              >
-                Create Free Store
-              </Link>
-            </div>
-          )}
+            {user ? (
+              <div className="flex items-center gap-3 ml-2">
+                <Link
+                  to="/dashboard"
+                  className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md"
+                >
+                  <LayoutDashboard size={15} />
+                  Dashboard
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 px-3 py-2 rounded-xl text-sm transition-all"
+                >
+                  <LogOut size={14} />
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 ml-2">
+                <Link
+                  to="/login"
+                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/login?mode=register"
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md"
+                >
+                  Create Free Store
+                </Link>
+              </div>
+            )}
+          </nav>
+
+          {/* Mobile toggle */}
+          <button
+            onClick={() => setOpen(!open)}
+            className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            {open ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
-
-        {/* Mobile toggle */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="md:hidden p-2 text-gray-600 hover:text-gray-900 transition-colors"
-          aria-label="Toggle menu"
-        >
-          {open ? <X size={24} /> : <Menu size={24} />}
-        </button>
       </div>
 
       {/* Mobile Menu */}
       {open && (
-        <div className="md:hidden bg-white border-t border-gray-100 px-4 py-5 space-y-1">
+        <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 space-y-1 shadow-lg">
           {[
             { label: 'How It Works', href: '/#how-it-works' },
-            { label: 'Features',     href: '/#features' },
-            { label: 'Pricing',      href: '/#pricing' },
+            { label: 'Features', href: '/#features' },
+            { label: 'Pricing', href: '/#pricing' },
           ].map(link => (
             <a
-              key={link.label}
+              key={link.href}
               href={link.href}
               onClick={close}
-              className="block px-3 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+              className="block px-3 py-2.5 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg font-medium transition-colors"
             >
               {link.label}
             </a>
           ))}
 
-          <div className="border-t border-gray-100 pt-3 mt-3 space-y-1">
+          <div className="pt-3 border-t border-gray-100 mt-3 space-y-2">
             {user ? (
               <>
                 {store?.businessName && (
-                  <p className="px-3 py-1 text-xs text-gray-400 font-medium">
-                    Signed in as {store.businessName}
+                  <p className="text-xs text-gray-400 px-3 pb-1">
+                    Signed in as{' '}
+                    <span className="font-semibold text-gray-600">{store.businessName}</span>
                   </p>
                 )}
                 <Link
                   to="/dashboard"
                   onClick={close}
-                  className="flex items-center gap-2.5 px-3 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-2 w-full bg-green-500 text-white px-4 py-2.5 rounded-xl font-semibold text-sm"
                 >
-                  <LayoutDashboard size={17} className="text-brand-500" />
+                  <LayoutDashboard size={15} />
                   My Dashboard
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2.5 w-full px-3 py-3 text-red-500 font-medium rounded-xl hover:bg-red-50 transition-colors"
+                  className="flex items-center gap-2 w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl font-medium text-sm"
                 >
-                  <LogOut size={17} />
+                  <LogOut size={14} />
                   Sign Out
                 </button>
               </>
@@ -135,14 +134,14 @@ export default function Navbar() {
                 <Link
                   to="/login"
                   onClick={close}
-                  className="block px-3 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                  className="block w-full text-center border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
-                  to="/login"
+                  to="/login?mode=register"
                   onClick={close}
-                  className="block bg-brand-500 text-white px-3 py-3 rounded-xl font-semibold text-center"
+                  className="block w-full text-center bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-sm transition-colors"
                 >
                   Create Free Store
                 </Link>
@@ -151,6 +150,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </nav>
+    </header>
   )
 }

@@ -1,35 +1,33 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, AlertCircle, Store, CheckCircle, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import { loginSeller, registerSeller, resetPassword } from '../firebase/auth'
 
 const ERROR_MESSAGES = {
-  'auth/user-not-found':       'No account found with that email.',
-  'auth/wrong-password':       'Incorrect password. Please try again.',
-  'auth/invalid-credential':   'Email or password is incorrect.',
+  'auth/user-not-found': 'No account found with that email.',
+  'auth/wrong-password': 'Incorrect password. Please try again.',
+  'auth/invalid-credential': 'Email or password is incorrect.',
   'auth/email-already-in-use': 'An account with this email already exists.',
-  'auth/weak-password':        'Password must be at least 6 characters.',
-  'auth/invalid-email':        'Please enter a valid email address.',
-  'auth/too-many-requests':    'Too many attempts. Please wait a moment and try again.',
+  'auth/weak-password': 'Password must be at least 6 characters.',
+  'auth/invalid-email': 'Please enter a valid email address.',
+  'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
 }
 
-// Modes: 'login' | 'register' | 'forgot'
 export default function Login() {
   const navigate = useNavigate()
-  const [mode, setMode]               = useState('login')
-  const [loading, setLoading]         = useState(false)
-  const [error, setError]             = useState('')
+  const [mode, setMode] = useState('login')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [resetSent, setResetSent]     = useState(false)
-  const [resetEmail, setResetEmail]   = useState('')
-
+  const [resetSent, setResetSent] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
   const [form, setForm] = useState({
-    email:          '',
-    password:       '',
-    businessName:   '',
+    email: '',
+    password: '',
+    businessName: '',
     whatsappNumber: '',
-    storeName:      '',
-    description:    '',
+    storeName: '',
+    description: '',
   })
 
   const update = (e) => {
@@ -48,13 +46,9 @@ export default function Login() {
     setResetSent(false)
   }
 
-  // ── Forgot password handler ──────────────────────────────────────
   const handleReset = async (e) => {
     e.preventDefault()
-    if (!resetEmail.trim()) {
-      setError('Please enter your email address.')
-      return
-    }
+    if (!resetEmail.trim()) { setError('Please enter your email address.'); return }
     setLoading(true)
     setError('')
     try {
@@ -67,28 +61,25 @@ export default function Login() {
     }
   }
 
-  // ── Login / Register handler ─────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
     if (mode === 'register') {
-      if (!form.businessName.trim())   return setError('Please enter your business name.')
+      if (!form.businessName.trim()) return setError('Please enter your business name.')
       if (!form.whatsappNumber.trim()) return setError('Please enter your WhatsApp number.')
-      if (!form.storeName.trim())      return setError('Please choose a store URL name.')
-      if (form.storeName.length < 3)   return setError('Store name must be at least 3 characters.')
+      if (!form.storeName.trim()) return setError('Please choose a store URL name.')
+      if (form.storeName.length < 3) return setError('Store name must be at least 3 characters.')
     }
-
     setLoading(true)
     try {
       if (mode === 'login') {
         await loginSeller(form.email, form.password)
       } else {
         await registerSeller(form.email, form.password, {
-          businessName:   form.businessName.trim(),
+          businessName: form.businessName.trim(),
           whatsappNumber: form.whatsappNumber.trim(),
-          storeName:      form.storeName.trim(),
-          description:    form.description.trim(),
+          storeName: form.storeName.trim(),
+          description: form.description.trim(),
         })
       }
       navigate('/dashboard')
@@ -99,102 +90,79 @@ export default function Login() {
     }
   }
 
-  // ── Forgot Password Screen ───────────────────────────────────────
   if (mode === 'forgot') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4 py-16">
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          <Link to="/" className="flex items-center justify-center gap-2.5 mb-8 group">
-            <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-md group-hover:bg-brand-600 transition-colors">
-              <Store size={20} className="text-white" />
-            </div>
-            <span className="font-display font-bold text-gray-900 text-2xl">Sellapage</span>
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-8 transition-colors">
+            <ArrowLeft size={14} /> Back to home
           </Link>
-
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
-            <button
-              onClick={() => switchMode('login')}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 text-sm font-medium mb-6 transition-colors"
-            >
-              <ArrowLeft size={16} />
-              Back to sign in
-            </button>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</span>
+              <span className="font-bold text-lg text-gray-900">sellapage</span>
+            </div>
 
             {resetSent ? (
-              <div className="text-center py-4">
-                <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle size={32} className="text-brand-500" />
+              <div>
+                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4">
+                  <CheckCircle size={24} className="text-green-500" />
                 </div>
-                <h2 className="font-display text-2xl font-extrabold text-gray-900 mb-2">
-                  Check your email
-                </h2>
-                <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                  We sent a password reset link to{' '}
-                  <span className="font-semibold text-gray-700">{resetEmail}</span>.
-                  Check your inbox and follow the link to reset your password.
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Check your inbox</h2>
+                <p className="text-gray-500 text-sm mb-1">
+                  We sent a reset link to <span className="font-medium text-gray-700">{resetEmail}</span>.
                 </p>
-                <p className="text-gray-400 text-xs mb-6">
-                  Did not receive it? Check your spam folder, or{' '}
-                  <button
-                    onClick={() => setResetSent(false)}
-                    className="text-brand-600 hover:underline font-medium"
-                  >
-                    try again
-                  </button>.
+                <p className="text-gray-400 text-sm mb-6">
+                  Didn't receive it? Check your spam folder, or{' '}
+                  <button onClick={() => setResetSent(false)} className="text-green-600 hover:underline">try again</button>.
                 </p>
                 <button
                   onClick={() => switchMode('login')}
-                  className="w-full border-2 border-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-all"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition-colors"
                 >
                   Back to Sign In
                 </button>
               </div>
             ) : (
-              <>
-                <h2 className="font-display text-2xl font-extrabold text-gray-900 mb-1">
-                  Reset your password
-                </h2>
-                <p className="text-gray-400 text-sm mb-6">
-                  Enter the email you signed up with and we will send you a reset link.
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Reset your password</h2>
+                <p className="text-gray-500 text-sm mb-6">
+                  Enter the email you signed up with and we'll send you a reset link.
                 </p>
-
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2.5 mb-5">
-                    <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-red-600 text-sm">{error}</p>
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl mb-5">
+                    <AlertCircle size={15} /> {error}
                   </div>
                 )}
-
                 <form onSubmit={handleReset} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email Address
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
                     <input
                       type="email"
                       value={resetEmail}
                       onChange={e => setResetEmail(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
                       placeholder="you@example.com"
-                      className="input-field"
-                      autoComplete="email"
+                      required
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-brand-500 hover:bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-200"
+                    className="w-full bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        Sending reset link...
-                      </>
-                    ) : (
-                      'Send Reset Link'
-                    )}
+                    {loading && <Loader2 size={16} className="animate-spin" />}
+                    Send Reset Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchMode('login')}
+                    className="w-full text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
+                  >
+                    Back to Sign In
                   </button>
                 </form>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -202,46 +170,43 @@ export default function Login() {
     )
   }
 
-  // ── Login / Register Screen ──────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-emerald-50 flex items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center justify-center gap-2.5 mb-8 group">
-          <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-md group-hover:bg-brand-600 transition-colors">
-            <Store size={20} className="text-white" />
-          </div>
-          <span className="font-display font-bold text-gray-900 text-2xl">Sellapage</span>
+        <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-8 transition-colors">
+          <ArrowLeft size={14} /> Back to home
         </Link>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
-          {/* Tab switch */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-7">
-            {['login', 'register'].map(m => (
-              <button
-                key={m}
-                onClick={() => switchMode(m)}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                  mode === m ? 'bg-white shadow text-gray-900' : 'text-gray-400'
-                }`}
-              >
-                {m === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            ))}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</span>
+            <span className="font-bold text-lg text-gray-900">sellapage</span>
           </div>
 
-          <h2 className="font-display text-2xl font-extrabold text-gray-900 mb-1">
-            {mode === 'login' ? 'Welcome back' : 'Create your store'}
-          </h2>
-          <p className="text-gray-400 text-sm mb-6">
+          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
+            <button
+              onClick={() => switchMode('login')}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'login' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => switchMode('register')}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'register' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Create Store
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-500 mb-6">
             {mode === 'login'
               ? 'Sign in to manage your Sellapage.'
               : 'Fill in your details to get started in minutes.'}
           </p>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2.5 mb-5">
-              <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl mb-5">
+              <AlertCircle size={15} /> {error}
             </div>
           )}
 
@@ -249,137 +214,128 @@ export default function Login() {
             {mode === 'register' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Business Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Business Name</label>
                   <input
                     name="businessName"
-                    type="text"
                     value={form.businessName}
                     onChange={update}
-                    placeholder="E.g. Chioma's Fashion House"
-                    className="input-field"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+                    placeholder="e.g. Chioma Fabrics"
+                    required
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">WhatsApp Number *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">WhatsApp Number</label>
                   <input
                     name="whatsappNumber"
-                    type="tel"
                     value={form.whatsappNumber}
                     onChange={update}
-                    placeholder="E.g. 2348012345678"
-                    className="input-field"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+                    placeholder="e.g. 08012345678"
+                    required
                   />
-                  <p className="text-gray-400 text-xs mt-1">
-                    Include country code — e.g. <strong>234</strong>8012345678 for Nigeria
-                  </p>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Your Store URL *</label>
-                  <div className="flex rounded-xl border border-gray-200 overflow-hidden focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
-                    <span className="bg-gray-50 px-3 flex items-center text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Store URL Name</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
                       sellapage.com.ng/
                     </span>
                     <input
                       name="storeName"
-                      type="text"
                       value={form.storeName}
                       onChange={update}
-                      placeholder="yourbrandname"
-                      className="flex-1 px-3 py-3 text-sm focus:outline-none bg-white"
+                      className="w-full border border-gray-200 rounded-xl pl-36 pr-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+                      placeholder="yourstore"
+                      required
+                      minLength={3}
                     />
                   </div>
-                  <p className="text-gray-400 text-xs mt-1">
-                    Lowercase letters, numbers, and hyphens only. Min 3 characters.
-                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Only lowercase letters, numbers, and hyphens</p>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Short Description
-                    <span className="text-gray-400 font-normal"> (Optional)</span>
+                    Store Description <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <textarea
                     name="description"
                     value={form.description}
                     onChange={update}
-                    placeholder="E.g. Premium fashion pieces for the modern Nigerian woman"
                     rows={2}
-                    className="input-field resize-none"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all resize-none"
+                    placeholder="Tell customers what you sell…"
                   />
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
               <input
                 name="email"
                 type="email"
                 value={form.email}
                 onChange={update}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
                 placeholder="you@example.com"
-                className="input-field"
-                autoComplete="email"
+                required
               />
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-700">Password *</label>
-                {mode === 'login' && (
-                  <button
-                    type="button"
-                    onClick={() => switchMode('forgot')}
-                    className="text-brand-600 hover:underline text-xs font-medium transition-colors"
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <div className="relative">
                 <input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={update}
-                  placeholder="At least 6 characters"
-                  className="input-field pr-11"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+                  placeholder={mode === 'register' ? 'At least 6 characters' : '••••••••'}
+                  required
+                  minLength={mode === 'register' ? 6 : undefined}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
+            {mode === 'login' && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => switchMode('forgot')}
+                  className="text-sm text-green-600 hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-brand-500 hover:bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-200 hover:shadow-xl mt-2"
+              className="w-full bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md mt-2"
             >
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  {mode === 'login' ? 'Signing in...' : 'Creating your store...'}
-                </>
-              ) : (
-                mode === 'login' ? 'Sign In' : 'Create My Store'
-              )}
+              {loading && <Loader2 size={16} className="animate-spin" />}
+              {mode === 'login' ? 'Sign In' : 'Create My Store'}
             </button>
           </form>
-        </div>
 
-        <p className="text-center mt-6">
-          <Link to="/" className="text-brand-600 hover:underline text-sm">
-            ← Back to home
-          </Link>
-        </p>
+          {mode === 'register' && (
+            <p className="text-xs text-gray-400 text-center mt-4">
+              By creating a store you agree to our{' '}
+              <Link to="/terms-of-service" className="underline hover:text-gray-600">Terms</Link>
+              {' '}and{' '}
+              <Link to="/privacy-policy" className="underline hover:text-gray-600">Privacy Policy</Link>.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

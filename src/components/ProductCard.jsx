@@ -1,57 +1,156 @@
-import { ShoppingCart, MessageCircle } from 'lucide-react'
+import { useState } from 'react'
+import { MessageCircle, Package, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react'
 import { buildOrderURL } from '../utils/whatsapp'
 
+export default function ProductCard({ product, whatsappNumber, storeUrl, isHighlighted }) {
+  const [activeImg, setActiveImg]   = useState(0)
+  const [popupIndex, setPopupIndex] = useState(null)
 
-export default function ProductCard({ product, whatsappNumber }) {
+  const images      = product.imageUrls?.length ? product.imageUrls : []
+  const hasMultiple = images.length > 1
+
   const handleOrder = () => {
-    const url = buildOrderURL(whatsappNumber, product.name, product.price)
+    const url = buildOrderURL(whatsappNumber, product.name, product.price, product.id, storeUrl)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
-
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
-      {/* Image */}
-      <div className="relative h-44 bg-gray-50 overflow-hidden">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-            <ShoppingCart size={32} className="text-gray-200" />
-            <p className="text-gray-300 text-xs">No image</p>
+    <>
+      {/* ── Card ── */}
+      <div
+        id={`product-${product.id}`}
+        className={`bg-white rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 group
+          ${isHighlighted
+            ? 'border-2 border-green-400 ring-2 ring-green-300 ring-offset-2 shadow-lg'
+            : 'border border-stone-100 shadow-sm hover:shadow-md'
+          }`}
+      >
+        {/* Image area */}
+        <div className="relative bg-stone-100 overflow-hidden" style={{ aspectRatio: '1 / 1' }}>
+          {images.length > 0 ? (
+            <>
+              <img
+                src={images[activeImg]}
+                alt={product.name}
+                className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 cursor-zoom-in"
+                loading="lazy"
+                onClick={() => setPopupIndex(activeImg)}
+              />
+              {/* Zoom hint */}
+              <div className="absolute top-2 right-2 w-7 h-7 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <ZoomIn size={13} className="text-white" />
+              </div>
+              {/* Carousel arrows */}
+              {hasMultiple && (
+                <>
+                  <button
+                    onClick={e => { e.stopPropagation(); setActiveImg(i => (i - 1 + images.length) % images.length) }}
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors"
+                    aria-label="Previous image"
+                  ><ChevronLeft size={14} /></button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setActiveImg(i => (i + 1) % images.length) }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors"
+                    aria-label="Next image"
+                  ><ChevronRight size={14} /></button>
+                  {/* Dot indicators */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                    {images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={e => { e.stopPropagation(); setActiveImg(i) }}
+                        className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeImg ? 'bg-white scale-125' : 'bg-white/50'}`}
+                        aria-label={`Image ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+              <Package size={32} className="text-stone-300" />
+              <p className="text-stone-300 text-xs">No image</p>
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="p-3 sm:p-4 flex flex-col flex-1">
+          <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">
+            {product.name}
+          </h3>
+          {product.description && (
+            <p className="text-stone-400 text-xs mb-2 line-clamp-2 leading-relaxed flex-1">
+              {product.description}
+            </p>
+          )}
+          <div className="flex items-center justify-between gap-2 mt-auto pt-2">
+            <span className="text-green-600 font-extrabold text-lg leading-none">
+              ₦{Number(product.price).toLocaleString()}
+            </span>
+            <button
+              onClick={handleOrder}
+              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm whitespace-nowrap"
+            >
+              <MessageCircle size={13} />
+              Order
+            </button>
           </div>
-        )}
-      </div>
-
-
-      {/* Info */}
-      <div className="p-3.5">
-        <h3 className="font-display font-semibold text-gray-900 text-sm leading-tight mb-0.5 line-clamp-1">
-          {product.name}
-        </h3>
-        {product.description && (
-          <p className="text-gray-400 text-xs mb-2.5 line-clamp-2 leading-relaxed">
-            {product.description}
-          </p>
-        )}
-        <div className="flex items-center justify-between gap-2 mt-2">
-          <span className="text-brand-600 font-display font-bold text-lg">
-            ₦{Number(product.price).toLocaleString()}
-          </span>
-          <button
-            onClick={handleOrder}
-            className="flex items-center gap-1.5 bg-whatsapp hover:opacity-90 text-white px-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 shadow-sm"
-          >
-            <MessageCircle size={14} />
-            Order
-          </button>
         </div>
       </div>
-    </div>
+
+      {/* ── Lightbox popup ── */}
+      {popupIndex !== null && (
+        <div
+          className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4"
+          onClick={() => setPopupIndex(null)}
+        >
+          <button
+            onClick={() => setPopupIndex(null)}
+            className="absolute top-4 right-4 w-11 h-11 bg-white/15 hover:bg-white/30 text-white rounded-full flex items-center justify-center transition-colors z-10"
+            aria-label="Close"
+          ><X size={20} /></button>
+
+          {hasMultiple && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+              {popupIndex + 1} / {images.length}
+            </div>
+          )}
+          {hasMultiple && (
+            <>
+              <button
+                onClick={e => { e.stopPropagation(); setPopupIndex(i => (i - 1 + images.length) % images.length) }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/15 hover:bg-white/30 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                aria-label="Previous"
+              ><ChevronLeft size={22} /></button>
+              <button
+                onClick={e => { e.stopPropagation(); setPopupIndex(i => (i + 1) % images.length) }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/15 hover:bg-white/30 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                aria-label="Next"
+              ><ChevronRight size={22} /></button>
+            </>
+          )}
+
+          <img
+            src={images[popupIndex]}
+            alt={product.name}
+            className="max-w-full max-h-[82vh] object-contain rounded-2xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+
+          <div className="absolute bottom-5 left-0 right-0 flex flex-col items-center gap-3 px-4">
+            <p className="text-white/80 text-sm font-semibold drop-shadow text-center">{product.name}</p>
+            <button
+              onClick={e => { e.stopPropagation(); handleOrder() }}
+              className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-all"
+            >
+              <MessageCircle size={15} />
+              Order on WhatsApp — ₦{Number(product.price).toLocaleString()}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

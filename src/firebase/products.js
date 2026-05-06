@@ -5,27 +5,21 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  getDoc,
   query,
   where,
   orderBy,
   getCountFromServer,
   writeBatch,
+  increment,
 } from 'firebase/firestore'
 import { db } from './config'
-
 
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
-
 export const FREE_PLAN_LIMIT = 10
 
-
-/**
- * Internal: upload a single file to Cloudinary.
- * @param {File}   imageFile
- * @param {string} folder - Cloudinary destination folder
- */
 const uploadToCloudinary = async (imageFile, folder = 'sellapage/products') => {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error(
@@ -55,64 +49,55 @@ const uploadToCloudinary = async (imageFile, folder = 'sellapage/products') => {
   return data.secure_url
 }
 
-
-/**
- * Upload multiple image files in parallel.
- * Returns an array of secure URLs.
- */
 const uploadMultipleImages = async (imageFiles) => {
   if (!imageFiles || imageFiles.length === 0) return []
   const uploads = imageFiles.map(file => uploadToCloudinary(file, 'sellapage/products'))
   return await Promise.all(uploads)
 }
 
-
-/**
- * Upload a single image file (e.g. store logo).
- * @param {File}   imageFile
- * @param {string} folder - defaults to 'sellapage/logos'
- * @returns {Promise<string>} secure URL
- */
 export const uploadSingleImage = async (imageFile, folder = 'sellapage/logos') => {
   return await uploadToCloudinary(imageFile, folder)
 }
 
-
-/**
- * Check if a store has reached the free plan product limit.
- */
 export const checkProductLimit = async (storeId) => {
+  const storeSnap = await getDoc(doc(db, 'stores', storeId))
+  const storeData = storeSnap.exists() ? storeSnap.data() : {}
+  const effectiveLimit = storeData.maxProducts ?? FREE_PLAN_LIMIT
+
   const snap = await getCountFromServer(
     collection(db, 'stores', storeId, 'products')
   )
   const count = snap.data().count
-  return { count, limitReached: count >= FREE_PLAN_LIMIT }
+  return { count, limitReached: count >= effectiveLimit }
 }
 
-
-/**
- * Add a new product. Supports up to 3 images.
- */
 export const addProduct = async (storeId, productData, imageFiles = []) => {
-  const { limitReached } = await checkProductLimit(storeId)
-  if (limitReached) throw new Error('FREE_PLAN_LIMIT_REACHED')
+  const storeSnap = await getDoc(doc(db, 'stores', storeId))
+  const storeData = storeSnap.exists() ? storeSnap.data() : {}
+  const effectiveLimit = storeData.maxProducts ?? FREE_PLAN_LIMIT
+  const maxImages = storeData.maxImagesPerProduct ?? 3
 
-  const imageUrls = await uploadMultipleImages(imageFiles.slice(0, 3))
+  const snap = await getCountFromServer(
+    collection(db, 'stores', storeId, 'products')
+  )
+  if (snap.data().count >= effectiveLimit) throw new Error('FREE_PLAN_LIMIT_REACHED')
 
-  const docRef = await addDoc(collection(db, 'stores', storeId, 'products'), {
+  const imageUrls = await uploadMultipleImages(imageFiles.slice(0, maxImages))
+
+  const batch = writeBatch(db)
+  const productRef = doc(collection(db, 'stores', storeId, 'products'))
+  batch.set(productRef, {
     ...productData,
     imageUrls,
     imageUrl: imageUrls[0] || '',
     createdAt: new Date(),
   })
+  batch.update(doc(db, 'stores', storeId), { productCount: increment(1) })
+  await batch.commit()
 
-  return { id: docRef.id, ...productData, imageUrls, imageUrl: imageUrls[0] || '' }
+  return { id: productRef.id, ...productData, imageUrls, imageUrl: imageUrls[0] || '' }
 }
 
-
-/**
- * Fetch all products for a store, newest first.
- */
 export const getProducts = async (storeId) => {
   const q = query(
     collection(db, 'stores', storeId, 'products'),
@@ -128,16 +113,16 @@ export const getProducts = async (storeId) => {
   })
 }
 
-
-/**
- * Update a product. Optionally adds new images on top of existing ones.
- */
 export const updateProduct = async (storeId, productId, updates, newImageFiles = []) => {
+  const storeSnap = await getDoc(doc(db, 'stores', storeId))
+  const storeData = storeSnap.exists() ? storeSnap.data() : {}
+  const maxImages = storeData.maxImagesPerProduct ?? 3
+
   let imageUrls = updates.imageUrls || []
 
   if (newImageFiles.length > 0) {
     const newUrls = await uploadMultipleImages(newImageFiles)
-    imageUrls = [...imageUrls, ...newUrls].slice(0, 3)
+    imageUrls = [...imageUrls, ...newUrls].slice(0, maxImages)
   }
 
   const finalData = {
@@ -151,10 +136,6 @@ export const updateProduct = async (storeId, productId, updates, newImageFiles =
   return finalData
 }
 
-
-/**
- * Remove a specific image URL from a product's imageUrls array.
- */
 export const removeProductImage = async (storeId, productId, imageUrl, currentImageUrls) => {
   const imageUrls = currentImageUrls.filter(url => url !== imageUrl)
   await updateDoc(doc(db, 'stores', storeId, 'products', productId), {
@@ -164,19 +145,13 @@ export const removeProductImage = async (storeId, productId, imageUrl, currentIm
   return imageUrls
 }
 
-
-/**
- * Delete a single product from Firestore.
- */
 export const deleteProduct = async (storeId, productId) => {
-  await deleteDoc(doc(db, 'stores', storeId, 'products', productId))
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'stores', storeId, 'products', productId))
+  batch.update(doc(db, 'stores', storeId), { productCount: increment(-1) })
+  await batch.commit()
 }
 
-
-/**
- * Delete ALL products for a store using a batched write.
- * Used during account deletion.
- */
 export const deleteAllStoreProducts = async (storeId) => {
   const snap = await getDocs(collection(db, 'stores', storeId, 'products'))
   if (snap.empty) return
@@ -185,10 +160,6 @@ export const deleteAllStoreProducts = async (storeId) => {
   await batch.commit()
 }
 
-
-/**
- * Fetch a store document by its public URL slug.
- */
 export const getStoreBySlug = async (storeName) => {
   const q = query(collection(db, 'stores'), where('storeName', '==', storeName))
   const snap = await getDocs(q)
