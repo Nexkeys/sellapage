@@ -75,7 +75,7 @@ export default function SettingsTab({
   const [slugError, setSlugError]             = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteStep, setDeleteStep]           = useState(1)
-  const [upgradeLoading, setUpgradeLoading]   = useState(false)
+  const [upgradeLoading, setUpgradeLoading]   = useState('')
   const [upgradeError, setUpgradeError]       = useState('')
 
 
@@ -115,7 +115,7 @@ export default function SettingsTab({
 
   const handleUpgrade = async (targetPlan) => {
     setUpgradeError('')
-    setUpgradeLoading(true)
+    setUpgradeLoading(targetPlan)
     try {
       const res = await fetch('/.netlify/functions/billing-initialize', {
         method: 'POST',
@@ -131,7 +131,7 @@ export default function SettingsTab({
       console.error('Upgrade failed', err)
       setUpgradeError('Something went wrong. Please try again or contact support.')
     } finally {
-      setUpgradeLoading(false)
+      setUpgradeLoading('')
     }
   }
 
@@ -338,20 +338,20 @@ export default function SettingsTab({
           <div className="flex flex-col gap-3">
             <button
               onClick={() => handleUpgrade('growth')}
-              disabled={upgradeLoading}
+              disabled={upgradeLoading === 'growth'}
               className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
-              {upgradeLoading
+              {upgradeLoading === 'growth'
                 ? <Loader2 size={15} className="animate-spin" />
                 : <><Sparkles size={15} /> Upgrade to Growth — ₦5,000/mo</>
               }
             </button>
             <button
               onClick={() => handleUpgrade('pro')}
-              disabled={upgradeLoading}
+              disabled={upgradeLoading === 'pro'}
               className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
-              {upgradeLoading
+              {upgradeLoading === 'pro'
                 ? <Loader2 size={15} className="animate-spin" />
                 : <><Sparkles size={15} /> Upgrade to Pro — ₦12,000/mo</>
               }
@@ -362,10 +362,10 @@ export default function SettingsTab({
         {plan === 'growth' && (
           <button
             onClick={() => handleUpgrade('pro')}
-            disabled={upgradeLoading}
+            disabled={upgradeLoading === 'pro'}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
           >
-            {upgradeLoading
+            {upgradeLoading === 'pro'
               ? <Loader2 size={15} className="animate-spin" />
               : <><Sparkles size={15} /> Upgrade to Pro — ₦12,000/mo</>
             }
