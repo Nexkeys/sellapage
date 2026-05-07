@@ -1,3 +1,5 @@
+//src/components/dashboard/Overview.jsx//
+
 import {
   Plus, Copy, Check, ExternalLink, Users, ArrowRight,
   Zap, CheckCircle, X, Loader2, AlertCircle,

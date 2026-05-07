@@ -5,12 +5,14 @@ import {
 } from 'lucide-react'
 import { FREE_PLAN_LIMIT } from '../../firebase/products'
 
+
 const getInitials = (name = '') => {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (!parts.length) return '?'
   if (parts.length === 1) return parts[0][0].toUpperCase()
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
+
 
 const THEME_COLORS = [
   { label: 'Green',  value: '#16a34a' },
@@ -20,6 +22,7 @@ const THEME_COLORS = [
   { label: 'Orange', value: '#ea580c' },
   { label: 'Teal',   value: '#0d9488' },
 ]
+
 
 const PLAN_INFO = {
   starter: {
@@ -48,6 +51,7 @@ const PLAN_INFO = {
   },
 }
 
+
 export default function SettingsTab({
   store, plan, isGrowthOrPro, isPro,
   onSave, saveLoading, saveError, saveSuccess,
@@ -60,12 +64,15 @@ export default function SettingsTab({
     whatsappNumber: store?.whatsappNumber || '',
     description:    store?.description    || '',
   })
-  const [slugError, setSlugError]         = useState('')
+  const [slugError, setSlugError]             = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteStep, setDeleteStep]       = useState(1)
-  const [upgradeLoading, setUpgradeLoading] = useState(false)
+  const [deleteStep, setDeleteStep]           = useState(1)
+  const [upgradeLoading, setUpgradeLoading]   = useState(false)
+  const [upgradeError, setUpgradeError]       = useState('')
+
 
   const planInfo = PLAN_INFO[plan] || PLAN_INFO.starter
+
 
   useEffect(() => {
     setForm({
@@ -76,6 +83,7 @@ export default function SettingsTab({
     })
   }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.description])
 
+
   const handleSlugChange = e => {
     const val = e.target.value.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '')
     setForm(p => ({ ...p, storeName: val }))
@@ -85,34 +93,40 @@ export default function SettingsTab({
     else setSlugError('')
   }
 
+
   const handleSubmit = () => {
     if (!form.businessName.trim() || !form.storeName.trim() || slugError) return
     onSave(form)
   }
 
+
   const handleDeleteClick = () => { onClearDeleteError(); setDeleteStep(1); setShowDeleteModal(true) }
   const closeModal        = () => { setShowDeleteModal(false); setDeleteStep(1) }
   const handleConfirmStep = () => { if (deleteStep === 1) setDeleteStep(2); else onDeleteAccount() }
 
-  // Upgrade button — wires to Cloud Function when backend is ready
+
   const handleUpgrade = async (targetPlan) => {
+    setUpgradeError('')
     setUpgradeLoading(true)
     try {
-      // TODO: replace with real Cloud Function call
-      // const res = await fetch('/api/billing/initialize', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ storeId: store.id, plan: targetPlan }),
-      // })
-      // const { authorization_url } = await res.json()
-      // window.location.href = authorization_url
-      alert(`Paystack integration coming soon!\nPlan: ${targetPlan}`)
+      const res = await fetch('/.netlify/functions/billing-initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: store.id, plan: targetPlan }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.authorization_url) {
+        throw new Error('No authorization URL returned')
+      }
+      window.location.href = data.authorization_url
     } catch (err) {
       console.error('Upgrade failed', err)
+      setUpgradeError('Something went wrong. Please try again or contact support.')
     } finally {
       setUpgradeLoading(false)
     }
   }
+
 
   const handleThemeColor = async (color) => {
     if (!isGrowthOrPro) return
@@ -123,6 +137,7 @@ export default function SettingsTab({
     }
   }
 
+
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
       <div>
@@ -130,9 +145,11 @@ export default function SettingsTab({
         <p className="text-gray-400 text-sm mt-1">Manage your store and account preferences.</p>
       </div>
 
+
       {/* ── Store Info ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
         <h2 className="font-bold text-gray-900 text-base">Store Information</h2>
+
 
         {/* Logo */}
         <div>
@@ -166,6 +183,7 @@ export default function SettingsTab({
           </div>
         </div>
 
+
         {/* Theme colours — Growth/Pro only */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -193,6 +211,7 @@ export default function SettingsTab({
           </div>
         </div>
 
+
         {/* Business Name */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Name</label>
@@ -203,6 +222,7 @@ export default function SettingsTab({
             placeholder="e.g. Bola's Boutique"
           />
         </div>
+
 
         {/* Store URL slug */}
         <div>
@@ -229,6 +249,7 @@ export default function SettingsTab({
           )}
         </div>
 
+
         {/* WhatsApp */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">WhatsApp Number</label>
@@ -240,6 +261,7 @@ export default function SettingsTab({
           />
           <p className="text-gray-400 text-xs mt-1.5">Used for customer order messages on your store page.</p>
         </div>
+
 
         {/* Description */}
         <div>
@@ -253,6 +275,7 @@ export default function SettingsTab({
           />
         </div>
 
+
         {/* Email (read-only) */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
@@ -264,9 +287,11 @@ export default function SettingsTab({
           <p className="text-gray-400 text-xs mt-1.5">To change your email, please contact support.</p>
         </div>
 
+
         {/* Save */}
         {saveError   && <p className="text-red-500 text-sm flex items-center gap-2"><AlertCircle size={14} />{saveError}</p>}
         {saveSuccess && <p className="text-green-600 text-sm flex items-center gap-2"><CheckCircle size={14} />{saveSuccess}</p>}
+
 
         <button
           onClick={handleSubmit}
@@ -278,9 +303,11 @@ export default function SettingsTab({
         </button>
       </div>
 
+
       {/* ── Plan & Billing ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
         <h2 className="font-bold text-gray-900 text-base">Plan & Billing</h2>
+
 
         <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
           <div className="flex-1 min-w-0">
@@ -298,18 +325,28 @@ export default function SettingsTab({
           </div>
         </div>
 
+
         {planInfo.upgradeLabel && (
-          <button
-            onClick={() => handleUpgrade(planInfo.upgradePlan)}
-            disabled={upgradeLoading}
-            className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
-          >
-            {upgradeLoading
-              ? <Loader2 size={15} className="animate-spin" />
-              : <><Sparkles size={15} /> {planInfo.upgradeLabel}</>
-            }
-          </button>
+          <>
+            <button
+              onClick={() => handleUpgrade(planInfo.upgradePlan)}
+              disabled={upgradeLoading}
+              className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+            >
+              {upgradeLoading
+                ? <Loader2 size={15} className="animate-spin" />
+                : <><Sparkles size={15} /> {planInfo.upgradeLabel}</>
+              }
+            </button>
+            {upgradeError && (
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+                <AlertCircle size={14} className="shrink-0" />
+                {upgradeError}
+              </p>
+            )}
+          </>
         )}
+
 
         {isPro && (
           <div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 text-sm font-medium">
@@ -317,6 +354,7 @@ export default function SettingsTab({
           </div>
         )}
       </div>
+
 
       {/* ── Danger Zone ── */}
       <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-5 space-y-3">
@@ -332,6 +370,7 @@ export default function SettingsTab({
           <p className="text-red-500 text-sm flex items-center gap-2"><AlertCircle size={13} />{deleteError}</p>
         )}
       </div>
+
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
