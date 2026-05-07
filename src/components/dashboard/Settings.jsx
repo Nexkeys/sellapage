@@ -25,27 +25,35 @@ const THEME_COLORS = [
 
 
 const PLAN_INFO = {
+  free: {
+    label:        'Starter (Free)',
+    products:     '10 products',
+    images:       '3 images / product',
+    features:     ['Basic store page', 'WhatsApp order button', 'Lead capture form', 'Shareable store link'],
+    upgradeLabel: 'Upgrade to Growth — ₦5,000/mo',
+    upgradePlan:  'growth',
+  },
   starter: {
-    label:      'Starter (Free)',
-    products:   '10 products',
-    images:     '3 images / product',
-    features:   ['Basic store page', 'WhatsApp order button', 'Lead capture form', 'Shareable store link'],
+    label:        'Starter (Free)',
+    products:     '10 products',
+    images:       '3 images / product',
+    features:     ['Basic store page', 'WhatsApp order button', 'Lead capture form', 'Shareable store link'],
     upgradeLabel: 'Upgrade to Growth — ₦5,000/mo',
     upgradePlan:  'growth',
   },
   growth: {
-    label:      'Growth',
-    products:   '50 products',
-    images:     '10 images / product',
-    features:   ['Everything in Starter', 'Store logo & colours', 'Analytics & click tracking', 'Product on/off toggle', 'Priority WA support'],
+    label:        'Growth',
+    products:     '50 products',
+    images:       '10 images / product',
+    features:     ['Everything in Starter', 'Store logo & colours', 'Analytics & click tracking', 'Product on/off toggle', 'Priority WA support'],
     upgradeLabel: 'Upgrade to Pro — ₦12,000/mo',
     upgradePlan:  'pro',
   },
   pro: {
-    label:    'Pro ✦',
-    products: 'Unlimited products',
-    images:   '50 images / product',
-    features: ['Everything in Growth', 'Hot leads list', 'Top performing products', 'Better store insights', 'Pro store badge', 'Early access features'],
+    label:        'Pro ✦',
+    products:     'Unlimited products',
+    images:       '50 images / product',
+    features:     ['Everything in Growth', 'Hot leads list', 'Top performing products', 'Better store insights', 'Pro store badge', 'Early access features'],
     upgradeLabel: null,
     upgradePlan:  null,
   },
@@ -326,25 +334,49 @@ export default function SettingsTab({
         </div>
 
 
-        {planInfo.upgradeLabel && (
-          <>
+        {(plan === 'starter' || plan === 'free') && (
+          <div className="flex flex-col gap-3">
             <button
-              onClick={() => handleUpgrade(planInfo.upgradePlan)}
+              onClick={() => handleUpgrade('growth')}
               disabled={upgradeLoading}
               className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
               {upgradeLoading
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> {planInfo.upgradeLabel}</>
+                : <><Sparkles size={15} /> Upgrade to Growth — ₦5,000/mo</>
               }
             </button>
-            {upgradeError && (
-              <p className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
-                <AlertCircle size={14} className="shrink-0" />
-                {upgradeError}
-              </p>
-            )}
-          </>
+            <button
+              onClick={() => handleUpgrade('pro')}
+              disabled={upgradeLoading}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+            >
+              {upgradeLoading
+                ? <Loader2 size={15} className="animate-spin" />
+                : <><Sparkles size={15} /> Upgrade to Pro — ₦12,000/mo</>
+              }
+            </button>
+          </div>
+        )}
+
+        {plan === 'growth' && (
+          <button
+            onClick={() => handleUpgrade('pro')}
+            disabled={upgradeLoading}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+          >
+            {upgradeLoading
+              ? <Loader2 size={15} className="animate-spin" />
+              : <><Sparkles size={15} /> Upgrade to Pro — ₦12,000/mo</>
+            }
+          </button>
+        )}
+
+        {upgradeError && (
+          <p className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+            <AlertCircle size={14} className="shrink-0" />
+            {upgradeError}
+          </p>
         )}
 
 
