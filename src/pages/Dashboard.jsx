@@ -1,5 +1,3 @@
-//src/pages/Dashboard.jsx//
-
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -12,7 +10,7 @@ import { logoutSeller, updateStore, deleteAuthUser } from '../firebase/auth'
 import { db } from '../firebase/config'
 import {
   collection, getDocs, query, orderBy,
-  writeBatch, deleteDoc, doc, addDoc, setDoc, getDoc,
+  writeBatch, deleteDoc, doc, addDoc, setDoc, getDoc, updateDoc,
 } from 'firebase/firestore'
 
 import DashboardLayout  from '../components/dashboard/DashboardLayout'
@@ -31,18 +29,22 @@ import DiscountsTab     from '../components/dashboard/DiscountsTab'
 import OnlineStoreTab   from '../components/dashboard/OnlineStoreTab'
 import MobileAppTab     from '../components/dashboard/MobileAppTab'
 import PayoutsTab       from '../components/dashboard/PayoutsTab'
+import BillingTab       from '../components/dashboard/BillingTab'
+
 
 const EMPTY_FORM = {
   name: '', price: '', description: '',
   imageFiles: [], imagePreviews: [], imageUrls: [],
 }
 
+
 export default function Dashboard() {
   const { store, setStore } = useAuth()
   const navigate = useNavigate()
 
-  // ── Plan-aware derivations (§5.2) ─────────────────────────────────────────
+  // ── Plan-aware derivations ─────────────────────────────────────────────────
   const plan                = store?.plan || 'starter'
+  const planStatus          = store?.planStatus || 'active'
   const maxProducts         = store?.maxProducts || FREE_PLAN_LIMIT
   const maxImagesPerProduct = store?.maxImagesPerProduct || 3
   const isGrowthOrPro       = store?.hasGrowthFeatures || false
@@ -81,7 +83,10 @@ export default function Dashboard() {
   const [pollReason, setPollReason]         = useState('')
   const [existingVote, setExistingVote]     = useState(null)
 
-  // plan-aware limit (§5.2)
+  // Billing
+  const [billingLoading, setBillingLoading] = useState(false)
+  const [billingError, setBillingError]     = useState('')
+
   const limitReached = productCount >= maxProducts
   const storeUrl     = store ? `${window.location.origin}/${store.storeName}` : ''
 
@@ -94,6 +99,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (activeTab !== 'support') { setSupportSuccess(''); setSupportError('') }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab !== 'billing') setBillingError('')
   }, [activeTab])
 
   useEffect(() => {
@@ -118,6 +127,22 @@ export default function Dashboard() {
     }
     loadUpgradeVote()
   }, [store?.id])
+
+  // Sync store plan state from Firestore after returning from billing callback
+  useEffect(() => {
+    if (activeTab !== 'billing' || !store?.id) return
+    const syncPlan = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'stores', store.id))
+        if (snap.exists()) {
+          setStore(prev => ({ ...prev, ...snap.data() }))
+        }
+      } catch (err) {
+        console.error('Failed to sync plan state', err)
+      }
+    }
+    syncPlan()
+  }, [activeTab, store?.id])
 
   // ── Data fetchers ──────────────────────────────────────────────────────────
   const fetchProducts = async () => {
@@ -179,7 +204,7 @@ export default function Dashboard() {
     const files = Array.from(e.target.files)
     if (!files.length) return
     const currentTotal = form.imageUrls.length + form.imageFiles.length
-    const slotsLeft = maxImagesPerProduct - currentTotal // plan-aware
+    const slotsLeft = maxImagesPerProduct - currentTotal
     if (slotsLeft <= 0) { setFormError(`Maximum ${maxImagesPerProduct} images allowed per product.`); return }
     const toAdd = files.slice(0, slotsLeft)
     const previews = []
@@ -282,6 +307,26 @@ export default function Dashboard() {
     }
   }
 
+  const handleToggleActive = async product => {
+    if (!isGrowthOrPro) return
+    const newValue = !product.isActive
+    // Optimistic update
+    setProducts(prev =>
+      prev.map(p => p.id === product.id ? { ...p, isActive: newValue } : p)
+    )
+    try {
+      await updateDoc(doc(db, 'stores', store.id, 'products', product.id), {
+        isActive: newValue,
+      })
+    } catch (err) {
+      console.error('Toggle failed', err)
+      // Revert on failure
+      setProducts(prev =>
+        prev.map(p => p.id === product.id ? { ...p, isActive: !newValue } : p)
+      )
+    }
+  }
+
   const handleSettingsSave = async formData => {
     setSettingsSaving(true)
     setSettingsError('')
@@ -357,7 +402,7 @@ export default function Dashboard() {
         email:          store.email,
         whatsappNumber: store.whatsappNumber,
         storeName:      store.storeName,
-        plan,                         // include plan for priority routing
+        plan,
         category:       formData.category,
         message:        formData.message.trim(),
         status:         'open',
@@ -394,6 +439,30 @@ export default function Dashboard() {
     }
   }
 
+  const handleUpgrade = async (selectedPlan) => {
+    if (!store?.id || !selectedPlan) return
+    setBillingLoading(true)
+    setBillingError('')
+    try {
+      const res = await fetch('/.netlify/functions/billing-initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: store.id, plan: selectedPlan }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setBillingError(data.error || 'Could not start checkout. Please try again.')
+        return
+      }
+      window.location.href = data.authorization_url
+    } catch (err) {
+      console.error('Billing initialize failed', err)
+      setBillingError('Network error. Please check your connection and try again.')
+    } finally {
+      setBillingLoading(false)
+    }
+  }
+
   // ── Loading guard ──────────────────────────────────────────────────────────
   if (!store) {
     return (
@@ -413,7 +482,6 @@ export default function Dashboard() {
       setSidebarOpen={setSidebarOpen}
       storeUrl={storeUrl}
     >
-      {/* ── Original tabs ── */}
       {activeTab === 'overview' && (
         <OverviewTab
           store={store}
@@ -467,6 +535,7 @@ export default function Dashboard() {
           resetForm={resetForm}
           startEdit={startEdit}
           handleDelete={handleDelete}
+          onToggleActive={handleToggleActive}
         />
       )}
 
@@ -482,6 +551,7 @@ export default function Dashboard() {
         <SettingsTab
           store={store}
           plan={plan}
+          planStatus={planStatus}
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
           onSave={handleSettingsSave}
@@ -494,6 +564,7 @@ export default function Dashboard() {
           onClearDeleteError={() => setDeleteError('')}
           onLogoUpload={handleLogoUpload}
           logoUploading={logoUploading}
+          navigateTo={setActiveTab}
         />
       )}
 
@@ -509,17 +580,37 @@ export default function Dashboard() {
         />
       )}
 
-      {/* ── New tabs ── */}
-      {activeTab === 'orders'      && <OrdersTab />}
-      {activeTab === 'customers'   && <CustomersTab />}
-      {activeTab === 'categories'  && <CategoriesTab />}
-      {activeTab === 'reviews'     && <ReviewsTab />}
-      {activeTab === 'analytics'   && <AnalyticsTab isGrowthOrPro={isGrowthOrPro} isPro={isPro} navigateTo={setActiveTab} />}
-      {activeTab === 'marketing'   && <MarketingTab store={store} storeUrl={storeUrl} />}
-      {activeTab === 'discounts'   && <DiscountsTab />}
-      {activeTab === 'online-store'&& <OnlineStoreTab store={store} storeUrl={storeUrl} />}
-      {activeTab === 'mobile-app'  && <MobileAppTab />}
-      {activeTab === 'payouts'     && <PayoutsTab />}
+      {activeTab === 'billing' && (
+        <BillingTab
+          store={store}
+          plan={plan}
+          planStatus={planStatus}
+          isGrowthOrPro={isGrowthOrPro}
+          isPro={isPro}
+          onUpgrade={handleUpgrade}
+          upgradeLoading={billingLoading}
+          upgradeError={billingError}
+        />
+      )}
+
+      {activeTab === 'orders'       && <OrdersTab store={store} whatsappNumber={store?.whatsappNumber} />}
+      {activeTab === 'customers'    && <CustomersTab />}
+      {activeTab === 'categories'   && <CategoriesTab />}
+      {activeTab === 'reviews'      && <ReviewsTab />}
+      {activeTab === 'analytics'    && (
+        <AnalyticsTab
+          storeId={store.id}
+          products={products}
+          isGrowthOrPro={isGrowthOrPro}
+          isPro={isPro}
+          navigateTo={setActiveTab}
+        />
+      )}
+      {activeTab === 'marketing'    && <MarketingTab store={store} storeUrl={storeUrl} />}
+      {activeTab === 'discounts'    && <DiscountsTab />}
+      {activeTab === 'online-store' && <OnlineStoreTab store={store} storeUrl={storeUrl} />}
+      {activeTab === 'mobile-app'   && <MobileAppTab />}
+      {activeTab === 'payouts'      && <PayoutsTab />}
     </DashboardLayout>
   )
 }

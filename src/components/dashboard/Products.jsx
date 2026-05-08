@@ -2,8 +2,7 @@ import {
   Plus, Edit2, Trash2, UploadCloud, X, Loader2,
   AlertCircle, ImageIcon, Package, ToggleLeft, ToggleRight, Lock,
 } from 'lucide-react'
-import { doc, updateDoc } from 'firebase/firestore'
-import { db } from '../../firebase/config'
+
 
 export default function ProductsTab({
   plan, productCount, maxProducts, maxImagesPerProduct, isGrowthOrPro, limitReached,
@@ -12,22 +11,11 @@ export default function ProductsTab({
   handleImageChange, handleRemoveExistingImage, handleRemoveNewImage,
   handleFormName, handleFormPrice, handleFormDesc,
   handleSave, resetForm, startEdit, handleDelete,
+  onToggleActive,
 }) {
   const maxLabel = maxProducts >= 999999 ? 'Unlimited' : maxProducts
   const pct      = maxProducts >= 999999 ? 0 : Math.min(100, Math.round((productCount / maxProducts) * 100))
 
-  const handleToggleActive = async (product) => {
-    if (!isGrowthOrPro) return
-    try {
-      await updateDoc(doc(db, 'stores', product.storeId, 'products', product.id), {
-        isActive: !product.isActive,
-      })
-      // Optimistic: caller re-fetches or handles state — component is stateless
-      window.location.reload() // simple for now; parent can lift state if needed
-    } catch (err) {
-      console.error('Toggle failed', err)
-    }
-  }
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
@@ -47,6 +35,7 @@ export default function ProductsTab({
         )}
       </div>
 
+
       {/* Product count bar */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
         <div className="flex items-center justify-between gap-3 mb-2">
@@ -65,6 +54,7 @@ export default function ProductsTab({
         )}
       </div>
 
+
       {/* Limit warning */}
       {limitReached && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4">
@@ -75,6 +65,7 @@ export default function ProductsTab({
           </div>
         </div>
       )}
+
 
       {/* Add / Edit Form */}
       {showForm && (
@@ -105,6 +96,7 @@ export default function ProductsTab({
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
               <textarea value={form.description} onChange={handleFormDesc} rows={3} placeholder="Describe your product..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
             </div>
+
 
             {/* Images */}
             <div>
@@ -142,6 +134,7 @@ export default function ProductsTab({
               </div>
             </div>
 
+
             <div className="flex gap-3 pt-1">
               <button onClick={resetForm} className="flex-1 sm:flex-none px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
               <button
@@ -155,6 +148,7 @@ export default function ProductsTab({
           </div>
         </div>
       )}
+
 
       {/* Product list */}
       {loading ? (
@@ -209,6 +203,7 @@ export default function ProductsTab({
                   )}
                 </div>
 
+
                 <div className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{product.name}</p>
@@ -217,6 +212,7 @@ export default function ProductsTab({
                   {product.description && (
                     <p className="text-gray-400 text-xs line-clamp-2 leading-relaxed">{product.description}</p>
                   )}
+
 
                   {/* Actions row */}
                   <div className="flex items-center justify-between pt-1">
@@ -241,11 +237,13 @@ export default function ProductsTab({
                       </button>
                     </div>
 
+
                     {/* Product on/off toggle — Growth/Pro only */}
                     <div className="flex items-center gap-1.5">
                       {isGrowthOrPro ? (
                         <button
-                          onClick={() => handleToggleActive(product)}
+                          onClick={() => onToggleActive(product)}
+                          disabled={!isGrowthOrPro}
                           className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${
                             isInactive
                               ? 'text-gray-400 bg-gray-100 hover:bg-gray-200'
@@ -275,3 +273,4 @@ export default function ProductsTab({
     </div>
   )
 }
+

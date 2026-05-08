@@ -5,12 +5,15 @@ import {
   ShoppingBag, ArrowRight, Grid, Tag,
 } from 'lucide-react'
 import { getStoreBySlug, getProducts } from '../firebase/products'
+import { db } from '../firebase/config'
+import { doc, setDoc, updateDoc, increment } from 'firebase/firestore'
 import { buildEnquiryURL } from '../utils/whatsapp'
 import LeadForm from '../components/LeadForm'
 import ProductCard from '../components/ProductCard'
 import StoreNavbar from '../components/StoreNavbar'
 import StoreFooter from '../components/StoreFooter'
 import NotFound from './NotFound'
+
 
 const getInitials = (name = '') => {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -19,11 +22,13 @@ const getInitials = (name = '') => {
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
 
+
 // ─── Categories Tab ───────────────────────────────────────────────────────────
 function CategoriesTab({ products, onSelectCategory, activeCategory }) {
   const categories = ['All', ...Array.from(new Set(
     products.map(p => p.category).filter(Boolean)
   ))]
+
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
@@ -69,6 +74,7 @@ function CategoriesTab({ products, onSelectCategory, activeCategory }) {
   )
 }
 
+
 // ─── Orders Tab ───────────────────────────────────────────────────────────────
 function OrdersTab({ store }) {
   return (
@@ -89,12 +95,13 @@ function OrdersTab({ store }) {
           className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1fba5a] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm"
         >
           <MessageCircle size={15} />
-          Order on WhatsApp
+          Order 
         </a>
       </div>
     </div>
   )
 }
+
 
 // ─── Store Page ───────────────────────────────────────────────────────────────
 export default function StorePage() {
@@ -109,7 +116,8 @@ export default function StorePage() {
   const [highlightedProduct, setHighlightedProduct] = useState(null)
   const allProdsRef = useRef(null)
 
-  // ── Data fetching (UNCHANGED) ──
+
+  // ── Data fetching ──
   useEffect(() => {
     const load = async () => {
       try {
@@ -118,6 +126,17 @@ export default function StorePage() {
         setStore(storeData)
         const prods = await getProducts(storeData.id)
         setProducts(prods)
+
+        // Addition 1 — View counting (fire-and-forget)
+        try {
+          await setDoc(
+            doc(db, 'stores', storeData.id, 'analytics', 'storeSummary'),
+            { totalViews: increment(1), updatedAt: new Date() },
+            { merge: true }
+          )
+        } catch {
+          // silently ignore — a failed view count must never interrupt page load
+        }
       } catch {
         setNotFound(true)
       } finally {
@@ -126,6 +145,7 @@ export default function StorePage() {
     }
     load()
   }, [storeName])
+
 
   // ── Highlight product from URL param (UNCHANGED) ──
   useEffect(() => {
@@ -141,26 +161,49 @@ export default function StorePage() {
     setTimeout(() => setHighlightedProduct(null), 4500)
   }, [products])
 
-  const filteredProducts = search.trim()
-    ? products.filter(p =>
-        p.name?.toLowerCase().includes(search.toLowerCase()) ||
-        p.description?.toLowerCase().includes(search.toLowerCase())
-      )
-    : activeCategory !== 'All'
-      ? products.filter(p => p.category === activeCategory)
-      : products
+
+  // Addition 4 — Click tracking callback (fire-and-forget)
+  const handleProductClick = (productId) => {
+    if (!store?.id) return
+    setDoc(
+      doc(db, 'stores', store.id, 'analytics', 'storeSummary'),
+      { totalClicks: increment(1), updatedAt: new Date() },
+      { merge: true }
+    ).catch(() => {})
+    updateDoc(
+      doc(db, 'stores', store.id, 'products', productId),
+      { clicks: increment(1) }
+    ).catch(() => {})
+  }
+
+
+  // Addition 2 — Inactive product filtering + existing search/category logic
+  const filteredProducts = (
+    search.trim()
+      ? products.filter(p =>
+          p.name?.toLowerCase().includes(search.toLowerCase()) ||
+          p.description?.toLowerCase().includes(search.toLowerCase())
+        )
+      : activeCategory !== 'All'
+        ? products.filter(p => p.category === activeCategory)
+        : products
+  ).filter(p => p.isActive !== false)
+
 
   const storeUrl = store ? `${window.location.origin}/${store.storeName}` : ''
+
 
   const scrollToAll = () => {
     allProdsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+
 
   const handleSelectCategory = cat => {
     setActiveCategory(cat)
     setActiveTab('home')
     setTimeout(() => allProdsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
   }
+
 
   // ── Loading state ──
   if (loading) {
@@ -174,10 +217,13 @@ export default function StorePage() {
     )
   }
 
+
   if (notFound) return <NotFound />
+
 
   return (
     <div className="min-h-screen bg-stone-50">
+
 
       {/* ── Navbar ── */}
       <StoreNavbar
@@ -188,6 +234,7 @@ export default function StorePage() {
         setActiveTab={setActiveTab}
       />
 
+
       {/* ── Tab: Categories ── */}
       {activeTab === 'categories' && (
         <CategoriesTab
@@ -197,14 +244,19 @@ export default function StorePage() {
         />
       )}
 
+
       {/* ── Tab: Orders ── */}
       {activeTab === 'orders' && <OrdersTab store={store} />}
+
 
       {/* ── Tab: Home ── */}
       {activeTab === 'home' && (
         <>
-          {/* ── Hero ── */}
-          <div className="relative bg-green-700 overflow-hidden">
+          {/* ── Hero ── Addition 3: theme colour via inline style, bg-green-700 removed ── */}
+          <div
+            className="relative overflow-hidden"
+            style={{ backgroundColor: store.themeColor || '#15803d' }}
+          >
             {/* Leaf decoration circles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div className="absolute -top-10 -left-10 w-64 h-64 rounded-full bg-green-600/40" />
@@ -212,8 +264,10 @@ export default function StorePage() {
               <div className="absolute top-8 right-8 w-32 h-32 rounded-full bg-green-500/20" />
             </div>
 
+
             <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16 lg:py-20">
               <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
+
 
                 {/* Left: Store info */}
                 <div className="flex-1 text-center md:text-left">
@@ -230,15 +284,18 @@ export default function StorePage() {
                     </div>
                   </div>
 
+
                   <h1 className="font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight text-white tracking-tight mb-3 drop-shadow-sm">
                     {store.businessName}
                   </h1>
+
 
                   {store.description && (
                     <p className="text-white/75 text-sm md:text-base max-w-sm mx-auto md:mx-0 leading-relaxed mb-6">
                       {store.description}
                     </p>
                   )}
+
 
                   <div className={`flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3 ${store.description ? '' : 'mt-6'}`}>
                     <a
@@ -263,6 +320,7 @@ export default function StorePage() {
                   </div>
                 </div>
 
+
                 {/* Desktop logo showcase */}
                 <div className="hidden md:flex flex-shrink-0 items-center justify-center w-[280px] lg:w-[340px] relative">
                   <div className="absolute w-[260px] h-[260px] lg:w-[310px] lg:h-[310px] rounded-full bg-white/8 border border-white/15" />
@@ -278,12 +336,15 @@ export default function StorePage() {
                   </div>
                 </div>
 
+
               </div>
             </div>
           </div>
 
+
           {/* ── Products Section ── */}
           <div ref={allProdsRef} className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+
 
             {products.length === 0 ? (
               <div className="text-center py-20">
@@ -317,6 +378,7 @@ export default function StorePage() {
                   )}
                 </div>
 
+
                 {/* Search bar */}
                 <div className="relative mb-5 max-w-sm">
                   <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
@@ -334,6 +396,7 @@ export default function StorePage() {
                   )}
                 </div>
 
+
                 {/* Product grid */}
                 {filteredProducts.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -344,6 +407,7 @@ export default function StorePage() {
                         whatsappNumber={store.whatsappNumber}
                         storeUrl={storeUrl}
                         isHighlighted={highlightedProduct === product.id}
+                        onOrder={handleProductClick}
                       />
                     ))}
                   </div>
@@ -361,6 +425,7 @@ export default function StorePage() {
               </>
             )}
 
+
             {/* Lead Form */}
             <div className="mt-12 sm:mt-14">
               <LeadForm
@@ -373,13 +438,16 @@ export default function StorePage() {
         </>
       )}
 
+
       {/* ── Footer ── */}
       {activeTab === 'home' && (
         <StoreFooter storeName={store.businessName} />
       )}
+
 
       {/* Bottom tab bar spacer on mobile */}
       <div className="h-16 md:hidden" />
     </div>
   )
 }
+

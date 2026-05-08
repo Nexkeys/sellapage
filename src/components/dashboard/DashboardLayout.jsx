@@ -3,33 +3,37 @@ import {
   LayoutDashboard, Package, Users, Settings,
   HelpCircle, LogOut, Menu, X, ExternalLink, Store,
   ShoppingCart, Tag, Star, BarChart2, Megaphone,
-  Percent, Globe, Smartphone, Wallet,
+  Percent, Globe, Smartphone, Wallet, CreditCard,
 } from 'lucide-react'
 import { logoutSeller } from '../../firebase/auth'
 
+
 const NAV_ITEMS = [
-  { id: 'overview',     label: 'Dashboard',   icon: LayoutDashboard },
+  { id: 'overview',      label: 'Dashboard',    icon: LayoutDashboard },
   { type: 'group', label: 'Store' },
-  { id: 'products',    label: 'Products',     icon: Package },
-  { id: 'categories',  label: 'Categories',   icon: Tag },
-  { id: 'orders',      label: 'Orders',       icon: ShoppingCart },
-  { id: 'customers',   label: 'Customers',    icon: Users },
-  { id: 'leads',       label: 'Leads',        icon: Users },
+  { id: 'products',      label: 'Products',     icon: Package },
+  { id: 'categories',    label: 'Categories',   icon: Tag },
+  { id: 'orders',        label: 'Orders',       icon: ShoppingCart },
+  { id: 'customers',     label: 'Customers',    icon: Users },
+  { id: 'leads',         label: 'Leads',        icon: Users },
   { type: 'group', label: 'Grow' },
-  { id: 'analytics',   label: 'Analytics',    icon: BarChart2 },
-  { id: 'marketing',   label: 'Marketing',    icon: Megaphone },
-  { id: 'discounts',   label: 'Discounts',    icon: Percent },
-  { id: 'reviews',     label: 'Reviews',      icon: Star },
+  { id: 'analytics',     label: 'Analytics',    icon: BarChart2 },
+  { id: 'marketing',     label: 'Marketing',    icon: Megaphone },
+  { id: 'discounts',     label: 'Discounts',    icon: Percent },
+  { id: 'reviews',       label: 'Reviews',      icon: Star },
   { type: 'group', label: 'Business' },
-  { id: 'online-store',label: 'Online Store', icon: Globe },
-  { id: 'payouts',     label: 'Payouts',      icon: Wallet },
-  { id: 'mobile-app',  label: 'Mobile App',   icon: Smartphone },
+  { id: 'online-store',  label: 'Online Store', icon: Globe },
+  { id: 'payouts',       label: 'Payouts',      icon: Wallet },
+  { id: 'mobile-app',    label: 'Mobile App',   icon: Smartphone },
   { type: 'group', label: 'Account' },
-  { id: 'settings',    label: 'Settings',     icon: Settings },
-  { id: 'support',     label: 'Support',      icon: HelpCircle },
+  { id: 'billing',       label: 'Billing',      icon: CreditCard },
+  { id: 'settings',      label: 'Settings',     icon: Settings },
+  { id: 'support',       label: 'Support',      icon: HelpCircle },
 ]
 
+
 const ALL_TABS = NAV_ITEMS.filter(n => !n.type)
+
 
 const PLAN_BADGE = {
   starter: null,
@@ -37,12 +41,14 @@ const PLAN_BADGE = {
   pro:     { label: 'Pro ✦',  cls: 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/30' },
 }
 
+
 const getInitials = (name = '') => {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (!parts.length) return '?'
   if (parts.length === 1) return parts[0][0].toUpperCase()
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
+
 
 export default function DashboardLayout({
   store, activeTab, setActiveTab,
@@ -53,10 +59,11 @@ export default function DashboardLayout({
 
   const plan       = store?.plan || 'starter'
   const planStatus = store?.planStatus || 'active'
-  const badge      = PLAN_BADGE[plan]
+  const badge      = PLAN_BADGE[plan] ?? null
   const isGrace    = planStatus === 'grace'
   const isPro      = store?.hasProFeatures
   const isGrowth   = store?.hasGrowthFeatures && !isPro
+
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -112,7 +119,7 @@ export default function DashboardLayout({
               : 'Unlock 50 products, analytics & priority support.'}
           </p>
           <button
-            onClick={() => { setActiveTab('settings'); setSidebarOpen(false) }}
+            onClick={() => { setActiveTab('billing'); setSidebarOpen(false) }}
             className="w-full py-1.5 rounded-lg bg-green-500 hover:bg-green-400 text-white text-xs font-semibold transition-colors"
           >
             Upgrade Now
@@ -152,6 +159,7 @@ export default function DashboardLayout({
     </div>
   )
 
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Desktop Sidebar */}
@@ -182,7 +190,7 @@ export default function DashboardLayout({
           <div className="w-full bg-amber-500 text-white text-sm font-semibold text-center px-4 py-2.5 flex-shrink-0">
             ⚠️ Your plan expires soon. Renew now to keep all your products live.{' '}
             <button
-              onClick={() => setActiveTab('settings')}
+              onClick={() => setActiveTab('billing')}
               className="underline underline-offset-2 hover:no-underline ml-1"
             >
               Renew Plan →

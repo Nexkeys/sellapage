@@ -1,3 +1,4 @@
+//src/components/dashboard/SupportTab.jsx/
 import { useState } from 'react'
 import { HelpCircle, MessageSquare, Loader2, CheckCircle, AlertCircle, Zap } from 'lucide-react'
 
@@ -113,7 +114,7 @@ export default function SupportTab({
             <span className="text-gray-600 text-lg">📧</span>
             <div>
               <p className="font-semibold text-sm text-gray-800">Email Support</p>
-              <p className="text-gray-400 text-xs">support@sellapage.com — we reply within 24 hours</p>
+              <p className="text-gray-400 text-xs">nexkeysagency@gmail.com — we reply within 24 hours</p>
             </div>
           </div>
         </div>

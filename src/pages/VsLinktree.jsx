@@ -34,7 +34,7 @@ export default function VsLinktree() {
           </h1>
           <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
             Linktree is a list of links. Sellapage is a real store where customers see your products,
-            check prices, and order on WhatsApp — without leaving the page.
+            check prices, and order — without leaving the page.
           </p>
         </div>
       </section>

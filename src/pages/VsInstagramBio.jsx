@@ -99,7 +99,7 @@ export default function VsInstagramBio() {
               <p className="text-gray-600 text-sm leading-relaxed">
                 Your Sellapage link sits in your Instagram bio permanently.
                 Any visitor clicks it and sees all your products, prices, and photos in one place.
-                They order on WhatsApp directly. No algorithm. No posts buried. Always accessible.
+                They order directly. No algorithm. No posts buried. Always accessible.
               </p>
             </div>
           </div>

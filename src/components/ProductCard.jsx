@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MessageCircle, Package, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react'
 import { buildOrderURL } from '../utils/whatsapp'
 
-export default function ProductCard({ product, whatsappNumber, storeUrl, isHighlighted }) {
+export default function ProductCard({ product, whatsappNumber, storeUrl, isHighlighted, onOrder }) {
   const [activeImg, setActiveImg]   = useState(0)
   const [popupIndex, setPopupIndex] = useState(null)
 
@@ -10,6 +10,7 @@ export default function ProductCard({ product, whatsappNumber, storeUrl, isHighl
   const hasMultiple = images.length > 1
 
   const handleOrder = () => {
+    if (onOrder) onOrder(product.id)
     const url = buildOrderURL(whatsappNumber, product.name, product.price, product.id, storeUrl)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
@@ -75,28 +76,33 @@ export default function ProductCard({ product, whatsappNumber, storeUrl, isHighl
           )}
         </div>
 
-        {/* Info */}
-        <div className="p-3 sm:p-4 flex flex-col flex-1">
-          <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">
+        {/* ── Info ── */}
+        <div className="p-3 sm:p-4 flex flex-col flex-1 gap-2">
+          {/* Name */}
+          <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
             {product.name}
           </h3>
+
+          {/* Description — only on sm+ to avoid crowding on 2-col mobile grid */}
           {product.description && (
-            <p className="text-stone-400 text-xs mb-2 line-clamp-2 leading-relaxed flex-1">
+            <p className="hidden sm:block text-stone-400 text-xs line-clamp-2 leading-relaxed">
               {product.description}
             </p>
           )}
-          <div className="flex items-center justify-between gap-2 mt-auto pt-2">
-            <span className="text-green-600 font-extrabold text-lg leading-none">
-              ₦{Number(product.price).toLocaleString()}
-            </span>
-            <button
-              onClick={handleOrder}
-              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm whitespace-nowrap"
-            >
-              <MessageCircle size={13} />
-              Order
-            </button>
-          </div>
+
+          {/* Price */}
+          <span className="text-green-600 font-extrabold text-lg leading-none mt-auto">
+            ₦{Number(product.price).toLocaleString()}
+          </span>
+
+          {/* Order button — full width, always below price */}
+          <button
+            onClick={handleOrder}
+            className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+          >
+            <MessageCircle size={13} />
+            Order 
+          </button>
         </div>
       </div>
 
@@ -146,7 +152,7 @@ export default function ProductCard({ product, whatsappNumber, storeUrl, isHighl
               className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-all"
             >
               <MessageCircle size={15} />
-              Order on WhatsApp — ₦{Number(product.price).toLocaleString()}
+              Order — ₦{Number(product.price).toLocaleString()}
             </button>
           </div>
         </div>

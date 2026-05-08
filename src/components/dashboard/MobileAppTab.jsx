@@ -1,3 +1,4 @@
+//src/components/dashboard/MobileAppTab.jsx/
 export default function MobileAppTab() {
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto flex items-center justify-center min-h-[70vh]">

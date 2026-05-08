@@ -1,3 +1,4 @@
+//src/components/dashboard/MarketingTab.jsx/
 import { Megaphone, Share2, MessageCircle, Zap } from 'lucide-react'
 
 const TOOLS = [
