@@ -92,8 +92,8 @@ const faqs = [
     a: 'No. Your store is a regular web page — customers just tap your link. No app, no account, no friction at all.',
   },
   {
-    q: 'How does the WhatsApp order work?',
-    a: 'When a customer taps "Order via WhatsApp", it opens a chat with a message already filled in — product name, price, everything. You just reply and confirm.',
+    q: 'How does the order work?',
+    a: 'When a customer taps "Order ", it opens a chat with a message already filled in — product name, price, everything. You just reply and confirm.',
   },
   {
     q: 'Can I update my products after I create the store?',

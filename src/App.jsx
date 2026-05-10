@@ -16,7 +16,7 @@ import VsInstagramBio from './pages/VsInstagramBio'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 import ContactUs from './pages/ContactUs'
-import About from './pages/About'
+import About from './pages/about'
 import BillingCallback from './pages/BillingCallback'
 
 export default function App() {
