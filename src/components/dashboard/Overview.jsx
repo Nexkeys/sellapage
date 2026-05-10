@@ -1,20 +1,21 @@
-//src/components/dashboard/Overview.jsx//
-
+//src/components/dashboard/Overview.jsx/
 import {
   Plus, Copy, Check, ExternalLink, Users, ArrowRight,
-  Zap, CheckCircle, X, Loader2, AlertCircle,
-  TrendingUp, ShoppingBag, Eye, Lock,
+  AlertCircle, TrendingUp, ShoppingBag, Eye, Lock,
 } from 'lucide-react'
+
+
 
 export default function OverviewTab({
   store, plan, maxProducts, productCount, limitReached,
   isGrowthOrPro, isPro,
   leads, storeUrl, copied, copyLink,
   navigateTo, setShowForm,
-  pollLoading, pollSubmitting, pollSuccess, pollError,
-  existingVote, pollReason, setPollReason, onVote,
+  analyticsData,
 }) {
   const pct = Math.min(100, Math.round((productCount / maxProducts) * 100))
+  const totalViews  = analyticsData?.totalViews  ?? 0
+  const totalClicks = analyticsData?.totalClicks ?? 0
 
   const PLAN_LABEL = {
     starter: { text: 'Free Plan',    cls: 'bg-gray-100 text-gray-600' },
@@ -22,6 +23,7 @@ export default function OverviewTab({
     pro:     { text: 'Pro Plan ✦',   cls: 'bg-yellow-100 text-yellow-700' },
   }
   const planLabel = PLAN_LABEL[plan] || PLAN_LABEL.starter
+
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
@@ -32,6 +34,7 @@ export default function OverviewTab({
         </h1>
         <p className="text-gray-400 text-sm mt-1">Here's what's happening with your store today.</p>
       </div>
+
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -56,6 +59,7 @@ export default function OverviewTab({
           </p>
         </div>
 
+
         {/* Leads */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center mb-2">
@@ -65,6 +69,7 @@ export default function OverviewTab({
           <p className="text-gray-400 text-xs mt-0.5 font-medium">Customer Leads</p>
           <p className="text-[10px] text-gray-400 mt-1">from lead form</p>
         </div>
+
 
         {/* Store Views — Growth/Pro only */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
@@ -77,10 +82,13 @@ export default function OverviewTab({
           <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
             <Eye size={15} className="text-blue-600" />
           </div>
-          <p className="text-2xl font-extrabold text-gray-900">{store?.totalViews ?? '—'}</p>
+          <p className="text-2xl font-extrabold text-gray-900">
+            {isGrowthOrPro ? totalViews.toLocaleString() : '—'}
+          </p>
           <p className="text-gray-400 text-xs mt-0.5 font-medium">Store Views</p>
-          <p className="text-[10px] text-gray-400 mt-1">this month</p>
+          <p className="text-[10px] text-gray-400 mt-1">all time</p>
         </div>
+
 
         {/* Conversion — Pro only */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
@@ -94,14 +102,15 @@ export default function OverviewTab({
             <TrendingUp size={15} className="text-amber-600" />
           </div>
           <p className="text-2xl font-extrabold text-gray-900">
-            {isPro && store?.totalViews && leads.length
-              ? `${Math.round((leads.length / store.totalViews) * 100)}%`
+            {isPro && totalViews > 0 && leads.length > 0
+              ? `${Math.round((leads.length / totalViews) * 100)}%`
               : '—'}
           </p>
           <p className="text-gray-400 text-xs mt-0.5 font-medium">Conversion Rate</p>
           <p className="text-[10px] text-gray-400 mt-1">leads / views</p>
         </div>
       </div>
+
 
       {/* Limit reached warning */}
       {limitReached && (
@@ -111,13 +120,14 @@ export default function OverviewTab({
             <p className="text-amber-800 font-semibold text-sm">Product limit reached</p>
             <p className="text-amber-700 text-xs mt-0.5">
               You've used all {maxProducts} product slots on the {plan} plan.{' '}
-              <button onClick={() => navigateTo('settings')} className="underline font-semibold hover:no-underline">
+              <button onClick={() => navigateTo('billing')} className="underline font-semibold hover:no-underline">
                 Upgrade your plan →
               </button>
             </p>
           </div>
         </div>
       )}
+
 
       {/* Store link */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -148,6 +158,7 @@ export default function OverviewTab({
         </div>
         <p className="text-gray-400 text-xs mt-3">Share on WhatsApp status, Instagram bio, and more.</p>
       </div>
+
 
       {/* Top Products — Pro only */}
       {isPro && (
@@ -188,6 +199,7 @@ export default function OverviewTab({
         </div>
       )}
 
+
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3">
         <button
@@ -209,62 +221,6 @@ export default function OverviewTab({
           <p className="font-semibold text-gray-700 text-sm">View Leads</p>
         </button>
       </div>
-
-      {/* Poll — only show if not on a paid plan */}
-      {plan === 'starter' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <div>
-            <p className="font-bold text-gray-900 text-sm">Quick question for you 🙋</p>
-            <p className="text-gray-400 text-xs mt-0.5">Would you use paid features when Sellapage upgrades launch?</p>
-          </div>
-          {pollLoading ? (
-            <Loader2 size={18} className="text-green-500 animate-spin" />
-          ) : pollSuccess || existingVote ? (
-            <div className="flex items-start gap-2 text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
-              <CheckCircle size={15} className="flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold">Thanks for your input!</p>
-                {existingVote && (
-                  <p className="text-xs text-green-600 mt-0.5">
-                    Your vote: {existingVote.vote === 'yes' ? 'Yes, I would use it' : 'Not for now'}
-                    {existingVote.reason && ` — "${existingVote.reason}"`}
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <textarea
-                value={pollReason}
-                onChange={e => setPollReason(e.target.value)}
-                placeholder="Tell us why (optional)..."
-                rows={2}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-300 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all"
-              />
-              {pollError && (
-                <p className="text-red-500 text-xs flex items-center gap-1.5"><AlertCircle size={12} />{pollError}</p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onVote('yes')}
-                  disabled={pollSubmitting}
-                  className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
-                >
-                  {pollSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                  Yes, I would
-                </button>
-                <button
-                  onClick={() => onVote('no')}
-                  disabled={pollSubmitting}
-                  className="flex-1 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold rounded-xl transition-all disabled:opacity-60"
-                >
-                  Not for now
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

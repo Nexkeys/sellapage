@@ -1,3 +1,4 @@
+//src/firebase/products.js/
 import {
   collection,
   addDoc,
@@ -15,10 +16,13 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 
+
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
+
 export const FREE_PLAN_LIMIT = 10
+
 
 const uploadToCloudinary = async (imageFile, folder = 'sellapage/products') => {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
@@ -49,20 +53,26 @@ const uploadToCloudinary = async (imageFile, folder = 'sellapage/products') => {
   return data.secure_url
 }
 
+
 const uploadMultipleImages = async (imageFiles) => {
   if (!imageFiles || imageFiles.length === 0) return []
   const uploads = imageFiles.map(file => uploadToCloudinary(file, 'sellapage/products'))
   return await Promise.all(uploads)
 }
 
+
 export const uploadSingleImage = async (imageFile, folder = 'sellapage/logos') => {
   return await uploadToCloudinary(imageFile, folder)
 }
 
+
 export const checkProductLimit = async (storeId) => {
   const storeSnap = await getDoc(doc(db, 'stores', storeId))
   const storeData = storeSnap.exists() ? storeSnap.data() : {}
-  const effectiveLimit = storeData.maxProducts ?? FREE_PLAN_LIMIT
+  const existingPlan = storeData.plan || 'starter'
+  const effectiveLimit = storeData.maxProducts ?? (
+    existingPlan === 'pro' ? 999999 : existingPlan === 'growth' ? 50 : FREE_PLAN_LIMIT
+  )
 
   const snap = await getCountFromServer(
     collection(db, 'stores', storeId, 'products')
@@ -71,11 +81,17 @@ export const checkProductLimit = async (storeId) => {
   return { count, limitReached: count >= effectiveLimit }
 }
 
+
 export const addProduct = async (storeId, productData, imageFiles = []) => {
   const storeSnap = await getDoc(doc(db, 'stores', storeId))
   const storeData = storeSnap.exists() ? storeSnap.data() : {}
-  const effectiveLimit = storeData.maxProducts ?? FREE_PLAN_LIMIT
-  const maxImages = storeData.maxImagesPerProduct ?? 3
+  const existingPlan = storeData.plan || 'starter'
+  const effectiveLimit = storeData.maxProducts ?? (
+    existingPlan === 'pro' ? 999999 : existingPlan === 'growth' ? 50 : FREE_PLAN_LIMIT
+  )
+  const maxImages = storeData.maxImagesPerProduct ?? (
+    existingPlan === 'pro' ? 50 : existingPlan === 'growth' ? 10 : 3
+  )
 
   const snap = await getCountFromServer(
     collection(db, 'stores', storeId, 'products')
@@ -98,6 +114,7 @@ export const addProduct = async (storeId, productData, imageFiles = []) => {
   return { id: productRef.id, ...productData, imageUrls, imageUrl: imageUrls[0] || '' }
 }
 
+
 export const getProducts = async (storeId) => {
   const q = query(
     collection(db, 'stores', storeId, 'products'),
@@ -112,6 +129,7 @@ export const getProducts = async (storeId) => {
     return { id: d.id, ...data, imageUrls, imageUrl: imageUrls[0] || '' }
   })
 }
+
 
 export const updateProduct = async (storeId, productId, updates, newImageFiles = []) => {
   const storeSnap = await getDoc(doc(db, 'stores', storeId))
@@ -136,6 +154,7 @@ export const updateProduct = async (storeId, productId, updates, newImageFiles =
   return finalData
 }
 
+
 export const removeProductImage = async (storeId, productId, imageUrl, currentImageUrls) => {
   const imageUrls = currentImageUrls.filter(url => url !== imageUrl)
   await updateDoc(doc(db, 'stores', storeId, 'products', productId), {
@@ -145,12 +164,14 @@ export const removeProductImage = async (storeId, productId, imageUrl, currentIm
   return imageUrls
 }
 
+
 export const deleteProduct = async (storeId, productId) => {
   const batch = writeBatch(db)
   batch.delete(doc(db, 'stores', storeId, 'products', productId))
   batch.update(doc(db, 'stores', storeId), { productCount: increment(-1) })
   await batch.commit()
 }
+
 
 export const deleteAllStoreProducts = async (storeId) => {
   const snap = await getDocs(collection(db, 'stores', storeId, 'products'))
@@ -159,6 +180,7 @@ export const deleteAllStoreProducts = async (storeId) => {
   snap.docs.forEach(d => batch.delete(d.ref))
   await batch.commit()
 }
+
 
 export const getStoreBySlug = async (storeName) => {
   const q = query(collection(db, 'stores'), where('storeName', '==', storeName))

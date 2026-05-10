@@ -1,5 +1,6 @@
 import { CreditCard, Zap, Star, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 
+
 const PLANS = [
   {
     id:    'growth',
@@ -38,6 +39,7 @@ const PLANS = [
     icon:   Star,
   },
 ]
+
 
 export default function BillingTab({
   store, plan, planStatus, isGrowthOrPro, isPro,
@@ -144,7 +146,7 @@ export default function BillingTab({
 
               <button
                 onClick={() => onUpgrade(p.id)}
-                disabled={upgradeLoading || isCurrent || isDowngrade}
+                disabled={upgradeLoading === p.id || isCurrent || isDowngrade}
                 className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                   isCurrent
                     ? 'bg-gray-100 text-gray-400 cursor-default'
@@ -153,7 +155,7 @@ export default function BillingTab({
                     : 'bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white'
                 }`}
               >
-                {upgradeLoading
+                {upgradeLoading === p.id
                   ? <><Loader2 size={14} className="animate-spin" /> Redirecting...</>
                   : isCurrent
                   ? 'Current Plan'

@@ -1,39 +1,12 @@
-import { useEffect, useState } from 'react'
-import { Eye, MousePointerClick, Users, TrendingUp, Lock, Loader2, BarChart2 } from 'lucide-react'
-import { doc, getDoc } from 'firebase/firestore'
+//src/components/dashboard/AnalyticsTab.jsx/
+import { useState } from 'react'
+import { Eye, MousePointerClick, Users, TrendingUp, Lock, Loader2, BarChart2, RotateCcw, Check } from 'lucide-react'
+import { doc, setDoc, writeBatch, collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 
 
-export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, navigateTo }) {
 
-  const [analyticsData, setAnalyticsData] = useState({ totalViews: 0, totalClicks: 0 })
-  const [loadingAnalytics, setLoadingAnalytics] = useState(true)
-
-
-  useEffect(() => {
-    if (!isGrowthOrPro || !storeId) {
-      setLoadingAnalytics(false)
-      return
-    }
-    const fetchAnalytics = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'stores', storeId, 'analytics', 'storeSummary'))
-        if (snap.exists()) {
-          const data = snap.data()
-          setAnalyticsData({
-            totalViews:  data.totalViews  ?? 0,
-            totalClicks: data.totalClicks ?? 0,
-          })
-        }
-      } catch {
-        // silently fall back to zeros
-      } finally {
-        setLoadingAnalytics(false)
-      }
-    }
-    fetchAnalytics()
-  }, [storeId, isGrowthOrPro])
-
+export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, navigateTo, analyticsData }) {
 
   // ── Plan gate ──
   if (!isGrowthOrPro) {
@@ -54,7 +27,7 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
             </p>
           </div>
           <button
-            onClick={() => navigateTo('settings')}
+            onClick={() => navigateTo('billing')}
             className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
           >
             Upgrade to unlock Analytics
@@ -65,8 +38,16 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
   }
 
 
+
+  // ── State ──
+  const [resetting, setResetting] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
+
+
+
   // ── Derived values ──
-  const { totalViews, totalClicks } = analyticsData
+  const totalViews  = analyticsData?.totalViews  ?? 0
+  const totalClicks = analyticsData?.totalClicks ?? 0
 
   const clickRate = totalViews > 0
     ? `${(totalClicks / totalViews * 100).toFixed(1)}%`
@@ -74,28 +55,28 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
 
   const KPIS = [
     {
-      label:   'Store Views',
-      value:   totalViews.toLocaleString(),
-      Icon:    Eye,
-      color:   'bg-amber-50 text-amber-600',
+      label: 'Store Views',
+      value: totalViews.toLocaleString(),
+      Icon:  Eye,
+      color: 'bg-amber-50 text-amber-600',
     },
     {
-      label:   'Product Clicks',
-      value:   totalClicks.toLocaleString(),
-      Icon:    MousePointerClick,
-      color:   'bg-blue-50 text-blue-600',
+      label: 'Product Clicks',
+      value: totalClicks.toLocaleString(),
+      Icon:  MousePointerClick,
+      color: 'bg-blue-50 text-blue-600',
     },
     {
-      label:   'Total Leads',
-      value:   products.length.toLocaleString(),
-      Icon:    Users,
-      color:   'bg-purple-50 text-purple-600',
+      label: 'Products Listed',
+      value: products.length.toLocaleString(),
+      Icon:  Users,
+      color: 'bg-purple-50 text-purple-600',
     },
     {
-      label:   'Click Rate',
-      value:   clickRate,
-      Icon:    TrendingUp,
-      color:   'bg-green-50 text-green-600',
+      label: 'Click Rate',
+      value: clickRate,
+      Icon:  TrendingUp,
+      color: 'bg-green-50 text-green-600',
     },
   ]
 
@@ -107,20 +88,36 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
   const maxClicks = topProducts.length > 0 ? topProducts[0].clicks : 1
 
 
-  // ── Loading ──
-  if (loadingAnalytics) {
-    return (
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
-        <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Analytics</h1>
-          <p className="text-gray-400 text-sm mt-1">Track your store's performance in real time.</p>
-        </div>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="text-green-500 animate-spin" />
-        </div>
-      </div>
-    )
+
+  // ── Reset handler ──
+  const handleReset = async () => {
+    if (!window.confirm('Reset all store views, product clicks, and per-product click counts to zero? This cannot be undone.')) return
+    setResetting(true)
+    try {
+      // 1. Reset the analytics summary document
+      await setDoc(
+        doc(db, 'stores', storeId, 'analytics', 'storeSummary'),
+        { totalViews: 0, totalClicks: 0, updatedAt: new Date() },
+        { merge: true }
+      )
+
+      // 2. Batch-reset clicks on every product document
+      const batch = writeBatch(db)
+      const prodsSnap = await getDocs(collection(db, 'stores', storeId, 'products'))
+      prodsSnap.docs.forEach(d => {
+        batch.update(d.ref, { clicks: 0 })
+      })
+      await batch.commit()
+
+      setResetDone(true)
+      setTimeout(() => setResetDone(false), 3000)
+    } catch (err) {
+      console.error('Reset failed', err)
+    } finally {
+      setResetting(false)
+    }
   }
+
 
 
   return (
@@ -189,8 +186,39 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
           </div>
         )}
       </div>
+
+
+      {/* ── Reset Analytics ──────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <p className="font-bold text-gray-900 text-sm">Reset Analytics</p>
+          <p className="text-gray-400 text-xs mt-0.5">
+            Permanently reset all store views, product clicks, and per-product click counts to zero.
+          </p>
+        </div>
+        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-gray-400 text-xs leading-relaxed max-w-sm">
+            Useful when starting a new marketing campaign or after testing your store. This cannot be undone.
+          </p>
+          <button
+            onClick={handleReset}
+            disabled={resetting}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 disabled:opacity-50 ${
+              resetDone
+                ? 'bg-green-500 text-white'
+                : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100'
+            }`}
+          >
+            {resetting ? (
+              <><Loader2 size={13} className="animate-spin" /> Resetting...</>
+            ) : resetDone ? (
+              <><Check size={13} /> Reset complete</>
+            ) : (
+              <><RotateCcw size={13} /> Reset All Analytics</>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
-
-

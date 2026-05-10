@@ -16,6 +16,7 @@ import VsInstagramBio from './pages/VsInstagramBio'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 import ContactUs from './pages/ContactUs'
+import About from './pages/About'
 import BillingCallback from './pages/BillingCallback'
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms"          element={<TermsOfService />} />
           <Route path="/contact"        element={<ContactUs />} />
+          <Route path="/about"          element={<About />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/:storeName" element={<StorePage />} />
           <Route path="*"           element={<NotFound />} />

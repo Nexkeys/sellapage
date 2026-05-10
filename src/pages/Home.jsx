@@ -1,9 +1,11 @@
+//src/pages/Home.jsx/
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ShoppingBag, MessageCircle, Zap, ChevronDown, Check, X,
   Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
   Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift,
+  CreditCard, Radio,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -107,7 +109,7 @@ const faqs = [
   },
   {
     q: 'Is it really free right now?',
-    a: 'Yes — completely free during our early access period. No card, no hidden fees. Paid plans are coming later with more advanced features, but your free page stays yours.',
+    a: 'Yes — the Starter plan is permanently free. Paid plans are also available now: Growth at ₦5,000/month and Pro at ₦12,000/month, with more features as you grow.',
   },
 ]
 
@@ -135,13 +137,12 @@ const plans = [
   {
     id: 'growth',
     name: 'Growth',
-    badge: 'Coming Soon',
     price: '₦5,000',
     period: 'per month',
     description: 'For businesses that are growing and want more control over their page.',
-    cta: 'Notify Me',
+    cta: 'Upgrade to Growth',
     ctaStyle: 'solid',
-    available: false,
+    available: true,
     features: [
       { text: 'Everything in Starter', available: true },
       { text: 'Up to 50 listings', available: true },
@@ -150,26 +151,25 @@ const plans = [
       { text: 'Track which listings get the most clicks', available: true },
       { text: 'Manage store settings easily', available: true },
       { text: 'WhatsApp support', available: true },
-      { text: 'Advanced order features', available: false },
+      { text: 'Product on/off toggle', available: true },
     ],
   },
   {
     id: 'pro',
     name: 'Pro',
-    badge: 'Coming Soon',
     price: '₦12,000',
     period: 'per month',
     description: 'For serious businesses that want the full package and maximum results.',
-    cta: 'Notify Me',
+    cta: 'Upgrade to Pro',
     ctaStyle: 'dark',
-    available: false,
+    available: true,
     features: [
       { text: 'Everything in Growth', available: true },
       { text: 'Unlimited listings', available: true },
-      { text: 'Payment links via Paystack', available: true },
+      { text: 'Hot leads list', available: true },
       { text: 'Full analytics dashboard', available: true },
       { text: 'Order history & customer records', available: true },
-      { text: 'Custom domain support', available: true },
+      { text: 'Store badge (Pro tag)', available: true },
       { text: 'Priority same-day support', available: true },
       { text: 'Early access to new features', available: true },
     ],
@@ -185,10 +185,10 @@ const trustBadges = [
 ]
 
 const stats = [
-  { value: '2,000+', label: 'Active Stores' },
-  { value: '98%', label: 'Customer Satisfaction' },
-  { value: '3x+', label: 'More Orders' },
-  { value: '24/7', label: 'Always Open' },
+  { value: '100+', label: 'Stores Created' },
+  { value: '100%', label: 'Free to Start' },
+  { value: '5 mins', label: 'To Go Live' },
+  { value: '24/7', label: 'Always Online' },
 ]
 
 const storeExamples = [
@@ -219,8 +219,8 @@ const storeExamples = [
 ]
 
 const comingFeatures = [
-  { icon: Palette, title: 'Custom Store Design', desc: 'Brand your store with your own colours and logo.' },
-  { icon: BarChart2, title: 'Analytics Dashboard', desc: 'See traffic, clicks, and what sells the most.' },
+  { icon: CreditCard, title: 'In-App Checkout', desc: 'Let customers pay directly on your store page — no WhatsApp step required.' },
+  { icon: Radio, title: 'WhatsApp Broadcast', desc: 'Send product updates and promotions to all your customers in one tap.' },
   { icon: Gift, title: 'Discount & Promo Codes', desc: 'Run promotions and reward loyal customers.' },
   { icon: Lock, title: 'Secure Payment Links', desc: 'Accept Paystack payments directly in your store.' },
   { icon: Settings, title: 'Order Management', desc: 'Track, update, and fulfil orders from one place.' },
@@ -503,7 +503,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
             {/* connector line desktop */}
             <div className="hidden sm:block absolute top-10 left-[calc(16.67%+12px)] right-[calc(16.67%+12px)] h-0.5 bg-brand-100 z-0" />
-            {steps.map((step, i) => (
+            {steps.map((step) => (
               <div key={step.number} className="relative z-10 flex flex-col items-center text-center">
                 <div className="w-20 h-20 rounded-2xl bg-brand-600 flex flex-col items-center justify-center mb-6 shadow-lg shadow-brand-200">
                   <span className="text-brand-100 text-xs font-bold uppercase tracking-wider">Step</span>
@@ -601,7 +601,7 @@ export default function Home() {
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3">
               Loved by Business Owners
             </h2>
-            <p className="text-gray-400 text-base">Real sellers. Real results.</p>
+            <p className="text-gray-400 text-base">What sellers like you could expect.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -638,9 +638,6 @@ export default function Home() {
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
               Start free. Grow when you're ready.
             </h2>
-            <p className="text-gray-400 text-sm max-w-md mx-auto">
-              Prices are estimates and may change before launch. Early access users get a discount on paid plans.
-            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
@@ -658,16 +655,6 @@ export default function Home() {
                   {isGrowth && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow">
                       Most Popular
-                    </div>
-                  )}
-                  {plan.badge && !isGrowth && (
-                    <div className="inline-block bg-gray-100 text-gray-500 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3 self-start">
-                      {plan.badge}
-                    </div>
-                  )}
-                  {isGrowth && plan.badge && (
-                    <div className="inline-block bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3 self-start">
-                      {plan.badge}
                     </div>
                   )}
 
@@ -693,29 +680,18 @@ export default function Home() {
                     ))}
                   </ul>
 
-                  {plan.available ? (
-                    <button
-                      onClick={handleCTA}
-                      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                        isGrowth
-                          ? 'bg-white text-brand-700 hover:bg-brand-50'
-                          : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-100'
-                      }`}
-                    >
-                      {plan.cta}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleNotify(plan.name)}
-                      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                        isGrowth
-                          ? 'bg-white text-brand-700 hover:bg-brand-50'
-                          : 'bg-gray-900 hover:bg-gray-700 text-white'
-                      }`}
-                    >
-                      {plan.cta}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleCTA}
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                      isGrowth
+                        ? 'bg-white text-brand-700 hover:bg-brand-50'
+                        : plan.id === 'pro'
+                        ? 'bg-gray-900 hover:bg-gray-700 text-white'
+                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-100'
+                    }`}
+                  >
+                    {plan.cta}
+                  </button>
                 </div>
               )
             })}

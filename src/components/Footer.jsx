@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom'
 import { Store } from 'lucide-react'
 
 
+
 export default function Footer() {
   return (
     <footer className="bg-gray-950 text-white">
       <div className="max-w-6xl mx-auto px-4 py-14">
+
 
         {/* Email capture banner */}
         <div className="bg-gray-900 rounded-2xl p-6 md:p-8 mb-14 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -27,6 +29,7 @@ export default function Footer() {
           </div>
         </div>
 
+
         {/* Links grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
@@ -40,6 +43,7 @@ export default function Footer() {
               Turn your WhatsApp into a professional store. Built for Nigerian sellers who are ready to grow.
             </p>
           </div>
+
 
           <div>
             <p className="font-display font-semibold text-white mb-4">Quick Links</p>
@@ -63,6 +67,7 @@ export default function Footer() {
             </ul>
           </div>
 
+
           <div>
             <p className="font-display font-semibold text-white mb-4">Compare</p>
             <ul className="space-y-2.5">
@@ -81,10 +86,12 @@ export default function Footer() {
             </ul>
           </div>
 
+
           <div>
             <p className="font-display font-semibold text-white mb-4">Legal</p>
             <ul className="space-y-2.5">
               {[
+                { label: 'About Us',         to: '/about' },
                 { label: 'Privacy Policy',   to: '/privacy-policy' },
                 { label: 'Terms of Service', to: '/terms' },
                 { label: 'Contact Us',       to: '/contact' },
@@ -98,6 +105,7 @@ export default function Footer() {
             </ul>
           </div>
         </div>
+
 
         <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Sellapage. All rights reserved.</p>

@@ -8,6 +8,7 @@ import {
 import { logoutSeller } from '../../firebase/auth'
 
 
+
 const NAV_ITEMS = [
   { id: 'overview',      label: 'Dashboard',    icon: LayoutDashboard },
   { type: 'group', label: 'Store' },
@@ -32,14 +33,18 @@ const NAV_ITEMS = [
 ]
 
 
+
 const ALL_TABS = NAV_ITEMS.filter(n => !n.type)
 
 
+
 const PLAN_BADGE = {
+  free:    null,
   starter: null,
   growth:  { label: 'Growth', cls: 'bg-blue-500/20 text-blue-300 border border-blue-500/30' },
   pro:     { label: 'Pro ✦',  cls: 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/30' },
 }
+
 
 
 const getInitials = (name = '') => {
@@ -50,6 +55,7 @@ const getInitials = (name = '') => {
 }
 
 
+
 export default function DashboardLayout({
   store, activeTab, setActiveTab,
   sidebarOpen, setSidebarOpen, storeUrl, children,
@@ -57,12 +63,14 @@ export default function DashboardLayout({
   const navigate = useNavigate()
   const handleLogout = async () => { await logoutSeller(); navigate('/') }
 
+
   const plan       = store?.plan || 'starter'
   const planStatus = store?.planStatus || 'active'
   const badge      = PLAN_BADGE[plan] ?? null
   const isGrace    = planStatus === 'grace'
-  const isPro      = store?.hasProFeatures
-  const isGrowth   = store?.hasGrowthFeatures && !isPro
+  const isPro      = store?.hasProFeatures ?? (plan === 'pro')
+  const isGrowth   = (store?.hasGrowthFeatures ?? (plan === 'growth' || plan === 'pro')) && !isPro
+
 
 
   const SidebarContent = () => (
@@ -74,6 +82,7 @@ export default function DashboardLayout({
         </div>
         <span className="text-white font-bold text-lg tracking-tight">sellapage</span>
       </div>
+
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
@@ -104,6 +113,7 @@ export default function DashboardLayout({
         })}
       </nav>
 
+
       {/* Upgrade Banner — hidden for Pro */}
       {!isPro && (
         <div className="mx-3 mb-3 p-4 rounded-xl bg-gradient-to-br from-green-600/30 to-green-700/20 border border-green-500/20">
@@ -126,6 +136,7 @@ export default function DashboardLayout({
           </button>
         </div>
       )}
+
 
       {/* User Profile */}
       <div className="px-3 pb-4">
@@ -160,12 +171,14 @@ export default function DashboardLayout({
   )
 
 
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-gray-900 flex-shrink-0">
         <SidebarContent />
       </aside>
+
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -183,6 +196,7 @@ export default function DashboardLayout({
         </div>
       )}
 
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Grace Period Banner */}
@@ -197,6 +211,7 @@ export default function DashboardLayout({
             </button>
           </div>
         )}
+
 
         {/* Top Bar */}
         <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
@@ -214,12 +229,14 @@ export default function DashboardLayout({
             </div>
           </div>
 
+
           <div className="hidden md:flex items-center gap-2 flex-1 max-w-sm mx-8">
             <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-400">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               Search anything...
             </div>
           </div>
+
 
           <div className="flex items-center gap-2">
             {storeUrl && (
@@ -241,6 +258,7 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
+
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">

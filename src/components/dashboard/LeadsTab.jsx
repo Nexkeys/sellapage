@@ -58,7 +58,7 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Leads',  value: leads.length },
+          { label: 'Products Listed',  value: products.length },
           { label: 'New',          value: leads.filter(l => !l.status || l.status === 'new').length },
           { label: 'Contacted',    value: leads.filter(l => l.status === 'contacted').length },
         ].map(s => (

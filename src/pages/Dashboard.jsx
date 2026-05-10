@@ -1,3 +1,4 @@
+//src/pages/Dashboard.jsx/
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -11,7 +12,10 @@ import { db } from '../firebase/config'
 import {
   collection, getDocs, query, orderBy,
   writeBatch, deleteDoc, doc, addDoc, setDoc, getDoc, updateDoc,
+  onSnapshot,
 } from 'firebase/firestore'
+
+
 
 import DashboardLayout  from '../components/dashboard/DashboardLayout'
 import OverviewTab      from '../components/dashboard/Overview'
@@ -32,23 +36,27 @@ import PayoutsTab       from '../components/dashboard/PayoutsTab'
 import BillingTab       from '../components/dashboard/BillingTab'
 
 
+
 const EMPTY_FORM = {
-  name: '', price: '', description: '',
+  name: '', price: '', description: '', category: '',
   imageFiles: [], imagePreviews: [], imageUrls: [],
 }
+
 
 
 export default function Dashboard() {
   const { store, setStore } = useAuth()
   const navigate = useNavigate()
 
+
   // ── Plan-aware derivations ─────────────────────────────────────────────────
   const plan                = store?.plan || 'starter'
   const planStatus          = store?.planStatus || 'active'
-  const maxProducts         = store?.maxProducts || FREE_PLAN_LIMIT
-  const maxImagesPerProduct = store?.maxImagesPerProduct || 3
-  const isGrowthOrPro       = store?.hasGrowthFeatures || false
-  const isPro               = store?.hasProFeatures || false
+  const isGrowthOrPro       = store?.hasGrowthFeatures ?? (plan === 'growth' || plan === 'pro')
+  const isPro               = store?.hasProFeatures ?? (plan === 'pro')
+  const maxProducts         = store?.maxProducts ?? (plan === 'pro' ? 999999 : plan === 'growth' ? 50 : FREE_PLAN_LIMIT)
+  const maxImagesPerProduct = store?.maxImagesPerProduct ?? (plan === 'pro' ? 50 : plan === 'growth' ? 10 : 3)
+
 
   const [activeTab, setActiveTab]           = useState('overview')
   const [products, setProducts]             = useState([])
@@ -65,6 +73,7 @@ export default function Dashboard() {
   const [productCount, setProductCount]     = useState(0)
   const [sidebarOpen, setSidebarOpen]       = useState(false)
 
+
   const [settingsSaving, setSettingsSaving]   = useState(false)
   const [settingsError, setSettingsError]     = useState('')
   const [settingsSuccess, setSettingsSuccess] = useState('')
@@ -72,61 +81,126 @@ export default function Dashboard() {
   const [deleteError, setDeleteError]         = useState('')
   const [logoUploading, setLogoUploading]     = useState(false)
 
+
   const [supportSubmitting, setSupportSubmitting] = useState(false)
   const [supportError, setSupportError]           = useState('')
   const [supportSuccess, setSupportSuccess]       = useState('')
 
-  const [pollLoading, setPollLoading]       = useState(true)
-  const [pollSubmitting, setPollSubmitting] = useState(false)
-  const [pollSuccess, setPollSuccess]       = useState('')
-  const [pollError, setPollError]           = useState('')
-  const [pollReason, setPollReason]         = useState('')
-  const [existingVote, setExistingVote]     = useState(null)
 
   // Billing
-  const [billingLoading, setBillingLoading] = useState(false)
+  const [billingLoading, setBillingLoading] = useState('')
   const [billingError, setBillingError]     = useState('')
+
+
+  // Analytics — lifted here so Overview and AnalyticsTab share the same data
+  const [analyticsData, setAnalyticsData] = useState({ totalViews: 0, totalClicks: 0 })
+
 
   const limitReached = productCount >= maxProducts
   const storeUrl     = store ? `${window.location.origin}/${store.storeName}` : ''
 
+
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { if (store?.id) fetchProducts() }, [store])
+
 
   useEffect(() => {
     if (activeTab === 'leads' && store?.id && leads.length === 0) fetchLeads()
   }, [activeTab, store])
 
+
   useEffect(() => {
     if (activeTab !== 'support') { setSupportSuccess(''); setSupportError('') }
   }, [activeTab])
+
 
   useEffect(() => {
     if (activeTab !== 'billing') setBillingError('')
   }, [activeTab])
 
+
+  // Analytics real-time listener — only for Growth/Pro, lives at Dashboard level
+  useEffect(() => {
+    if (!store?.id || !isGrowthOrPro) return
+    const unsubscribe = onSnapshot(
+      doc(db, 'stores', store.id, 'analytics', 'storeSummary'),
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data()
+          setAnalyticsData({
+            totalViews:  data.totalViews  ?? 0,
+            totalClicks: data.totalClicks ?? 0,
+          })
+        } else {
+          setAnalyticsData({ totalViews: 0, totalClicks: 0 })
+        }
+      },
+      () => {
+        setAnalyticsData({ totalViews: 0, totalClicks: 0 })
+      }
+    )
+    return unsubscribe
+  }, [store?.id, isGrowthOrPro])
+
+
+  // Mount-time Firestore re-fetch with self-healing migration for legacy store documents
   useEffect(() => {
     if (!store?.id) return
-    const loadUpgradeVote = async () => {
-      setPollLoading(true)
+    const syncStoreOnMount = async () => {
       try {
-        const voteSnap = await getDoc(doc(db, 'upgradeVotes', store.id))
-        if (voteSnap.exists()) {
-          const data = voteSnap.data()
-          setExistingVote({ id: voteSnap.id, ...data })
-          setPollReason(data.reason || '')
-        } else {
-          setExistingVote(null)
-          setPollReason('')
+        const snap = await getDoc(doc(db, 'stores', store.id))
+        if (snap.exists()) {
+          const data = snap.data()
+
+          // Detect legacy documents missing plan fields and backfill them
+          if (data.maxProducts === undefined || data.hasGrowthFeatures === undefined) {
+            const existingPlan = data.plan || 'starter'
+            let planFields = {}
+
+            if (existingPlan === 'pro') {
+              planFields = {
+                maxProducts:         999999,
+                maxImagesPerProduct: 50,
+                hasGrowthFeatures:   true,
+                hasProFeatures:      true,
+              }
+            } else if (existingPlan === 'growth') {
+              planFields = {
+                maxProducts:         50,
+                maxImagesPerProduct: 10,
+                hasGrowthFeatures:   true,
+                hasProFeatures:      false,
+              }
+            } else {
+              planFields = {
+                maxProducts:         FREE_PLAN_LIMIT,
+                maxImagesPerProduct: 3,
+                hasGrowthFeatures:   false,
+                hasProFeatures:      false,
+              }
+            }
+
+            planFields.planStatus   = data.planStatus   ?? 'active'
+            planFields.productCount = data.productCount ?? 0
+
+            try {
+              await updateDoc(doc(db, 'stores', store.id), planFields)
+            } catch (writeErr) {
+              console.error('Failed to migrate legacy store fields', writeErr)
+            }
+
+            Object.assign(data, planFields)
+          }
+
+          setStore(prev => ({ ...prev, ...data }))
         }
       } catch (err) {
-        console.error('Failed to load upgrade vote', err)
-      } finally {
-        setPollLoading(false)
+        console.error('Failed to sync store on mount', err)
       }
     }
-    loadUpgradeVote()
-  }, [store?.id])
+    syncStoreOnMount()
+  }, [])
+
 
   // Sync store plan state from Firestore after returning from billing callback
   useEffect(() => {
@@ -144,6 +218,7 @@ export default function Dashboard() {
     syncPlan()
   }, [activeTab, store?.id])
 
+
   // ── Data fetchers ──────────────────────────────────────────────────────────
   const fetchProducts = async () => {
     try {
@@ -156,6 +231,7 @@ export default function Dashboard() {
       setLoading(false)
     }
   }
+
 
   const fetchLeads = async () => {
     setLeadsLoading(true)
@@ -173,12 +249,14 @@ export default function Dashboard() {
     }
   }
 
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   const copyLink = () => {
     navigator.clipboard.writeText(storeUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
 
   const resetForm = () => {
     setForm(EMPTY_FORM)
@@ -187,18 +265,23 @@ export default function Dashboard() {
     setShowForm(false)
   }
 
+
   const startEdit = product => {
     setEditingProduct(product)
     setForm({
-      name: product.name, price: product.price,
-      description: product.description || '',
-      imageFiles: [], imagePreviews: [],
-      imageUrls: product.imageUrls || [],
+      name:          product.name,
+      price:         product.price,
+      description:   product.description || '',
+      category:      product.category || '',
+      imageFiles:    [],
+      imagePreviews: [],
+      imageUrls:     product.imageUrls || [],
     })
     setShowForm(true)
     setActiveTab('products')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
 
   const handleImageChange = e => {
     const files = Array.from(e.target.files)
@@ -226,6 +309,7 @@ export default function Dashboard() {
     setFormError('')
   }
 
+
   const handleRemoveExistingImage = async url => {
     if (!editingProduct) {
       setForm(p => ({ ...p, imageUrls: p.imageUrls.filter(u => u !== url) }))
@@ -243,6 +327,7 @@ export default function Dashboard() {
     }
   }
 
+
   const handleRemoveNewImage = index => {
     setForm(p => ({
       ...p,
@@ -250,6 +335,7 @@ export default function Dashboard() {
       imagePreviews: p.imagePreviews.filter((_, i) => i !== index),
     }))
   }
+
 
   const handleSave = async () => {
     if (!form.name.trim()) { setFormError('Product name is required.'); return }
@@ -262,7 +348,13 @@ export default function Dashboard() {
       if (editingProduct) {
         const updatedData = await updateProduct(
           store.id, editingProduct.id,
-          { name: form.name.trim(), price: form.price, description: form.description.trim(), imageUrls: form.imageUrls },
+          {
+            name:        form.name.trim(),
+            price:       form.price,
+            description: form.description.trim(),
+            category:    form.category.trim(),
+            imageUrls:   form.imageUrls,
+          },
           form.imageFiles
         )
         setProducts(prev => prev.map(p =>
@@ -274,7 +366,12 @@ export default function Dashboard() {
         if (reached) { setFormError(`You've reached the ${maxProducts} product limit.`); setSaving(false); return }
         const newProduct = await addProduct(
           store.id,
-          { name: form.name.trim(), price: form.price, description: form.description.trim() },
+          {
+            name:        form.name.trim(),
+            price:       form.price,
+            description: form.description.trim(),
+            category:    form.category.trim(),
+          },
           form.imageFiles
         )
         setProducts(prev => [newProduct, ...prev])
@@ -293,6 +390,7 @@ export default function Dashboard() {
     }
   }
 
+
   const handleDelete = async id => {
     if (!window.confirm('Delete this product? This cannot be undone.')) return
     setDeleting(id)
@@ -307,10 +405,10 @@ export default function Dashboard() {
     }
   }
 
+
   const handleToggleActive = async product => {
     if (!isGrowthOrPro) return
     const newValue = !product.isActive
-    // Optimistic update
     setProducts(prev =>
       prev.map(p => p.id === product.id ? { ...p, isActive: newValue } : p)
     )
@@ -320,12 +418,12 @@ export default function Dashboard() {
       })
     } catch (err) {
       console.error('Toggle failed', err)
-      // Revert on failure
       setProducts(prev =>
         prev.map(p => p.id === product.id ? { ...p, isActive: !newValue } : p)
       )
     }
   }
+
 
   const handleSettingsSave = async formData => {
     setSettingsSaving(true)
@@ -337,8 +435,9 @@ export default function Dashboard() {
         storeName:      formData.storeName.trim(),
         whatsappNumber: formData.whatsappNumber.trim(),
         description:    formData.description.trim(),
+        themeColor:     formData.themeColor || '',
       })
-      setStore(prev => ({ ...prev, ...formData }))
+      setStore(prev => ({ ...prev, ...formData, themeColor: formData.themeColor || '' }))
       setSettingsSuccess('Settings saved successfully.')
       setTimeout(() => setSettingsSuccess(''), 3000)
     } catch (err) {
@@ -348,6 +447,7 @@ export default function Dashboard() {
       setSettingsSaving(false)
     }
   }
+
 
   const handleLogoUpload = async file => {
     setLogoUploading(true)
@@ -361,6 +461,27 @@ export default function Dashboard() {
       setLogoUploading(false)
     }
   }
+
+
+  const handleColorSave = async (color) => {
+    try {
+      await updateStore(store.id, { themeColor: color })
+      setStore(prev => ({ ...prev, themeColor: color }))
+    } catch (err) {
+      console.error('Color save failed', err)
+    }
+  }
+
+
+  const handleLayoutSave = async (layout) => {
+    try {
+      await updateStore(store.id, { storeLayout: layout })
+      setStore(prev => ({ ...prev, storeLayout: layout }))
+    } catch (err) {
+      console.error('Layout save failed', err)
+    }
+  }
+
 
   const handleDeleteAccount = async () => {
     setDeleteLoading(true)
@@ -390,6 +511,7 @@ export default function Dashboard() {
     }
   }
 
+
   const handleSupportSubmit = async formData => {
     if (!formData.message.trim()) return
     setSupportSubmitting(true)
@@ -417,31 +539,10 @@ export default function Dashboard() {
     }
   }
 
-  const handlePollVote = async vote => {
-    if (!store?.id) return
-    setPollSubmitting(true)
-    setPollError('')
-    try {
-      await setDoc(doc(db, 'upgradeVotes', store.id), {
-        storeId:      store.id,
-        businessName: store.businessName,
-        vote,
-        reason:       pollReason.trim(),
-        createdAt:    new Date(),
-      })
-      setExistingVote({ vote, reason: pollReason.trim() })
-      setPollSuccess('Thanks for your feedback!')
-    } catch (err) {
-      console.error('Poll vote failed', err)
-      setPollError('Could not save your response. Please try again.')
-    } finally {
-      setPollSubmitting(false)
-    }
-  }
 
   const handleUpgrade = async (selectedPlan) => {
     if (!store?.id || !selectedPlan) return
-    setBillingLoading(true)
+    setBillingLoading(selectedPlan)
     setBillingError('')
     try {
       const res = await fetch('/.netlify/functions/billing-initialize', {
@@ -459,9 +560,10 @@ export default function Dashboard() {
       console.error('Billing initialize failed', err)
       setBillingError('Network error. Please check your connection and try again.')
     } finally {
-      setBillingLoading(false)
+      setBillingLoading('')
     }
   }
+
 
   // ── Loading guard ──────────────────────────────────────────────────────────
   if (!store) {
@@ -471,6 +573,7 @@ export default function Dashboard() {
       </div>
     )
   }
+
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -497,16 +600,10 @@ export default function Dashboard() {
           copyLink={copyLink}
           navigateTo={setActiveTab}
           setShowForm={setShowForm}
-          pollLoading={pollLoading}
-          pollSubmitting={pollSubmitting}
-          pollSuccess={pollSuccess}
-          pollError={pollError}
-          existingVote={existingVote}
-          pollReason={pollReason}
-          setPollReason={setPollReason}
-          onVote={handlePollVote}
+          analyticsData={analyticsData}
         />
       )}
+
 
       {activeTab === 'products' && (
         <ProductsTab
@@ -531,6 +628,7 @@ export default function Dashboard() {
           handleFormName={e => setForm(p => ({ ...p, name: e.target.value }))}
           handleFormPrice={e => setForm(p => ({ ...p, price: e.target.value }))}
           handleFormDesc={e => setForm(p => ({ ...p, description: e.target.value }))}
+          handleFormCategory={e => setForm(p => ({ ...p, category: e.target.value }))}
           handleSave={handleSave}
           resetForm={resetForm}
           startEdit={startEdit}
@@ -539,6 +637,7 @@ export default function Dashboard() {
         />
       )}
 
+
       {activeTab === 'leads' && (
         <LeadsTab
           leadsLoading={leadsLoading}
@@ -546,6 +645,7 @@ export default function Dashboard() {
           isPro={isPro}
         />
       )}
+
 
       {activeTab === 'settings' && (
         <SettingsTab
@@ -568,6 +668,7 @@ export default function Dashboard() {
         />
       )}
 
+
       {activeTab === 'support' && (
         <SupportTab
           store={store}
@@ -579,6 +680,7 @@ export default function Dashboard() {
           submitSuccess={supportSuccess}
         />
       )}
+
 
       {activeTab === 'billing' && (
         <BillingTab
@@ -593,9 +695,15 @@ export default function Dashboard() {
         />
       )}
 
+
       {activeTab === 'orders'       && <OrdersTab store={store} whatsappNumber={store?.whatsappNumber} />}
       {activeTab === 'customers'    && <CustomersTab />}
-      {activeTab === 'categories'   && <CategoriesTab />}
+      {activeTab === 'categories'   && (
+        <CategoriesTab
+          isGrowthOrPro={isGrowthOrPro}
+          navigateTo={setActiveTab}
+        />
+      )}
       {activeTab === 'reviews'      && <ReviewsTab />}
       {activeTab === 'analytics'    && (
         <AnalyticsTab
@@ -604,11 +712,22 @@ export default function Dashboard() {
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
           navigateTo={setActiveTab}
+          analyticsData={analyticsData}
         />
       )}
       {activeTab === 'marketing'    && <MarketingTab store={store} storeUrl={storeUrl} />}
       {activeTab === 'discounts'    && <DiscountsTab />}
-      {activeTab === 'online-store' && <OnlineStoreTab store={store} storeUrl={storeUrl} />}
+      {activeTab === 'online-store' && (
+        <OnlineStoreTab
+          store={store}
+          storeUrl={storeUrl}
+          isGrowthOrPro={isGrowthOrPro}
+          navigateTo={setActiveTab}
+          onLogoUpload={handleLogoUpload}
+          onColorSave={handleColorSave}
+          onLayoutSave={handleLayoutSave}
+        />
+      )}
       {activeTab === 'mobile-app'   && <MobileAppTab />}
       {activeTab === 'payouts'      && <PayoutsTab />}
     </DashboardLayout>
