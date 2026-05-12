@@ -1,5 +1,6 @@
+// src/components/StoreNavbar.jsx
 import { useState, useRef } from 'react'
-import { MessageCircle, Search, X, Home, Grid, ShoppingBag, ChevronDown } from 'lucide-react'
+import { MessageCircle, Search, X, Home, Grid, ShoppingBag, ShoppingCart } from 'lucide-react'
 import { buildEnquiryURL } from '../utils/whatsapp'
 
 const getInitials = (name = '') => {
@@ -9,7 +10,15 @@ const getInitials = (name = '') => {
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
 
-export default function StoreNavbar({ store, search, setSearch, activeTab, setActiveTab }) {
+export default function StoreNavbar({
+  store,
+  search,
+  setSearch,
+  activeTab,
+  setActiveTab,
+  cartCount = 0,
+  onCartOpen = null,
+}) {
   const [searchOpen, setSearchOpen] = useState(false)
   const searchRef = useRef(null)
 
@@ -59,6 +68,7 @@ export default function StoreNavbar({ store, search, setSearch, activeTab, setAc
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Mobile search toggle */}
             <button
               onClick={openSearch}
               className="md:hidden p-2 text-stone-500 hover:text-green-600 hover:bg-stone-100 rounded-xl transition-all"
@@ -66,6 +76,24 @@ export default function StoreNavbar({ store, search, setSearch, activeTab, setAc
             >
               <Search size={18} />
             </button>
+
+            {/* Desktop cart button — only for Growth/Pro */}
+            {onCartOpen !== null && (
+              <button
+                onClick={onCartOpen}
+                className="hidden md:flex relative items-center justify-center p-2 text-stone-500 hover:text-green-600 hover:bg-stone-100 rounded-xl transition-all"
+                aria-label="Open cart"
+              >
+                <ShoppingCart size={18} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Chat button */}
             <a
               href={buildEnquiryURL(store?.whatsappNumber, store?.businessName)}
               target="_blank"
@@ -94,7 +122,10 @@ export default function StoreNavbar({ store, search, setSearch, activeTab, setAc
                 onBlur={() => { if (!search) setSearchOpen(false) }}
               />
               {search && (
-                <button onClick={() => { setSearch(''); setSearchOpen(false) }} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                <button
+                  onClick={() => { setSearch(''); setSearchOpen(false) }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                >
                   <X size={14} />
                 </button>
               )}
@@ -107,9 +138,9 @@ export default function StoreNavbar({ store, search, setSearch, activeTab, setAc
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-stone-200 safe-area-bottom">
         <div className="flex items-center justify-around px-2 py-2">
           {[
-            { id: 'home',       label: 'Home',       icon: Home },
-            { id: 'categories', label: 'Categories',  icon: Grid },
-            { id: 'orders',     label: 'Orders',      icon: ShoppingBag },
+            { id: 'home',       label: 'Home',      icon: Home },
+            { id: 'categories', label: 'Categories', icon: Grid },
+            { id: 'orders',     label: 'Orders',     icon: ShoppingBag },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -123,6 +154,25 @@ export default function StoreNavbar({ store, search, setSearch, activeTab, setAc
               {activeTab === id && <span className="w-1 h-1 rounded-full bg-green-500 mt-0.5" />}
             </button>
           ))}
+
+          {/* Cart tab — only for Growth/Pro */}
+          {onCartOpen !== null && (
+            <button
+              onClick={onCartOpen}
+              className="relative flex flex-col items-center gap-0.5 px-5 py-1 rounded-xl transition-all text-stone-400 hover:text-stone-600"
+              aria-label="Open cart"
+            >
+              <span className="relative">
+                <ShoppingCart size={20} strokeWidth={1.8} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </span>
+              <span className="text-[10px] font-semibold">Cart</span>
+            </button>
+          )}
         </div>
       </div>
     </>

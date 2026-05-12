@@ -1,10 +1,18 @@
-//src/components/ProductCard.jsx/
+// src/components/ProductCard.jsx
 import { useState } from 'react'
-import { MessageCircle, Package, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react'
+import { MessageCircle, Package, ChevronLeft, ChevronRight, X, ZoomIn, Plus } from 'lucide-react'
 import { buildOrderURL } from '../utils/whatsapp'
 
 
-export default function ProductCard({ product, whatsappNumber, storeUrl, isHighlighted, onOrder, listView = false }) {
+export default function ProductCard({
+  product,
+  whatsappNumber,
+  storeUrl,
+  isHighlighted,
+  onOrder,
+  listView = false,
+  onAddToCart = null,
+}) {
   const [activeImg, setActiveImg]   = useState(0)
   const [popupIndex, setPopupIndex] = useState(null)
 
@@ -15,6 +23,10 @@ export default function ProductCard({ product, whatsappNumber, storeUrl, isHighl
     if (onOrder) onOrder(product.id)
     const url = buildOrderURL(whatsappNumber, product.name, product.price, product.id, storeUrl)
     window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleAdd = () => {
+    if (onAddToCart) onAddToCart(product)
   }
 
   return (
@@ -118,13 +130,25 @@ export default function ProductCard({ product, whatsappNumber, storeUrl, isHighl
               <span className="text-green-600 font-extrabold text-base leading-none flex-shrink-0">
                 ₦{Number(product.price).toLocaleString()}
               </span>
-              <button
-                onClick={handleOrder}
-                className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm flex-shrink-0"
-              >
-                <MessageCircle size={12} />
-                Order
-              </button>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {onAddToCart !== null && (
+                  <button
+                    onClick={handleAdd}
+                    className="flex items-center gap-1 border border-green-500 text-green-600 hover:bg-green-50 active:scale-95 py-2 px-2.5 rounded-xl text-xs font-bold transition-all"
+                    aria-label="Add to cart"
+                  >
+                    <Plus size={12} />
+                    Add
+                  </button>
+                )}
+                <button
+                  onClick={handleOrder}
+                  className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <MessageCircle size={12} />
+                  Order
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -135,7 +159,7 @@ export default function ProductCard({ product, whatsappNumber, storeUrl, isHighl
               {product.name}
             </h3>
 
-            {/* Description — only on sm+ to avoid crowding on 2-col mobile grid */}
+            {/* Description — only on sm+ */}
             {product.description && (
               <p className="hidden sm:block text-stone-400 text-xs line-clamp-2 leading-relaxed">
                 {product.description}
@@ -147,19 +171,40 @@ export default function ProductCard({ product, whatsappNumber, storeUrl, isHighl
               ₦{Number(product.price).toLocaleString()}
             </span>
 
-            {/* Order button — full width, always below price */}
-            <button
-              onClick={handleOrder}
-              className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm"
-            >
-              <MessageCircle size={13} />
-              Order 
-            </button>
+            {/* Buttons */}
+            {onAddToCart !== null ? (
+              // Growth/Pro: two buttons side by side
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAdd}
+                  className="flex-1 flex items-center justify-center gap-1.5 border border-green-500 text-green-600 hover:bg-green-50 active:scale-95 py-2.5 rounded-xl text-xs font-bold transition-all"
+                >
+                  <Plus size={13} />
+                  Add
+                </button>
+                <button
+                  onClick={handleOrder}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <MessageCircle size={13} />
+                  Order
+                </button>
+              </div>
+            ) : (
+              // Starter: single full-width Order button — unchanged
+              <button
+                onClick={handleOrder}
+                className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+              >
+                <MessageCircle size={13} />
+                Order
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* ── Lightbox popup — identical for all layout modes ── */}
+      {/* ── Lightbox popup ── */}
       {popupIndex !== null && (
         <div
           className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4"

@@ -595,6 +595,7 @@ export default function Dashboard() {
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
           leads={leads}
+          products={products}
           storeUrl={storeUrl}
           copied={copied}
           copyLink={copyLink}

@@ -58,9 +58,9 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Products Listed',  value: products.length },
-          { label: 'New',          value: leads.filter(l => !l.status || l.status === 'new').length },
-          { label: 'Contacted',    value: leads.filter(l => l.status === 'contacted').length },
+      { label: 'Total Leads',  value: leads.length },
+      { label: 'New',          value: leads.filter(l => !l.status || l.status === 'new').length },
+      { label: 'Contacted',    value: leads.filter(l => l.status === 'contacted').length },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4">
             <p className="text-2xl font-extrabold text-gray-900">{s.value}</p>
@@ -86,7 +86,7 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[2fr_1.5fr_2fr_1.5fr_1.2fr_1fr] gap-4 px-5 py-3 border-b border-gray-100 bg-gray-50/70">
+          <div className="hidden sm:grid grid-cols-[1.6fr_1.4fr_3fr_0.8fr_1.2fr_1fr] gap-4 px-5 py-3 border-b border-gray-100 bg-gray-50/70">
             {['Customer','Phone','Message','Product','Date','Status'].map(h => (
               <span key={h} className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</span>
             ))}
@@ -95,18 +95,20 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
             {leads.map(lead => (
               <div key={lead.id}>
                 {/* Desktop row */}
-                <div className="hidden sm:grid grid-cols-[2fr_1.5fr_2fr_1.5fr_1.2fr_1fr] gap-4 items-center px-5 py-4 hover:bg-gray-50/40 transition-colors">
+                <div className="hidden sm:grid grid-cols-[1.6fr_1.4fr_3fr_0.8fr_1.2fr_1fr] gap-4 items-start px-5 py-4 hover:bg-gray-50/40 transition-colors">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                       <span className="text-green-700 font-bold text-xs">{(lead.name || '?')[0].toUpperCase()}</span>
                     </div>
                     <p className="text-sm font-semibold text-gray-900 truncate">{lead.name || '—'}</p>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Phone size={11} className="text-gray-400 flex-shrink-0" />
-                    <p className="text-sm text-gray-600 truncate">{lead.phone || lead.whatsapp || '—'}</p>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Phone size={11} className="text-gray-400 flex-shrink-0 mt-1" />
+                    <p className="text-sm text-gray-600 break-words min-w-0">{lead.phone || lead.whatsapp || '—'}</p>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{lead.message || '—'}</p>
+                  <p className="text-sm text-gray-500 whitespace-pre-wrap break-words leading-relaxed">
+                    {lead.interest || lead.message || '—'}
+                  </p>
                   <p className="text-xs text-gray-400 truncate">{lead.productName || lead.productId || '—'}</p>
                   <p className="text-xs text-gray-400">
                     {lead.createdAt?.toDate
@@ -130,7 +132,11 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{lead.phone || lead.whatsapp || '—'}</p>
-                    {lead.message && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{lead.message}</p>}
+                    {(lead.interest || lead.message) && (
+                      <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap break-words leading-relaxed">
+                        {lead.interest || lead.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

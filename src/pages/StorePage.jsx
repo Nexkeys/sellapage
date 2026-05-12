@@ -1,4 +1,4 @@
-//src/pages/StorePage.jsx/
+// src/pages/StorePage.jsx
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
@@ -13,6 +13,7 @@ import LeadForm from '../components/LeadForm'
 import ProductCard from '../components/ProductCard'
 import StoreNavbar from '../components/StoreNavbar'
 import StoreFooter from '../components/StoreFooter'
+import CartDrawer from '../components/CartDrawer'
 import NotFound from './NotFound'
 
 
@@ -98,7 +99,7 @@ function OrdersTab({ store }) {
           className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1fba5a] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm"
         >
           <MessageCircle size={15} />
-          Order via
+          Order via WhatsApp
         </a>
       </div>
     </div>
@@ -118,8 +119,14 @@ export default function StorePage() {
   const [activeTab, setActiveTab] = useState('home')
   const [activeCategory, setActiveCategory] = useState('All')
   const [highlightedProduct, setHighlightedProduct] = useState(null)
+
+  // ── Cart state ──
+  const [cart, setCart]         = useState([])
+  const [cartOpen, setCartOpen] = useState(false)
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+
   const allProdsRef    = useRef(null)
-  const viewCountedRef = useRef(false)   // ← StrictMode double-invoke guard
+  const viewCountedRef = useRef(false)
 
 
 
@@ -133,7 +140,6 @@ export default function StorePage() {
         const prods = await getProducts(storeData.id)
         setProducts(prods)
 
-        // View counting — guarded against StrictMode double-invoke
         if (!viewCountedRef.current) {
           viewCountedRef.current = true
           try {
@@ -143,7 +149,7 @@ export default function StorePage() {
               { merge: true }
             )
           } catch {
-            // silently ignore — a failed view count must never interrupt page load
+            // silently ignore
           }
         }
       } catch {
@@ -173,7 +179,7 @@ export default function StorePage() {
 
 
 
-  // Click tracking callback (fire-and-forget)
+  // ── Click tracking callback ──
   const handleProductClick = (productId) => {
     if (!store?.id) return
     setDoc(
@@ -189,7 +195,48 @@ export default function StorePage() {
 
 
 
-  // Inactive product filtering + existing search/category logic
+  // ── Cart handlers ──
+  const handleAddToCart = (product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id)
+      if (existing) {
+        return prev.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      }
+      return [
+        ...prev,
+        {
+          id: product.id,
+          name: product.name,
+          price: Number(product.price),
+          quantity: 1,
+        },
+      ]
+    })
+  }
+
+  const handleUpdateQuantity = (productId, newQuantity) => {
+    if (newQuantity < 1) {
+      handleRemoveItem(productId)
+      return
+    }
+    setCart(prev =>
+      prev.map(item =>
+        item.id === productId ? { ...item, quantity: newQuantity } : item
+      )
+    )
+  }
+
+  const handleRemoveItem = (productId) => {
+    setCart(prev => prev.filter(item => item.id !== productId))
+  }
+
+
+
+  // ── Filtered products ──
   const filteredProducts = (
     search.trim()
       ? products.filter(p =>
@@ -205,6 +252,12 @@ export default function StorePage() {
 
   const storeUrl    = store ? `${window.location.origin}/${store.storeName}` : ''
   const storeLayout = store?.storeLayout || 'grid'
+
+  // ── Cart feature gate ──
+  const isCartEnabled =
+    store?.hasGrowthFeatures === true ||
+    store?.plan === 'growth' ||
+    store?.plan === 'pro'
 
   const scrollToAll = () => {
     allProdsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -243,6 +296,8 @@ export default function StorePage() {
         setSearch={setSearch}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        cartCount={isCartEnabled ? cartCount : 0}
+        onCartOpen={isCartEnabled ? () => setCartOpen(true) : null}
       />
 
       {/* ── Tab: Categories ── */}
@@ -265,7 +320,6 @@ export default function StorePage() {
             className="relative overflow-hidden"
             style={{ backgroundColor: store.themeColor || '#15803d' }}
           >
-            {/* Leaf decoration circles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div className="absolute -top-10 -left-10 w-64 h-64 rounded-full bg-green-600/40" />
               <div className="absolute -bottom-16 -right-10 w-80 h-80 rounded-full bg-green-800/50" />
@@ -277,7 +331,6 @@ export default function StorePage() {
 
                 {/* Left: Store info */}
                 <div className="flex-1 text-center md:text-left">
-                  {/* Mobile logo */}
                   <div className="flex justify-center md:hidden mb-5">
                     <div className="w-20 h-20 rounded-3xl overflow-hidden flex items-center justify-center shadow-xl bg-white/20 backdrop-blur-sm border-2 border-white/30">
                       {store.logoUrl ? (
@@ -413,6 +466,7 @@ export default function StorePage() {
                         isHighlighted={highlightedProduct === product.id}
                         onOrder={handleProductClick}
                         listView={storeLayout === 'list'}
+                        onAddToCart={isCartEnabled ? handleAddToCart : null}
                       />
                     ))}
                   </div>
@@ -449,6 +503,18 @@ export default function StorePage() {
 
       {/* Bottom tab bar spacer on mobile */}
       <div className="h-16 md:hidden" />
+
+      {/* ── Cart Drawer ── */}
+      {cartOpen && isCartEnabled && (
+        <CartDrawer
+          cartItems={cart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onClose={() => setCartOpen(false)}
+          whatsappNumber={store.whatsappNumber}
+          storeName={store.businessName}
+        />
+      )}
     </div>
   )
 }

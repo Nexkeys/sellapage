@@ -9,7 +9,7 @@ import {
 export default function OverviewTab({
   store, plan, maxProducts, productCount, limitReached,
   isGrowthOrPro, isPro,
-  leads, storeUrl, copied, copyLink,
+  leads, products = [], storeUrl, copied, copyLink,
   navigateTo, setShowForm,
   analyticsData,
 }) {
@@ -102,12 +102,12 @@ export default function OverviewTab({
             <TrendingUp size={15} className="text-amber-600" />
           </div>
           <p className="text-2xl font-extrabold text-gray-900">
-            {isPro && totalViews > 0 && leads.length > 0
-              ? `${Math.round((leads.length / totalViews) * 100)}%`
+            {isPro && totalViews > 0 && totalClicks > 0
+              ? `${Math.round((totalClicks / totalViews) * 100)}%`
               : '—'}
           </p>
           <p className="text-gray-400 text-xs mt-0.5 font-medium">Conversion Rate</p>
-          <p className="text-[10px] text-gray-400 mt-1">leads / views</p>
+          <p className="text-[10px] text-gray-400 mt-1">clicks / views</p>
         </div>
       </div>
 
@@ -176,24 +176,21 @@ export default function OverviewTab({
             </button>
           </div>
           <div className="divide-y divide-gray-100">
-            {[...leads]
-              .reduce((acc, l) => {
-                const existing = acc.find(a => a.productId === l.productId)
-                if (existing) existing.count++
-                else acc.push({ productId: l.productId, name: l.productName || l.productId || 'Unknown', count: 1 })
-                return acc
-              }, [])
-              .sort((a, b) => b.count - a.count)
+            {[...products]
+              .filter(p => (p.clicks || 0) > 0)
+              .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
               .slice(0, 5)
               .map((p, i) => (
-                <div key={p.productId || i} className="flex items-center gap-4 px-5 py-3.5">
+                <div key={p.id} className="flex items-center gap-4 px-5 py-3.5">
                   <span className="text-gray-300 font-bold text-sm w-5 flex-shrink-0">#{i + 1}</span>
                   <p className="flex-1 text-sm font-semibold text-gray-800 truncate">{p.name}</p>
-                  <p className="text-xs font-bold text-green-600">{p.count} enquir{p.count === 1 ? 'y' : 'ies'}</p>
+                  <p className="text-xs font-bold text-green-600">{p.clicks} click{p.clicks === 1 ? '' : 's'}</p>
                 </div>
               ))}
-            {leads.length === 0 && (
-              <div className="px-5 py-8 text-center text-gray-400 text-sm">No data yet — share your store to get leads.</div>
+            {products.filter(p => (p.clicks || 0) > 0).length === 0 && (
+              <div className="px-5 py-8 text-center text-gray-400 text-sm">
+                No clicks yet — share your store link to get started.
+              </div>
             )}
           </div>
         </div>
