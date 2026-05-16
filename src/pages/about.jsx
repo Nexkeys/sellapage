@@ -142,7 +142,7 @@ export default function About() {
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {[
-              { label: 'Business Registration', status: 'CAC registration in progress' },
+              { label: 'Business Registration', status: 'CAC Registered — BN No. 9537181' },
               { label: 'Payment Processing',    status: 'Paystack — CBN licensed' },
               { label: 'Data Storage',          status: 'Google Firebase — encrypted at rest' },
               { label: 'Image Hosting',         status: 'Cloudinary — global CDN' },

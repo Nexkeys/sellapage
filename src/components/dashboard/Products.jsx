@@ -11,7 +11,7 @@ export default function ProductsTab({
   showForm, setShowForm, editingProduct, form, formError, saving, loading,
   products, deleting,
   handleImageChange, handleRemoveExistingImage, handleRemoveNewImage,
-  handleFormName, handleFormPrice, handleFormDesc, handleFormCategory,
+  handleFormName, handleFormPrice, handleFormDesc, handleFormCategory, handleFormStock,
   handleSave, resetForm, startEdit, handleDelete,
   onToggleActive,
 }) {
@@ -74,7 +74,7 @@ export default function ProductsTab({
 
 
       {/* Add / Edit Form */}
-      {showForm && (
+      {showForm && !editingProduct && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h2 className="font-bold text-gray-900 text-base">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
@@ -113,6 +113,20 @@ export default function ProductsTab({
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
               />
               <p className="text-gray-400 text-xs mt-1.5">Customers can filter your store by category.</p>
+            </div>
+
+            {/* Stock */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Stock Count</label>
+              <input
+                value={form.stock}
+                onChange={handleFormStock}
+                type="number"
+                min="0"
+                placeholder="e.g. 10"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+              />
+              <p className="text-gray-400 text-xs mt-1.5">Leave blank if you don't track stock. Set to 0 to mark as out of stock.</p>
             </div>
 
             {/* Images */}
@@ -193,6 +207,112 @@ export default function ProductsTab({
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.map(product => {
             const isInactive = product.isActive === false
+            if (editingProduct?.id === product.id) {
+              return (
+                <div key={product.id} className="bg-white rounded-2xl border border-green-200 shadow-md overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h2 className="font-bold text-gray-900 text-base">Edit Product</h2>
+                    <button onClick={resetForm} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                      <X size={17} />
+                    </button>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    {formError && (
+                      <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
+                        <AlertCircle size={14} /> {formError}
+                      </div>
+                    )}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Product Name *</label>
+                        <input value={form.name} onChange={handleFormName} placeholder="e.g. Blue Ankara Blouse" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Price *</label>
+                        <input value={form.price} onChange={handleFormPrice} type="number" min="0" placeholder="e.g. 5000" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
+                      <textarea value={form.description} onChange={handleFormDesc} rows={3} placeholder="Describe your product..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+                    </div>
+
+                    {/* Category */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category</label>
+                      <input
+                        value={form.category}
+                        onChange={handleFormCategory}
+                        placeholder="e.g. Tops, Shoes, Electronics"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+                      />
+                      <p className="text-gray-400 text-xs mt-1.5">Customers can filter your store by category.</p>
+                    </div>
+
+                    {/* Stock */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Stock Count</label>
+                      <input
+                        value={form.stock}
+                        onChange={handleFormStock}
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 10"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+                      />
+                      <p className="text-gray-400 text-xs mt-1.5">Leave blank if you don't track stock. Set to 0 to mark as out of stock.</p>
+                    </div>
+
+                    {/* Images */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Images
+                        <span className="ml-1.5 text-gray-400 font-normal">PNG or JPG, max 5MB each. Up to {maxImagesPerProduct} images.</span>
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {/* Existing URLs */}
+                        {form.imageUrls.map((url, i) => (
+                          <div key={`ex-${i}`} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 group">
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <button onClick={() => handleRemoveExistingImage(url)} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <X size={16} className="text-white" />
+                            </button>
+                          </div>
+                        ))}
+                        {/* New previews */}
+                        {form.imagePreviews.map((src, i) => (
+                          <div key={`new-${i}`} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 group">
+                            <img src={src} alt="" className="w-full h-full object-cover" />
+                            <button onClick={() => handleRemoveNewImage(i)} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <X size={16} className="text-white" />
+                            </button>
+                          </div>
+                        ))}
+                        {/* Upload slot */}
+                        {(form.imageUrls.length + form.imagePreviews.length) < maxImagesPerProduct && (
+                          <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-green-400 hover:bg-green-50/30 transition-all group">
+                            <UploadCloud size={16} className="text-gray-300 group-hover:text-green-400 transition-colors mb-0.5" />
+                            <span className="text-[10px] text-gray-300 group-hover:text-green-400 font-medium">Upload</span>
+                            <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-1">
+                      <button onClick={resetForm} className="flex-1 sm:flex-none px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex-1 sm:flex-none px-6 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+                      >
+                        {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : 'Update Product'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
             return (
               <div
                 key={product.id}
@@ -229,6 +349,17 @@ export default function ProductsTab({
                     <p className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{product.name}</p>
                   </div>
                   <p className="text-green-600 font-extrabold text-base">₦{Number(product.price).toLocaleString()}</p>
+                  {product.stock !== null && product.stock !== undefined && (
+                    <div>
+                      {product.stock === 0 ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Out of Stock</span>
+                      ) : product.stock > 0 && product.stock <= 5 ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">{product.stock} left</span>
+                      ) : product.stock > 5 ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200">{product.stock} in stock</span>
+                      ) : null}
+                    </div>
+                  )}
                   {product.description && (
                     <p className="text-gray-400 text-xs line-clamp-2 leading-relaxed">{product.description}</p>
                   )}

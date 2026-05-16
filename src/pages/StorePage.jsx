@@ -249,6 +249,14 @@ export default function StorePage() {
   ).filter(p => p.isActive !== false)
 
 
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const aOut = typeof a.stock === 'number' && a.stock === 0
+    const bOut = typeof b.stock === 'number' && b.stock === 0
+    if (aOut && !bOut) return 1
+    if (!aOut && bOut) return -1
+    return 0
+  })
+
 
   const storeUrl    = store ? `${window.location.origin}/${store.storeName}` : ''
   const storeLayout = store?.storeLayout || 'grid'
@@ -457,7 +465,7 @@ export default function StorePage() {
                         : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4'
                     }
                   >
-                    {filteredProducts.map(product => (
+                    {sortedProducts.map(product => (
                       <ProductCard
                         key={product.id}
                         product={product}

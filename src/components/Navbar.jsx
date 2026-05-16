@@ -28,9 +28,11 @@ export default function Navbar() {
             onClick={close}
             className="flex items-center gap-2 font-bold text-xl text-gray-900 hover:text-green-600 transition-colors"
           >
-            <span className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm">
-              S
-            </span>
+            <img
+              src="/og-image.png"
+              alt="Sellapage logo"
+              className="w-8 h-8 rounded-lg object-cover shadow-sm"
+            />
             <span>sellapage</span>
           </Link>
 

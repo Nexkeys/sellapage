@@ -38,7 +38,7 @@ import BillingTab       from '../components/dashboard/BillingTab'
 
 
 const EMPTY_FORM = {
-  name: '', price: '', description: '', category: '',
+  name: '', price: '', description: '', category: '', stock: '',
   imageFiles: [], imagePreviews: [], imageUrls: [],
 }
 
@@ -273,13 +273,12 @@ export default function Dashboard() {
       price:         product.price,
       description:   product.description || '',
       category:      product.category || '',
+      stock:         product.stock ?? '',
       imageFiles:    [],
       imagePreviews: [],
       imageUrls:     product.imageUrls || [],
     })
     setShowForm(true)
-    setActiveTab('products')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
 
@@ -353,6 +352,7 @@ export default function Dashboard() {
             price:       form.price,
             description: form.description.trim(),
             category:    form.category.trim(),
+            stock:       form.stock !== '' && form.stock !== null && form.stock !== undefined ? Number(form.stock) : null,
             imageUrls:   form.imageUrls,
           },
           form.imageFiles
@@ -371,6 +371,7 @@ export default function Dashboard() {
             price:       form.price,
             description: form.description.trim(),
             category:    form.category.trim(),
+            stock:       form.stock !== '' && form.stock !== null && form.stock !== undefined ? Number(form.stock) : null,
           },
           form.imageFiles
         )
@@ -630,6 +631,7 @@ export default function Dashboard() {
           handleFormPrice={e => setForm(p => ({ ...p, price: e.target.value }))}
           handleFormDesc={e => setForm(p => ({ ...p, description: e.target.value }))}
           handleFormCategory={e => setForm(p => ({ ...p, category: e.target.value }))}
+          handleFormStock={e => setForm(p => ({ ...p, stock: e.target.value }))}
           handleSave={handleSave}
           resetForm={resetForm}
           startEdit={startEdit}
@@ -703,6 +705,7 @@ export default function Dashboard() {
         <CategoriesTab
           isGrowthOrPro={isGrowthOrPro}
           navigateTo={setActiveTab}
+          products={products}
         />
       )}
       {activeTab === 'reviews'      && <ReviewsTab />}

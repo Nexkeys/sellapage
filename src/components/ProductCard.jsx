@@ -29,6 +29,9 @@ export default function ProductCard({
     if (onAddToCart) onAddToCart(product)
   }
 
+  const isOutOfStock = typeof product.stock === 'number' && product.stock === 0
+  const isLowStock   = typeof product.stock === 'number' && product.stock > 0 && product.stock <= 5
+
   return (
     <>
       {/* ── Card ── */}
@@ -59,6 +62,16 @@ export default function ProductCard({
                 <p className="text-stone-300 text-[10px]">No image</p>
               </div>
             )}
+            {isOutOfStock && (
+              <div className="absolute top-1 left-1">
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full">Out of Stock</span>
+              </div>
+            )}
+            {isLowStock && (
+              <div className="absolute top-1 left-1">
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500 text-white rounded-full">Only {product.stock} left</span>
+              </div>
+            )}
           </div>
         ) : (
           // ── Default (grid/compact) view image ──
@@ -76,6 +89,16 @@ export default function ProductCard({
                 <div className="absolute top-2 right-2 w-7 h-7 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <ZoomIn size={13} className="text-white" />
                 </div>
+                {isOutOfStock && (
+                  <div className="absolute top-2 left-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full">Out of Stock</span>
+                  </div>
+                )}
+                {isLowStock && (
+                  <div className="absolute top-2 left-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500 text-white rounded-full">Only {product.stock} left</span>
+                  </div>
+                )}
                 {/* Carousel arrows */}
                 {hasMultiple && (
                   <>
@@ -130,25 +153,29 @@ export default function ProductCard({
               <span className="text-green-600 font-extrabold text-base leading-none flex-shrink-0">
                 ₦{Number(product.price).toLocaleString()}
               </span>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {onAddToCart !== null && (
+              {isOutOfStock ? (
+                <span className="text-xs font-bold px-3 py-2 rounded-xl bg-gray-100 text-gray-400">Out of Stock</span>
+              ) : (
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {onAddToCart !== null && (
+                    <button
+                      onClick={handleAdd}
+                      className="flex items-center gap-1 border border-green-500 text-green-600 hover:bg-green-50 active:scale-95 py-2 px-2.5 rounded-xl text-xs font-bold transition-all"
+                      aria-label="Add to cart"
+                    >
+                      <Plus size={12} />
+                      Add
+                    </button>
+                  )}
                   <button
-                    onClick={handleAdd}
-                    className="flex items-center gap-1 border border-green-500 text-green-600 hover:bg-green-50 active:scale-95 py-2 px-2.5 rounded-xl text-xs font-bold transition-all"
-                    aria-label="Add to cart"
+                    onClick={handleOrder}
+                    className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"
                   >
-                    <Plus size={12} />
-                    Add
+                    <MessageCircle size={12} />
+                    Order
                   </button>
-                )}
-                <button
-                  onClick={handleOrder}
-                  className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"
-                >
-                  <MessageCircle size={12} />
-                  Order
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -172,7 +199,9 @@ export default function ProductCard({
             </span>
 
             {/* Buttons */}
-            {onAddToCart !== null ? (
+            {isOutOfStock ? (
+              <button disabled className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 cursor-not-allowed py-2.5 rounded-xl text-xs font-bold">Out of Stock</button>
+            ) : onAddToCart !== null ? (
               // Growth/Pro: two buttons side by side
               <div className="flex gap-2">
                 <button
@@ -247,10 +276,11 @@ export default function ProductCard({
             <p className="text-white/80 text-sm font-semibold drop-shadow text-center">{product.name}</p>
             <button
               onClick={e => { e.stopPropagation(); handleOrder() }}
-              className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-all"
+              disabled={isOutOfStock}
+              className="flex items-center gap-2 bg-green-500 hover:bg-green-400 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-all"
             >
               <MessageCircle size={15} />
-              Order — ₦{Number(product.price).toLocaleString()}
+              {isOutOfStock ? 'Out of Stock' : `Order — ₦${Number(product.price).toLocaleString()}`}
             </button>
           </div>
         </div>
