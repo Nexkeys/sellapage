@@ -26,20 +26,20 @@ export default function OverviewTab({
 
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
           Good day, {store?.businessName?.split(' ')[0] || 'there'} 👋
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Here's what's happening with your store today.</p>
+        <p className="text-gray-500 text-sm mt-1">Here's what's happening with your store today.</p>
       </div>
 
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* Products */}
-        <div className={`rounded-2xl p-4 shadow-sm border ${limitReached ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+        <div className={`rounded-2xl p-4 shadow-sm shadow-gray-100/80 border transition-all ${limitReached ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100 hover:border-green-100 hover:shadow-md hover:shadow-gray-200/70'}`}>
           <div className="flex items-start justify-between mb-2">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${limitReached ? 'bg-amber-100' : 'bg-green-50'}`}>
               <ShoppingBag size={15} className={limitReached ? 'text-amber-600' : 'text-green-600'} />
@@ -61,7 +61,7 @@ export default function OverviewTab({
 
 
         {/* Leads */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 p-4 transition-all hover:border-purple-100 hover:shadow-md hover:shadow-gray-200/70">
           <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center mb-2">
             <Users size={15} className="text-purple-600" />
           </div>
@@ -72,7 +72,7 @@ export default function OverviewTab({
 
 
         {/* Store Views — Growth/Pro only */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 p-4 relative overflow-hidden transition-all hover:border-blue-100 hover:shadow-md hover:shadow-gray-200/70">
           {!isGrowthOrPro && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 z-10">
               <Lock size={14} className="text-gray-400" />
@@ -91,7 +91,7 @@ export default function OverviewTab({
 
 
         {/* Conversion — Pro only */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 p-4 relative overflow-hidden transition-all hover:border-amber-100 hover:shadow-md hover:shadow-gray-200/70">
           {!isPro && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 z-10">
               <Lock size={14} className="text-gray-400" />
@@ -114,7 +114,7 @@ export default function OverviewTab({
 
       {/* Limit reached warning */}
       {limitReached && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4">
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 shadow-sm shadow-amber-100/70">
           <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-amber-800 font-semibold text-sm">Product limit reached</p>
@@ -130,7 +130,7 @@ export default function OverviewTab({
 
 
       {/* Store link */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 p-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="font-bold text-gray-900 text-sm mb-1">Your Store Link</p>
@@ -140,7 +140,7 @@ export default function OverviewTab({
             <button
               onClick={copyLink}
               className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                copied ? 'bg-green-500 text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                copied ? 'bg-green-500 text-white shadow-sm' : 'border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
               }`}
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -150,7 +150,7 @@ export default function OverviewTab({
               href={storeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-green-500 hover:bg-green-600 text-white transition-all"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold bg-green-500 hover:bg-green-600 text-white transition-all shadow-sm hover:shadow-md"
             >
               <ExternalLink size={14} /> View Store
             </a>
@@ -162,7 +162,7 @@ export default function OverviewTab({
 
       {/* Top Products — Pro only */}
       {isPro && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export default function OverviewTab({
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => { setShowForm(true); navigateTo('products') }}
-          className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-4 hover:border-green-200 hover:bg-green-50/30 transition-all group"
+          className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-green-200 hover:bg-green-50/30 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
         >
           <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
             <Plus size={15} className="text-green-600" />
@@ -210,7 +210,7 @@ export default function OverviewTab({
         </button>
         <button
           onClick={() => navigateTo('leads')}
-          className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-4 hover:border-purple-200 hover:bg-purple-50/20 transition-all group"
+          className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-purple-200 hover:bg-purple-50/20 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
         >
           <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
             <Users size={15} className="text-purple-600" />

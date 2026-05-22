@@ -15,6 +15,7 @@ import StoreNavbar from '../components/StoreNavbar'
 import StoreFooter from '../components/StoreFooter'
 import CartDrawer from '../components/CartDrawer'
 import NotFound from './NotFound'
+import { resolveStoreThemeTokens } from '../utils/resolveStoreTheme'
 
 
 
@@ -28,16 +29,16 @@ const getInitials = (name = '') => {
 
 
 // ─── Categories Tab ───────────────────────────────────────────────────────────
-function CategoriesTab({ products, onSelectCategory, activeCategory }) {
+function CategoriesTab({ products, onSelectCategory, activeCategory, activeThemeObj }) {
   const categories = ['All', ...Array.from(new Set(
     products.map(p => p.category).filter(Boolean)
   ))]
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
       <h2 className="font-bold text-gray-900 text-lg mb-4">Categories</h2>
       {categories.length <= 1 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-stone-100">
+        <div className="text-center py-16 bg-white rounded-2xl border border-stone-100 shadow-sm shadow-stone-100/70">
           <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Grid size={24} className="text-gray-300" />
           </div>
@@ -50,14 +51,14 @@ function CategoriesTab({ products, onSelectCategory, activeCategory }) {
             <button
               key={cat}
               onClick={() => onSelectCategory(cat)}
-              className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${
+              className={`flex items-center gap-3 p-4 transition-all text-left ${
                 activeCategory === cat
-                  ? 'bg-green-50 border-green-300 text-green-700'
-                  : 'bg-white border-stone-100 hover:border-green-200 hover:bg-green-50/40 text-gray-700'
+                  ? `${activeThemeObj?.internalTabShellStyle?.cardClasses || 'bg-white rounded-2xl border border-stone-100 shadow-sm'} ring-2 ring-green-400`
+                  : `${activeThemeObj?.internalTabShellStyle?.cardClasses || 'bg-white rounded-2xl border border-stone-100 shadow-sm'} hover:opacity-80`
               }`}
             >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                activeCategory === cat ? 'bg-green-100' : 'bg-stone-100'
+              <div className={`w-9 h-9 flex items-center justify-center flex-shrink-0 ${
+                activeThemeObj?.internalTabShellStyle?.cardClasses ? 'rounded-full bg-black/10' : 'rounded-xl bg-stone-100'
               }`}>
                 <Tag size={16} className={activeCategory === cat ? 'text-green-600' : 'text-stone-400'} />
               </div>
@@ -80,11 +81,11 @@ function CategoriesTab({ products, onSelectCategory, activeCategory }) {
 
 
 // ─── Orders Tab ───────────────────────────────────────────────────────────────
-function OrdersTab({ store }) {
+function OrdersTab({ store, activeThemeObj }) {
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      <h2 className="font-bold text-gray-900 text-lg mb-4">Orders</h2>
-      <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-10 text-center">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <h2 className="font-bold text-lg mb-4" style={{ fontFamily: activeThemeObj?.typography?.headerFontFamily }}>Orders</h2>
+      <div className={`p-10 text-center ${activeThemeObj?.internalTabShellStyle?.cardClasses || 'bg-white rounded-2xl border border-stone-100 shadow-sm'}`}>
         <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <ShoppingBag size={28} className="text-green-400" />
         </div>
@@ -162,6 +163,34 @@ export default function StorePage() {
   }, [storeName])
 
 
+
+  // ── Theme extraction (shared with dashboard live preview) ──
+  const {
+    activeThemeObj,
+    previewThemeObj,
+    themeBg,
+    themeText,
+    themePrimary,
+    themeCard,
+    themeAccent,
+    headerFont,
+    bodyFont,
+    fontUrl,
+    heroBannerUrl,
+    footerText,
+  } = resolveStoreThemeTokens(store, {}, { bannerWidth: 1200 })
+
+  // ── Dynamic Font Injection ──
+  useEffect(() => {
+    if (!store || !fontUrl) return
+    const link = document.createElement('link')
+    link.href = fontUrl
+    link.rel = 'stylesheet'
+    document.head.appendChild(link)
+    return () => {
+      document.head.removeChild(link)
+    }
+  }, [store?.storeTheme])
 
   // ── Highlight product from URL param ──
   useEffect(() => {
@@ -295,7 +324,10 @@ export default function StorePage() {
 
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div 
+      className={`w-full min-h-screen overflow-x-hidden ${activeThemeObj.structuralStyle.containerClasses}`}
+      style={{ backgroundColor: themeBg, color: themeText, fontFamily: bodyFont }}
+    >
 
       {/* ── Navbar ── */}
       <StoreNavbar
@@ -306,6 +338,7 @@ export default function StorePage() {
         setActiveTab={setActiveTab}
         cartCount={isCartEnabled ? cartCount : 0}
         onCartOpen={isCartEnabled ? () => setCartOpen(true) : null}
+        activeThemeObj={previewThemeObj}
       />
 
       {/* ── Tab: Categories ── */}
@@ -314,33 +347,43 @@ export default function StorePage() {
           products={products}
           onSelectCategory={handleSelectCategory}
           activeCategory={activeCategory}
+          activeThemeObj={activeThemeObj}
         />
       )}
 
       {/* ── Tab: Orders ── */}
-      {activeTab === 'orders' && <OrdersTab store={store} />}
+      {activeTab === 'orders' && <OrdersTab store={store} activeThemeObj={activeThemeObj} />}
 
       {/* ── Tab: Home ── */}
       {activeTab === 'home' && (
         <>
           {/* ── Hero ── */}
           <div
-            className="relative overflow-hidden"
-            style={{ backgroundColor: store.themeColor || '#15803d' }}
+            className="relative overflow-hidden shadow-inner shadow-black/10"
+            style={{ 
+              backgroundColor: themePrimary,
+              backgroundImage: heroBannerUrl ? `url(${heroBannerUrl})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
           >
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute -top-10 -left-10 w-64 h-64 rounded-full bg-green-600/40" />
-              <div className="absolute -bottom-16 -right-10 w-80 h-80 rounded-full bg-green-800/50" />
-              <div className="absolute top-8 right-8 w-32 h-32 rounded-full bg-green-500/20" />
+              <div className={`absolute inset-0 ${heroBannerUrl ? 'bg-black/50' : 'bg-black/10'}`} />
+              {!heroBannerUrl && (
+                <>
+                  <div className="absolute -top-10 -left-10 w-64 h-64 rounded-full bg-white/10" />
+                  <div className="absolute -bottom-16 -right-10 w-80 h-80 rounded-full bg-black/10" />
+                </>
+              )}
             </div>
 
             <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16 lg:py-20">
-              <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
+              <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-14">
 
                 {/* Left: Store info */}
                 <div className="flex-1 text-center md:text-left">
                   <div className="flex justify-center md:hidden mb-5">
-                    <div className="w-20 h-20 rounded-3xl overflow-hidden flex items-center justify-center shadow-xl bg-white/20 backdrop-blur-sm border-2 border-white/30">
+                    <div className="w-20 h-20 rounded-3xl overflow-hidden flex items-center justify-center shadow-2xl bg-white/20 backdrop-blur-sm border-2 border-white/35">
                       {store.logoUrl ? (
                         <img src={store.logoUrl} alt={store.businessName} className="w-full h-full object-cover" />
                       ) : (
@@ -351,12 +394,15 @@ export default function StorePage() {
                     </div>
                   </div>
 
-                  <h1 className="font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight text-white tracking-tight mb-3 drop-shadow-sm">
+                  <h1 
+                    className="font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight text-white tracking-tight mb-4 drop-shadow-sm max-w-2xl mx-auto md:mx-0"
+                    style={{ fontFamily: headerFont }}
+                  >
                     {store.businessName}
                   </h1>
 
                   {store.description && (
-                    <p className="text-white/75 text-sm md:text-base max-w-sm mx-auto md:mx-0 leading-relaxed mb-6">
+                    <p className="text-white/80 text-sm md:text-base max-w-md mx-auto md:mx-0 leading-relaxed mb-6">
                       {store.description}
                     </p>
                   )}
@@ -366,7 +412,8 @@ export default function StorePage() {
                       href={buildEnquiryURL(store.whatsappNumber, store.businessName)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 bg-white text-green-700 hover:bg-green-50 active:bg-green-100 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg"
+                      className={`inline-flex items-center justify-center gap-2 px-6 py-3 transition-all shadow-xl shadow-black/10 ${activeThemeObj.structuralStyle.buttonClasses}`}
+                      style={{ backgroundColor: themeAccent !== activeThemeObj.defaultColors.accent ? themeAccent : undefined }}
                     >
                       <MessageCircle size={15} />
                       Chat with us on WhatsApp
@@ -374,7 +421,7 @@ export default function StorePage() {
                     {products.length > 0 && (
                       <button
                         onClick={scrollToAll}
-                        className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all border border-white/20"
+                        className="inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all border border-white/25 backdrop-blur-sm"
                       >
                         <ShoppingBag size={15} />
                         Browse {products.length} item{products.length !== 1 ? 's' : ''}
@@ -386,9 +433,9 @@ export default function StorePage() {
 
                 {/* Desktop logo showcase */}
                 <div className="hidden md:flex flex-shrink-0 items-center justify-center w-[280px] lg:w-[340px] relative">
-                  <div className="absolute w-[260px] h-[260px] lg:w-[310px] lg:h-[310px] rounded-full bg-white/8 border border-white/15" />
+                  <div className="absolute w-[260px] h-[260px] lg:w-[310px] lg:h-[310px] rounded-full bg-white/10 border border-white/15" />
                   <div className="absolute w-[200px] h-[200px] lg:w-[240px] lg:h-[240px] rounded-full bg-white/15" />
-                  <div className="relative z-10 w-[140px] h-[140px] lg:w-[168px] lg:h-[168px] rounded-3xl overflow-hidden flex items-center justify-center shadow-2xl bg-white/25 backdrop-blur-md border-2 border-white/35">
+                  <div className="relative z-10 w-[140px] h-[140px] lg:w-[168px] lg:h-[168px] rounded-3xl overflow-hidden flex items-center justify-center shadow-2xl shadow-black/20 bg-white/25 backdrop-blur-md border-2 border-white/40">
                     {store.logoUrl ? (
                       <img src={store.logoUrl} alt={store.businessName} className="w-full h-full object-cover" />
                     ) : (
@@ -404,9 +451,9 @@ export default function StorePage() {
           </div>
 
           {/* ── Products Section ── */}
-          <div ref={allProdsRef} className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+          <div ref={allProdsRef} className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
             {products.length === 0 ? (
-              <div className="text-center py-20">
+              <div className="text-center py-20 bg-white rounded-2xl border border-stone-100 shadow-sm shadow-stone-100/70">
                 <div className="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Package size={28} className="text-stone-300" />
                 </div>
@@ -416,12 +463,12 @@ export default function StorePage() {
             ) : (
               <>
                 {/* Section header */}
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
                   <div>
-                    <h2 className="font-bold text-gray-900 text-lg sm:text-xl">
+                    <h2 className="font-bold text-lg sm:text-xl" style={{ fontFamily: headerFont, color: themeText }}>
                       {search ? 'Search Results' : activeCategory !== 'All' ? activeCategory : 'Our Collection'}
                     </h2>
-                    <p className="text-stone-400 text-xs sm:text-sm mt-0.5">
+                    <p className="text-xs sm:text-sm mt-0.5 opacity-60">
                       {search
                         ? `${filteredProducts.length} of ${products.length} item${products.length !== 1 ? 's' : ''}`
                         : `${filteredProducts.length} item${filteredProducts.length !== 1 ? 's' : ''}`}
@@ -430,7 +477,7 @@ export default function StorePage() {
                   {activeCategory !== 'All' && (
                     <button
                       onClick={() => setActiveCategory('All')}
-                      className="text-green-600 text-sm font-semibold hover:underline"
+                      className="text-green-600 text-sm font-semibold hover:underline w-fit"
                     >
                       View all
                     </button>
@@ -438,14 +485,14 @@ export default function StorePage() {
                 </div>
 
                 {/* Search bar */}
-                <div className="relative mb-5 max-w-sm">
+                <div className="relative mb-6 max-w-sm">
                   <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
                   <input
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search products..."
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-white text-sm text-gray-700 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all shadow-sm"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-white text-sm text-gray-700 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all shadow-sm shadow-stone-100/70"
                   />
                   {search && (
                     <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
@@ -459,10 +506,10 @@ export default function StorePage() {
                   <div
                     className={
                       storeLayout === 'list'
-                        ? 'grid grid-cols-1 gap-3'
+                        ? 'grid grid-cols-1 gap-3 sm:gap-4'
                         : storeLayout === 'compact'
                         ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3'
-                        : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4'
+                        : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5'
                     }
                   >
                     {sortedProducts.map(product => (
@@ -475,11 +522,18 @@ export default function StorePage() {
                         onOrder={handleProductClick}
                         listView={storeLayout === 'list'}
                         onAddToCart={isCartEnabled ? handleAddToCart : null}
+                        themeCardStyle={{
+                          backgroundColor: themeCard,
+                          color: themeText,
+                          fontFamily: bodyFont
+                        }}
+                        buttonStyle={activeThemeObj.structuralStyle.buttonClasses}
+                        structuralClasses={`${activeThemeObj.structuralStyle.cardBorderRadius} ${activeThemeObj.structuralStyle.cardBorder}`}
                       />
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-14 bg-white rounded-2xl border border-stone-100 shadow-sm">
+                  <div className="text-center py-14 bg-white rounded-2xl border border-stone-100 shadow-sm shadow-stone-100/80">
                     <Search size={28} className="text-stone-200 mx-auto mb-3" />
                     <p className="text-stone-500 text-sm font-semibold">
                       No products match &ldquo;<span className="font-bold text-gray-700">{search}</span>&rdquo;
@@ -506,7 +560,7 @@ export default function StorePage() {
 
       {/* ── Footer ── */}
       {activeTab === 'home' && (
-        <StoreFooter storeName={store.businessName} />
+        <StoreFooter storeName={store.businessName} customFooterText={footerText} />
       )}
 
       {/* Bottom tab bar spacer on mobile */}
@@ -521,6 +575,7 @@ export default function StorePage() {
           onClose={() => setCartOpen(false)}
           whatsappNumber={store.whatsappNumber}
           storeName={store.businessName}
+          activeThemeObj={activeThemeObj}
         />
       )}
     </div>

@@ -31,7 +31,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber }) {
 
   if (submitted) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center shadow-sm shadow-green-100/80">
         <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle size={28} className="text-green-600" />
         </div>
@@ -44,10 +44,10 @@ export default function LeadForm({ storeId, storeName, whatsappNumber }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-gray-100 flex items-start gap-3">
-        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-start gap-3">
+        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
           <MessageCircle size={18} className="text-green-600" />
         </div>
         <div>
@@ -70,7 +70,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber }) {
               value={form.name}
               onChange={update('name')}
               placeholder="E.g. Amara Okafor"
-              className="w-full px-4 py-3 text-sm text-gray-900 bg-white border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+              className="w-full px-4 py-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
             />
           </div>
           <div>
@@ -82,7 +82,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber }) {
               value={form.phone}
               onChange={update('phone')}
               placeholder="E.g. 08012345678"
-              className="w-full px-4 py-3 text-sm text-gray-900 bg-white border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+              className="w-full px-4 py-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
             />
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber }) {
             onChange={update('interest')}
             placeholder="E.g. I'm interested in the blue dress, do you have size M?"
             rows={3}
-            className="w-full px-4 py-3 text-sm text-gray-900 bg-white border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 resize-none"
+            className="w-full px-4 py-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 resize-none"
           />
         </div>
 
@@ -110,7 +110,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber }) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
         >
           {loading
             ? <><Loader2 size={16} className="animate-spin" />Sending...</>

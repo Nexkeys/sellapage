@@ -18,6 +18,8 @@ export default function StoreNavbar({
   setActiveTab,
   cartCount = 0,
   onCartOpen = null,
+  activeThemeObj = null,
+  previewMode = false,
 }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const searchRef = useRef(null)
@@ -27,11 +29,41 @@ export default function StoreNavbar({
     setTimeout(() => searchRef.current?.focus(), 50)
   }
 
+  const headerLayout = activeThemeObj?.layout?.headerLayout || 'classic-flat-row'
+  const dockLayout = activeThemeObj?.layout?.navigationDockLayout || 'flush-bottom'
+  
+  const cardBg = activeThemeObj?.defaultColors?.card || '#ffffff'
+  const textCol = activeThemeObj?.defaultColors?.text || '#111827'
+  const primaryCol = activeThemeObj?.defaultColors?.primary || '#16a34a'
+  
+  let navClasses = "sticky top-0 z-40 transition-all "
+  if (headerLayout === 'glass-pill') navClasses += "mt-4 mx-4 rounded-full border border-gray-200/50 shadow-lg bg-white/70 backdrop-blur-md "
+  else if (headerLayout === 'asymmetric-heavy') navClasses += "border-b-4 border-r-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-none "
+  else if (headerLayout === 'puffy-rounded') navClasses += "rounded-[2rem] border-4 mt-2 mx-2 shadow-xl "
+  else if (headerLayout === 'heavy-block') navClasses += "border-b-[4px] rounded-none "
+  else if (headerLayout === 'minimal-underline') navClasses += "border-b-[0.5px] rounded-none shadow-none "
+  else if (headerLayout === 'neon-cyber-bordered') navClasses += "border-b shadow-lg "
+  else navClasses += "border-b shadow-sm " // classic
+
+  let dockClasses = previewMode
+    ? "sticky bottom-0 left-0 right-0 z-40 transition-all "
+    : "fixed left-0 right-0 z-40 md:hidden safe-area-bottom transition-all "
+  if (dockLayout === 'floating-pill') dockClasses += previewMode ? "mx-2 mb-2 rounded-full border shadow-lg " : "bottom-4 mx-4 rounded-full border shadow-2xl "
+  else if (dockLayout === 'retro-block') dockClasses += "border-t-4 border-black "
+  else dockClasses += "border-t " // flush-bottom
+
   return (
     <>
       {/* ── Top Navbar ── */}
-      <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <nav 
+        className={navClasses}
+        style={{ 
+          backgroundColor: headerLayout === 'glass-pill' ? undefined : cardBg, 
+          color: textCol,
+          borderColor: activeThemeObj?.structuralStyle?.cardBorder ? 'inherit' : undefined
+        }}
+      >
+        <div className={`max-w-6xl mx-auto px-3 flex items-center justify-between gap-2 ${previewMode ? 'h-10' : 'px-4 sm:px-6 h-14 gap-4'}`}>
 
           {/* Brand */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -44,19 +76,20 @@ export default function StoreNavbar({
                 </span>
               )}
             </div>
-            <span className="font-bold text-gray-900 text-sm truncate">{store?.businessName}</span>
+            <span className="font-bold text-sm truncate" style={{ fontFamily: activeThemeObj?.typography?.headerFontFamily }}>{store?.businessName}</span>
           </div>
 
           {/* Desktop Search */}
-          <div className="hidden md:flex items-center flex-shrink-0">
-            <div className={`flex items-center gap-2 bg-stone-100 rounded-xl px-3 py-2 transition-all duration-200 ${search ? 'ring-2 ring-green-400 bg-white' : ''}`}>
-              <Search size={15} className="text-stone-400 flex-shrink-0" />
+          <div className={`${previewMode ? 'hidden' : 'hidden md:flex'} items-center flex-shrink-0`}>
+            <div className={`flex items-center gap-2 rounded-xl px-3 py-2 transition-all duration-200 ${search ? 'ring-2' : ''}`} style={{ backgroundColor: 'rgba(0,0,0,0.05)' }}>
+              <Search size={15} className="flex-shrink-0 opacity-50" />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search products..."
-                className="bg-transparent text-sm text-gray-700 placeholder-stone-400 outline-none w-40 focus:w-52 transition-all duration-200"
+                className="bg-transparent text-sm placeholder-current outline-none w-40 focus:w-52 transition-all duration-200"
+                style={{ color: textCol }}
               />
               {search && (
                 <button onClick={() => setSearch('')} className="text-stone-400 hover:text-stone-600 transition-colors">
@@ -71,7 +104,7 @@ export default function StoreNavbar({
             {/* Mobile search toggle */}
             <button
               onClick={openSearch}
-              className="md:hidden p-2 text-stone-500 hover:text-green-600 hover:bg-stone-100 rounded-xl transition-all"
+              className="md:hidden p-2 opacity-70 hover:opacity-100 rounded-xl transition-all"
               aria-label="Search"
             >
               <Search size={18} />
@@ -81,12 +114,12 @@ export default function StoreNavbar({
             {onCartOpen !== null && (
               <button
                 onClick={onCartOpen}
-                className="hidden md:flex relative items-center justify-center p-2 text-stone-500 hover:text-green-600 hover:bg-stone-100 rounded-xl transition-all"
+                className="hidden md:flex relative items-center justify-center p-2 opacity-70 hover:opacity-100 rounded-xl transition-all"
                 aria-label="Open cart"
               >
                 <ShoppingCart size={18} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none" style={{ backgroundColor: primaryCol }}>
                     {cartCount > 9 ? '9+' : cartCount}
                   </span>
                 )}
@@ -98,7 +131,7 @@ export default function StoreNavbar({
               href={buildEnquiryURL(store?.whatsappNumber, store?.businessName)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 bg-[#25D366] hover:bg-[#1fba5a] active:scale-95 text-white px-3 py-2 sm:px-4 rounded-xl font-bold text-xs transition-all shadow-sm whitespace-nowrap"
+              className={`flex items-center gap-1.5 active:scale-95 px-3 py-2 sm:px-4 text-xs transition-all shadow-sm whitespace-nowrap ${activeThemeObj?.structuralStyle?.buttonClasses || 'bg-[#25D366] hover:bg-[#1fba5a] text-white rounded-xl font-bold'}`}
             >
               <MessageCircle size={14} />
               <span className="hidden sm:inline">Chat with us</span>
@@ -109,7 +142,7 @@ export default function StoreNavbar({
 
         {/* Mobile Search Dropdown */}
         {searchOpen && (
-          <div className="md:hidden px-4 pb-3 border-t border-stone-100 pt-2 bg-white">
+          <div className="md:hidden px-4 pb-3 border-t pt-2" style={{ backgroundColor: cardBg, borderColor: 'rgba(0,0,0,0.1)' }}>
             <div className="relative">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
               <input
@@ -135,7 +168,10 @@ export default function StoreNavbar({
       </nav>
 
       {/* ── Mobile Bottom Tab Bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-stone-200 safe-area-bottom">
+      <div 
+        className={dockClasses}
+        style={{ backgroundColor: cardBg, borderColor: 'rgba(0,0,0,0.1)' }}
+      >
         <div className="flex items-center justify-around px-2 py-2">
           {[
             { id: 'home',       label: 'Home',      icon: Home },
@@ -145,13 +181,12 @@ export default function StoreNavbar({
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex flex-col items-center gap-0.5 px-5 py-1 rounded-xl transition-all ${
-                activeTab === id ? 'text-green-600' : 'text-stone-400 hover:text-stone-600'
-              }`}
+              className="flex flex-col items-center gap-0.5 px-5 py-1 rounded-xl transition-all"
+              style={{ color: activeTab === id ? primaryCol : textCol, opacity: activeTab === id ? 1 : 0.5 }}
             >
               <Icon size={20} strokeWidth={activeTab === id ? 2.5 : 1.8} />
               <span className="text-[10px] font-semibold">{label}</span>
-              {activeTab === id && <span className="w-1 h-1 rounded-full bg-green-500 mt-0.5" />}
+              {activeTab === id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ backgroundColor: primaryCol }} />}
             </button>
           ))}
 
@@ -159,13 +194,14 @@ export default function StoreNavbar({
           {onCartOpen !== null && (
             <button
               onClick={onCartOpen}
-              className="relative flex flex-col items-center gap-0.5 px-5 py-1 rounded-xl transition-all text-stone-400 hover:text-stone-600"
+              className="relative flex flex-col items-center gap-0.5 px-5 py-1 rounded-xl transition-all opacity-50 hover:opacity-100"
+              style={{ color: textCol }}
               aria-label="Open cart"
             >
               <span className="relative">
                 <ShoppingCart size={20} strokeWidth={1.8} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none" style={{ backgroundColor: primaryCol }}>
                     {cartCount > 9 ? '9+' : cartCount}
                   </span>
                 )}

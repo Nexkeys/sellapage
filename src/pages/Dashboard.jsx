@@ -45,7 +45,7 @@ const EMPTY_FORM = {
 
 
 export default function Dashboard() {
-  const { store, setStore } = useAuth()
+  const { user, store, setStore } = useAuth()
   const navigate = useNavigate()
 
 
@@ -72,6 +72,8 @@ export default function Dashboard() {
   const [form, setForm]                     = useState(EMPTY_FORM)
   const [productCount, setProductCount]     = useState(0)
   const [sidebarOpen, setSidebarOpen]       = useState(false)
+  const [generatingDesc, setGeneratingDesc] = useState(false)
+  const [aiDescError, setAiDescError]       = useState('')
 
 
   const [settingsSaving, setSettingsSaving]   = useState(false)
@@ -91,6 +93,10 @@ export default function Dashboard() {
   const [billingLoading, setBillingLoading] = useState('')
   const [billingError, setBillingError]     = useState('')
 
+  const [orders, setOrders]               = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [ordersSynced, setOrdersSynced]   = useState(false)
+
 
   // Analytics — lifted here so Overview and AnalyticsTab share the same data
   const [analyticsData, setAnalyticsData] = useState({ totalViews: 0, totalClicks: 0 })
@@ -104,9 +110,7 @@ export default function Dashboard() {
   useEffect(() => { if (store?.id) fetchProducts() }, [store])
 
 
-  useEffect(() => {
-    if (activeTab === 'leads' && store?.id && leads.length === 0) fetchLeads()
-  }, [activeTab, store])
+  useEffect(() => { if (store?.id) fetchLeads() }, [store])
 
 
   useEffect(() => {
@@ -117,6 +121,19 @@ export default function Dashboard() {
   useEffect(() => {
     if (activeTab !== 'billing') setBillingError('')
   }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'orders' && !isGrowthOrPro) setActiveTab('overview')
+  }, [activeTab, isGrowthOrPro])
+
+  useEffect(() => {
+    if (activeTab === 'orders' && store?.id && isGrowthOrPro && !ordersSynced) fetchOrders()
+  }, [activeTab, store?.id, isGrowthOrPro, ordersSynced])
+
+  useEffect(() => {
+    setOrdersSynced(false)
+    setOrders([])
+  }, [store?.id])
 
 
   // Analytics real-time listener — only for Growth/Pro, lives at Dashboard level
@@ -250,6 +267,108 @@ export default function Dashboard() {
   }
 
 
+  const fetchOrders = async () => {
+    setOrdersLoading(true)
+    try {
+      const q = query(
+        collection(db, 'stores', store.id, 'orders'),
+        orderBy('createdAt', 'desc')
+      )
+      const snap = await getDocs(q)
+      setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setOrdersSynced(true)
+    } catch (err) {
+      console.error('Failed to fetch orders', err)
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
+
+
+  const handleAddOrder = async (orderData) => {
+    if (!store?.id || !isGrowthOrPro) return
+    const now = new Date()
+    const orderRef = doc(collection(db, 'stores', store.id, 'orders'))
+    const newOrder = {
+      id: orderRef.id,
+      customerName: orderData.customerName,
+      customerPhone: orderData.customerPhone || '',
+      items: orderData.items,
+      total: orderData.total ?? null,
+      notes: orderData.notes || '',
+      status: orderData.status || 'pending',
+      paymentStatus: orderData.paymentStatus || 'unpaid',
+      paymentMethod: orderData.paymentMethod || 'bank_transfer',
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    setOrders(prev => [newOrder, ...prev])
+
+    try {
+      const { id, ...payload } = newOrder
+      await setDoc(orderRef, payload)
+      setOrdersSynced(true)
+    } catch (err) {
+      console.error('Failed to add order', err)
+      setOrders(prev => prev.filter(order => order.id !== orderRef.id))
+      throw err
+    }
+  }
+
+  const handleUpdateOrder = async (orderId, updates) => {
+    if (!store?.id || !isGrowthOrPro) return
+    const previousOrder = orders.find(order => order.id === orderId)
+    if (!previousOrder) return
+
+    const normalizedUpdates =
+      typeof updates === 'string' ? { status: updates } : { ...updates }
+    const updatedAt = new Date()
+    const nextOrder = { ...previousOrder, ...normalizedUpdates, updatedAt }
+
+    setOrders(prev => prev.map(order => (
+      order.id === orderId ? { ...order, ...normalizedUpdates, updatedAt } : order
+    )))
+
+    try {
+      await updateDoc(doc(db, 'stores', store.id, 'orders', orderId), {
+        ...normalizedUpdates,
+        updatedAt,
+      })
+    } catch (err) {
+      console.error('Failed to update order', err)
+      setOrders(prev => prev.map(order => (
+        order.id === orderId ? previousOrder : order
+      )))
+      throw err
+    }
+
+    return nextOrder
+  }
+
+  const handleDeleteOrder = async (orderId) => {
+    if (!store?.id || !isGrowthOrPro) return
+    const deletedOrder = orders.find(order => order.id === orderId)
+    const deletedIndex = orders.findIndex(order => order.id === orderId)
+    if (!deletedOrder) return
+
+    setOrders(prev => prev.filter(order => order.id !== orderId))
+
+    try {
+      await deleteDoc(doc(db, 'stores', store.id, 'orders', orderId))
+    } catch (err) {
+      console.error('Failed to delete order', err)
+      setOrders(prev => {
+        if (prev.some(order => order.id === orderId)) return prev
+        const next = [...prev]
+        next.splice(Math.max(deletedIndex, 0), 0, deletedOrder)
+        return next
+      })
+      throw err
+    }
+  }
+
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   const copyLink = () => {
     navigator.clipboard.writeText(storeUrl)
@@ -261,6 +380,7 @@ export default function Dashboard() {
   const resetForm = () => {
     setForm(EMPTY_FORM)
     setFormError('')
+    setAiDescError('')
     setEditingProduct(null)
     setShowForm(false)
   }
@@ -268,6 +388,7 @@ export default function Dashboard() {
 
   const startEdit = product => {
     setEditingProduct(product)
+    setAiDescError('')
     setForm({
       name:          product.name,
       price:         product.price,
@@ -484,6 +605,59 @@ export default function Dashboard() {
   }
 
 
+  const handleThemeSave = async (themeId, themeMetadata) => {
+    try {
+      await updateStore(store.id, { storeTheme: themeId, themeMetadata })
+      setStore(prev => ({ ...prev, storeTheme: themeId, themeMetadata }))
+    } catch (err) {
+      console.error('Theme save failed', err)
+    }
+  }
+
+
+  const handleGenerateDescription = async () => {
+    if (!form.name.trim()) return
+    if (!user || !store?.id) {
+      setAiDescError('Please sign in again to generate descriptions.')
+      return
+    }
+    setGeneratingDesc(true)
+    setAiDescError('')
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch('/.netlify/functions/ai-describe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storeId: store.id,
+          productName: form.name.trim(),
+          category: form.category?.trim() || '',
+          price: form.price || '',
+        }),
+      })
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        data = {}
+      }
+      if (res.ok && data.description) {
+        setForm(p => ({ ...p, description: data.description }))
+      } else {
+        setAiDescError(data.error || 'Failed to generate description. Please try again.')
+      }
+    } catch (err) {
+      console.error('AI description generation failed', err)
+      setAiDescError('Failed to generate description. Please try again.')
+    } finally {
+      setGeneratingDesc(false)
+    }
+  }
+
+
   const handleDeleteAccount = async () => {
     setDeleteLoading(true)
     setDeleteError('')
@@ -585,6 +759,7 @@ export default function Dashboard() {
       sidebarOpen={sidebarOpen}
       setSidebarOpen={setSidebarOpen}
       storeUrl={storeUrl}
+      isGrowthOrPro={isGrowthOrPro}
     >
       {activeTab === 'overview' && (
         <OverviewTab
@@ -632,6 +807,9 @@ export default function Dashboard() {
           handleFormDesc={e => setForm(p => ({ ...p, description: e.target.value }))}
           handleFormCategory={e => setForm(p => ({ ...p, category: e.target.value }))}
           handleFormStock={e => setForm(p => ({ ...p, stock: e.target.value }))}
+          onGenerateDescription={handleGenerateDescription}
+          generatingDesc={generatingDesc}
+          aiDescError={aiDescError}
           handleSave={handleSave}
           resetForm={resetForm}
           startEdit={startEdit}
@@ -699,7 +877,19 @@ export default function Dashboard() {
       )}
 
 
-      {activeTab === 'orders'       && <OrdersTab store={store} whatsappNumber={store?.whatsappNumber} />}
+      {activeTab === 'orders' && isGrowthOrPro && (
+        <OrdersTab
+          store={store}
+          whatsappNumber={store?.whatsappNumber}
+          orders={orders}
+          ordersLoading={ordersLoading}
+          onAddOrder={handleAddOrder}
+          onUpdateOrder={handleUpdateOrder}
+          onDeleteOrder={handleDeleteOrder}
+          isGrowthOrPro={isGrowthOrPro}
+          navigateTo={setActiveTab}
+        />
+      )}
       {activeTab === 'customers'    && <CustomersTab />}
       {activeTab === 'categories'   && (
         <CategoriesTab
@@ -726,10 +916,13 @@ export default function Dashboard() {
           store={store}
           storeUrl={storeUrl}
           isGrowthOrPro={isGrowthOrPro}
+          isPro={isPro}
           navigateTo={setActiveTab}
           onLogoUpload={handleLogoUpload}
           onColorSave={handleColorSave}
           onLayoutSave={handleLayoutSave}
+          onThemeSave={handleThemeSave}
+          previewProducts={products.filter(p => p.isActive !== false).slice(0, 2)}
         />
       )}
       {activeTab === 'mobile-app'   && <MobileAppTab />}

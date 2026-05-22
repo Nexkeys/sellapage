@@ -1,7 +1,7 @@
 //src/components/dashboard/Products.jsx/
 import {
   Plus, Edit2, Trash2, UploadCloud, X, Loader2,
-  AlertCircle, ImageIcon, Package, ToggleLeft, ToggleRight, Lock,
+  AlertCircle, ImageIcon, Package, ToggleLeft, ToggleRight, Lock, Sparkles,
 } from 'lucide-react'
 
 
@@ -12,6 +12,7 @@ export default function ProductsTab({
   products, deleting,
   handleImageChange, handleRemoveExistingImage, handleRemoveNewImage,
   handleFormName, handleFormPrice, handleFormDesc, handleFormCategory, handleFormStock,
+  onGenerateDescription, generatingDesc, aiDescError,
   handleSave, resetForm, startEdit, handleDelete,
   onToggleActive,
 }) {
@@ -21,7 +22,7 @@ export default function ProductsTab({
 
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -31,7 +32,7 @@ export default function ProductsTab({
         {!limitReached && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex-shrink-0 shadow-sm"
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex-shrink-0 shadow-sm hover:shadow-md"
           >
             <Plus size={15} /> Add Product
           </button>
@@ -41,7 +42,7 @@ export default function ProductsTab({
 
 
       {/* Product count bar */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 px-5 py-4">
         <div className="flex items-center justify-between gap-3 mb-2">
           <p className="text-sm font-semibold text-gray-700">
             {productCount} of {maxLabel} products used
@@ -62,7 +63,7 @@ export default function ProductsTab({
 
       {/* Limit warning */}
       {limitReached && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4">
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 shadow-sm shadow-amber-100/70">
           <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-amber-800 font-semibold text-sm">{plan === 'starter' ? 'Free plan' : 'Plan'} limit reached — {maxProducts}/{maxProducts} products</p>
@@ -75,7 +76,7 @@ export default function ProductsTab({
 
       {/* Add / Edit Form */}
       {showForm && !editingProduct && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h2 className="font-bold text-gray-900 text-base">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
             <button onClick={resetForm} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
@@ -91,16 +92,38 @@ export default function ProductsTab({
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Product Name *</label>
-                <input value={form.name} onChange={handleFormName} placeholder="e.g. Blue Ankara Blouse" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+                <input value={form.name} onChange={handleFormName} placeholder="e.g. Blue Ankara Blouse" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Price (₦) *</label>
-                <input value={form.price} onChange={handleFormPrice} type="number" min="0" placeholder="e.g. 5000" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+                <input value={form.price} onChange={handleFormPrice} type="number" min="0" placeholder="e.g. 5000" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
-              <textarea value={form.description} onChange={handleFormDesc} rows={3} placeholder="Describe your product..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-gray-700">Description</label>
+                {isGrowthOrPro ? (
+                  <button
+                    type="button"
+                    onClick={onGenerateDescription}
+                    disabled={generatingDesc || !form.name.trim()}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-green-200"
+                  >
+                    {generatingDesc
+                      ? <><Loader2 size={11} className="animate-spin" /> Generating...</>
+                      : <><Sparkles size={11} /> Generate with AI</>
+                    }
+                  </button>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold px-2 py-1 rounded-lg bg-gray-50 border border-gray-200">
+                    <Lock size={10} /> AI — Growth+
+                  </span>
+                )}
+              </div>
+              <textarea value={form.description} onChange={handleFormDesc} rows={3} placeholder="Describe your product..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+              {aiDescError && (
+                <p className="text-red-500 text-xs font-medium mt-1.5">{aiDescError}</p>
+              )}
             </div>
 
             {/* Category */}
@@ -110,7 +133,7 @@ export default function ProductsTab({
                 value={form.category}
                 onChange={handleFormCategory}
                 placeholder="e.g. Tops, Shoes, Electronics"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
               />
               <p className="text-gray-400 text-xs mt-1.5">Customers can filter your store by category.</p>
             </div>
@@ -124,7 +147,7 @@ export default function ProductsTab({
                 type="number"
                 min="0"
                 placeholder="e.g. 10"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
               />
               <p className="text-gray-400 text-xs mt-1.5">Leave blank if you don't track stock. Set to 0 to mark as out of stock.</p>
             </div>
@@ -172,7 +195,7 @@ export default function ProductsTab({
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 sm:flex-none px-6 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+                className="flex-1 sm:flex-none px-6 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
               >
                 {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : editingProduct ? 'Update Product' : 'Add Product'}
               </button>
@@ -189,7 +212,7 @@ export default function ProductsTab({
           <Loader2 size={24} className="text-green-500 animate-spin" />
         </div>
       ) : products.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center py-16 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 flex flex-col items-center justify-center py-16 gap-4">
           <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center">
             <Package size={24} className="text-green-400" />
           </div>
@@ -198,7 +221,7 @@ export default function ProductsTab({
             <p className="text-gray-400 text-sm mt-1 max-w-xs">Add your first product to start getting orders.</p>
           </div>
           {!limitReached && (
-            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all">
+            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md">
               <Plus size={14} /> Add Product
             </button>
           )}
@@ -209,7 +232,7 @@ export default function ProductsTab({
             const isInactive = product.isActive === false
             if (editingProduct?.id === product.id) {
               return (
-                <div key={product.id} className="bg-white rounded-2xl border border-green-200 shadow-md overflow-hidden">
+                <div key={product.id} className="bg-white rounded-2xl border border-green-200 shadow-lg shadow-green-100/70 overflow-hidden">
                   <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <h2 className="font-bold text-gray-900 text-base">Edit Product</h2>
                     <button onClick={resetForm} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
@@ -225,16 +248,38 @@ export default function ProductsTab({
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1.5">Product Name *</label>
-                        <input value={form.name} onChange={handleFormName} placeholder="e.g. Blue Ankara Blouse" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+                        <input value={form.name} onChange={handleFormName} placeholder="e.g. Blue Ankara Blouse" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1.5">Price *</label>
-                        <input value={form.price} onChange={handleFormPrice} type="number" min="0" placeholder="e.g. 5000" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+                        <input value={form.price} onChange={handleFormPrice} type="number" min="0" placeholder="e.g. 5000" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
-                      <textarea value={form.description} onChange={handleFormDesc} rows={3} placeholder="Describe your product..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-semibold text-gray-700">Description</label>
+                        {isGrowthOrPro ? (
+                          <button
+                            type="button"
+                            onClick={onGenerateDescription}
+                            disabled={generatingDesc || !form.name.trim()}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-green-200"
+                          >
+                            {generatingDesc
+                              ? <><Loader2 size={11} className="animate-spin" /> Generating...</>
+                              : <><Sparkles size={11} /> Generate with AI</>
+                            }
+                          </button>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold px-2 py-1 rounded-lg bg-gray-50 border border-gray-200">
+                            <Lock size={10} /> AI — Growth+
+                          </span>
+                        )}
+                      </div>
+                      <textarea value={form.description} onChange={handleFormDesc} rows={3} placeholder="Describe your product..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+                      {aiDescError && (
+                        <p className="text-red-500 text-xs font-medium mt-1.5">{aiDescError}</p>
+                      )}
                     </div>
 
                     {/* Category */}
@@ -244,7 +289,7 @@ export default function ProductsTab({
                         value={form.category}
                         onChange={handleFormCategory}
                         placeholder="e.g. Tops, Shoes, Electronics"
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
                       />
                       <p className="text-gray-400 text-xs mt-1.5">Customers can filter your store by category.</p>
                     </div>
@@ -258,7 +303,7 @@ export default function ProductsTab({
                         type="number"
                         min="0"
                         placeholder="e.g. 10"
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
                       />
                       <p className="text-gray-400 text-xs mt-1.5">Leave blank if you don't track stock. Set to 0 to mark as out of stock.</p>
                     </div>
@@ -304,7 +349,7 @@ export default function ProductsTab({
                       <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex-1 sm:flex-none px-6 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+                        className="flex-1 sm:flex-none px-6 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
                       >
                         {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : 'Update Product'}
                       </button>
@@ -316,8 +361,8 @@ export default function ProductsTab({
             return (
               <div
                 key={product.id}
-                className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
-                  isInactive ? 'border-gray-100 opacity-70' : 'border-gray-100 hover:shadow-md'
+                className={`bg-white rounded-2xl border shadow-sm shadow-gray-100/70 overflow-hidden transition-all ${
+                  isInactive ? 'border-gray-100 opacity-70' : 'border-gray-100 hover:border-green-100 hover:shadow-lg hover:shadow-gray-200/80 hover:-translate-y-0.5'
                 }`}
               >
                 {/* Product image */}

@@ -6,3 +6,6 @@ dist
 *.log
 sellapage-7145d-firebase-adminsdk-fbsvc-53a17e8575.json
 desktop.ini
+
+# Local Netlify folder
+.netlify

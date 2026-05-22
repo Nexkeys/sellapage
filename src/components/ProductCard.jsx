@@ -12,6 +12,9 @@ export default function ProductCard({
   onOrder,
   listView = false,
   onAddToCart = null,
+  themeCardStyle = {},
+  buttonStyle = '',
+  structuralClasses = 'rounded-2xl border border-stone-100'
 }) {
   const [activeImg, setActiveImg]   = useState(0)
   const [popupIndex, setPopupIndex] = useState(null)
@@ -38,11 +41,13 @@ export default function ProductCard({
       <div
         id={`product-${product.id}`}
         className={`bg-white overflow-hidden transition-all duration-200 hover:-translate-y-0.5 group
-          ${listView ? 'rounded-2xl flex flex-row' : 'rounded-2xl flex flex-col'}
+          ${listView ? 'flex flex-row' : 'flex flex-col'}
+          ${structuralClasses}
           ${isHighlighted
-            ? 'border-2 border-green-400 ring-2 ring-green-300 ring-offset-2 shadow-lg'
-            : 'border border-stone-100 shadow-sm hover:shadow-md'
+            ? 'ring-2 ring-green-300 ring-offset-2 shadow-xl shadow-green-100/80'
+            : 'hover:shadow-lg hover:shadow-black/10'
           }`}
+        style={themeCardStyle}
       >
         {/* Image area */}
         {listView ? (
@@ -52,7 +57,7 @@ export default function ProductCard({
               <img
                 src={images[activeImg]}
                 alt={product.name}
-                className="w-full h-full object-cover cursor-zoom-in"
+                className="w-full h-full object-cover cursor-zoom-in transition-transform duration-300 group-hover:scale-[1.03]"
                 loading="lazy"
                 onClick={() => setPopupIndex(activeImg)}
               />
@@ -86,7 +91,7 @@ export default function ProductCard({
                   onClick={() => setPopupIndex(activeImg)}
                 />
                 {/* Zoom hint */}
-                <div className="absolute top-2 right-2 w-7 h-7 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute top-2 right-2 w-7 h-7 bg-black/35 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <ZoomIn size={13} className="text-white" />
                 </div>
                 {isOutOfStock && (
@@ -104,12 +109,12 @@ export default function ProductCard({
                   <>
                     <button
                       onClick={e => { e.stopPropagation(); setActiveImg(i => (i - 1 + images.length) % images.length) }}
-                      className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors"
+                      className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
                       aria-label="Previous image"
                     ><ChevronLeft size={14} /></button>
                     <button
                       onClick={e => { e.stopPropagation(); setActiveImg(i => (i + 1) % images.length) }}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
                       aria-label="Next image"
                     ><ChevronRight size={14} /></button>
                     {/* Dot indicators */}
@@ -169,7 +174,7 @@ export default function ProductCard({
                   )}
                   <button
                     onClick={handleOrder}
-                    className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"
+                    className={`flex items-center gap-1.5 py-2 px-3 text-xs font-bold transition-all shadow-sm hover:shadow-md ${buttonStyle || 'bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white rounded-xl'}`}
                   >
                     <MessageCircle size={12} />
                     Order
@@ -180,15 +185,15 @@ export default function ProductCard({
           </div>
         ) : (
           // ── Default (grid/compact) view info ──
-          <div className="p-3 sm:p-4 flex flex-col flex-1 gap-2">
+          <div className="p-3 sm:p-4 flex flex-col flex-1 gap-2.5">
             {/* Name */}
             <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
               {product.name}
             </h3>
 
-            {/* Description — only on sm+ */}
+            {/* Description */}
             {product.description && (
-              <p className="hidden sm:block text-stone-400 text-xs line-clamp-2 leading-relaxed">
+              <p className="text-stone-400 text-[11px] sm:text-xs line-clamp-1 leading-snug">
                 {product.description}
               </p>
             )}
@@ -213,7 +218,7 @@ export default function ProductCard({
                 </button>
                 <button
                   onClick={handleOrder}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all shadow-sm hover:shadow-md ${buttonStyle || 'bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white rounded-xl'}`}
                 >
                   <MessageCircle size={13} />
                   Order
@@ -223,7 +228,7 @@ export default function ProductCard({
               // Starter: single full-width Order button — unchanged
               <button
                 onClick={handleOrder}
-                className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+                className={`w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold transition-all shadow-sm hover:shadow-md ${buttonStyle || 'bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white rounded-xl'}`}
               >
                 <MessageCircle size={13} />
                 Order
@@ -236,7 +241,7 @@ export default function ProductCard({
       {/* ── Lightbox popup ── */}
       {popupIndex !== null && (
         <div
-          className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setPopupIndex(null)}
         >
           <button

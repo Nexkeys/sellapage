@@ -2,10 +2,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ShoppingBag, MessageCircle, Zap, ChevronDown, Check, X,
+  ShoppingBag, ShoppingCart, MessageCircle, Zap, ChevronDown, Check, X,
   Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
   Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift,
-  CreditCard, Radio,
+  Grid, Users,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -63,6 +63,31 @@ const features = [
     title: 'Live the Same Day You Sign Up',
     description: 'No technical setup. No waiting. Create your account, add your products or services, and share your link — all in the same session.',
   },
+  {
+    icon: ShoppingCart,
+    title: 'WhatsApp Cart (Growth+)',
+    description: 'Customers can add multiple items to a cart and send one beautifully structured order directly to the vendor\'s WhatsApp.',
+  },
+  {
+    icon: Package,
+    title: 'Stock Count Management',
+    description: 'Vendors can set precise stock levels. Out-of-stock products automatically sort to the bottom of the store page.',
+  },
+  {
+    icon: Grid,
+    title: 'Categories',
+    description: 'Vendors can seamlessly organize their products, allowing customers to easily filter items by category on the live storefront.',
+  },
+  {
+    icon: Sparkles,
+    title: 'AI Product Descriptions (Growth+)',
+    description: 'Generate a sharp, ready-to-publish product description in seconds. Tap one button and AI writes it for you.',
+  },
+  {
+    icon: Palette,
+    title: '20 Premium Store Themes (Pro)',
+    description: 'Pick from 20 professionally designed store themes. Each one changes your fonts, colours, layout, and card style completely.',
+  },
 ]
 
 const testimonials = [
@@ -74,13 +99,13 @@ const testimonials = [
   },
   {
     name: 'Emeka Nwosu',
-    role: 'Car DealerAbuja',
+    role: 'Car Dealer, Abuja',
     avatar: '/avatar-2.png',
     text: "I used to screenshot my menu and send it one by one. Now I send one link. Customers see everything, place their orders, and I get a clean WhatsApp message. Much easier.",
   },
   {
     name: 'Peter Bron',
-    role: 'Wine & Spirits,  ',
+    role: 'Wine & Spirits, Lagos',
     avatar: '/avatar-3.png',
     text: 'My customers used to ask the same questions over and over. Now they see all the details on my page. Orders come in clean and clear. Worth every kobo.',
   },
@@ -152,6 +177,10 @@ const plans = [
       { text: 'Manage store settings easily', available: true },
       { text: 'WhatsApp support', available: true },
       { text: 'Product on/off toggle', available: true },
+      { text: 'AI product descriptions — 20 per day', available: true },
+      { text: 'WhatsApp Cart — multi-item orders in one message', available: true },
+      { text: 'Stock count management & out-of-stock sorting', available: true },
+      { text: 'Product categories for easy browsing', available: true },
     ],
   },
   {
@@ -168,8 +197,9 @@ const plans = [
       { text: 'Unlimited listings', available: true },
       { text: 'Hot leads list', available: true },
       { text: 'Full analytics dashboard', available: true },
-      { text: 'Order history & customer records', available: true },
       { text: 'Store badge (Pro tag)', available: true },
+      { text: '20 Premium Store Themes — full visual customisation', available: true },
+      { text: 'AI product descriptions — 50 per day', available: true },
       { text: 'Priority same-day support', available: true },
       { text: 'Early access to new features', available: true },
     ],
@@ -219,12 +249,11 @@ const storeExamples = [
 ]
 
 const comingFeatures = [
-  { icon: CreditCard, title: 'In-App Checkout', desc: 'Let customers pay directly on your store page — no WhatsApp step required.' },
-  { icon: Radio, title: 'WhatsApp Broadcast', desc: 'Send product updates and promotions to all your customers in one tap.' },
-  { icon: Gift, title: 'Discount & Promo Codes', desc: 'Run promotions and reward loyal customers.' },
-  { icon: Lock, title: 'Secure Payment Links', desc: 'Accept Paystack payments directly in your store.' },
-  { icon: Settings, title: 'Order Management', desc: 'Track, update, and fulfil orders from one place.' },
-  { icon: Sparkles, title: 'AI Product Descriptions', desc: 'Write sharp product copy in seconds with AI.' },
+  { icon: Settings, title: 'Structured Orders Tab Tracking', desc: 'Track and manage customer orders from a dedicated Orders tab on your storefront.' },
+  { icon: Users, title: 'Advanced Customers CRM', desc: 'See customer history, repeat buyers, and follow up smarter from one dashboard.' },
+  { icon: Gift, title: 'Discount & Coupon Codes Engine', desc: 'Create promo codes and run discounts that customers can apply at checkout.' },
+  { icon: Star, title: 'Customer Reviews & Ratings', desc: 'Let happy customers leave reviews and build trust on your store page.' },
+  { icon: Smartphone, title: 'Native Mobile App', desc: 'Manage your store and orders on the go with a dedicated Sellapage mobile app.' },
 ]
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -265,7 +294,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white font-body">
+    <div className="min-h-screen bg-white font-body text-gray-900">
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
@@ -275,23 +304,23 @@ export default function Home() {
         <div className="pointer-events-none absolute top-1/2 -left-40 w-[340px] h-[340px] rounded-full bg-brand-100 opacity-40 blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
 
             {/* Left */}
-            <div className="max-w-xl py-10 lg:py-16">
+            <div className="max-w-2xl py-10 lg:py-16">
               {/* pill badge */}
               <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 uppercase tracking-wide">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
                 For Nigerian Business Owners
               </div>
 
-              <h1 className="font-display text-[2.6rem] sm:text-5xl lg:text-[3.25rem] font-extrabold leading-[1.1] tracking-tight text-gray-900 mb-6">
+              <h1 className="font-display text-[2.6rem] sm:text-5xl lg:text-[3.35rem] font-extrabold leading-[1.08] tracking-tight text-gray-950 mb-6 max-w-xl">
                 One link for<br />
                 <span className="text-brand-600">everything you</span><br />
                 sell or offer.
               </h1>
 
-              <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-md">
+              <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
                 Create a clean page for your products. Share one link anywhere.
                 Let customers browse and order directly from your store.
               </p>
@@ -299,14 +328,14 @@ export default function Home() {
               <div className="flex flex-wrap items-center gap-3 mb-8">
                 <button
                   onClick={handleCTA}
-                  className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all duration-200 shadow-md shadow-brand-200"
+                  className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-brand-200/80 hover:shadow-xl hover:shadow-brand-200"
                 >
                   Create Your Free Page
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <a
                   href="#examples"
-                  className="inline-flex items-center gap-2 text-gray-700 hover:text-brand-600 font-semibold text-sm px-5 py-3.5 rounded-xl border border-gray-200 hover:border-brand-300 bg-white transition-all duration-200"
+                  className="inline-flex items-center gap-2 text-gray-700 hover:text-brand-600 font-semibold text-sm px-5 py-3.5 rounded-xl border border-gray-200 hover:border-brand-300 bg-white shadow-sm transition-all duration-200"
                 >
                   View Examples
                   <span className="text-base">👁</span>
@@ -314,7 +343,7 @@ export default function Home() {
               </div>
 
               {/* Social proof row */}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex -space-x-2.5">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <img
@@ -328,7 +357,7 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
@@ -339,7 +368,7 @@ export default function Home() {
             </div>
 
             {/* Right — hero images */}
-            <div className="relative flex justify-center items-end lg:items-center lg:justify-end h-[420px] sm:h-[500px] lg:h-[560px]">
+              <div className="relative flex justify-center items-end lg:items-center lg:justify-end h-[400px] sm:h-[500px] lg:h-[560px]">
               {/* Main laptop */}
               <img
                 src="/Herosection-mainlaptop.png"
@@ -347,7 +376,7 @@ export default function Home() {
                 width={620}
                 height={420}
                 loading="eager"
-                className="relative z-10 w-[85%] sm:w-[78%] lg:w-full max-w-[600px] object-contain drop-shadow-2xl"
+                className="relative z-10 w-[88%] sm:w-[78%] lg:w-full max-w-[600px] object-contain drop-shadow-2xl"
               />
               {/* Phone overlay */}
               <img
@@ -359,7 +388,7 @@ export default function Home() {
                 className="absolute bottom-0 right-0 lg:-right-4 z-20 w-[28%] sm:w-[24%] lg:w-[30%] max-w-[180px] object-contain drop-shadow-xl animate-float"
               />
               {/* Floating badge — New Order */}
-              <div className="absolute top-8 left-4 sm:left-0 z-30 flex items-center gap-2 bg-white rounded-2xl shadow-lg px-3 py-2 border border-gray-100 animate-float-delayed">
+              <div className="absolute top-8 left-4 sm:left-0 z-30 flex items-center gap-2 bg-white rounded-2xl shadow-xl shadow-gray-200/70 px-3 py-2 border border-gray-100 animate-float-delayed">
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
                 <div>
                   <p className="text-xs font-bold text-gray-900 leading-tight">New Order!</p>
@@ -373,9 +402,9 @@ export default function Home() {
         {/* ── Trust badges strip ── */}
         <div className="mt-12 border-t border-gray-100 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-4">
               {trustBadges.map((b) => (
-                <div key={b.label} className="flex items-center gap-2.5 min-w-[140px]">
+                <div key={b.label} className="flex items-center gap-2.5 min-w-0">
                   <b.icon className="w-5 h-5 text-brand-600 flex-shrink-0" />
                   <div>
                     <p className="text-xs font-bold text-gray-800 leading-tight">{b.label}</p>
@@ -407,8 +436,11 @@ export default function Home() {
               { icon: Package, title: 'Manage Products', desc: 'Add, edit, and organise your products easily. Keep your store fresh and updated.' },
               { icon: MessageCircle, title: 'Receive Orders', desc: 'Customers order directly from your page. Get notified and fulfil with ease.' },
               { icon: TrendingUp, title: 'Track Performance', desc: "See what's working. Track visitors, orders, and sales all in one place." },
+              { icon: ShoppingCart, title: 'WhatsApp Cart (Growth+)', desc: 'Customers can add multiple items to a cart and send one beautifully structured order directly to the vendor\'s WhatsApp.' },
+              { icon: Package, title: 'Stock Count Management', desc: 'Vendors can set precise stock levels. Out-of-stock products automatically sort to the bottom of the store page.' },
+              { icon: Grid, title: 'Categories', desc: 'Vendors can seamlessly organize their products, allowing customers to easily filter items by category on the live storefront.' },
             ].map((item) => (
-              <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md hover:border-brand-100 transition-all duration-200 group">
+              <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm shadow-gray-100/80 hover:shadow-lg hover:shadow-gray-200/80 hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
                 <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-4 group-hover:bg-brand-100 transition-colors">
                   <item.icon className="w-5 h-5 text-brand-600" />
                 </div>
@@ -457,7 +489,7 @@ export default function Home() {
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4 mb-8">
                 {stats.map((s) => (
-                  <div key={s.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                  <div key={s.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm shadow-gray-100/70">
                     <p className="font-display text-2xl font-extrabold text-brand-600 leading-none mb-1">{s.value}</p>
                     <p className="text-xs text-gray-500">{s.label}</p>
                   </div>
@@ -466,7 +498,7 @@ export default function Home() {
 
               <button
                 onClick={handleCTA}
-                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-colors shadow-md shadow-brand-200"
+                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-brand-200/80 hover:shadow-xl hover:shadow-brand-200"
               >
                 Create Your Free Page <ArrowRight className="w-4 h-4" />
               </button>
@@ -528,7 +560,7 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f) => (
-              <div key={f.title} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-brand-100 transition-all duration-200 group">
+              <div key={f.title} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
                 <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-4 group-hover:bg-brand-100 transition-colors">
                   <f.icon className="w-5 h-5 text-brand-600" />
                 </div>
@@ -557,7 +589,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {storeExamples.map((store) => (
-              <div key={store.name} className="group overflow-hidden rounded-2xl border border-gray-100 hover:shadow-lg transition-all duration-300">
+              <div key={store.name} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100/80 hover:shadow-xl hover:shadow-gray-200/80 transition-all duration-300">
                 {/* image with overlay */}
                 <div className="relative overflow-hidden aspect-[4/3]">
                   <img
@@ -571,7 +603,7 @@ export default function Home() {
                   {/* overlay label */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 flex items-center justify-between">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 flex items-center justify-between gap-3 shadow-sm">
                       <div>
                         <p className="font-display font-bold text-gray-900 text-sm leading-tight">{store.tag}</p>
                         <p className="text-gray-400 text-xs">{store.tagline}</p>
@@ -606,7 +638,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {testimonials.map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col">
+              <div key={t.name} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 transition-all duration-200 flex flex-col">
                 {/* quote mark */}
                 <div className="text-brand-200 text-5xl font-serif leading-none mb-3 select-none">&ldquo;</div>
                 <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">{t.text}</p>
@@ -648,8 +680,8 @@ export default function Home() {
                   key={plan.id}
                   className={`relative rounded-2xl p-6 border flex flex-col ${
                     isGrowth
-                      ? 'bg-brand-600 border-brand-600 text-white shadow-xl shadow-brand-200 scale-[1.02]'
-                      : 'bg-white border-gray-100 text-gray-900'
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-2xl shadow-brand-200/80 scale-[1.02]'
+                      : 'bg-white border-gray-100 text-gray-900 shadow-sm shadow-gray-100/70'
                   }`}
                 >
                   {isGrowth && (
@@ -713,7 +745,7 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
             {comingFeatures.map((item) => (
-              <div key={item.title} className="bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-md transition-all duration-200 group">
+              <div key={item.title} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 transition-all duration-200 group">
                 <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
                   <item.icon className="w-5 h-5 text-brand-600" />
                 </div>
@@ -738,7 +770,7 @@ export default function Home() {
             {faqs.map((faq, i) => (
               <div
                 key={i}
-                className="border border-gray-100 rounded-2xl overflow-hidden"
+                className="border border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm shadow-gray-100/60"
               >
                 <button
                   onClick={() => toggleFaq(i)}
@@ -783,7 +815,7 @@ export default function Home() {
             <div className="flex flex-col items-center gap-4 flex-shrink-0">
               <button
                 onClick={handleCTA}
-                className="inline-flex items-center gap-2 bg-white hover:bg-brand-50 text-brand-700 font-bold text-sm px-8 py-4 rounded-xl transition-colors shadow-lg"
+                className="inline-flex items-center gap-2 bg-white hover:bg-brand-50 text-brand-700 font-bold text-sm px-8 py-4 rounded-xl transition-all shadow-xl shadow-brand-900/10"
               >
                 Create Your Free Page <ArrowRight className="w-4 h-4" />
               </button>

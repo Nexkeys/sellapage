@@ -58,7 +58,9 @@ const getInitials = (name = '') => {
 
 export default function DashboardLayout({
   store, activeTab, setActiveTab,
-  sidebarOpen, setSidebarOpen, storeUrl, children,
+  sidebarOpen, setSidebarOpen, storeUrl,
+  isGrowthOrPro = false,
+  children,
 }) {
   const navigate = useNavigate()
   const handleLogout = async () => { await logoutSeller(); navigate('/') }
@@ -95,15 +97,16 @@ export default function DashboardLayout({
             )
           }
           const { id, label, icon: Icon } = item
+          if (id === 'orders' && !isGrowthOrPro) return null
           const active = activeTab === id
           return (
             <button
               key={id}
               onClick={() => { setActiveTab(id); setSidebarOpen(false) }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                 active
-                  ? 'bg-green-600 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/8'
+                  ? 'bg-green-500 text-white shadow-lg shadow-green-950/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/10'
               }`}
             >
               <Icon size={17} strokeWidth={1.8} />
@@ -116,7 +119,7 @@ export default function DashboardLayout({
 
       {/* Upgrade Banner — hidden for Pro */}
       {!isPro && (
-        <div className="mx-3 mb-3 p-4 rounded-xl bg-gradient-to-br from-green-600/30 to-green-700/20 border border-green-500/20">
+        <div className="mx-3 mb-3 p-4 rounded-2xl bg-gradient-to-br from-green-600/30 to-green-700/20 border border-green-500/20 shadow-lg shadow-black/10">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-yellow-400 text-sm">⭐</span>
             <span className="text-white text-sm font-semibold">
@@ -130,7 +133,7 @@ export default function DashboardLayout({
           </p>
           <button
             onClick={() => { setActiveTab('billing'); setSidebarOpen(false) }}
-            className="w-full py-1.5 rounded-lg bg-green-500 hover:bg-green-400 text-white text-xs font-semibold transition-colors"
+            className="w-full py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-xs font-semibold transition-colors shadow-sm"
           >
             Upgrade Now
           </button>
@@ -140,7 +143,7 @@ export default function DashboardLayout({
 
       {/* User Profile */}
       <div className="px-3 pb-4">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/8">
+        <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-white/5 border border-white/10 shadow-sm shadow-black/10">
           <div className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
             {store?.logoUrl
               ? <img src={store.logoUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
@@ -175,7 +178,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-gray-900 flex-shrink-0">
+      <aside className="hidden md:flex flex-col w-64 bg-gray-950 flex-shrink-0">
         <SidebarContent />
       </aside>
 
@@ -184,7 +187,7 @@ export default function DashboardLayout({
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-gray-900 flex flex-col shadow-2xl">
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-gray-950 flex flex-col shadow-2xl">
             <button
               onClick={() => setSidebarOpen(false)}
               className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -214,7 +217,7 @@ export default function DashboardLayout({
 
 
         {/* Top Bar */}
-        <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+        <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm flex-shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -231,7 +234,7 @@ export default function DashboardLayout({
 
 
           <div className="hidden md:flex items-center gap-2 flex-1 max-w-sm mx-8">
-            <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-400">
+            <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-400 shadow-inner shadow-gray-100">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               Search anything...
             </div>
@@ -244,7 +247,7 @@ export default function DashboardLayout({
                 href={storeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-green-600 hover:border-green-300 text-xs font-medium transition-colors"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:text-green-600 hover:border-green-300 hover:bg-green-50/40 text-xs font-medium transition-all"
               >
                 <ExternalLink size={13} />
                 View Store

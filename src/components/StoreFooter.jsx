@@ -7,11 +7,18 @@ const TRUST_BADGES = [
   { icon: Lock,   title: 'Secure Shopping',  sub: 'Your data is safe' },
 ]
 
-export default function StoreFooter({ storeName }) {
+export default function StoreFooter({ storeName, customFooterText }) {
   return (
     <footer className="mt-10 mb-20 md:mb-8">
-      {/* Trust Badges */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        {/* Custom Theme Footer Text */}
+        {customFooterText && (
+          <div className="text-center mb-6 px-4">
+            <p className="text-sm font-semibold tracking-wide uppercase opacity-80 whitespace-pre-line">{customFooterText}</p>
+          </div>
+        )}
+        
+        {/* Trust Badges */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 py-6 px-6 bg-white rounded-2xl border border-stone-100 shadow-sm">
           {TRUST_BADGES.map(({ icon: Icon, title, sub }) => (
             <div key={title} className="flex items-center gap-3 text-center sm:text-left">
