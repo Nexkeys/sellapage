@@ -106,8 +106,8 @@ export default function OverviewTab({
               ? `${Math.round((totalClicks / totalViews) * 100)}%`
               : '—'}
           </p>
-          <p className="text-gray-400 text-xs mt-0.5 font-medium">Conversion Rate</p>
-          <p className="text-[10px] text-gray-400 mt-1">clicks / views</p>
+          <p className="text-gray-400 text-xs mt-0.5 font-medium">Product Click Rate</p>
+          <p className="text-xs text-gray-400 mt-1">of visitors who tapped a product</p>
         </div>
       </div>
 

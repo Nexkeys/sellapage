@@ -325,7 +325,7 @@ export default function StorePage() {
 
   return (
     <div 
-      className={`w-full min-h-screen overflow-x-hidden ${activeThemeObj.structuralStyle.containerClasses}`}
+      className={`isolate w-full min-h-screen overflow-x-hidden ${activeThemeObj.structuralStyle.containerClasses}`}
       style={{ backgroundColor: themeBg, color: themeText, fontFamily: bodyFont }}
     >
 
@@ -340,6 +340,8 @@ export default function StorePage() {
         onCartOpen={isCartEnabled ? () => setCartOpen(true) : null}
         activeThemeObj={previewThemeObj}
       />
+
+      <main className="relative z-0 pb-24 md:pb-0">
 
       {/* ── Tab: Categories ── */}
       {activeTab === 'categories' && (
@@ -451,7 +453,7 @@ export default function StorePage() {
           </div>
 
           {/* ── Products Section ── */}
-          <div ref={allProdsRef} className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div ref={allProdsRef} className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 scroll-mt-20">
             {products.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-2xl border border-stone-100 shadow-sm shadow-stone-100/70">
                 <div className="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -506,10 +508,10 @@ export default function StorePage() {
                   <div
                     className={
                       storeLayout === 'list'
-                        ? 'grid grid-cols-1 gap-3 sm:gap-4'
+                        ? 'grid grid-cols-1 items-stretch gap-3 sm:gap-4'
                         : storeLayout === 'compact'
-                        ? 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3'
-                        : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5'
+                        ? 'grid grid-cols-3 items-stretch sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3'
+                        : 'grid grid-cols-2 items-stretch sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5'
                     }
                   >
                     {sortedProducts.map(product => (
@@ -563,8 +565,8 @@ export default function StorePage() {
         <StoreFooter storeName={store.businessName} customFooterText={footerText} />
       )}
 
-      {/* Bottom tab bar spacer on mobile */}
-      <div className="h-16 md:hidden" />
+      {/* Mobile bottom dock clearance */}
+      </main>
 
       {/* ── Cart Drawer ── */}
       {cartOpen && isCartEnabled && (

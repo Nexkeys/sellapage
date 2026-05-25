@@ -46,8 +46,8 @@ export default function StoreNavbar({
   else navClasses += "border-b shadow-sm " // classic
 
   let dockClasses = previewMode
-    ? "sticky bottom-0 left-0 right-0 z-40 transition-all "
-    : "fixed left-0 right-0 z-40 md:hidden safe-area-bottom transition-all "
+    ? "absolute bottom-0 left-0 right-0 z-30 w-full flex-shrink-0 transition-all "
+    : "fixed bottom-0 left-0 right-0 z-50 w-full md:hidden safe-area-bottom bg-white border-t border-gray-100 transition-all "
   if (dockLayout === 'floating-pill') dockClasses += previewMode ? "mx-2 mb-2 rounded-full border shadow-lg " : "bottom-4 mx-4 rounded-full border shadow-2xl "
   else if (dockLayout === 'retro-block') dockClasses += "border-t-4 border-black "
   else dockClasses += "border-t " // flush-bottom
@@ -172,7 +172,7 @@ export default function StoreNavbar({
         className={dockClasses}
         style={{ backgroundColor: cardBg, borderColor: 'rgba(0,0,0,0.1)' }}
       >
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="mx-auto flex min-h-[4.25rem] max-w-3xl items-center justify-around gap-1 px-2 py-2">
           {[
             { id: 'home',       label: 'Home',      icon: Home },
             { id: 'categories', label: 'Categories', icon: Grid },
@@ -181,11 +181,11 @@ export default function StoreNavbar({
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className="flex flex-col items-center gap-0.5 px-5 py-1 rounded-xl transition-all"
+              className="relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1 transition-all"
               style={{ color: activeTab === id ? primaryCol : textCol, opacity: activeTab === id ? 1 : 0.5 }}
             >
               <Icon size={20} strokeWidth={activeTab === id ? 2.5 : 1.8} />
-              <span className="text-[10px] font-semibold">{label}</span>
+              <span className="max-w-full truncate text-[10px] font-semibold">{label}</span>
               {activeTab === id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ backgroundColor: primaryCol }} />}
             </button>
           ))}
@@ -194,11 +194,11 @@ export default function StoreNavbar({
           {onCartOpen !== null && (
             <button
               onClick={onCartOpen}
-              className="relative flex flex-col items-center gap-0.5 px-5 py-1 rounded-xl transition-all opacity-50 hover:opacity-100"
+              className="relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1 transition-all opacity-50 hover:opacity-100"
               style={{ color: textCol }}
               aria-label="Open cart"
             >
-              <span className="relative">
+              <span className="relative inline-flex h-5 w-5 items-center justify-center">
                 <ShoppingCart size={20} strokeWidth={1.8} />
                 {cartCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 w-4 h-4 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none" style={{ backgroundColor: primaryCol }}>
@@ -206,7 +206,7 @@ export default function StoreNavbar({
                   </span>
                 )}
               </span>
-              <span className="text-[10px] font-semibold">Cart</span>
+              <span className="max-w-full truncate text-[10px] font-semibold">Cart</span>
             </button>
           )}
         </div>

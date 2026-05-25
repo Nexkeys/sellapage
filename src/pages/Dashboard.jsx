@@ -210,6 +210,14 @@ export default function Dashboard() {
           }
 
           setStore(prev => ({ ...prev, ...data }))
+
+          try {
+            await updateDoc(doc(db, 'stores', store.id), {
+              lastSeen: new Date()
+            });
+          } catch {
+            // non-critical background signature logging; silently suppress anomalies
+          }
         }
       } catch (err) {
         console.error('Failed to sync store on mount', err)

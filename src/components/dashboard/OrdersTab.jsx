@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import {
   AlertCircle,
   Calendar,
@@ -17,6 +17,9 @@ import {
   User,
   Wallet,
   X,
+  Search,
+  Filter,
+  ArrowDownUp
 } from 'lucide-react'
 
 const STATUS_OPTIONS = [
@@ -177,6 +180,13 @@ export default function OrdersTab({
   const [confirmingDelete, setConfirmingDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  
+  // Filtering States
+  const [filterSearch, setFilterSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterPayment, setFilterPayment] = useState('all')
+  const [filterSort, setFilterSort] = useState('newest')
+
   const formRef = useRef(null)
   const firstFieldRef = useRef(null)
 
@@ -312,6 +322,35 @@ export default function OrdersTab({
     }
   }
 
+  // --- Filtering Engine ---
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      // 1. Text Field Search (name, id, address/notes)
+      if (filterSearch) {
+        const query = filterSearch.toLowerCase()
+        const matchName = (order.customerName || '').toLowerCase().includes(query)
+        const matchId = (order.id || '').toLowerCase().includes(query)
+        const matchNotes = (order.notes || '').toLowerCase().includes(query)
+        if (!matchName && !matchId && !matchNotes) return false
+      }
+      // 2. Order Status
+      if (filterStatus !== 'all' && normalizeStatus(order.status) !== filterStatus) {
+        return false
+      }
+      // 3. Payment Status
+      if (filterPayment !== 'all' && normalizePaymentStatus(order.paymentStatus) !== filterPayment) {
+        return false
+      }
+      return true
+    }).sort((a, b) => {
+      // 4. Date Sorting
+      const dateA = typeof a.createdAt?.toDate === 'function' ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime()
+      const dateB = typeof b.createdAt?.toDate === 'function' ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime()
+      return filterSort === 'oldest' ? dateA - dateB : dateB - dateA
+    })
+  }, [orders, filterSearch, filterStatus, filterPayment, filterSort])
+
+
   if (!isGrowthOrPro) {
     return (
       <div className="mx-auto max-w-5xl p-4 sm:p-6">
@@ -365,6 +404,62 @@ export default function OrdersTab({
           <Plus size={16} strokeWidth={2.25} />
           Log Order
         </button>
+      </div>
+
+      {/* Operational Filter Strip */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={16} className="text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search name, ID, or address..."
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 py-2.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+          />
+        </div>
+        <div className="relative">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+          >
+            <option value="all">All Statuses</option>
+            {STATUS_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
+        <div className="relative">
+          <select
+            value={filterPayment}
+            onChange={(e) => setFilterPayment(e.target.value)}
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+          >
+            <option value="all">All Payments</option>
+            {PAYMENT_STATUS_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <ArrowDownUp size={16} className="text-gray-400" />
+          </div>
+          <select
+            value={filterSort}
+            onChange={(e) => setFilterSort(e.target.value)}
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-10 py-2.5 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
       </div>
 
       {ledgerError && (
@@ -572,7 +667,27 @@ export default function OrdersTab({
         </section>
       )}
 
-      {!ordersLoading && orders.length > 0 && (
+      {!ordersLoading && orders.length > 0 && filteredOrders.length === 0 && (
+        <section className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white px-6 py-12 text-center shadow-sm">
+          <Filter size={30} className="text-gray-300 mb-4" strokeWidth={1.75} />
+          <p className="text-sm font-semibold text-gray-600">
+            No orders match your active filter criteria.
+          </p>
+          <button 
+            onClick={() => {
+              setFilterSearch('');
+              setFilterStatus('all');
+              setFilterPayment('all');
+              setFilterSort('newest');
+            }} 
+            className="mt-4 text-xs font-bold text-green-600 hover:text-green-700 underline underline-offset-2"
+          >
+            Clear all filters
+          </button>
+        </section>
+      )}
+
+      {!ordersLoading && filteredOrders.length > 0 && (
         <>
           <section className="hidden overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm shadow-gray-100/80 md:block">
             <div className="overflow-x-auto">
@@ -590,7 +705,7 @@ export default function OrdersTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map(order => (
+                  {filteredOrders.map(order => (
                     <tr key={order.id} className="group border-b border-gray-100 transition-all duration-200 hover:bg-gray-50/70 last:border-b-0">
                       <td className="border-r border-gray-100 px-4 py-4 align-top">
                         <div className="flex items-start gap-2 text-xs font-semibold leading-snug text-gray-500">
@@ -663,7 +778,7 @@ export default function OrdersTab({
           </section>
 
           <section className="space-y-3 md:hidden">
-            {orders.map(order => (
+            {filteredOrders.map(order => (
               <article key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -800,7 +915,7 @@ export default function OrdersTab({
                   type="button"
                   onClick={closeDeleteDialog}
                   disabled={deleteLoading}
-                  className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-extrabold text-gray-600 transition-all duration-200 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-extrabold text-gray-600 transition-all duration-200 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -808,10 +923,19 @@ export default function OrdersTab({
                   type="button"
                   onClick={confirmDeleteOrder}
                   disabled={deleteLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-extrabold text-white transition-all duration-200 hover:bg-red-700 disabled:bg-red-400"
+                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-2.5 text-sm font-extrabold text-white shadow-sm transition-all duration-200 hover:bg-red-700 disabled:bg-red-400"
                 >
-                  {deleteLoading ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                  Delete Order
+                  {deleteLoading ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={15} />
+                      Delete
+                    </>
+                  )}
                 </button>
               </div>
             </div>

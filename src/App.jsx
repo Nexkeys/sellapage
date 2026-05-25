@@ -18,6 +18,8 @@ import TermsOfService from './pages/TermsOfService'
 import ContactUs from './pages/ContactUs'
 import About from './pages/about'
 import BillingCallback from './pages/BillingCallback'
+import Admin from './pages/Admin'
+
 
 export default function App() {
   return (
@@ -46,6 +48,7 @@ export default function App() {
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/:storeName" element={<StorePage />} />
           <Route path="*"           element={<NotFound />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -79,7 +79,7 @@ export default function ThemeLivePreview({
           >
             <div className="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
               <div
-                className={`pointer-events-none min-h-full w-full overflow-x-hidden ${activeThemeObj?.structuralStyle?.containerClasses ?? ''}`}
+                className={`pointer-events-none relative min-h-full w-full overflow-x-hidden pb-20 ${activeThemeObj?.structuralStyle?.containerClasses ?? ''}`}
                 style={{ backgroundColor: themeBg, color: themeText, fontFamily: bodyFont }}
               >
                 <StoreNavbar
@@ -147,7 +147,7 @@ export default function ThemeLivePreview({
                   >
                     Our Collection
                   </h2>
-                  <div className={gridClass}>
+                  <div className={`${gridClass} items-stretch`}>
                     {displayProducts.map((product) => (
                       <ProductCard
                         key={product.id}

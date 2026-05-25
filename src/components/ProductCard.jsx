@@ -30,6 +30,7 @@ export default function ProductCard({
 
   const handleAdd = () => {
     if (onAddToCart) onAddToCart(product)
+    if (onOrder) onOrder(product.id)
   }
 
   const isOutOfStock = typeof product.stock === 'number' && product.stock === 0
@@ -40,7 +41,7 @@ export default function ProductCard({
       {/* ── Card ── */}
       <div
         id={`product-${product.id}`}
-        className={`bg-white overflow-hidden transition-all duration-200 hover:-translate-y-0.5 group
+        className={`relative isolate h-full min-w-0 bg-white overflow-hidden transition-all duration-200 hover:-translate-y-0.5 group
           ${listView ? 'flex flex-row' : 'flex flex-col'}
           ${structuralClasses}
           ${isHighlighted
@@ -52,7 +53,7 @@ export default function ProductCard({
         {/* Image area */}
         {listView ? (
           // ── List view image ──
-          <div className="relative bg-stone-100 overflow-hidden flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-l-2xl rounded-r-none">
+          <div className="relative z-0 bg-stone-100 overflow-hidden flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-l-2xl rounded-r-none">
             {images.length > 0 ? (
               <img
                 src={images[activeImg]}
@@ -68,19 +69,19 @@ export default function ProductCard({
               </div>
             )}
             {isOutOfStock && (
-              <div className="absolute top-1 left-1">
+              <div className="absolute left-1 top-1 z-10 pointer-events-none">
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full">Out of Stock</span>
               </div>
             )}
             {isLowStock && (
-              <div className="absolute top-1 left-1">
+              <div className="absolute left-1 top-1 z-10 pointer-events-none">
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500 text-white rounded-full">Only {product.stock} left</span>
               </div>
             )}
           </div>
         ) : (
           // ── Default (grid/compact) view image ──
-          <div className="relative bg-stone-100 overflow-hidden" style={{ aspectRatio: '1 / 1' }}>
+          <div className="relative z-0 aspect-square w-full bg-stone-100 overflow-hidden">
             {images.length > 0 ? (
               <>
                 <img
@@ -91,16 +92,16 @@ export default function ProductCard({
                   onClick={() => setPopupIndex(activeImg)}
                 />
                 {/* Zoom hint */}
-                <div className="absolute top-2 right-2 w-7 h-7 bg-black/35 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute right-2 top-2 z-10 w-7 h-7 bg-black/35 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <ZoomIn size={13} className="text-white" />
                 </div>
                 {isOutOfStock && (
-                  <div className="absolute top-2 left-2">
+                  <div className="absolute left-2 top-2 z-10 pointer-events-none">
                     <span className="text-[10px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full">Out of Stock</span>
                   </div>
                 )}
                 {isLowStock && (
-                  <div className="absolute top-2 left-2">
+                  <div className="absolute left-2 top-2 z-10 pointer-events-none">
                     <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500 text-white rounded-full">Only {product.stock} left</span>
                   </div>
                 )}
@@ -109,16 +110,16 @@ export default function ProductCard({
                   <>
                     <button
                       onClick={e => { e.stopPropagation(); setActiveImg(i => (i - 1 + images.length) % images.length) }}
-                      className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+                      className="absolute left-1.5 top-1/2 z-20 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
                       aria-label="Previous image"
                     ><ChevronLeft size={14} /></button>
                     <button
                       onClick={e => { e.stopPropagation(); setActiveImg(i => (i + 1) % images.length) }}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+                      className="absolute right-1.5 top-1/2 z-20 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
                       aria-label="Next image"
                     ><ChevronRight size={14} /></button>
                     {/* Dot indicators */}
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                    <div className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 flex gap-1">
                       {images.map((_, i) => (
                         <button
                           key={i}
@@ -143,7 +144,7 @@ export default function ProductCard({
         {/* ── Info ── */}
         {listView ? (
           // ── List view info ──
-          <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between min-w-0">
+          <div className="relative z-10 flex-1 p-3 sm:p-4 flex flex-col justify-between min-w-0">
             <div>
               <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-1">
                 {product.name}
@@ -185,18 +186,16 @@ export default function ProductCard({
           </div>
         ) : (
           // ── Default (grid/compact) view info ──
-          <div className="p-3 sm:p-4 flex flex-col flex-1 gap-2.5">
+          <div className="relative z-10 p-3 sm:p-4 flex flex-col flex-1 min-h-0 gap-2.5">
             {/* Name */}
-            <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
+            <h3 className="min-h-[2.25rem] font-bold text-gray-900 text-sm leading-snug line-clamp-2">
               {product.name}
             </h3>
 
             {/* Description */}
-            {product.description && (
-              <p className="text-stone-400 text-[11px] sm:text-xs line-clamp-1 leading-snug">
-                {product.description}
-              </p>
-            )}
+            <p className="min-h-[1rem] text-stone-400 text-[11px] sm:text-xs line-clamp-1 leading-snug">
+              {product.description || ''}
+            </p>
 
             {/* Price */}
             <span className="text-green-600 font-extrabold text-lg leading-none mt-auto">
@@ -208,20 +207,20 @@ export default function ProductCard({
               <button disabled className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 cursor-not-allowed py-2.5 rounded-xl text-xs font-bold">Out of Stock</button>
             ) : onAddToCart !== null ? (
               // Growth/Pro: two buttons side by side
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   onClick={handleAdd}
-                  className="flex-1 flex items-center justify-center gap-1.5 border border-green-500 text-green-600 hover:bg-green-50 active:scale-95 py-2.5 rounded-xl text-xs font-bold transition-all"
+                  className="min-w-0 flex items-center justify-center gap-1.5 border border-green-500 text-green-600 hover:bg-green-50 active:scale-95 py-2.5 px-2 rounded-xl text-xs font-bold transition-all"
                 >
                   <Plus size={13} />
-                  Add
+                  <span className="truncate">Add</span>
                 </button>
                 <button
                   onClick={handleOrder}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all shadow-sm hover:shadow-md ${buttonStyle || 'bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white rounded-xl'}`}
+                  className={`min-w-0 flex items-center justify-center gap-1.5 py-2.5 px-2 text-xs font-bold transition-all shadow-sm hover:shadow-md ${buttonStyle || 'bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white rounded-xl'}`}
                 >
                   <MessageCircle size={13} />
-                  Order
+                  <span className="truncate">Order</span>
                 </button>
               </div>
             ) : (
@@ -241,7 +240,7 @@ export default function ProductCard({
       {/* ── Lightbox popup ── */}
       {popupIndex !== null && (
         <div
-          className="fixed inset-0 bg-black/92 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] bg-black/92 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setPopupIndex(null)}
         >
           <button

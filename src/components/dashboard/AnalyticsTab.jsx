@@ -1,6 +1,6 @@
 //src/components/dashboard/AnalyticsTab.jsx/
 import { useState } from 'react'
-import { Eye, MousePointerClick, Users, TrendingUp, Lock, Loader2, BarChart2, RotateCcw, Check } from 'lucide-react'
+import { Eye, MousePointerClick, Users, TrendingUp, Lock, Loader2, BarChart2, RotateCcw, Check, Info } from 'lucide-react'
 import { doc, setDoc, writeBatch, collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 
@@ -73,7 +73,7 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
       color: 'bg-purple-50 text-purple-600',
     },
     {
-      label: 'Click Rate',
+      label: 'Product Click Rate',
       value: clickRate,
       Icon:  TrendingUp,
       color: 'bg-green-50 text-green-600',
@@ -131,6 +131,13 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
       </div>
 
 
+      {/* Info banner */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-start gap-3 text-blue-700 text-sm mb-6">
+        <Info size={16} className="flex-shrink-0 mt-0.5" />
+        <p>Store views count every visit to your store link. Your own visits count too — share your link with customers for the most accurate data. Click rate rises as more customers tap your products.</p>
+      </div>
+
+
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {KPIS.map(kpi => (
@@ -142,6 +149,9 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
             </div>
             <p className="text-xl font-extrabold text-gray-900">{kpi.value}</p>
             <p className="text-gray-400 text-xs mt-0.5 font-medium">{kpi.label}</p>
+            {kpi.label === 'Product Click Rate' && (
+              <p className="text-xs text-gray-400 mt-1">of visitors who tapped a product</p>
+            )}
           </div>
         ))}
       </div>
