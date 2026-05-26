@@ -917,7 +917,7 @@ export default function Dashboard() {
           analyticsData={analyticsData}
         />
       )}
-      {activeTab === 'marketing'    && <MarketingTab store={store} storeUrl={storeUrl} />}
+      {activeTab === 'marketing'    && <MarketingTab store={store} storeUrl={storeUrl} navigateTo={setActiveTab} />}
       {activeTab === 'discounts'    && <DiscountsTab />}
       {activeTab === 'online-store' && (
         <OnlineStoreTab

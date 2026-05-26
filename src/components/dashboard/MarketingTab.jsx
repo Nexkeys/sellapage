@@ -1,76 +1,307 @@
-//src/components/dashboard/MarketingTab.jsx/
-import { Megaphone, Share2, MessageCircle, Zap } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Megaphone, Share2, MessageCircle, Zap, Check, ChevronRight, Copy, Loader2, ArrowRight } from 'lucide-react'
+import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore'
+import { db } from '../../firebase/config'
 
-const TOOLS = [
-  { Icon: MessageCircle, color: 'bg-green-50 text-green-600',  title: 'WhatsApp Broadcast',    desc: 'Send a message to all your customers at once. Great for announcing new arrivals or promos.',     badge: 'Coming Soon', bc: 'bg-gray-100 text-gray-500' },
-  { Icon: Share2,        color: 'bg-blue-50 text-blue-600',    title: 'Instagram Bio Link',     desc: 'Your store link is perfect for your Instagram bio. Tap to copy and paste in your profile.',       badge: 'Available',   bc: 'bg-green-50 text-green-700' },
-  { Icon: Megaphone,     color: 'bg-purple-50 text-purple-600',title: 'Share Store Link',       desc: 'Share your store on WhatsApp Status, Twitter, Facebook, and more — all with one tap.',           badge: 'Available',   bc: 'bg-green-50 text-green-700' },
-  { Icon: Zap,           color: 'bg-amber-50 text-amber-600',  title: 'Promotions & Discounts', desc: 'Create time-limited discount codes to create urgency and drive more sales from your audience.',   badge: 'Coming Soon', bc: 'bg-gray-100 text-gray-500' },
+const DAILY_TASKS = [
+  { day: 0, text: 'Weekend Traffic Prep: Review your top-performing products list to verify availability for weekend shoppers.' },
+  { day: 1, text: 'Price Audit: Review your catalog prices to stay competitive for the week.' },
+  { day: 2, text: 'Bio-Link Check: Confirm your store URL is pinned inside your social media profile bios.' },
+  { day: 3, text: 'Engagement Drill-down: Review your newly calculated Store Engagement Rate metric.' },
+  { day: 4, text: 'Catalog Clean-Up: Audit active stock levels and toggle visibility for out-of-stock items.' },
+  { day: 5, text: 'Weekend Traffic Prep: Review your top-performing products list to verify availability for weekend shoppers.' },
+  { day: 6, text: 'Catalog Clean-Up: Audit active stock levels and toggle visibility for out-of-stock items.' },
 ]
 
-export default function MarketingTab({ store, storeUrl }) {
+export default function MarketingTab({ store, storeUrl, navigateTo }) {
+  const [marketingPoints, setMarketingPoints] = useState(store?.marketingPoints || 0)
+  const [waitlistStatus, setWaitlistStatus] = useState(store?.marketingWaitlist || [])
+  const [copied, setCopied] = useState(false)
+  
+  // Checklist local states
+  const [checkedShare, setCheckedShare] = useState(false)
+  const [checkedQueue, setCheckedQueue] = useState(false)
+  const [checkedDaily, setCheckedDaily] = useState(false)
+  
+  const [updatingTask, setUpdatingTask] = useState(null)
+
+  // Sync basic store metrics and read persistent daily checklist state from local storage
+  useEffect(() => {
+    setMarketingPoints(store?.marketingPoints || 0)
+    setWaitlistStatus(store?.marketingWaitlist || [])
+
+    if (store?.id) {
+      const todayStr = new Date().toDateString() // e.g., "Tue May 26 2026"
+      const savedProgress = localStorage.getItem(`sellapage_checklist_${store.id}_${todayStr}`)
+      if (savedProgress) {
+        const parsed = JSON.parse(savedProgress)
+        setCheckedShare(!!parsed.share)
+        setCheckedQueue(!!parsed.queue)
+        setCheckedDaily(!!parsed.daily)
+      } else {
+        setCheckedShare(false)
+        setCheckedQueue(false)
+        setCheckedDaily(false)
+      }
+    }
+  }, [store])
+
+  // Helper to persist checkmark state safely across dashboard navigation changes
+  const saveChecklistProgress = (taskId, status) => {
+    if (!store?.id) return
+    const todayStr = new Date().toDateString()
+    const storageKey = `sellapage_checklist_${store.id}_${todayStr}`
+    
+    const existing = localStorage.getItem(storageKey)
+    const currentMap = existing ? JSON.parse(existing) : { share: false, queue: false, daily: false }
+    
+    currentMap[taskId] = status
+    localStorage.setItem(storageKey, JSON.stringify(currentMap))
+  }
+
   const name = store?.businessName || 'my store'
   const url  = storeUrl || 'https://sellapage.com/store/your-store'
-  const waShare  = `https://wa.me/?text=${encodeURIComponent(`Shop from ${name} 🛍️ ${url}`)}`
-  const twShare  = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out ${name} 🛍️ ${url}`)}`
+  const promoText = `Check out my store! Shop from ${name} 🛍️ ${url}`
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(promoText)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+    
+    if (!checkedShare) {
+      handleTaskCompletion('share')
+      setCheckedShare(true)
+      saveChecklistProgress('share', true)
+    }
+  }
+
+  const handleTaskCompletion = async (taskId) => {
+    if (!store?.id) return
+    setUpdatingTask(taskId)
+    try {
+      await updateDoc(doc(db, 'stores', store.id), {
+        marketingPoints: increment(10)
+      })
+      setMarketingPoints(prev => prev + 10)
+    } catch (err) {
+      console.error('Failed to update points', err)
+    } finally {
+      setUpdatingTask(null)
+    }
+  }
+
+  const joinWaitlist = async (featureName) => {
+    if (!store?.id || waitlistStatus.includes(featureName)) return
+    try {
+      await updateDoc(doc(db, 'stores', store.id), {
+        marketingWaitlist: arrayUnion(featureName)
+      })
+      setWaitlistStatus(prev => [...prev, featureName])
+    } catch (err) {
+      console.error('Failed to join waitlist', err)
+    }
+  }
+
+  const maxPoints = 500
+  const progressPercent = Math.min((marketingPoints / maxPoints) * 100, 100)
+  
+  let rankLabel = 'Getting Started'
+  if (marketingPoints >= 151 && marketingPoints <= 350) rankLabel = 'Active Growth Hub'
+  else if (marketingPoints > 350) rankLabel = 'Elite Consistent Seller'
+
+  const currentDayOfWeek = new Date().getDay()
+  const contextualTask = DAILY_TASKS.find(t => t.day === currentDayOfWeek)?.text || DAILY_TASKS[1].text
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-5">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Marketing</h1>
-        <p className="text-gray-400 text-sm mt-1">Grow your customer base and drive more sales.</p>
+        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Growth Workspace</h1>
+        <p className="text-gray-500 text-sm mt-1">Operational milestones and marketing strategy hub.</p>
       </div>
 
-      <div className="bg-gradient-to-r from-green-600 to-green-500 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-          <Megaphone size={22} className="text-white" />
-        </div>
-        <div className="flex-1">
-          <p className="font-bold text-white text-base">Share your store today</p>
-          <p className="text-white/70 text-xs mt-0.5">Every share is a potential sale. Start spreading the word.</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <a href={waShare} target="_blank" rel="noopener noreferrer"
-            className="bg-white text-green-700 hover:bg-green-50 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
-            <MessageCircle size={13} /> WhatsApp
-          </a>
-          <a href={twShare} target="_blank" rel="noopener noreferrer"
-            className="bg-white/20 border border-white/30 text-white hover:bg-white/30 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
-            <Share2 size={13} /> Share
-          </a>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {TOOLS.map(t => (
-          <div key={t.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
-            <div className="flex items-start justify-between">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${t.color}`}>
-                <t.Icon size={19} strokeWidth={1.8} />
-              </div>
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${t.bc}`}>{t.badge}</span>
-            </div>
-            <div>
-              <p className="font-bold text-gray-900 text-sm">{t.title}</p>
-              <p className="text-gray-400 text-xs mt-1 leading-relaxed">{t.desc}</p>
-            </div>
+      {/* Monthly Success Bar */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="font-bold text-gray-900 text-base">Monthly Success Score</h2>
+            <p className="text-gray-500 text-xs mt-0.5">Complete daily tasks to unlock growth tiers.</p>
           </div>
-        ))}
+          <div className="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg font-black text-sm border border-green-100 flex-shrink-0 text-center">
+            {marketingPoints} / 500 pts
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-green-500 rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div className="flex justify-between items-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+            <span>{rankLabel}</span>
+            <span>Milestone: 500</span>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 space-y-3">
-        <p className="font-bold text-amber-800 text-sm flex items-center gap-2"><span>💡</span> Marketing Tips for Nigerian Sellers</p>
-        <ul className="space-y-2 text-amber-700 text-xs leading-relaxed">
-          {[
-            'Post your store link in WhatsApp Status every morning for consistent visibility.',
-            'Ask satisfied customers to share your store with their contacts.',
-            'Use high-quality photos — products with clear images sell 3× faster.',
-            'Respond to enquiries within 30 minutes to maximise conversion.',
-          ].map((tip,i) => (
-            <li key={i} className="flex items-start gap-2"><span className="text-amber-400 font-bold mt-0.5">→</span>{tip}</li>
-          ))}
-        </ul>
+      {/* Daily Growth Checklist */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-gray-50 border-b border-gray-100 px-6 py-4">
+          <h2 className="font-bold text-gray-900 text-base">Daily Growth Checklist</h2>
+          <p className="text-gray-500 text-xs mt-0.5">Check off these operational basics every day to grow your score.</p>
+        </div>
+
+        <div className="divide-y divide-gray-100">
+          {/* Task 1: Share Link */}
+          <div className="p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/50">
+            <div className="flex items-start gap-4 flex-1">
+              <button 
+                onClick={copyToClipboard}
+                disabled={checkedShare}
+                className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all ${
+                  checkedShare ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 bg-white hover:border-green-500'
+                }`}
+              >
+                {checkedShare && <Check size={14} strokeWidth={3} />}
+              </button>
+              <div>
+                <p className={`font-bold text-sm ${checkedShare ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Share Your Storefront Link</p>
+                <p className="text-gray-500 text-xs mt-1 max-w-lg leading-relaxed">Copy your pre-baked sales text and blast it to your WhatsApp status or social media.</p>
+              </div>
+            </div>
+            <button
+              onClick={copyToClipboard}
+              className="flex-shrink-0 flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-all ml-10 sm:ml-0"
+            >
+              {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+              {copied ? 'Copied' : 'Copy Link'}
+            </button>
+          </div>
+
+          {/* Task 2: Processing Queue */}
+          <div className="p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/50">
+            <div className="flex items-start gap-4 flex-1">
+              <button 
+                onClick={() => {
+                  if (!checkedQueue) {
+                    handleTaskCompletion('queue')
+                    setCheckedQueue(true)
+                    saveChecklistProgress('queue', true)
+                  }
+                }}
+                disabled={checkedQueue}
+                className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all ${
+                  checkedQueue ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 bg-white hover:border-green-500'
+                }`}
+              >
+                {checkedQueue && <Check size={14} strokeWidth={3} />}
+              </button>
+              <div>
+                <p className={`font-bold text-sm ${checkedQueue ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Clear the Processing Queue</p>
+                <p className="text-gray-500 text-xs mt-1 max-w-lg leading-relaxed">Ensure all pending orders and active customer leads are properly attended to.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (!checkedQueue) {
+                  handleTaskCompletion('queue')
+                  setCheckedQueue(true)
+                  saveChecklistProgress('queue', true)
+                }
+                navigateTo('orders')
+              }}
+              className="flex-shrink-0 flex items-center gap-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl text-xs font-bold transition-all ml-10 sm:ml-0"
+            >
+              Go to Orders <ArrowRight size={14} />
+            </button>
+          </div>
+
+          {/* Task 3: Contextual Daily Task */}
+          <div className="p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/50">
+            <div className="flex items-start gap-4 flex-1">
+              <button 
+                onClick={() => {
+                  if (!checkedDaily) {
+                    handleTaskCompletion('daily')
+                    setCheckedDaily(true)
+                    saveChecklistProgress('daily', true)
+                  }
+                }}
+                disabled={checkedDaily}
+                className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all ${
+                  checkedDaily ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 bg-white hover:border-green-500'
+                }`}
+              >
+                {checkedDaily && <Check size={14} strokeWidth={3} />}
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className={`font-bold text-sm ${checkedDaily ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Today's Growth Focus</p>
+                  <span className="bg-purple-50 text-purple-600 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-purple-100">Dynamic</span>
+                </div>
+                <p className={`text-xs mt-1 max-w-lg leading-relaxed ${checkedDaily ? 'text-gray-400' : 'text-gray-500'}`}>{contextualTask}</p>
+              </div>
+            </div>
+            {updatingTask === 'daily' && <Loader2 size={16} className="animate-spin text-gray-400 ml-10 sm:ml-0" />}
+          </div>
+        </div>
       </div>
+
+      {/* Interactive Beta Waitlists */}
+      <div className="pt-4">
+        <h2 className="font-bold text-gray-900 text-lg mb-4">Coming Soon</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          {/* WhatsApp Broadcast */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full transition-all hover:border-gray-200 hover:shadow-md">
+            <div className="w-12 h-12 bg-green-50 rounded-xl border border-green-100 flex items-center justify-center mb-4">
+              <MessageCircle size={22} className="text-green-600" />
+            </div>
+            <h3 className="font-bold text-gray-900 text-base mb-2">WhatsApp Broadcast</h3>
+            <p className="text-gray-500 text-xs leading-relaxed mb-6 flex-1">
+              Send a blast message to all your customers at once. Great for announcing new arrivals or promos natively.
+            </p>
+            {waitlistStatus.includes('WhatsApp Broadcast') ? (
+              <div className="w-full bg-gray-50 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-default">
+                <Check size={16} /> Added to Priority Beta
+              </div>
+            ) : (
+              <button
+                onClick={() => joinWaitlist('WhatsApp Broadcast')}
+                className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                Notify Me When Available
+              </button>
+            )}
+          </div>
+
+          {/* Promotions & Discounts */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full transition-all hover:border-gray-200 hover:shadow-md">
+            <div className="w-12 h-12 bg-amber-50 rounded-xl border border-amber-100 flex items-center justify-center mb-4">
+              <Zap size={22} className="text-amber-600" />
+            </div>
+            <h3 className="font-bold text-gray-900 text-base mb-2">Promotions & Discounts</h3>
+            <p className="text-gray-500 text-xs leading-relaxed mb-6 flex-1">
+              Create time-limited discount codes to create urgency and drive more sales from your audience.
+            </p>
+            {waitlistStatus.includes('Promotions & Discounts') ? (
+              <div className="w-full bg-gray-50 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-default">
+                <Check size={16} /> Added to Priority Beta
+              </div>
+            ) : (
+              <button
+                onClick={() => joinWaitlist('Promotions & Discounts')}
+                className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                Notify Me When Available
+              </button>
+            )}
+          </div>
+
+        </div>
+      </div>
+
     </div>
   )
 }

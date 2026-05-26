@@ -48,23 +48,24 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
   // ── Derived values ──
   const totalViews  = analyticsData?.totalViews  ?? 0
   const totalClicks = analyticsData?.totalClicks ?? 0
+  const engagedViews = analyticsData?.engagedViews ?? 0
 
-  const clickRate = totalViews > 0
-    ? `${(totalClicks / totalViews * 100).toFixed(1)}%`
-    : '—'
+  let engagementRateNum = totalViews > 0 ? (engagedViews / totalViews) * 100 : 0;
+  if (engagementRateNum > 100) engagementRateNum = 100;
+  const engagementRate = totalViews > 0 ? `${engagementRateNum.toFixed(1)}%` : '0.0%';
 
   const KPIS = [
     {
       label: 'Store Views',
       value: totalViews.toLocaleString(),
       Icon:  Eye,
-      color: 'bg-amber-50 text-amber-600',
+      color: 'bg-blue-50 text-blue-600',
     },
     {
       label: 'Product Clicks',
       value: totalClicks.toLocaleString(),
       Icon:  MousePointerClick,
-      color: 'bg-blue-50 text-blue-600',
+      color: 'bg-orange-50 text-orange-600',
     },
     {
       label: 'Products Listed',
@@ -73,8 +74,8 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
       color: 'bg-purple-50 text-purple-600',
     },
     {
-      label: 'Product Click Rate',
-      value: clickRate,
+      label: 'Store Engagement Rate',
+      value: engagementRate,
       Icon:  TrendingUp,
       color: 'bg-green-50 text-green-600',
     },
@@ -149,8 +150,8 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
             </div>
             <p className="text-xl font-extrabold text-gray-900">{kpi.value}</p>
             <p className="text-gray-400 text-xs mt-0.5 font-medium">{kpi.label}</p>
-            {kpi.label === 'Product Click Rate' && (
-              <p className="text-xs text-gray-400 mt-1">of visitors who tapped a product</p>
+            {kpi.label === 'Store Engagement Rate' && (
+              <p className="text-xs text-gray-400 mt-1">of visitors who interacted</p>
             )}
           </div>
         ))}

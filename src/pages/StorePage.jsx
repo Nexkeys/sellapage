@@ -120,6 +120,7 @@ export default function StorePage() {
   const [activeTab, setActiveTab] = useState('home')
   const [activeCategory, setActiveCategory] = useState('All')
   const [highlightedProduct, setHighlightedProduct] = useState(null)
+  const [hasInteracted, setHasInteracted] = useState(false)
 
   // ── Cart state ──
   const [cart, setCart]         = useState([])
@@ -128,6 +129,18 @@ export default function StorePage() {
 
   const allProdsRef    = useRef(null)
   const viewCountedRef = useRef(false)
+
+  // ── Analytics ──
+  const triggerSessionEngagement = () => {
+    if (!hasInteracted && store?.id) {
+      setHasInteracted(true)
+      setDoc(
+        doc(db, 'stores', store.id, 'analytics', 'storeSummary'),
+        { engagedViews: increment(1), updatedAt: new Date() },
+        { merge: true }
+      ).catch(() => {})
+    }
+  }
 
 
 
@@ -211,6 +224,7 @@ export default function StorePage() {
   // ── Click tracking callback ──
   const handleProductClick = (productId) => {
     if (!store?.id) return
+    triggerSessionEngagement();
     setDoc(
       doc(db, 'stores', store.id, 'analytics', 'storeSummary'),
       { totalClicks: increment(1), updatedAt: new Date() },
@@ -226,6 +240,7 @@ export default function StorePage() {
 
   // ── Cart handlers ──
   const handleAddToCart = (product) => {
+    triggerSessionEngagement();
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id)
       if (existing) {

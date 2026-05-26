@@ -15,7 +15,11 @@ export default function OverviewTab({
 }) {
   const pct = Math.min(100, Math.round((productCount / maxProducts) * 100))
   const totalViews  = analyticsData?.totalViews  ?? 0
-  const totalClicks = analyticsData?.totalClicks ?? 0
+  const engagedViews = analyticsData?.engagedViews ?? 0
+
+  let engagementRateNum = totalViews > 0 ? (engagedViews / totalViews) * 100 : 0;
+  if (engagementRateNum > 100) engagementRateNum = 100;
+  const engagementRate = totalViews > 0 ? `${engagementRateNum.toFixed(0)}%` : '—';
 
   const PLAN_LABEL = {
     starter: { text: 'Free Plan',    cls: 'bg-gray-100 text-gray-600' },
@@ -102,12 +106,12 @@ export default function OverviewTab({
             <TrendingUp size={15} className="text-amber-600" />
           </div>
           <p className="text-2xl font-extrabold text-gray-900">
-            {isPro && totalViews > 0 && totalClicks > 0
-              ? `${Math.round((totalClicks / totalViews) * 100)}%`
+            {isPro && totalViews > 0
+              ? engagementRate
               : '—'}
           </p>
-          <p className="text-gray-400 text-xs mt-0.5 font-medium">Product Click Rate</p>
-          <p className="text-xs text-gray-400 mt-1">of visitors who tapped a product</p>
+          <p className="text-gray-400 text-xs mt-0.5 font-medium">Store Engagement Rate</p>
+          <p className="text-xs text-gray-400 mt-1">of visitors who interacted</p>
         </div>
       </div>
 

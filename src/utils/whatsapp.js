@@ -1,11 +1,23 @@
 // src/utils/whatsapp.js
 
+const sanitizeWhatsAppNumber = (num) => {
+  if (!num) return '';
+  let cleaned = num.toString().replace(/\D/g, '');
+  if (cleaned.startsWith('0')) {
+    return '234' + cleaned.substring(1);
+  }
+  if (cleaned.length === 10 && !cleaned.startsWith('234')) {
+    return '234' + cleaned;
+  }
+  return cleaned;
+};
+
 /**
  * Generates a WhatsApp deep-link URL from a phone number and message body.
  * All other functions in this file use this internally.
  */
 export function generateWhatsAppLink(phoneNumber, message) {
-  const cleaned = phoneNumber?.toString().replace(/\D/g, '') || ''
+  const cleaned = sanitizeWhatsAppNumber(phoneNumber);
   const encoded = encodeURIComponent(message)
   return `https://wa.me/${cleaned}?text=${encoded}`
 }
