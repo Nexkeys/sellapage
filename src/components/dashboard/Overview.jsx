@@ -107,10 +107,10 @@ export default function OverviewTab({
           </div>
           <p className="text-2xl font-extrabold text-gray-900">
             {isPro && totalViews > 0
-              ? engagementRate
+              ? `${((engagedViews / totalViews) * 100).toFixed(1)}%`
               : '—'}
           </p>
-          <p className="text-gray-400 text-xs mt-0.5 font-medium">Store Engagement Rate</p>
+          <p className="text-gray-400 text-xs mt-0.5 font-medium">Engagement Rate</p>
           <p className="text-xs text-gray-400 mt-1">of visitors who interacted</p>
         </div>
       </div>

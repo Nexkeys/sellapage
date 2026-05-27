@@ -3,11 +3,11 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import fetch from 'node-fetch';
 
-const MASTER_ADMIN_UID = 'xBJZGcVuHyQayXcztNmqENFSEoE3';
+
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, x-admin-uid',
+  'Access-Control-Allow-Headers': 'Content-Type, x-admin-token',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 
@@ -33,20 +33,33 @@ export const handler = async (event) => {
     };
   }
 
-  // Master admin UID gate — expects x-admin-uid header from authenticated Admin.jsx
-  const adminUid =
-    event.headers['x-admin-uid'] ||
-    event.headers['X-Admin-Uid'] ||
-    event.headers['X-ADMIN-UID'];
+  // Token gate — validates secret from environment against x-admin-token header
+  const adminToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
 
-  if (!adminUid || adminUid !== MASTER_ADMIN_UID) {
+  // Check 1: If process.env.ADMIN_SECRET_TOKEN is falsy/missing
+  if (!process.env.ADMIN_SECRET_TOKEN) {
     return {
       statusCode: 403,
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        error: 'Forbidden',
-        message: 'Invalid or missing admin credentials.',
-      }),
+      body: JSON.stringify({ error: 'BACKEND_ENV_MISSING: ADMIN_SECRET_TOKEN is not defined in Netlify/Server environment.' }),
+    };
+  }
+
+  // Check 2: If the incoming header token is missing
+  if (!adminToken) {
+    return {
+      statusCode: 403,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'FRONTEND_HEADER_MISSING: The x-admin-token header did not reach the server or is empty.' }),
+    };
+  }
+
+  // Check 3: If the tokens do not match
+  if (adminToken !== process.env.ADMIN_SECRET_TOKEN) {
+    return {
+      statusCode: 403,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'TOKEN_MISMATCH: Frontend sent a token, but it does not match the backend token.' }),
     };
   }
 
@@ -218,15 +231,22 @@ export const handler = async (event) => {
 
       // Group 2: Gemini AI Usage Data
       (async () => {
-        const aiProductsSnap = await adminDb
-          .collectionGroup('products')
-          .where('aiGenerated', '==', true)
-          .count()
-          .get();
+        try {
+          const aiProductsSnap = await adminDb
+            .collectionGroup('products')
+            .where('aiGenerated', '==', true)
+            .count()
+            .get();
 
-        return {
-          totalAiGenerations: aiProductsSnap.data().count,
-        };
+          return {
+            totalAiGenerations: aiProductsSnap.data().count,
+          };
+        } catch (err) {
+          console.error("🔴 FIREBASE INDEX LINK DETECTED:", err);
+          return {
+            totalAiGenerations: 0,
+          };
+        }
       })(),
 
       // Group 3: Cloudinary Storage Capacity Metrics

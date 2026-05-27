@@ -1,3 +1,4 @@
+//src/pages/Admin.jsx/
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { 
@@ -8,10 +9,7 @@ import {
 
 const ADMIN_UID = 'xBJZGcVuHyQayXcztNmqENFSEoE3';
 
-const ADMIN_HEADERS = {
-  'Content-Type': 'application/json',
-  'x-admin-uid': ADMIN_UID,
-};
+
 
 export default function Admin() {
   const { user } = useAuth();
@@ -41,7 +39,10 @@ export default function Admin() {
     setHealthError('');
     try {
       const res = await fetch('/.netlify/functions/admin-health?action=health', {
-        headers: ADMIN_HEADERS,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '',
+        },
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
@@ -52,7 +53,7 @@ export default function Admin() {
       setLastRefreshed(new Date());
       setCountdown(30);
     } catch (err) {
-      setHealthError('Failed to extract system performance records. Check Netlify engine logs.');
+      setHealthError(err.message || 'Failed to extract system performance records.');
     } finally {
       setHealthLoading(false);
     }
@@ -64,7 +65,10 @@ export default function Admin() {
     try {
       const url = `/.netlify/functions/admin-health?action=directory&page=${pageNum}&limit=${LIMIT}&search=${encodeURIComponent(searchQuery)}`;
       const res = await fetch(url, {
-        headers: ADMIN_HEADERS,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '',
+        },
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));

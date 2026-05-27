@@ -223,28 +223,31 @@ const stats = [
 
 const storeExamples = [
   {
-    name: 'Tasty Meals – Food Store',
-    desc: 'Taking food orders across Lagos',
+    name: 'Jenny Wines – Premium Wine Store',
+    desc: 'Exquisite wines and spirits delivered straight to your door across Lagos.',
     image: '/seehowotherssell-projectimage1.png',
-    tag: 'Tasty Meals',
-    tagline: 'Delicious food, delivered fast',
+    tag: 'Jenny Wines',
+    tagline: 'Premium wines & spirits, uncorked',
     btnLabel: 'Order Now',
+    url: 'https://sellapage.com.ng/jennywines'
   },
   {
-    name: 'Gadgets Hub – Tech Store',
-    desc: 'Selling gadgets and accessories online',
+    name: 'The Trend Plug – Premium Clothing Store',
+    desc: 'The ultimate destination for trending streetwear and fashion outfits.',
     image: '/seehowotherssell-projectimage2.png',
-    tag: 'Gadgets Hub',
-    tagline: 'Latest gadgets. Best prices.',
+    tag: 'The Trend Plug',
+    tagline: 'Your plug for premium outfits',
     btnLabel: 'Shop Now',
+    url: 'https://sellapage.com.ng/thetrendplug'
   },
   {
-    name: 'Home & More – Home Essentials',
-    desc: 'Quality home products for every home',
+    name: 'Chioma Fashion – Luxury Fashion Store',
+    desc: 'Bespoke designs and elegant traditional styles for all premium occasions.',
     image: '/seehowotherssell-projectimage3.png',
-    tag: 'Home & More',
-    tagline: 'Everything for your home',
+    tag: 'Chioma Fashion',
+    tagline: 'Elegance in every stitch',
     btnLabel: 'Shop Now',
+    url: 'https://sellapage.com.ng/chioma-fashion'
   },
 ]
 
@@ -446,9 +449,6 @@ export default function Home() {
                 </div>
                 <h3 className="font-display font-bold text-gray-900 text-base mb-2">{item.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
-                <button className="mt-4 inline-flex items-center gap-1 text-brand-600 text-sm font-semibold hover:gap-2 transition-all duration-150">
-                  Learn More <ArrowRight className="w-3.5 h-3.5" />
-                </button>
               </div>
             ))}
           </div>
@@ -461,7 +461,7 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left copy */}
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Why Nigerian Businesses Choose Sellapage</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Why Nigerian Businesses Choose Sellapage™</span>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-6">
                 Simple, Fast &amp; Built<br />
                 for <span className="text-brand-600">Real Business.</span>
@@ -575,51 +575,52 @@ export default function Home() {
       {/* ── REAL STORES (EXAMPLES) ──────────────────────────────────────── */}
       <section id="examples" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-12">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Real Stores on Sellapage</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Real Stores on Sellapage™</span>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
                 See How Others Sell with Ease
               </h2>
             </div>
-            <a href="#" className="inline-flex items-center gap-1.5 text-brand-600 font-semibold text-sm hover:gap-2.5 transition-all duration-150">
-              View All Examples <ArrowRight className="w-4 h-4" />
-            </a>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {storeExamples.map((store) => (
-              <div key={store.name} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100/80 hover:shadow-xl hover:shadow-gray-200/80 transition-all duration-300">
+              <a 
+                key={store.name} 
+                href={store.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100/80 hover:shadow-xl hover:shadow-brand-100/50 transition-all duration-300 transform hover:-translate-y-1"
+              >
                 {/* image with overlay */}
-                <div className="relative overflow-hidden aspect-[4/3]">
+                <div className="relative overflow-hidden h-64 sm:h-72 lg:h-80 w-full bg-gray-50">
                   <img
                     src={store.image}
                     alt={store.name}
-                    width={480}
-                    height={360}
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   {/* overlay label */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 flex items-center justify-between gap-3 shadow-sm">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center justify-between gap-3 shadow-md">
                       <div>
                         <p className="font-display font-bold text-gray-900 text-sm leading-tight">{store.tag}</p>
-                        <p className="text-gray-400 text-xs">{store.tagline}</p>
+                        <p className="text-brand-600 text-xs font-medium mt-0.5">{store.tagline}</p>
                       </div>
-                      <button className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
+                      <span className="bg-brand-600 text-white text-xs font-bold px-3 py-2 rounded-lg group-hover:bg-brand-700 transition-colors flex-shrink-0">
                         {store.btnLabel}
-                      </button>
+                      </span>
                     </div>
                   </div>
                 </div>
                 {/* card footer */}
-                <div className="px-4 py-3 bg-white">
-                  <p className="font-semibold text-gray-900 text-sm">{store.name}</p>
-                  <p className="text-gray-400 text-xs mt-0.5">{store.desc}</p>
+                <div className="p-5 bg-white">
+                  <p className="font-display font-bold text-gray-900 text-base leading-snug group-hover:text-brand-600 transition-colors">{store.name}</p>
+                  <p className="text-gray-500 text-sm mt-2 leading-relaxed">{store.desc}</p>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>

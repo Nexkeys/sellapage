@@ -99,7 +99,7 @@ export default function Dashboard() {
 
 
   // Analytics — lifted here so Overview and AnalyticsTab share the same data
-  const [analyticsData, setAnalyticsData] = useState({ totalViews: 0, totalClicks: 0 })
+  const [analyticsData, setAnalyticsData] = useState({ totalViews: 0, totalClicks: 0, engagedViews: 0 })
 
 
   const limitReached = productCount >= maxProducts
@@ -145,15 +145,16 @@ export default function Dashboard() {
         if (snap.exists()) {
           const data = snap.data()
           setAnalyticsData({
-            totalViews:  data.totalViews  ?? 0,
-            totalClicks: data.totalClicks ?? 0,
+            totalViews:   data.totalViews   ?? 0,
+            totalClicks:  data.totalClicks  ?? 0,
+            engagedViews: data.engagedViews ?? 0,
           })
         } else {
-          setAnalyticsData({ totalViews: 0, totalClicks: 0 })
+          setAnalyticsData({ totalViews: 0, totalClicks: 0, engagedViews: 0 })
         }
       },
       () => {
-        setAnalyticsData({ totalViews: 0, totalClicks: 0 })
+        setAnalyticsData({ totalViews: 0, totalClicks: 0, engagedViews: 0 })
       }
     )
     return unsubscribe

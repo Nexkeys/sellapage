@@ -93,10 +93,10 @@ export default function ContactUs() {
                 Tell us your store name and describe the issue clearly.
               </p>
               <a
-                href="mailto:nexkeysagency@gmail.com"
+                href="mailto:sellapage.ng@gmail.com"
                 className="inline-flex items-center gap-2 text-brand-600 font-semibold text-sm hover:underline"
               >
-                nexkeysagency@gmail.com
+                sellapage.ng@gmail.com
                 <ExternalLink size={13} />
               </a>
             </div>
