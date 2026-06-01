@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import { loginSeller, registerSeller, resetPassword } from '../firebase/auth'
 
@@ -15,6 +15,10 @@ const ERROR_MESSAGES = {
 
 export default function Login() {
   const navigate = useNavigate()
+  // 2. Initialize the search parameter hook
+  const [searchParams] = useSearchParams()
+  const refCode = searchParams.get('ref')
+
   const [mode, setMode] = useState('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -29,6 +33,13 @@ export default function Login() {
     storeName: '',
     description: '',
   })
+
+  // 3. Cache the referral tracking code safely if found in the link
+  useEffect(() => {
+    if (refCode) {
+      localStorage.setItem('vendor_referral_code', refCode.trim())
+    }
+  }, [refCode])
 
   const update = (e) => {
     const { name, value } = e.target
@@ -75,12 +86,21 @@ export default function Login() {
       if (mode === 'login') {
         await loginSeller(form.email, form.password)
       } else {
+        // 4. Fetch tracking code from cache right at submission (fallback to null if organic signup)
+        const savedRefCode = localStorage.getItem('vendor_referral_code') || null
+
         await registerSeller(form.email, form.password, {
           businessName: form.businessName.trim(),
           whatsappNumber: form.whatsappNumber.trim(),
           storeName: form.storeName.trim(),
           description: form.description.trim(),
+          referredBy: savedRefCode, // Injected into storeData payload
         })
+
+        // 5. Clear tracking cache completely upon successful document creation
+        if (savedRefCode) {
+          localStorage.removeItem('vendor_referral_code')
+        }
       }
       navigate('/dashboard')
     } catch (err) {

@@ -139,6 +139,7 @@ export const handler = async (event) => {
           }
 
           return {
+            ...store, // Ensures 'referredBy' and all dynamic fields flow to the frontend
             id: store.id,
             storeName: store.storeName || '',
             handle: store.handle || '',

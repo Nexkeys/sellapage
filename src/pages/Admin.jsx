@@ -407,6 +407,7 @@ export default function Admin() {
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-black tracking-wider uppercase text-gray-400">
                       <th className="px-5 py-4">Merchant Profile</th>
                       <th className="px-5 py-4">Subscription Status</th>
+                      <th className="px-5 py-4">Registration Source</th>
                       <th className="px-5 py-4">Timelines & Metrics</th>
                     </tr>
                   </thead>
@@ -460,6 +461,27 @@ export default function Admin() {
                             )}
                           </div>
                         </td>
+
+                        <td className="px-5 py-4 align-top pt-5">
+                          {(() => {
+                            // Case 1: Field completely missing (Old Users)
+                            if (store.referredBy === undefined) {
+                              return <span className="text-xs font-medium text-gray-400 italic">Not Referred</span>;
+                            }
+                            
+                            // Case 2: Explicitly marked as organic
+                            if (store.referredBy === null || store.referredBy === '' || store.referredBy?.toLowerCase() === 'organic') {
+                              return <span className="text-xs font-bold text-gray-500">Organic</span>;
+                            }
+                            
+                            // Case 3: Actual Influencer / Referral Code present
+                            return (
+                              <span className="text-[10px] font-black text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100 inline-block uppercase tracking-wider">
+                                {store.referredBy}
+                              </span>
+                            );
+                          })()}
+                        </td>
                         
                         <td className="px-5 py-4 align-top pt-5">
                           <div className="flex flex-col gap-1.5 text-xs">
@@ -499,7 +521,28 @@ export default function Admin() {
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-bold text-gray-900 text-base">{store.storeName || 'Unnamed Business'}</div>
-                        <div className="text-[11px] text-gray-400 font-mono mb-2">@{store.handle}</div>
+                        <div className="text-[11px] text-gray-400 font-mono mb-1">@{store.handle}</div>
+                        <div className="mt-2">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Registration Source</span>
+                          {(() => {
+                            // Case 1: Field completely missing (Old Users)
+                            if (store.referredBy === undefined) {
+                              return <span className="text-xs font-medium text-gray-400 italic mt-0.5 inline-block">Not Referred</span>;
+                            }
+                            
+                            // Case 2: Explicitly marked as organic
+                            if (store.referredBy === null || store.referredBy === '' || store.referredBy?.toLowerCase() === 'organic') {
+                              return <span className="text-xs font-bold text-gray-500 mt-0.5 inline-block">Organic</span>;
+                            }
+                            
+                            // Case 3: Actual Influencer / Referral Code present
+                            return (
+                              <span className="text-xs font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 inline-block mt-0.5">
+                                {store.referredBy}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <span className={`text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full border ${

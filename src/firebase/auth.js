@@ -28,6 +28,7 @@ export const registerSeller = async (email, password, storeData) => {
     maxImagesPerProduct: 3,
     hasGrowthFeatures: false,
     hasProFeatures: false,
+    referredBy: storeData.referredBy || null, // Ensures explicit entry even if undefined
     createdAt: new Date(),
   })
 

@@ -59,6 +59,7 @@ export default function Dashboard() {
 
 
   const [activeTab, setActiveTab]           = useState('overview')
+  const [showChecklist, setShowChecklist]   = useState(false)
   const [products, setProducts]             = useState([])
   const [leads, setLeads]                   = useState([])
   const [loading, setLoading]               = useState(true)
@@ -108,6 +109,16 @@ export default function Dashboard() {
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { if (store?.id) fetchProducts() }, [store])
+
+  // Setup Guide State initialization
+  useEffect(() => {
+    if (store?.id) {
+      const dismissed = localStorage.getItem(`sellapage_onboarding_dismissed_${store.id}`)
+      if (!dismissed) {
+        setShowChecklist(true)
+      }
+    }
+  }, [store?.id])
 
 
   useEffect(() => { if (store?.id) fetchLeads() }, [store])
@@ -379,6 +390,12 @@ export default function Dashboard() {
 
 
   // ── Handlers ───────────────────────────────────────────────────────────────
+  const dismissChecklist = () => {
+    if (!store?.id) return
+    localStorage.setItem(`sellapage_onboarding_dismissed_${store.id}`, 'true')
+    setShowChecklist(false)
+  }
+
   const copyLink = () => {
     navigator.clipboard.writeText(storeUrl)
     setCopied(true)
@@ -771,23 +788,66 @@ export default function Dashboard() {
       isGrowthOrPro={isGrowthOrPro}
     >
       {activeTab === 'overview' && (
-        <OverviewTab
-          store={store}
-          plan={plan}
-          maxProducts={maxProducts}
-          productCount={productCount}
-          limitReached={limitReached}
-          isGrowthOrPro={isGrowthOrPro}
-          isPro={isPro}
-          leads={leads}
-          products={products}
-          storeUrl={storeUrl}
-          copied={copied}
-          copyLink={copyLink}
-          navigateTo={setActiveTab}
-          setShowForm={setShowForm}
-          analyticsData={analyticsData}
-        />
+        <div className="animate-in fade-in duration-300 w-full">
+          {showChecklist && (
+            <div className="mb-6 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-green-500" />
+              <div className="flex justify-between items-start mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Welcome to Sellapage! Let's get you set up.</h2>
+                  <p className="text-sm text-gray-500 mt-1">Complete these quick steps to launch your store and start making sales.</p>
+                </div>
+                <button onClick={dismissChecklist} className="text-gray-400 hover:text-gray-600 text-sm font-bold bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors">
+                  Dismiss
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onClick={() => setActiveTab('products')} className="flex flex-col items-start p-4 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl transition-all text-left group">
+                  <span className="w-8 h-8 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-200 mb-3 font-bold text-xs">1</span>
+                  <span className="font-bold text-gray-900 text-sm mb-1 group-hover:text-green-700">Upload First Product</span>
+                  <span className="text-xs text-gray-500 group-hover:text-green-600">Add your items, descriptions, and prices.</span>
+                </button>
+                <button onClick={() => setActiveTab('online-store')} className="flex flex-col items-start p-4 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl transition-all text-left group">
+                  <span className="w-8 h-8 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-200 mb-3 font-bold text-xs">2</span>
+                  <span className="font-bold text-gray-900 text-sm mb-1 group-hover:text-green-700">Share Store Link</span>
+                  <span className="text-xs text-gray-500 group-hover:text-green-600">Copy your unique link to your social bios.</span>
+                </button>
+                <button onClick={() => setActiveTab('marketing')} className="flex flex-col items-start p-4 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl transition-all text-left group">
+                  <span className="w-8 h-8 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-200 mb-3 font-bold text-xs">3</span>
+                  <span className="font-bold text-gray-900 text-sm mb-1 group-hover:text-green-700">Start Daily Growth</span>
+                  <span className="text-xs text-gray-500 group-hover:text-green-600">Check your growth workspace to complete your daily tasks.</span>
+                </button>
+              </div>
+            </div>
+          )}
+          {!showChecklist && (
+            <div className="flex justify-end mb-4">
+              <button 
+                onClick={() => setShowChecklist(true)} 
+                className="text-xs font-semibold text-gray-500 hover:text-green-600 transition-colors flex items-center gap-1 bg-white border border-gray-100 shadow-sm px-3 py-1.5 rounded-lg"
+              >
+                View Setup Guide
+              </button>
+            </div>
+          )}
+          <OverviewTab
+            store={store}
+            plan={plan}
+            maxProducts={maxProducts}
+            productCount={productCount}
+            limitReached={limitReached}
+            isGrowthOrPro={isGrowthOrPro}
+            isPro={isPro}
+            leads={leads}
+            products={products}
+            storeUrl={storeUrl}
+            copied={copied}
+            copyLink={copyLink}
+            navigateTo={setActiveTab}
+            setShowForm={setShowForm}
+            analyticsData={analyticsData}
+          />
+        </div>
       )}
 
 
