@@ -1,3 +1,4 @@
+// src/pages/about.jsx
 import { Link } from 'react-router-dom'
 import { ArrowRight, ExternalLink } from 'lucide-react'
 import Navbar from '../components/Navbar'
@@ -16,60 +17,53 @@ export default function About() {
             Our Story
           </div>
           <h1 className="font-display text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
-            Sellapage™ was built for Nigerian sellers,<br />
-            by people who get it.
+            Built in Nigeria. Built for Nigerians
           </h1>
           <p className="text-gray-500 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-            Sellapage™ started with a simple observation — millions of Nigerian business owners were doing
-            everything through WhatsApp, messy catalogues and PDFs, but had no proper storefront to send
-            customers to. We built the simplest fix we could.
+            Sellapage is a live commerce platform built for the way Nigerian businesses actually sell: one store link, structured ordering, customer records, payments, analytics and a dashboard that keeps everything organised.
           </p>
         </div>
       </section>
 
-      {/* ── WHAT SELLAPAGE IS ─────────────────────────────────────────────── */}
+      {/* ── WHAT WE DO ─────────────────────────────────────────────────── */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What we do</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What We Built</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6">
-              A storefront for every Nigerian business
+              A commerce platform for every Nigerian business
             </h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* Value 1 */}
             <div className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
-              <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Simple Creation</h3>
+              <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Store in Minutes</h3>
               <p className="text-brand-700/80 text-sm leading-relaxed">
-                Sellapage™ lets any Nigerian business owner create a professional product page in minutes —
-                no coding, no technical setup, and no prior experience required. If you can use WhatsApp,
-                you can build your store.
+                Any Nigerian business owner can have a professional, shareable store page live in under five minutes. No coding, no technical knowledge, no prior experience.
               </p>
             </div>
             {/* Value 2 */}
             <div className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
-              <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Seamless Ordering</h3>
+              <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Sell Products or Services</h3>
               <p className="text-brand-700/80 text-sm leading-relaxed">
-                Customers can browse your products, see prices and photos, and place orders directly from
-                your unique store link. You share the link anywhere, and customers arrive at a clean, credible storefront.
+                Sellapage supports physical products, digital items, and service bookings. Fashion sellers, food vendors, makeup artists, tutors, consultants, and agencies can all run from one workspace.
               </p>
             </div>
             {/* Value 3 */}
             <div className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
-              <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Flexible Plans</h3>
+              <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Built to Grow With You</h3>
               <p className="text-brand-700/80 text-sm leading-relaxed">
-                Sellapage™ has three plans. The <span className="font-semibold text-brand-800">Starter</span> plan
-                is permanently free. <span className="font-semibold text-brand-800">Growth</span> and <span className="font-semibold text-brand-800">Pro</span> unlock advanced tools like analytics, custom themes, and AI automation as you scale.
+                Starter is permanently free. Growth and Pro unlock analytics, carts, AI descriptions, premium themes, customer CRM, reviews, checkout, delivery zones, and payout tools as you scale.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { value: '100+',     label: 'Stores Created' },
+              { value: '100+',     label: 'Active Stores' },
               { value: 'April 2026', label: 'Launched' },
-              { value: '₦0',       label: 'To Start' },
+              { value: '₦0',       label: 'To Get Started' },
             ].map((stat) => (
               <div
                 key={stat.label}
@@ -83,7 +77,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* ── WHO BUILT THIS ────────────────────────────────────────────────── */}
+      {/* ── THE TEAM ────────────────────────────────────────────────────── */}
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -94,41 +88,33 @@ export default function About() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
-
-            {/* NexKeys Agency */}
+            {/* The Builders */}
             <div className="bg-gray-50 rounded-2xl border border-gray-100 p-8">
               <div className="w-11 h-11 rounded-xl bg-brand-600 flex items-center justify-center mb-5">
-                <span className="text-white font-display font-extrabold text-sm">NK</span>
+              <img
+              src="/nexkeys-logo.png"
+              alt="Nexkeys Agency logo"
+              className="w-11 h-11 rounded-xl object-cover shadow-sm ring-1 ring-gray-100"
+            />
               </div>
               <h3 className="font-display font-bold text-gray-900 text-lg mb-3">NexKeys Agency</h3>
               <p className="text-gray-500 text-sm leading-relaxed mb-5">
-                The product and engineering team behind Sellapage™, based in Nigeria. We focus on building
-                practical digital tools for African businesses — things that actually work in the local
-                context, not just imports from elsewhere.
+                The product and engineering team behind Sellapage, based in Lagos, Nigeria. 
+                <br></br>
+                We build practical digital tools for African businesses tools that work in the Nigerian context, not imports from markets that do not understand ours.
               </p>
-              <a
-                href="https://nexkeysagency.netlify.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-brand-600 font-semibold text-sm hover:underline"
-              >
-                Visit NexKeys Agency <ExternalLink className="w-3.5 h-3.5" />
-              </a>
             </div>
 
             {/* The Mission */}
             <div className="bg-brand-600 rounded-2xl p-8">
-              <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center mb-5">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-5">
                 <span className="text-white font-display font-extrabold text-sm">🎯</span>
               </div>
-              <h3 className="font-display font-bold text-white text-lg mb-3">The Mission</h3>
+              <h3 className="font-display font-bold text-white text-lg mb-3">Our Mission</h3>
               <p className="text-brand-100 text-sm leading-relaxed">
-                Make professional online selling accessible to every Nigerian business owner — regardless
-                of their technical ability or budget. We started with the simplest possible product and we
-                are building from there, one real seller at a time.
+                Make professional online selling accessible to every Nigerian business owner or service provider regardless of their technical ability or budget. We started with the simplest possible product and we are building from there, one real seller at a time.
               </p>
             </div>
-
           </div>
         </div>
       </section>
@@ -139,7 +125,7 @@ export default function About() {
           <div className="text-center mb-12">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Transparency</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
-              Where we stand today
+              What's under the hood
             </h2>
           </div>
 
@@ -151,6 +137,7 @@ export default function About() {
               { label: 'Image Hosting',         status: 'Cloudinary — global CDN' },
               { label: 'Hosting',               status: 'Netlify — SOC 2 certified' },
               { label: 'Support',               status: 'sellapage.ng@gmail.com' },
+              { label: 'Security',              status: 'ISO/IEC 27001 guidance — reviewed by co-founder' },
             ].map((item, i, arr) => (
               <div
                 key={item.label}
@@ -165,8 +152,9 @@ export default function About() {
           </div>
 
           <p className="text-gray-400 text-xs text-center mt-6 leading-relaxed">
-            Sellapage™ is an early-stage product. We are transparent about what is built, what is coming,
-            and how your data is handled.
+            Sellapage is a live growing product. 
+            <br></br>
+            We are transparent about how the platform works, how your data is handled and what your subscription includes.
           </p>
         </div>
       </section>
@@ -175,10 +163,10 @@ export default function About() {
       <section className="py-20 bg-brand-600">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-4">
-            Ready to create your store?
+            Your store is one link away.
           </h2>
           <p className="text-brand-100 text-base mb-8">
-            It takes less than 5 minutes and costs nothing to start.
+            Takes less than two minutes. Free forever on the Starter plan.
           </p>
           <Link
             to="/login"

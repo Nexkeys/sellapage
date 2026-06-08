@@ -1,8 +1,8 @@
 import { themes, CLASSIC_DEFAULT_THEME, getOptimizedImageUrl } from './themes'
 
 /**
- * Resolves storefront theme tokens from persisted store data plus optional draft overrides.
- * Mirrors StorePage.jsx theme extraction so dashboard preview and live store stay aligned.
+ * Resolves business page theme tokens from persisted store data plus optional draft overrides.
+ * Mirrors StorePage.jsx theme extraction so dashboard preview and live page stay aligned.
  *
  * @param {object} store - Firestore store document
  * @param {object} [draft] - Unsaved overrides

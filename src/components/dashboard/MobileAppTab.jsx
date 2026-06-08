@@ -13,45 +13,30 @@ export default function MobileAppTab() {
               </svg>
             </div>
             <div className="absolute -top-2 -right-2 bg-amber-400 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md whitespace-nowrap">
-              Soon ✦
+              PWA
             </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mobile App</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mobile Workspace</h1>
           <p className="text-gray-500 text-base max-w-sm mx-auto leading-relaxed">
-            Manage your store, track orders, and respond to customers — all from your pocket.
+            Install Sellapage on your phone home screen and manage offers, orders, customers, and analytics from your browser.
           </p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-2">
-          {['Live Order Notifications','Manage Products','Chat with Customers','View Analytics','Offline Support'].map(f => (
+          {['Home-screen access','Manage Offers','Chat with Customers','View Analytics','Fast PWA Loading'].map(f => (
             <span key={f} className="bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1.5 rounded-full">{f}</span>
           ))}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-3 max-w-sm mx-auto">
-          <p className="font-bold text-gray-900 text-sm">Get notified when it launches</p>
-          <div className="flex gap-2">
-            <input type="email" placeholder="Your email address"
-              className="flex-1 px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all min-w-0" />
-            <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all flex-shrink-0">
-              Notify Me
-            </button>
-          </div>
-          <p className="text-gray-400 text-xs">No spam, ever. Unsubscribe at any time.</p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          {[['App Store','Download on the'],['Google Play','Get it on']].map(([store, pre]) => (
-            <button key={store} disabled className="flex items-center gap-3 bg-gray-900 opacity-40 text-white px-5 py-3 rounded-xl cursor-not-allowed">
-              <div className="text-left">
-                <p className="text-[10px] opacity-70 leading-none">{pre}</p>
-                <p className="text-sm font-bold leading-tight">{store}</p>
-              </div>
-            </button>
-          ))}
+          <p className="font-bold text-gray-900 text-sm">Install from your browser</p>
+          <p className="text-gray-500 text-sm leading-relaxed">
+            On Android, open the browser menu and choose Add to Home Screen. On iPhone, use Share, then Add to Home Screen.
+          </p>
+          <p className="text-gray-400 text-xs">The installed workspace opens fullscreen and stays connected to your live dashboard.</p>
         </div>
       </div>
     </div>

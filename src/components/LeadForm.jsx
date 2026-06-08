@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { CheckCircle, Loader2, MessageCircle, User, Phone, HelpCircle } from 'lucide-react'
 import { saveLead } from '../firebase/leads'
 
-export default function LeadForm({ storeId, storeName, whatsappNumber }) {
+export default function LeadForm({ storeId, storeName, whatsappNumber, leadType = 'product' }) {
   const [form, setForm]         = useState({ name: '', phone: '', interest: '' })
   const [loading, setLoading]   = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -20,7 +20,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber }) {
     setLoading(true)
     setError('')
     try {
-      await saveLead(storeId, storeName, form)
+      await saveLead(storeId, storeName, { ...form, leadType })
       setSubmitted(true)
     } catch {
       setError('Could not send your message. Please try again.')

@@ -1,3 +1,4 @@
+// src/components/Navbar.jsx/
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, X, LayoutDashboard, LogOut } from 'lucide-react'
@@ -26,21 +27,22 @@ export default function Navbar() {
           <Link
             to="/"
             onClick={close}
-            className="flex items-center gap-2 font-bold text-xl text-gray-900 hover:text-green-600 transition-colors"
+            className="flex items-center gap-2.5 font-bold text-xl text-gray-900 hover:text-green-600 transition-colors"
           >
             <img
               src="/og-image.png"
               alt="Sellapage logo"
-              className="w-8 h-8 rounded-lg object-cover shadow-sm"
+              className="w-9 h-9 rounded-xl object-cover shadow-sm ring-1 ring-gray-100"
             />
-            <span>sellapage</span>
+            <span className="tracking-tight">Sellapage</span>
           </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
             <a href="/#how-it-works" className="hover:text-gray-900 transition-colors">How It Works</a>
             <a href="/#features" className="hover:text-gray-900 transition-colors">Features</a>
-            <a href="/#pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
+            <Link to="/tools/offer-name-lab" className="hover:text-gray-900 transition-colors">Tools</Link>
+            <a href="/pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
 
             {user ? (
               <div className="flex items-center gap-3 ml-2">
@@ -71,7 +73,7 @@ export default function Navbar() {
                   to="/login?mode=register"
                   className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md"
                 >
-                  Create Free Store
+                  Create Free Account
                 </Link>
               </div>
             )}
@@ -94,7 +96,8 @@ export default function Navbar() {
           {[
             { label: 'How It Works', href: '/#how-it-works' },
             { label: 'Features', href: '/#features' },
-            { label: 'Pricing', href: '/#pricing' },
+            { label: 'Tools', href: '/tools/offer-name-lab' },
+            { label: 'Pricing', href: '/pricing' },
           ].map(link => (
             <a
               key={link.href}
@@ -145,7 +148,7 @@ export default function Navbar() {
                   onClick={close}
                   className="block w-full text-center bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-sm transition-colors"
                 >
-                  Create Free Store
+                  Create Free Account
                 </Link>
               </>
             )}

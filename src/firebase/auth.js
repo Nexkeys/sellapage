@@ -1,3 +1,4 @@
+// src/firebase/auth.js/
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -18,16 +19,18 @@ export const registerSeller = async (email, password, storeData) => {
     email,
     ownerId: user.uid,
     isActive: true,
+    vendorType: storeData.vendorType || 'products',
     plan: 'starter',
     planStatus: 'active',
     planStartDate: null,
     planEndDate: null,
     graceUntil: null,
     productCount: 0,
-    maxProducts: 10,
+    maxProducts: 15,
     maxImagesPerProduct: 3,
     hasGrowthFeatures: false,
     hasProFeatures: false,
+    hasPremiumFeatures: false,
     referredBy: storeData.referredBy || null, // Ensures explicit entry even if undefined
     createdAt: new Date(),
   })

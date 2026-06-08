@@ -1,65 +1,52 @@
 // src/utils/whatsapp.js
 
 const sanitizeWhatsAppNumber = (num) => {
-  if (!num) return '';
-  let cleaned = num.toString().replace(/\D/g, '');
-  if (cleaned.startsWith('0')) {
-    return '234' + cleaned.substring(1);
-  }
-  if (cleaned.length === 10 && !cleaned.startsWith('234')) {
-    return '234' + cleaned;
-  }
-  return cleaned;
-};
+  if (!num) return ''
+  const cleaned = num.toString().replace(/\D/g, '')
+  if (cleaned.startsWith('0')) return `234${cleaned.substring(1)}`
+  if (cleaned.length === 10 && !cleaned.startsWith('234')) return `234${cleaned}`
+  return cleaned
+}
 
-/**
- * Generates a WhatsApp deep-link URL from a phone number and message body.
- * All other functions in this file use this internally.
- */
 export function generateWhatsAppLink(phoneNumber, message) {
-  const cleaned = sanitizeWhatsAppNumber(phoneNumber);
+  const cleaned = sanitizeWhatsAppNumber(phoneNumber)
   const encoded = encodeURIComponent(message)
   return `https://wa.me/${cleaned}?text=${encoded}`
 }
 
-/**
- * Builds a WhatsApp URL for a general enquiry (Chat with us button).
- */
 export function buildEnquiryURL(phoneNumber, storeName) {
   const message = `Hi! I'd like to enquire about ${storeName}. Please assist me.`
   return generateWhatsAppLink(phoneNumber, message)
 }
 
-/**
- * Builds a WhatsApp URL for ordering a single product.
- */
-export function buildOrderURL(phoneNumber, productName, price, productId, storeUrl) {
+export function buildOrderURL(phoneNumber, productName, price, productId, storeUrl, type = 'physical') {
+  const isService = type === 'service'
   const lines = [
-    `Hi! I'd like to order the following:`,
-    ``,
-    `Product: ${productName}`,
+    isService ? `Hi! I'd like to book this service:` : `Hi! I'd like to order the following:`,
+    '',
+    `${isService ? 'Service' : 'Product'}: ${productName}`,
     `Price: ₦${Number(price).toLocaleString()}`,
   ]
+
   if (storeUrl && productId) {
     lines.push(`Link: ${storeUrl}?product=${productId}`)
   }
-  lines.push(``, `Please confirm availability. Thank you!`)
+
+  lines.push(
+    '',
+    isService
+      ? 'Please confirm your available booking times. Thank you!'
+      : 'Please confirm availability. Thank you!'
+  )
+
   return generateWhatsAppLink(phoneNumber, lines.join('\n'))
 }
 
-/**
- * Builds a WhatsApp URL for a full cart order (Growth / Pro stores only).
- *
- * @param {string}   phoneNumber      – Store owner's WhatsApp number
- * @param {string}   storeName        – Display name of the store
- * @param {Array}    cartItems        – [{ name, price, quantity }, ...]
- * @param {Object}   customerDetails  – { name, phone, note }
- * @returns {string} WhatsApp deep-link URL
- */
 export function buildCartOrderURL(phoneNumber, storeName, cartItems, customerDetails) {
   const itemLines = cartItems.map(item => {
     const lineTotal = Number(item.price) * Number(item.quantity)
-    return `- ${item.quantity}x ${item.name} — ₦${lineTotal.toLocaleString()}`
+    const label = item.type === 'service' ? 'service' : 'item'
+    return `- ${item.quantity}x ${item.name} (${label}) - ₦${lineTotal.toLocaleString()}`
   })
 
   const orderTotal = cartItems.reduce(
@@ -68,14 +55,14 @@ export function buildCartOrderURL(phoneNumber, storeName, cartItems, customerDet
   )
 
   const lines = [
-    `🛒 New Order from ${storeName}`,
-    ``,
-    `Items:`,
+    `New order from ${storeName}`,
+    '',
+    'Items:',
     ...itemLines,
-    ``,
-    `Order Total: ₦${orderTotal.toLocaleString()}`,
-    ``,
-    `Customer Details:`,
+    '',
+    `Order total: ₦${orderTotal.toLocaleString()}`,
+    '',
+    'Customer details:',
     `Name: ${customerDetails.name}`,
     `Phone: ${customerDetails.phone}`,
   ]
@@ -84,7 +71,7 @@ export function buildCartOrderURL(phoneNumber, storeName, cartItems, customerDet
     lines.push(`Note: ${customerDetails.note.trim()}`)
   }
 
-  lines.push(``, `Please confirm this order. Thank you!`)
+  lines.push('', 'Please confirm this order. Thank you!')
 
   return generateWhatsAppLink(phoneNumber, lines.join('\n'))
 }

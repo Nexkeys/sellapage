@@ -10,7 +10,6 @@ import {
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
-import { saveWaitlistEmail } from '../firebase/leads'
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -18,7 +17,7 @@ const steps = [
   {
     number: '01',
     title: 'Tell us about your business',
-    description: 'Add what you sell or offer — products, services, prices, photos, and your contact details. Takes about 2 minutes.',
+    description: 'Add what you sell or offer, whether products, services, prices, photos, contact details, delivery options, and payment preferences.',
   },
   {
     number: '02',
@@ -28,7 +27,7 @@ const steps = [
   {
     number: '03',
     title: 'Share and start getting customers',
-    description: 'Drop the link in your WhatsApp status, Instagram bio, or send it directly to anyone. Customers browse, tap, and reach you.',
+    description: 'Drop the link in your social bios, messages, ads, flyers, or direct conversations. Customers browse, order, pay, and reach you.',
   },
 ]
 
@@ -36,12 +35,12 @@ const features = [
   {
     icon: Smartphone,
     title: 'Sharp on Every Phone',
-    description: 'Whether you sell clothes, offer a service, or run a food business — your page loads clean and fast on every phone.',
+    description: 'Whether you sell clothes, offer a service, or run a food business your page loads clean and fast on every phone.',
   },
   {
     icon: MessageCircle,
-    title: 'Customers Contact You in One Tap',
-    description: 'Every product or service has a direct WhatsApp button. Customers tap once and a message lands in your phone — details already filled in.',
+    title: 'Customers Order in One Flow',
+    description: 'Every product or service has a clear action path. Customers can order, leave details, and move into your customer workflow without confusion.',
   },
   {
     icon: Package,
@@ -51,7 +50,7 @@ const features = [
   {
     icon: Share2,
     title: 'One Link That Works Everywhere',
-    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram — anywhere you promote yourself.',
+    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram, flyers anywhere you promote yourself.',
   },
   {
     icon: TrendingUp,
@@ -61,12 +60,12 @@ const features = [
   {
     icon: Zap,
     title: 'Live the Same Day You Sign Up',
-    description: 'No technical setup. No waiting. Create your account, add your products or services, and share your link — all in the same session.',
+    description: 'No technical setup. No waiting. Create your account, add your products or services, and share your link all in the same session.',
   },
   {
     icon: ShoppingCart,
-    title: 'WhatsApp Cart (Growth+)',
-    description: 'Customers can add multiple items to a cart and send one beautifully structured order directly to the vendor\'s WhatsApp.',
+    title: 'Structured Cart (Growth+)',
+    description: 'Customers can add multiple items to a cart and send one clean order with their details, notes, and preferred next step.',
   },
   {
     icon: Package,
@@ -76,7 +75,7 @@ const features = [
   {
     icon: Grid,
     title: 'Categories',
-    description: 'Vendors can seamlessly organize their products, allowing customers to easily filter items by category on the live storefront.',
+    description: 'Vendors can organize offers clearly so customers can filter items by category on the live page.',
   },
   {
     icon: Sparkles,
@@ -114,11 +113,11 @@ const testimonials = [
 const faqs = [
   {
     q: 'Do my customers need to download anything?',
-    a: 'No. Your store is a regular web page — customers just tap your link. No app, no account, no friction at all.',
+    a: 'No. Your store is a regular web page customers just tap your link. No app, no account, no friction at all.',
   },
   {
     q: 'How does the order work?',
-    a: 'When a customer taps "Order ", it opens a chat with a message already filled in — product name, price, everything. You just reply and confirm.',
+    a: 'Customers browse your store, choose a product or service, and send a structured order with the important details already included. You confirm from your workflow.',
   },
   {
     q: 'Can I update my products after I create the store?',
@@ -126,15 +125,15 @@ const faqs = [
   },
   {
     q: "What if I'm not good with technology?",
-    a: "Sellapage is built for everyday people, not tech experts. If you can use WhatsApp, you can set this up. It's that simple.",
+    a: "Sellapage is built for everyday business owners, not technical teams. If you can upload photos and fill a simple form, you can run your store here.",
   },
   {
     q: 'How do I share my page with customers?',
-    a: "You get a link like sellapage.com.ng/yourbrandname. Paste it in your WhatsApp status, Instagram bio, or send it directly to anyone.",
+    a: "You get a link like sellapage.com.ng/yourbrandname. Paste it in your social bio, WhatsApp status, campaign posts, or send it directly to anyone.",
   },
   {
     q: 'Is it really free right now?',
-    a: 'Yes — the Starter plan is permanently free. Paid plans are also available now: Growth at ₦5,000/month and Pro at ₦12,000/month, with more features as you grow.',
+    a: 'Yes — the Starter plan is permanently free. Paid plans are also available: Growth at ₦5,000/month, Pro at ₦12,000/month and Premium at ₦25,000 with more features as you grow.',
   },
 ]
 
@@ -145,13 +144,13 @@ const plans = [
     price: '₦0',
     period: 'Forever free',
     description: 'Everything you need to start getting customers online today.',
-    cta: 'Create Free Store',
+    cta: 'Create Free Account',
     ctaStyle: 'outline',
     available: true,
     features: [
       { text: 'Clean business page', available: true },
-      { text: 'WhatsApp button on every product or service', available: true },
-      { text: 'Up to 10 listings', available: true },
+      { text: 'Direct order path on every product or service', available: true },
+      { text: 'Up to 15 listings', available: true },
       { text: 'Lead capture enquiry form', available: true },
       { text: 'Unique shareable link', available: true },
       { text: 'Store customisation', available: false },
@@ -175,10 +174,10 @@ const plans = [
       { text: 'See how many people visited your page', available: true },
       { text: 'Track which listings get the most clicks', available: true },
       { text: 'Manage store settings easily', available: true },
-      { text: 'WhatsApp support', available: true },
+      { text: 'Responsive support', available: true },
       { text: 'Product on/off toggle', available: true },
       { text: 'AI product descriptions — 20 per day', available: true },
-      { text: 'WhatsApp Cart — multi-item orders in one message', available: true },
+      { text: 'Structured cart — multi-item orders in one flow', available: true },
       { text: 'Stock count management & out-of-stock sorting', available: true },
       { text: 'Product categories for easy browsing', available: true },
     ],
@@ -207,17 +206,17 @@ const plans = [
 ]
 
 const trustBadges = [
-  { icon: Zap, label: 'No Coding Needed', sub: 'Launch in Minutes' },
-  { icon: Smartphone, label: 'Mobile Friendly', sub: 'Looks Great Anywhere' },
-  { icon: BarChart2, label: 'Built for Sales', sub: 'Designed to Convert' },
-  { icon: MessageCircle, label: 'Orders', sub: 'Customers Can Chat & Order' },
-  { icon: Lock, label: 'Secure & Reliable', sub: 'Your Store, Always Online' },
+  { icon: Zap, label: 'No Coding Required', sub: 'Set up in minutes' },
+  { icon: Smartphone, label: 'Mobile-First', sub: 'Looks sharp on any phone' },
+  { icon: BarChart2, label: 'Products & Services', sub: 'Sell anything you offer' },
+  { icon: MessageCircle, label: 'Structured Orders', sub: 'Customers order clearly' },
+  { icon: Lock, label: 'Always Online', sub: 'Your store never sleeps' },
 ]
 
 const stats = [
-  { value: '100+', label: 'Stores Created' },
-  { value: '100%', label: 'Free to Start' },
-  { value: '5 mins', label: 'To Go Live' },
+  { value: '100+', label: 'Active Stores' },
+  { value: '₦0', label: 'To Get Started' },
+  { value: 'Take Less Than 2 mins', label: 'To Go Live' },
   { value: '24/7', label: 'Always Online' },
 ]
 
@@ -251,50 +250,23 @@ const storeExamples = [
   },
 ]
 
-const comingFeatures = [
-  { icon: Settings, title: 'Structured Orders Tab Tracking', desc: 'Track and manage customer orders from a dedicated Orders tab on your storefront.' },
-  { icon: Users, title: 'Advanced Customers CRM', desc: 'See customer history, repeat buyers, and follow up smarter from one dashboard.' },
-  { icon: Gift, title: 'Discount & Coupon Codes Engine', desc: 'Create promo codes and run discounts that customers can apply at checkout.' },
-  { icon: Star, title: 'Customer Reviews & Ratings', desc: 'Let happy customers leave reviews and build trust on your store page.' },
-  { icon: Smartphone, title: 'Native Mobile App', desc: 'Manage your store and orders on the go with a dedicated Sellapage mobile app.' },
+const platformFeatures = [
+  { icon: Settings, title: 'Structured Checkout', desc: 'Give customers a clear path from browsing to payment confirmation and order follow-up.' },
+  { icon: Package, title: 'Delivery Planning', desc: 'Prepare location-aware delivery workflows for faster fulfilment and cleaner customer communication.' },
+  { icon: Users, title: 'Customers CRM', desc: 'See customer history, repeat buyers, and follow up smarter from one dashboard.' },
+  { icon: Star, title: 'Reviews & Ratings', desc: 'Let happy customers leave reviews and build trust on your store page.' },
+  { icon: MessageCircle, title: 'Business Messaging', desc: 'Automate order confirmations and customer support from the same commerce flow.' },
 ]
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [openFaq, setOpenFaq] = useState(null)
-  const [notifyPlan, setNotifyPlan] = useState(null)
-  const [notifyEmail, setNotifyEmail] = useState('')
-  const [notifyDone, setNotifyDone] = useState(false)
   const { user } = useAuth()
   const navigate = useNavigate()
 
   const toggleFaq = (i) => setOpenFaq(openFaq === i ? null : i)
   const handleCTA = () => navigate(user ? '/dashboard' : '/login')
-
-  const handleNotify = (planName) => {
-    setNotifyPlan(planName)
-    setNotifyDone(false)
-    setNotifyEmail('')
-  }
-
-  const closeModal = () => {
-    setNotifyPlan(null)
-    setNotifyDone(false)
-    setNotifyEmail('')
-  }
-
-  const submitNotify = async (e) => {
-    e.preventDefault()
-    try {
-      await saveWaitlistEmail(notifyEmail, notifyPlan)
-      setNotifyDone(true)
-      setNotifyEmail('')
-    } catch (err) {
-      console.error('Waitlist save failed:', err)
-      setNotifyDone(true)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-white font-body text-gray-900">
@@ -314,18 +286,23 @@ export default function Home() {
               {/* pill badge */}
               <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 uppercase tracking-wide">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                For Nigerian Business Owners
+              For Nigerian Business Owners & Service Providers
               </div>
 
               <h1 className="font-display text-[2.6rem] sm:text-5xl lg:text-[3.35rem] font-extrabold leading-[1.08] tracking-tight text-gray-950 mb-6 max-w-xl">
-                One link for<br />
-                <span className="text-brand-600">everything you</span><br />
-                sell or offer.
+                Your store. Your rules.<br />
+                <span className="text-brand-600">Sell anything,</span><br />
+                from anywhere.
               </h1>
 
               <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
-                Create a clean page for your products. Share one link anywhere.
-                Let customers browse and order directly from your store.
+                Set up a professional e-commerce page for your products or services.
+                <br></br> 
+                <br></br>
+                Share one link anywhere - Instagram, Facebook, TikTok, WhatsApp, Twitter, flyers, or DMs and let customers browse, order, pay and reach you directly. 
+                <br></br>
+                <br></br>
+                No coding. No stress.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 mb-8">
@@ -333,14 +310,14 @@ export default function Home() {
                   onClick={handleCTA}
                   className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-brand-200/80 hover:shadow-xl hover:shadow-brand-200"
                 >
-                  Create Your Free Page
+                  Create Your Free Store
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <a
                   href="#examples"
                   className="inline-flex items-center gap-2 text-gray-700 hover:text-brand-600 font-semibold text-sm px-5 py-3.5 rounded-xl border border-gray-200 hover:border-brand-300 bg-white shadow-sm transition-all duration-200"
                 >
-                  View Examples
+                  See Real Stores
                   <span className="text-base">👁</span>
                 </a>
               </div>
@@ -365,7 +342,7 @@ export default function Home() {
                     <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
                   <span className="text-sm font-semibold text-gray-700 ml-1">5.0</span>
-                  <span className="text-sm text-gray-400 ml-1">Trusted by 100+ Nigerian Businesses</span>
+                  <span className="text-sm text-gray-400 ml-1">Trusted by 100+ Nigerian businesses</span>
                 </div>
               </div>
             </div>
@@ -395,7 +372,7 @@ export default function Home() {
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
                 <div>
                   <p className="text-xs font-bold text-gray-900 leading-tight">New Order!</p>
-                  <p className="text-[10px] text-gray-400 leading-tight">via WhatsApp</p>
+                  <p className="text-[10px] text-gray-400 leading-tight">structured order</p>
                 </div>
               </div>
             </div>
@@ -426,22 +403,22 @@ export default function Home() {
           <div className="text-center mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What Sellapage Does</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-              Everything You Need to Sell Online
+              One Platform For Everything You Sell Or Offer
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto text-base">
-              Built for vendors, service providers, freelancers, and business owners who want to look professional and get more customers.
+              Built for Nigerian sellers, service providers and freelancers who want to look professional and close more sales without the technical headache.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Store, title: 'Create Your Storefront', desc: 'Build a beautiful store page in minutes. Add products, images, and prices.' },
-              { icon: Package, title: 'Manage Products', desc: 'Add, edit, and organise your products easily. Keep your store fresh and updated.' },
-              { icon: MessageCircle, title: 'Receive Orders', desc: 'Customers order directly from your page. Get notified and fulfil with ease.' },
-              { icon: TrendingUp, title: 'Track Performance', desc: "See what's working. Track visitors, orders, and sales all in one place." },
-              { icon: ShoppingCart, title: 'WhatsApp Cart (Growth+)', desc: 'Customers can add multiple items to a cart and send one beautifully structured order directly to the vendor\'s WhatsApp.' },
+              { icon: Store, title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
+              { icon: Package, title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
+              { icon: MessageCircle, title: 'Receive Orders', desc: 'Customers order directly from your page. You get notified and fulfil with ease.' },
+              { icon: TrendingUp, title: 'Track Performance', desc: "See what's working. Track visitors, orders and sales all in one place." },
+              { icon: ShoppingCart, title: 'Cart Checkout (Growth+)', desc: 'Customers can add multiple items to a cart and send one structured order with their details and notes.' },
               { icon: Package, title: 'Stock Count Management', desc: 'Vendors can set precise stock levels. Out-of-stock products automatically sort to the bottom of the store page.' },
-              { icon: Grid, title: 'Categories', desc: 'Vendors can seamlessly organize their products, allowing customers to easily filter items by category on the live storefront.' },
+              { icon: Grid, title: 'Categories', desc: 'Vendors can organize offers clearly so customers can filter items by category on the live page.' },
             ].map((item) => (
               <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm shadow-gray-100/80 hover:shadow-lg hover:shadow-gray-200/80 hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
                 <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-4 group-hover:bg-brand-100 transition-colors">
@@ -463,19 +440,20 @@ export default function Home() {
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Why Nigerian Businesses Choose Sellapage™</span>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-6">
-                Simple, Fast &amp; Built<br />
-                for <span className="text-brand-600">Real Business.</span>
+                Less chaos. More orders.<br />
+                <span className="text-brand-600">One dashboard.</span>
               </h2>
               <p className="text-gray-500 text-base leading-relaxed mb-8 max-w-md">
-                Sellapage helps you sell more with less stress. One link. More sales. Happier customers.
+                Most Nigerian businesses are managing sales across chats, screenshots, transfers and scattered customer details. 
+                Sellapage gives you one proper home for everything you sell or offer and the tools to manage it.
               </p>
 
               <ul className="space-y-3 mb-8">
                 {[
-                  'One link to showcase everything you sell',
-                  'Customers can browse and order instantly',
-                  'Accept orders via WhatsApp',
-                  'Perfect for products, services &amp; bookings',
+                  'Your full catalogue in one shareable link',
+                  'Orders come in structured, not buried in chats',
+                  'Manage products, leads and analytics from one dashboard',
+                  'Supports products, services and bookings',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <span className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -500,7 +478,7 @@ export default function Home() {
                 onClick={handleCTA}
                 className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-brand-200/80 hover:shadow-xl hover:shadow-brand-200"
               >
-                Create Your Free Page <ArrowRight className="w-4 h-4" />
+                Create Your Free Store <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 
@@ -519,16 +497,84 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── THE REAL PROBLEM ────────────────────────────────────────────── */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-xs font-bold uppercase tracking-widest text-red-500 mb-3 block">
+              The Real Problem
+            </span>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+              This is how most Nigerian sellers are operating right now
+            </h2>
+            <p className="text-gray-500 max-w-xl mx-auto text-base">
+              It works until it doesn't. And for most sellers, it breaks at the worst possible time.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-14">
+            {[
+              {
+                problem: 'No permanent catalogue',
+                detail: 'Products live in WhatsApp status for 24 hours, then vanish. Every new customer asks the same question: "What do you have?"',
+              },
+              {
+                problem: 'Orders get buried in chats',
+                detail: 'A customer messages at 11pm. By morning it\'s buried under 40 other conversations. The sale is gone.',
+              },
+              {
+                problem: 'Looks unprofessional to new buyers',
+                detail: 'A customer who doesn\'t know you sees scattered screenshots and no real business page. Trust breaks before the conversation starts.',
+              },
+              {
+                problem: 'Starting from scratch every time',
+                detail: 'Every new customer needs prices, photos, and descriptions sent all over again manually, one message at a time.',
+              },
+              {
+                problem: 'No way to track what\'s working',
+                detail: 'You have no idea how many people saw your status, which product gets the most interest or who almost bought but didn\'t.',
+              },
+              {
+                problem: 'Expensive tools weren\'t built for you',
+                detail: 'Shopify costs ₦47,000 a month and needs a developer. Linktree has no catalogue. WhatsApp Business has no store page.',
+              },
+            ].map((item) => (
+              <div
+                key={item.problem}
+                className="bg-red-50 border border-red-100 rounded-2xl p-5 hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex items-start gap-3 mb-2">
+                  <span className="w-5 h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <X className="w-3 h-3 text-red-600" />
+                  </span>
+                  <p className="font-bold text-gray-900 text-sm">{item.problem}</p>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed pl-8">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-brand-600 rounded-2xl p-8 sm:p-10 text-center max-w-3xl mx-auto">
+            <h3 className="font-display font-extrabold text-white text-2xl sm:text-3xl mb-3">
+              Sellapage fixes all of this for free.
+            </h3>
+            <p className="text-brand-100 max-w-xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
+              Get a professional catalogue link that never expires, receive organised orders, manage customers, track performance and run your business from one dashboard.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
       <section id="how-it-works" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">How It Works</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Getting Started</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-              No technical skill needed
+              From sign-up to first order in one session
             </h2>
             <p className="text-gray-500 max-w-md mx-auto text-base">
-              Create your account, add what you offer, share your link. Done.
+              No technical setup. No waiting. Just create, add and share.
             </p>
           </div>
 
@@ -663,89 +709,20 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── PRICING ─────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Choose Your Plan</span>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-              Start free. Grow when you're ready.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
-            {plans.map((plan) => {
-              const isGrowth = plan.id === 'growth'
-              return (
-                <div
-                  key={plan.id}
-                  className={`relative rounded-2xl p-6 border flex flex-col ${
-                    isGrowth
-                      ? 'bg-brand-600 border-brand-600 text-white shadow-2xl shadow-brand-200/80 scale-[1.02]'
-                      : 'bg-white border-gray-100 text-gray-900 shadow-sm shadow-gray-100/70'
-                  }`}
-                >
-                  {isGrowth && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow">
-                      Most Popular
-                    </div>
-                  )}
-
-                  <h3 className={`font-display font-extrabold text-xl mb-1 ${isGrowth ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
-                  <div className="flex items-end gap-1 mb-1">
-                    <span className={`font-display text-4xl font-extrabold ${isGrowth ? 'text-white' : 'text-gray-900'}`}>{plan.price}</span>
-                    <span className={`text-sm mb-1.5 ${isGrowth ? 'text-brand-100' : 'text-gray-400'}`}>/{plan.period}</span>
-                  </div>
-                  <p className={`text-sm mb-6 ${isGrowth ? 'text-brand-100' : 'text-gray-500'}`}>{plan.description}</p>
-
-                  <ul className="space-y-2.5 mb-8 flex-1">
-                    {plan.features.map((feat) => (
-                      <li key={feat.text} className="flex items-start gap-2.5">
-                        {feat.available ? (
-                          <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isGrowth ? 'text-brand-200' : 'text-brand-600'}`} />
-                        ) : (
-                          <X className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isGrowth ? 'text-brand-300/60' : 'text-gray-300'}`} />
-                        )}
-                        <span className={`text-sm ${feat.available ? (isGrowth ? 'text-white' : 'text-gray-700') : (isGrowth ? 'text-brand-300/60' : 'text-gray-300')}`}>
-                          {feat.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <button
-                    onClick={handleCTA}
-                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                      isGrowth
-                        ? 'bg-white text-brand-700 hover:bg-brand-50'
-                        : plan.id === 'pro'
-                        ? 'bg-gray-900 hover:bg-gray-700 text-white'
-                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-100'
-                    }`}
-                  >
-                    {plan.cta}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── COMING SOON FEATURES ────────────────────────────────────────── */}
+      {/* ── PLATFORM FEATURES ───────────────────────────────────────────── */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What's Coming</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Commerce Tools</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-              Features in the works
+              Built for the full selling workflow
             </h2>
             <p className="text-gray-400 text-base max-w-sm mx-auto">
-              Early access users will be the first to get them.
+              From checkout to delivery, customers, reviews, and follow-up, Sellapage gives Nigerian businesses the operating layer to sell with confidence.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-            {comingFeatures.map((item) => (
+            {platformFeatures.map((item) => (
               <div key={item.title} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 transition-all duration-200 group">
                 <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
                   <item.icon className="w-5 h-5 text-brand-600" />
@@ -800,14 +777,18 @@ export default function Home() {
             {/* Left */}
             <div className="flex items-center gap-5 max-w-xl">
               <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                <ShoppingBag className="w-7 h-7 text-white" />
+              <img
+                src="/og-image.png"
+                alt="Sellapage logo"
+                className="w-13 h-13 rounded-xl object-cover shadow-sm ring-1 ring-white/10"
+              />
               </div>
               <div>
                 <h2 className="font-display font-extrabold text-white text-2xl sm:text-3xl leading-tight mb-1">
-                  Ready to start selling online?
+                  Your store is one link away.
                 </h2>
                 <p className="text-brand-100 text-sm leading-relaxed">
-                  Create your free store in minutes and start receiving orders from your customers today.
+                  Create your free store in minutes and manage products, services, orders, customers, payments and growth from one place.
                 </p>
               </div>
             </div>
@@ -818,10 +799,10 @@ export default function Home() {
                 onClick={handleCTA}
                 className="inline-flex items-center gap-2 bg-white hover:bg-brand-50 text-brand-700 font-bold text-sm px-8 py-4 rounded-xl transition-all shadow-xl shadow-brand-900/10"
               >
-                Create Your Free Page <ArrowRight className="w-4 h-4" />
+                Create Your Free Store <ArrowRight className="w-4 h-4" />
               </button>
               {!user && (
-                <p className="text-brand-200 text-xs text-center">No credit card needed. Takes less than 5 minutes.</p>
+                <p className="text-brand-200 text-xs text-center">Free forever on Starter. Upgrade when you need more.</p>
               )}
               {/* social proof */}
               <div className="flex items-center gap-2 mt-1">
@@ -838,7 +819,7 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <span className="text-brand-100 text-xs">100+ Nigerian Businesses Trust Sellapage</span>
+                <span className="text-brand-100 text-xs">100+ active Nigerian stores use Sellapage</span>
               </div>
             </div>
           </div>
@@ -848,55 +829,6 @@ export default function Home() {
       <Footer />
 
       {/* ── NOTIFY MODAL ────────────────────────────────────────────────── */}
-      {notifyPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative">
-            <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {notifyDone ? (
-              <div className="text-center py-4">
-                <div className="w-14 h-14 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-7 h-7 text-brand-600" />
-                </div>
-                <h3 className="font-display font-bold text-gray-900 text-lg mb-2">You're on the list!</h3>
-                <p className="text-gray-500 text-sm">
-                  We'll let you know as soon as this plan launches. Early users get a special discount.
-                </p>
-              </div>
-            ) : (
-              <>
-                <h3 className="font-display font-bold text-gray-900 text-lg mb-1">
-                  Get notified for <span className="text-brand-600">{notifyPlan}</span>
-                </h3>
-                <p className="text-gray-500 text-sm mb-5">
-                  Drop your email and we'll notify you the moment this plan goes live. Early users get a discount.
-                </p>
-                <form onSubmit={submitNotify} className="flex flex-col gap-3">
-                  <input
-                    type="email"
-                    value={notifyEmail}
-                    onChange={(e) => setNotifyEmail(e.target.value)}
-                    required
-                    placeholder="your@email.com"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
-                  />
-                  <button
-                    type="submit"
-                    className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors"
-                  >
-                    Notify Me
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

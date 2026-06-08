@@ -15,15 +15,3 @@ export const saveLead = async (storeId, storeName, leadData) => {
   })
 }
 
-/**
- * Save a waitlist email for a specific upcoming plan.
- * Saved to: /waitlist/{autoId}
- * Fields: email, plan, createdAt
- */
-export const saveWaitlistEmail = async (email, plan) => {
-  await addDoc(collection(db, 'waitlist'), {
-    email,
-    plan,
-    createdAt: new Date(),
-  })
-}

@@ -1,3 +1,4 @@
+// src/pages/VsShopify.jsx/
 import { useNavigate } from 'react-router-dom'
 import { Check, X, ArrowRight, AlertCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
@@ -8,13 +9,14 @@ import { useAuth } from '../hooks/useAuth'
 const FEATURES = [
   { label: 'Free to start',                       shopify: false, sellapage: true  },
   { label: 'Set up in under 10 minutes',           shopify: false, sellapage: true  },
-  { label: 'Works with WhatsApp ordering',         shopify: false, sellapage: true  },
+  { label: 'Direct customer ordering',             shopify: true,  sellapage: true  },
   { label: 'No technical skills needed',           shopify: false, sellapage: true  },
   { label: 'No domain or hosting needed',          shopify: false, sellapage: true  },
   { label: 'Built for Nigerian sellers',           shopify: false, sellapage: true  },
-  { label: 'Sell physical products',               shopify: true,  sellapage: true  },
-  { label: 'Online payment processing',            shopify: true,  sellapage: false },
-  { label: 'Advanced inventory management',        shopify: true,  sellapage: false },
+  { label: 'Sell products and services',           shopify: true,  sellapage: true  },
+  { label: 'Dashboard to manage orders & leads',   shopify: true,  sellapage: true  },
+  { label: 'Online payment processing',            shopify: true,  sellapage: true  },
+  { label: 'Inventory and customer management',    shopify: true,  sellapage: true  },
 ]
 
 
@@ -35,7 +37,7 @@ export default function VsShopify() {
           </h1>
           <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
             Shopify is a powerful platform built for big businesses with a tech team and a budget.
-            Sellapage is built for everyday Nigerian sellers who want to start now, not next month.
+            We built Sellapage for everyday Nigerian sellers who want to start now, not next month.
           </p>
         </div>
       </section>
@@ -49,7 +51,7 @@ export default function VsShopify() {
               <p className="font-bold text-amber-800 text-sm mb-1">The real cost of Shopify</p>
               <p className="text-amber-700 text-sm leading-relaxed">
                 Shopify's basic plan starts at $29/month — that's roughly <strong>₦47,000+ every month</strong>,
-                plus domain fees, app add-ons, and payment transaction fees. For most Nigerian sellers,
+                plus domain fees, app add-ons, and payment transaction fees. For many Nigerian businesses,
                 that cost is not worth it.
               </p>
             </div>
@@ -76,8 +78,8 @@ export default function VsShopify() {
 
           <div className="space-y-2">
             {FEATURES.map((row, i) => (
-              <div key={i} className="grid grid-cols-3 gap-3 items-center bg-gray-50 rounded-xl px-4 py-3">
-                <p className="text-gray-700 text-sm font-medium leading-snug">{row.label}</p>
+              <div key={i} className="grid grid-cols-3 gap-2 sm:gap-3 items-center bg-gray-50 rounded-xl px-3 sm:px-4 py-3">
+                <p className="text-gray-700 text-xs sm:text-sm font-medium leading-snug">{row.label}</p>
                 <div className="flex justify-center">
                   {row.shopify
                     ? <Check size={18} className="text-green-500" />
@@ -114,9 +116,8 @@ export default function VsShopify() {
               <p className="font-bold text-brand-600 text-sm mb-1">Starting on Sellapage</p>
               <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
               <p className="text-gray-600 text-sm leading-relaxed">
-                You sign up. You add your products, prices, and photos. You copy your link and paste
-                it in your WhatsApp status. In under 30 minutes, customers are already browsing
-                and orders are coming in for free.
+                You sign up. You add your products or services, prices, photos, delivery details, and payment options.
+                In under 30 minutes, customers are browsing, ordering, and entering your Sellapage workflow.
               </p>
             </div>
           </div>
@@ -150,10 +151,10 @@ export default function VsShopify() {
               <p className="font-bold text-brand-700 mb-4">Use Sellapage if...</p>
               <ul className="space-y-2.5">
                 {[
-                  'You sell via WhatsApp and want to look professional',
-                  'You want to start immediately without spending money',
-                  "You're a small business or individual seller",
-                  'Your customers already use WhatsApp to order',
+                  'You want a Nigerian-first commerce workspace',
+                  'You want to start immediately without heavy setup costs',
+                  "You're a small business, service provider, or growing merchant",
+                  'You sell products, services, or both and want one page to manage it all',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-brand-700">
                     <Check size={14} className="text-brand-500 flex-shrink-0 mt-0.5" />
@@ -173,13 +174,13 @@ export default function VsShopify() {
             Start free. Sell today.
           </h2>
           <p className="text-brand-100 mb-8 text-base">
-            No monthly fees. No complicated setup. Just your products and your customers.
+            Your store. Your products. Your services. One link. Zero cost to start.
           </p>
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login')}
             className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
           >
-            {user ? 'Go to My Dashboard' : 'Create Free Store'}
+            {user ? 'Check your growth workspace' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
         </div>

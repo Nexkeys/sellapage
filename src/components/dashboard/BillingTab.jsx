@@ -1,52 +1,72 @@
+//src/components/dashboard/BillingTab.jsx/
 import { CreditCard, Zap, Star, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
-
 
 const PLANS = [
   {
-    id:    'growth',
-    name:  'Growth',
+    id: 'growth',
+    name: 'Growth',
     price: '₦5,000',
     period: '/month',
-    description: 'For growing stores that need more products and visibility.',
+    description: 'For growing teams that need analytics, carts, branding, and AI-assisted selling.',
     features: [
-      '50 products',
-      'Up to 10 images per product',
+      '50 products or services',
+      'Up to 10 images per listing',
       'Analytics dashboard',
+      'Multi-item cart checkout',
       'Product visibility toggle',
       'Priority support',
     ],
-    cta:    'Upgrade to Growth',
+    cta: 'Upgrade to Growth',
     accent: 'border-blue-400',
-    badge:  'bg-blue-50 text-blue-600',
-    icon:   Zap,
+    badge: 'bg-blue-50 text-blue-600',
+    icon: Zap,
   },
   {
-    id:    'pro',
-    name:  'Pro',
+    id: 'pro',
+    name: 'Pro',
     price: '₦12,000',
     period: '/month',
-    description: 'For serious sellers who need unlimited scale and full features.',
+    description: 'For serious businesses managing customers, reviews, payouts, and premium operations.',
     features: [
-      'Unlimited products',
-      'Up to 50 images per product',
+      'Unlimited products or services',
+      'Up to 50 images per listing',
       'Everything in Growth',
-      'Hot leads access',
+      'Customer CRM and hot leads',
+      'Reviews and payout workspace',
       'Dedicated support',
     ],
-    cta:    'Upgrade to Pro',
+    cta: 'Upgrade to Pro',
     accent: 'border-yellow-400',
-    badge:  'bg-yellow-50 text-yellow-600',
-    icon:   Star,
+    badge: 'bg-yellow-50 text-yellow-600',
+    icon: Star,
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    price: '₦25,000',
+    period: '/month',
+    description: 'For established operators that need white-label commerce, automation, staff access, and deeper integrations.',
+    features: [
+      'Everything in Pro',
+      'White-label customer experience',
+      'WhatsApp Business automation',
+      'Broadcasts and loyalty tools',
+      'Staff access controls',
+      'Advanced integrations',
+    ],
+    cta: 'Upgrade to Premium',
+    accent: 'border-orange-400',
+    badge: 'bg-orange-50 text-orange-600',
+    icon: CreditCard,
   },
 ]
 
-
 export default function BillingTab({
-  store, plan, planStatus, isGrowthOrPro, isPro,
+  store, plan, planStatus, isGrowthOrPro, isPro, isPremium,
   onUpgrade, upgradeLoading, upgradeError,
 }) {
   const isExpired = planStatus === 'expired'
-  const isGrace   = planStatus === 'grace'
+  const isGrace = planStatus === 'grace'
 
   const planEndDate = store?.planEndDate?.toDate?.()
   const formattedEnd = planEndDate
@@ -54,13 +74,12 @@ export default function BillingTab({
     : null
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Billing & Plans</h1>
-        <p className="text-gray-400 text-sm mt-1">Manage your subscription and upgrade your store.</p>
+        <p className="text-gray-400 text-sm mt-1">Manage your subscription and unlock more of your Sellapage commerce workspace.</p>
       </div>
 
-      {/* Current plan status */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Current Plan</p>
@@ -91,7 +110,6 @@ export default function BillingTab({
         )}
       </div>
 
-      {/* Error */}
       {upgradeError && (
         <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
@@ -99,12 +117,11 @@ export default function BillingTab({
         </div>
       )}
 
-      {/* Plan cards */}
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         {PLANS.map(p => {
-          const isCurrent   = plan === p.id && !isExpired
-          const isDowngrade = (p.id === 'growth' && isPro)
-          const PlanIcon    = p.icon
+          const isCurrent = plan === p.id && !isExpired
+          const isDowngrade = (p.id === 'growth' && (isPro || isPremium)) || (p.id === 'pro' && isPremium)
+          const PlanIcon = p.icon
 
           return (
             <div
@@ -169,10 +186,9 @@ export default function BillingTab({
         })}
       </div>
 
-      {/* Starter fallback note */}
       {plan === 'starter' && (
         <p className="text-center text-xs text-gray-400">
-          You are on the free Starter plan. Upgrade anytime — no lock-in.
+          You are on the free Starter plan. Upgrade anytime - no lock-in.
         </p>
       )}
     </div>

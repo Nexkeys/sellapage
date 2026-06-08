@@ -1,3 +1,4 @@
+//sellapage/netlify/functions/paystack-webhook.js/
 import crypto from 'crypto'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
@@ -13,6 +14,7 @@ const db = getFirestore()
 const PLAN_AMOUNTS = {
   growth: 500000,
   pro: 1200000,
+  premium: 2500000,
 }
 
 const PLAN_LIMITS = {
@@ -21,12 +23,21 @@ const PLAN_LIMITS = {
     maxImagesPerProduct: 10,
     hasGrowthFeatures: true,
     hasProFeatures: false,
+    hasPremiumFeatures: false,
   },
   pro: {
     maxProducts: 999999,
     maxImagesPerProduct: 50,
     hasGrowthFeatures: true,
     hasProFeatures: true,
+    hasPremiumFeatures: false,
+  },
+  premium: {
+    maxProducts: 999999,
+    maxImagesPerProduct: 50,
+    hasGrowthFeatures: true,
+    hasProFeatures: true,
+    hasPremiumFeatures: true,
   },
 }
 
@@ -66,7 +77,7 @@ export const handler = async (event) => {
     return { statusCode: 400, body: 'Missing storeId or plan in metadata' }
   }
 
-  if (!['growth', 'pro'].includes(plan)) {
+  if (!['growth', 'pro', 'premium'].includes(plan)) {
     return { statusCode: 400, body: 'Invalid plan in metadata' }
   }
 

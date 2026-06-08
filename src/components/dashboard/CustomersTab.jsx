@@ -1,3 +1,4 @@
+// src/components/dashboard/CustomersTab.jsx/
 import { Users, ArrowRight, Info } from 'lucide-react'
 
 export default function CustomersTab() {

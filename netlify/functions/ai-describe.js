@@ -1,3 +1,4 @@
+// netlify/functions/ai-describe.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore'

@@ -21,8 +21,8 @@ export default function ContactUs() {
             We're here to help
           </h1>
           <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
-            Have a question, complaint, or suggestion? Reach us through any of the channels below.
-            We usually respond within 1–2 business days.
+            Have a question, complaint, or suggestion about your store, orders, payments, customers, or dashboard?
+            Reach us through any of the channels below. We usually respond within 1-2 business days.
           </p>
         </div>
       </section>
@@ -102,25 +102,25 @@ export default function ContactUs() {
             </div>
           </div>
 
-          {/* WhatsApp */}
+          {/* Direct support */}
           <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
             <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
               <MessageCircle size={22} className="text-green-600" />
             </div>
             <div>
-              <p className="font-display font-bold text-gray-900 text-lg mb-1">WhatsApp</p>
+              <p className="font-display font-bold text-gray-900 text-lg mb-1">Direct Support</p>
               <p className="text-gray-500 text-sm leading-relaxed mb-3">
-                For urgent issues, you can reach us on WhatsApp. Please include your store name
-                and describe the problem clearly when you message us.
+                For urgent issues, send us your store name and describe the problem clearly
+                so we can trace your workspace faster.
               </p>
               <a
-                href="https://wa.me/2348033004474"
+                href="https://wa.me/2348120525256"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm"
               >
                 <MessageCircle size={15} />
-                Chat on WhatsApp
+                Chat with Support
               </a>
             </div>
           </div>
@@ -128,14 +128,18 @@ export default function ContactUs() {
           {/* Built by */}
           <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
             <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 text-xl">
-              🇳🇬
+              <img
+              src="/og-image.png"
+              alt="Sellapage logo"
+              className="w-11 h-11 rounded-xl object-cover shadow-sm ring-1 ring-gray-100"
+            />
             </div>
             <div>
               <p className="font-display font-bold text-gray-900 text-lg mb-1">About Sellapage</p>
               <p className="text-gray-500 text-sm leading-relaxed mb-3">
-                Sellapage is built and maintained by NexKeys Agency — a Nigerian digital product studio
-                building tools for everyday sellers. We're not a faceless company. We're real people
-                who want to see Nigerian businesses grow.
+                Sellapage is built and maintained by NexKeys Agency, a Nigerian digital product studio
+                building commerce tools for everyday businesses. We're not a faceless company. We're real people
+                helping Nigerian businesses operate with more confidence.
               </p>
               <a
                 href="https://nexkeysagency.netlify.app"
@@ -155,7 +159,7 @@ export default function ContactUs() {
       <section className="py-10 px-4 bg-gray-50 border-t border-gray-100">
         <div className="max-w-2xl mx-auto text-center">
           <p className="text-gray-500 text-sm mb-3">
-            Looking for quick answers? Many common questions are already answered on our homepage.
+            Looking for quick answers? Many common questions about stores, orders, plans, and customers are already answered on our homepage.
           </p>
           <Link
             to="/#faq"

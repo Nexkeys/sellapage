@@ -1,3 +1,4 @@
+//sellapage/netlify/functions/expiry-cron.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 
@@ -12,10 +13,11 @@ const db = getFirestore()
 const STARTER_RESET = {
   plan: 'starter',
   planStatus: 'expired',
-  maxProducts: 10,
+  maxProducts: 15,
   maxImagesPerProduct: 3,
   hasGrowthFeatures: false,
   hasProFeatures: false,
+  hasPremiumFeatures: false,
 }
 
 export const handler = async (event) => {

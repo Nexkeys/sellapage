@@ -17,6 +17,12 @@ export default function CartDrawer({
   const [note, setNote]   = useState('')
   const [error, setError] = useState('')
 
+  const allServices = cartItems.length > 0 && cartItems.every(item => item.type === 'service')
+  const hasServices = cartItems.some(item => item.type === 'service')
+
+  const [bookingDate, setBookingDate] = useState('')
+  const [bookingTime, setBookingTime] = useState('')
+
   const subtotal = cartItems.reduce(
     (sum, item) => sum + Number(item.price) * item.quantity,
     0
@@ -31,11 +37,15 @@ export default function CartDrawer({
     }
     setError('')
 
+    const bookingNote = allServices && (bookingDate || bookingTime)
+      ? `Preferred booking: ${bookingDate || 'Date TBD'} at ${bookingTime || 'Time TBD'}`
+      : note.trim()
+
     const url = buildCartOrderURL(
       whatsappNumber,
       storeName,
       cartItems,
-      { name: name.trim(), phone: phone.trim(), note: note.trim() }
+      { name: name.trim(), phone: phone.trim(), note: bookingNote }
     )
     window.open(url, '_blank', 'noopener,noreferrer')
     onClose()
@@ -188,14 +198,34 @@ export default function CartDrawer({
               className="w-full px-3.5 py-2.5 rounded-xl border border-transparent outline-none transition-all"
               style={{ backgroundColor: cardBg, color: textCol }}
             />
-            <textarea
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Any special instructions..."
-              rows={2}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-transparent outline-none transition-all resize-none"
-              style={{ backgroundColor: cardBg, color: textCol }}
-            />
+            {allServices ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold opacity-60">Preferred Date & Time</p>
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={e => setBookingDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-transparent outline-none transition-all text-sm"
+                  style={{ backgroundColor: cardBg, color: textCol }}
+                />
+                <input
+                  type="time"
+                  value={bookingTime}
+                  onChange={e => setBookingTime(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-transparent outline-none transition-all text-sm"
+                  style={{ backgroundColor: cardBg, color: textCol }}
+                />
+              </div>
+            ) : (
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder={hasServices ? "Delivery address or booking notes..." : "Any special instructions..."}
+                rows={2}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-transparent outline-none transition-all resize-none"
+                style={{ backgroundColor: cardBg, color: textCol }}
+              />
+            )}
           </div>
 
           {/* Send order button */}

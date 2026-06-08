@@ -10,10 +10,12 @@ const FEATURES = [
   { label: 'More than one link',                     ig: false, sellapage: true  },
   { label: 'Show prices and product details',        ig: false, sellapage: true  },
   { label: 'Customers can search products',          ig: false, sellapage: true  },
-  { label: 'WhatsApp order button per product',      ig: false, sellapage: true  },
+  { label: 'Direct order flow per listing',          ig: false, sellapage: true  },
   { label: 'Lead capture for interested customers',  ig: false, sellapage: true  },
+  { label: 'Sell products and services',             ig: false, sellapage: true  },
+  { label: 'Dashboard to manage orders & leads',     ig: false, sellapage: true  },
   { label: 'Works without social media algorithm',   ig: false, sellapage: true  },
-  { label: 'Post photos and videos',                 ig: true,  sellapage: false },
+  { label: 'Post photos and videos',                 ig: true,  sellapage: true  },
   { label: 'Free to use',                            ig: true,  sellapage: true  },
 ]
 
@@ -35,7 +37,7 @@ export default function VsInstagramBio() {
           </h1>
           <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
             Using your Instagram bio link to sell is like running a market from a post-it note.
-            Sellapage gives you a full store page with products, prices, and a direct order button.
+            Sellapage gives you a full commerce page with products, services, prices, direct ordering, customer records, and payments.
           </p>
         </div>
       </section>
@@ -59,8 +61,8 @@ export default function VsInstagramBio() {
 
           <div className="space-y-2">
             {FEATURES.map((row, i) => (
-              <div key={i} className="grid grid-cols-3 gap-3 items-center bg-gray-50 rounded-xl px-4 py-3">
-                <p className="text-gray-700 text-sm font-medium leading-snug">{row.label}</p>
+              <div key={i} className="grid grid-cols-3 gap-2 sm:gap-3 items-center bg-gray-50 rounded-xl px-3 sm:px-4 py-3">
+                <p className="text-gray-700 text-xs sm:text-sm font-medium leading-snug">{row.label}</p>
                 <div className="flex justify-center">
                   {row.ig
                     ? <Check size={18} className="text-green-500" />
@@ -98,7 +100,7 @@ export default function VsInstagramBio() {
               <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
               <p className="text-gray-600 text-sm leading-relaxed">
                 Your Sellapage link sits in your Instagram bio permanently.
-                Any visitor clicks it and sees all your products, prices, and photos in one place.
+                Any visitor clicks it and sees your products, services, prices, photos, and ordering options in one place.
                 They order directly. No algorithm. No posts buried. Always accessible.
               </p>
             </div>
@@ -114,7 +116,7 @@ export default function VsInstagramBio() {
           </h2>
           <p className="text-gray-500 text-sm leading-relaxed max-w-xl mx-auto">
             Keep your Instagram for content — photos, reels, stories. Put your Sellapage link
-            in your bio. When people want to buy, they click through to your real store.
+            in your bio. When people want to buy, they click through to your real commerce workspace.
             Instagram brings the audience. Sellapage closes the sale.
           </p>
         </div>
@@ -124,16 +126,16 @@ export default function VsInstagramBio() {
       <section className="py-20 px-4 bg-gradient-to-br from-brand-500 to-emerald-600">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="font-display font-extrabold text-white text-3xl mb-3">
-            Put a real store in your Instagram bio
+            Start free. Sell today.
           </h2>
           <p className="text-brand-100 mb-8 text-base">
-            Create your store in minutes. Paste the link. Start getting orders.
+            Your store. Your products. Your services. One link. Zero cost to start.
           </p>
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login')}
             className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
           >
-            {user ? 'Go to My Dashboard' : 'Create Free Store'}
+            {user ? 'Check your growth workspace' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
         </div>

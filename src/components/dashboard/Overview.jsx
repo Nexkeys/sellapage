@@ -7,13 +7,24 @@ import {
 
 
 export default function OverviewTab({
-  store, plan, maxProducts, productCount, limitReached,
+  store, plan, maxProducts, productCount = 0, serviceCount = 0, services = [], vendorType = 'products', limitReached,
   isGrowthOrPro, isPro,
   leads, products = [], storeUrl, copied, copyLink,
   navigateTo, setShowForm,
   analyticsData,
 }) {
-  const pct = Math.min(100, Math.round((productCount / maxProducts) * 100))
+  // derive which count and label to show
+  let derivedCount = productCount || 0
+  let label = 'Products Listed'
+  if (vendorType === 'services') {
+    derivedCount = serviceCount || 0
+    label = 'Services Listed'
+  } else if (vendorType === 'both') {
+    derivedCount = (productCount || 0) + (serviceCount || 0)
+    label = 'Total Listings'
+  }
+
+  const pct = Math.min(100, Math.round((derivedCount / maxProducts) * 100))
   const totalViews  = analyticsData?.totalViews  ?? 0
   const engagedViews = analyticsData?.engagedViews ?? 0
 
@@ -31,6 +42,7 @@ export default function OverviewTab({
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5">
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
@@ -50,8 +62,8 @@ export default function OverviewTab({
             </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${planLabel.cls}`}>{planLabel.text}</span>
           </div>
-          <p className="text-2xl font-extrabold text-gray-900">{productCount}</p>
-          <p className="text-gray-400 text-xs mt-0.5 font-medium">Products Listed</p>
+          <p className="text-2xl font-extrabold text-gray-900">{derivedCount}</p>
+          <p className="text-gray-400 text-xs mt-0.5 font-medium">{label}</p>
           <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${limitReached ? 'bg-amber-400' : 'bg-green-400'}`}
@@ -59,7 +71,7 @@ export default function OverviewTab({
             />
           </div>
           <p className="text-[10px] text-gray-400 mt-1">
-            {productCount} / {maxProducts === 999999 ? 'Unlimited' : maxProducts}
+            {derivedCount} / {maxProducts === 999999 ? 'Unlimited' : maxProducts}
           </p>
         </div>
 
@@ -121,9 +133,15 @@ export default function OverviewTab({
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 shadow-sm shadow-amber-100/70">
           <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-amber-800 font-semibold text-sm">Product limit reached</p>
+            <p className="text-amber-800 font-semibold text-sm">{vendorType === 'services' ? 'Service limit reached' : vendorType === 'both' ? 'Listing limit reached' : 'Product limit reached'}</p>
             <p className="text-amber-700 text-xs mt-0.5">
-              You've used all {maxProducts} product slots on the {plan} plan.{' '}
+              {vendorType === 'services' ? (
+                <>You've used all {maxProducts} service slots on the {plan} plan.{' '}</>
+              ) : vendorType === 'both' ? (
+                <>You've used all {maxProducts} listing slots on the {plan} plan.{' '}</>
+              ) : (
+                <>You've used all {maxProducts} product slots on the {plan} plan.{' '}</>
+              )}
               <button onClick={() => navigateTo('billing')} className="underline font-semibold hover:no-underline">
                 Upgrade your plan →
               </button>
@@ -164,64 +182,147 @@ export default function OverviewTab({
       </div>
 
 
-      {/* Top Products — Pro only */}
+      {/* Top Performing — Pro only */}
       {isPro && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-bold text-gray-900 text-sm">Top Performing Products</p>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">Pro</span>
-              </div>
-              <p className="text-gray-400 text-xs mt-0.5">Ranked by customer clicks</p>
-            </div>
-            <button onClick={() => navigateTo('analytics')} className="text-green-600 text-xs font-bold hover:underline flex items-center gap-1">
-              View all <ArrowRight size={12} />
-            </button>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {[...products]
-              .filter(p => (p.clicks || 0) > 0)
-              .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
-              .slice(0, 5)
-              .map((p, i) => (
-                <div key={p.id} className="flex items-center gap-4 px-5 py-3.5">
-                  <span className="text-gray-300 font-bold text-sm w-5 flex-shrink-0">#{i + 1}</span>
-                  <p className="flex-1 text-sm font-semibold text-gray-800 truncate">{p.name}</p>
-                  <p className="text-xs font-bold text-green-600">{p.clicks} click{p.clicks === 1 ? '' : 's'}</p>
+        <div className="space-y-4">
+          {(vendorType === 'products' || vendorType === 'both') && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-gray-900 text-sm">Top Performing Products</p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">Pro</span>
+                  </div>
+                  <p className="text-gray-400 text-xs mt-0.5">Ranked by customer clicks</p>
                 </div>
-              ))}
-            {products.filter(p => (p.clicks || 0) > 0).length === 0 && (
-              <div className="px-5 py-8 text-center text-gray-400 text-sm">
-                No clicks yet — share your store link to get started.
+                <button onClick={() => navigateTo('analytics')} className="text-green-600 text-xs font-bold hover:underline flex items-center gap-1">
+                  View all <ArrowRight size={12} />
+                </button>
               </div>
-            )}
-          </div>
+              <div className="divide-y divide-gray-100">
+                {[...products]
+                  .filter(p => (p.clicks || 0) > 0)
+                  .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+                  .slice(0, 5)
+                  .map((p, i) => (
+                    <div key={p.id} className="flex items-center gap-4 px-5 py-3.5">
+                      <span className="text-gray-300 font-bold text-sm w-5 flex-shrink-0">#{i + 1}</span>
+                      <p className="flex-1 text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <p className="text-xs font-bold text-green-600">{p.clicks} click{p.clicks === 1 ? '' : 's'}</p>
+                    </div>
+                  ))}
+                {products.filter(p => (p.clicks || 0) > 0).length === 0 && (
+                  <div className="px-5 py-8 text-center text-gray-400 text-sm">
+                    No clicks yet — share your store link to get started.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {(vendorType === 'services' || vendorType === 'both') && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-gray-900 text-sm">Top Performing Services</p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">Pro</span>
+                  </div>
+                  <p className="text-gray-400 text-xs mt-0.5">Ranked by booking requests</p>
+                </div>
+                <button onClick={() => navigateTo('analytics')} className="text-green-600 text-xs font-bold hover:underline flex items-center gap-1">
+                  View all <ArrowRight size={12} />
+                </button>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {[...services]
+                  .filter(s => (s.bookingRequests || 0) > 0)
+                  .sort((a, b) => (b.bookingRequests || 0) - (a.bookingRequests || 0))
+                  .slice(0, 5)
+                  .map((s, i) => (
+                    <div key={s.id} className="flex items-center gap-4 px-5 py-3.5">
+                      <span className="text-gray-300 font-bold text-sm w-5 flex-shrink-0">#{i + 1}</span>
+                      <p className="flex-1 text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+                      <p className="text-xs font-bold text-green-600">{s.bookingRequests} request{s.bookingRequests === 1 ? '' : 's'}</p>
+                    </div>
+                  ))}
+                {services.filter(s => (s.bookingRequests || 0) > 0).length === 0 && (
+                  <div className="px-5 py-8 text-center text-gray-400 text-sm">
+                    No booking requests yet — promote your services to get bookings.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => { setShowForm(true); navigateTo('products') }}
-          className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-green-200 hover:bg-green-50/30 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
-        >
-          <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
-            <Plus size={15} className="text-green-600" />
-          </div>
-          <p className="font-semibold text-gray-700 text-sm">Add Product</p>
-        </button>
-        <button
-          onClick={() => navigateTo('leads')}
-          className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-purple-200 hover:bg-purple-50/20 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
-        >
-          <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-            <Users size={15} className="text-purple-600" />
-          </div>
-          <p className="font-semibold text-gray-700 text-sm">View Leads</p>
-        </button>
-      </div>
+      {vendorType === 'both' ? (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => { setShowForm(true); navigateTo('products') }}
+            className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-green-200 hover:bg-green-50/30 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
+          >
+            <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
+              <Plus size={15} className="text-green-600" />
+            </div>
+            <p className="font-semibold text-gray-700 text-sm">Add Product</p>
+          </button>
+          <button
+            onClick={() => navigateTo('services')}
+            className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-green-200 hover:bg-green-50/30 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
+          >
+            <div className="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+              <Plus size={15} className="text-teal-600" />
+            </div>
+            <p className="font-semibold text-gray-700 text-sm">Add Service</p>
+          </button>
+        </div>
+      ) : vendorType === 'services' ? (
+        <div className="grid grid-cols-1 gap-3">
+          <button
+            onClick={() => navigateTo('services')}
+            className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-green-200 hover:bg-green-50/30 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
+          >
+            <div className="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+              <Plus size={15} className="text-teal-600" />
+            </div>
+            <p className="font-semibold text-gray-700 text-sm">Add Service</p>
+          </button>
+          <button
+            onClick={() => navigateTo('leads')}
+            className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-purple-200 hover:bg-purple-50/20 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
+          >
+            <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+              <Users size={15} className="text-purple-600" />
+            </div>
+            <p className="font-semibold text-gray-700 text-sm">View Leads</p>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => { setShowForm(true); navigateTo('products') }}
+            className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-green-200 hover:bg-green-50/30 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
+          >
+            <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
+              <Plus size={15} className="text-green-600" />
+            </div>
+            <p className="font-semibold text-gray-700 text-sm">Add Product</p>
+          </button>
+          <button
+            onClick={() => navigateTo('leads')}
+            className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm shadow-gray-100/70 rounded-2xl px-4 py-4 hover:border-purple-200 hover:bg-purple-50/20 hover:shadow-md hover:shadow-gray-200/70 transition-all group"
+          >
+            <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+              <Users size={15} className="text-purple-600" />
+            </div>
+            <p className="font-semibold text-gray-700 text-sm">View Leads</p>
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,46 +15,47 @@ const getInitials = (name = '') => {
 }
 
 
-const THEME_COLORS = [
-  { label: 'Green',  value: '#16a34a' },
-  { label: 'Blue',   value: '#2563eb' },
-  { label: 'Purple', value: '#7c3aed' },
-  { label: 'Rose',   value: '#e11d48' },
-  { label: 'Orange', value: '#ea580c' },
-  { label: 'Teal',   value: '#0d9488' },
-]
+// Theme colors removed (now in OnlineStoreTab)
 
 
 const PLAN_INFO = {
   free: {
     label:        'Starter (Free)',
-    products:     '10 products',
-    images:       '3 images / product',
-    features:     ['Basic store page', 'WhatsApp order button', 'Lead capture form', 'Shareable store link'],
-    upgradeLabel: 'Upgrade to Growth — ₦5,000/mo',
+    products:     '15 listings',
+    images:       '3 images / listing',
+    features:     ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
+    upgradeLabel: 'Upgrade to Growth - ₦5,000/mo',
     upgradePlan:  'growth',
   },
   starter: {
     label:        'Starter (Free)',
-    products:     '10 products',
-    images:       '3 images / product',
-    features:     ['Basic store page', 'WhatsApp order button', 'Lead capture form', 'Shareable store link'],
-    upgradeLabel: 'Upgrade to Growth — ₦5,000/mo',
+    products:     '15 listings',
+    images:       '3 images / listing',
+    features:     ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
+    upgradeLabel: 'Upgrade to Growth - ₦5,000/mo',
     upgradePlan:  'growth',
   },
   growth: {
     label:        'Growth',
-    products:     '50 products',
-    images:       '10 images / product',
-    features:     ['Everything in Starter', 'Store logo & colours', 'Analytics & click tracking', 'Product on/off toggle', 'Priority WA support'],
-    upgradeLabel: 'Upgrade to Pro — ₦12,000/mo',
+    products:     '50 listings',
+    images:       '10 images / listing',
+    features:     ['Everything in Starter', 'Logo and brand colours', 'Analytics and click tracking', 'Offer visibility toggle', 'Priority WhatsApp support'],
+    upgradeLabel: 'Upgrade to Pro - ₦12,000/mo',
     upgradePlan:  'pro',
   },
   pro: {
-    label:        'Pro ✦',
-    products:     'Unlimited products',
-    images:       '50 images / product',
-    features:     ['Everything in Growth', 'Hot leads list', 'Top performing products', 'Better store insights', 'Pro store badge', 'Early access features'],
+    label:        'Pro',
+    products:     'Unlimited listings',
+    images:       '50 images / listing',
+    features:     ['Everything in Growth', 'Hot leads list', 'Top performing offers', 'Better commerce insights', 'Pro badge', 'Early access features'],
+    upgradeLabel: null,
+    upgradePlan:  null,
+  },
+  premium: {
+    label:        'Premium',
+    products:     'Unlimited listings',
+    images:       '50 images / listing',
+    features:     ['Everything in Pro', 'White-label customer experience', 'WhatsApp Business automation', 'Broadcast and loyalty tools', 'Staff access controls', 'Advanced integrations'],
     upgradeLabel: null,
     upgradePlan:  null,
   },
@@ -62,7 +63,7 @@ const PLAN_INFO = {
 
 
 export default function SettingsTab({
-  store, plan, isGrowthOrPro, isPro,
+  store, plan, isGrowthOrPro, isPro, isPremium,
   onSave, saveLoading, saveError, saveSuccess,
   onDeleteAccount, deleteLoading, deleteError, onClearDeleteError,
   onLogoUpload, logoUploading,
@@ -72,6 +73,7 @@ export default function SettingsTab({
     storeName:      store?.storeName      || '',
     whatsappNumber: store?.whatsappNumber || '',
     description:    store?.description    || '',
+    vendorType:     store?.vendorType     || 'products',
   })
   const [slugError, setSlugError]             = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -89,14 +91,15 @@ export default function SettingsTab({
       storeName:      store?.storeName      || '',
       whatsappNumber: store?.whatsappNumber || '',
       description:    store?.description    || '',
+      vendorType:     store?.vendorType     || 'products',
     })
-  }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.description])
+  }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.description, store?.vendorType])
 
 
   const handleSlugChange = e => {
     const val = e.target.value.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '')
     setForm(p => ({ ...p, storeName: val }))
-    if (!val) setSlugError('Store URL slug is required.')
+    if (!val) setSlugError('Business link slug is required.')
     else if (val.startsWith('-') || val.endsWith('-')) setSlugError('Cannot start or end with a hyphen.')
     else if (val.includes('--')) setSlugError('Cannot contain consecutive hyphens.')
     else setSlugError('')
@@ -137,32 +140,22 @@ export default function SettingsTab({
   }
 
 
-  const handleThemeColor = async (color) => {
-    if (!isGrowthOrPro) return
-    try {
-      await onSave({ ...form, themeColor: color })
-    } catch (err) {
-      console.error('Theme colour save failed', err)
-    }
-  }
-
-
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Settings</h1>
-        <p className="text-gray-400 text-sm mt-1">Manage your store and account preferences.</p>
+        <p className="text-gray-400 text-sm mt-1">Manage your business page and account preferences.</p>
       </div>
 
 
       {/* ── Store Info ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
-        <h2 className="font-bold text-gray-900 text-base">Store Information</h2>
+        <h2 className="font-bold text-gray-900 text-base">Business Information</h2>
 
 
         {/* Logo */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-3">Store Logo</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Business Logo</label>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-green-600 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-gray-100 shadow-sm">
               {store?.logoUrl
@@ -180,7 +173,7 @@ export default function SettingsTab({
                     }
                     <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files[0] && onLogoUpload(e.target.files[0])} disabled={logoUploading} />
                   </label>
-                  <p className="text-gray-400 text-xs mt-1.5">PNG or JPG, max 5MB. Shown on your store page.</p>
+                  <p className="text-gray-400 text-xs mt-1.5">PNG or JPG, max 5MB. Shown on your public commerce page.</p>
                 </>
               ) : (
                 <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-dashed border-gray-200 rounded-xl w-fit">
@@ -193,30 +186,28 @@ export default function SettingsTab({
         </div>
 
 
-        {/* Theme colours — Growth/Pro only */}
+        {/* Business Type */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Store Colour
-            {!isGrowthOrPro && <span className="ml-2 text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Growth+</span>}
-          </label>
-          <div className="flex items-center gap-2 flex-wrap">
-            {THEME_COLORS.map(c => (
+          <label className="block text-sm font-semibold text-gray-700 mb-2">What do you sell/offer?</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'products', label: 'Physical/Digital Products' },
+              { id: 'services', label: 'Bookable Services' },
+              { id: 'both', label: 'Both' },
+            ].map(type => (
               <button
-                key={c.value}
-                disabled={!isGrowthOrPro}
-                onClick={() => handleThemeColor(c.value)}
-                title={c.label}
-                className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${
-                  !isGrowthOrPro ? 'opacity-40 cursor-not-allowed' : 'hover:scale-110 cursor-pointer'
-                } ${store?.themeColor === c.value ? 'border-gray-900 scale-110' : 'border-transparent'}`}
-                style={{ backgroundColor: c.value }}
+                key={type.id}
+                type="button"
+                onClick={() => setForm(p => ({ ...p, vendorType: type.id }))}
+                className={`py-3 px-3 rounded-xl border-2 text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1.5 ${
+                  form.vendorType === type.id
+                    ? 'border-green-500 bg-green-50/50 text-green-700'
+                    : 'border-gray-100 hover:border-gray-200 text-gray-600 bg-white'
+                }`}
               >
-                {store?.themeColor === c.value && <Check size={12} className="text-white" strokeWidth={3} />}
+                {type.label}
               </button>
             ))}
-            {!isGrowthOrPro && (
-              <span className="text-xs text-gray-400 ml-1">Unlock on Growth plan</span>
-            )}
           </div>
         </div>
 
@@ -235,7 +226,7 @@ export default function SettingsTab({
 
         {/* Store URL slug */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Store URL</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Link</label>
           <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-400/20 transition-all">
             <span className="px-3 py-2.5 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap flex-shrink-0">
               {window.location.origin}/
@@ -268,13 +259,13 @@ export default function SettingsTab({
             className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
             placeholder="+234 801 234 5678"
           />
-          <p className="text-gray-400 text-xs mt-1.5">Used for customer order messages on your store page.</p>
+          <p className="text-gray-400 text-xs mt-1.5">Used for customer order and booking messages from your public page.</p>
         </div>
 
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Store Description</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Description</label>
           <textarea
             value={form.description}
             onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
@@ -344,7 +335,7 @@ export default function SettingsTab({
             >
               {upgradeLoading === 'growth'
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> Upgrade to Growth — ₦5,000/mo</>
+                : <><Sparkles size={15} /> Upgrade to Growth - ₦5,000/mo</>
               }
             </button>
             <button
@@ -354,21 +345,56 @@ export default function SettingsTab({
             >
               {upgradeLoading === 'pro'
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> Upgrade to Pro — ₦12,000/mo</>
+                : <><Sparkles size={15} /> Upgrade to Pro - ₦12,000/mo</>
+              }
+            </button>
+            <button
+              onClick={() => handleUpgrade('premium')}
+              disabled={upgradeLoading === 'premium'}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+            >
+              {upgradeLoading === 'premium'
+                ? <Loader2 size={15} className="animate-spin" />
+                : <><Sparkles size={15} /> Upgrade to Premium - ₦25,000/mo</>
               }
             </button>
           </div>
         )}
 
         {plan === 'growth' && (
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => handleUpgrade('pro')}
+              disabled={upgradeLoading === 'pro'}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+            >
+              {upgradeLoading === 'pro'
+                ? <Loader2 size={15} className="animate-spin" />
+                : <><Sparkles size={15} /> Upgrade to Pro - ₦12,000/mo</>
+              }
+            </button>
+            <button
+              onClick={() => handleUpgrade('premium')}
+              disabled={upgradeLoading === 'premium'}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+            >
+              {upgradeLoading === 'premium'
+                ? <Loader2 size={15} className="animate-spin" />
+                : <><Sparkles size={15} /> Upgrade to Premium - ₦25,000/mo</>
+              }
+            </button>
+          </div>
+        )}
+
+        {plan === 'pro' && (
           <button
-            onClick={() => handleUpgrade('pro')}
-            disabled={upgradeLoading === 'pro'}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+            onClick={() => handleUpgrade('premium')}
+            disabled={upgradeLoading === 'premium'}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
           >
-            {upgradeLoading === 'pro'
+            {upgradeLoading === 'premium'
               ? <Loader2 size={15} className="animate-spin" />
-              : <><Sparkles size={15} /> Upgrade to Pro — ₦12,000/mo</>
+              : <><Sparkles size={15} /> Upgrade to Premium - ₦25,000/mo</>
             }
           </button>
         )}
@@ -381,9 +407,15 @@ export default function SettingsTab({
         )}
 
 
-        {isPro && (
+        {isPro && !isPremium && (
           <div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 text-sm font-medium">
-            <span>✦</span> You're on the Pro plan — enjoy all features!
+            <span>✦</span> You're on the Pro plan - enjoy all features!
+          </div>
+        )}
+
+        {isPremium && (
+          <div className="flex items-center gap-2 text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-sm font-medium">
+            <span>👑</span> You're on the Premium plan - enjoy ultimate scale & automation!
           </div>
         )}
       </div>
@@ -392,12 +424,12 @@ export default function SettingsTab({
       {/* ── Danger Zone ── */}
       <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-5 space-y-3">
         <h2 className="font-bold text-gray-900 text-base">Danger Zone</h2>
-        <p className="text-gray-500 text-sm">Permanently delete your store and all associated data.</p>
+        <p className="text-gray-500 text-sm">Permanently delete your business page and all associated data.</p>
         <button
           onClick={handleDeleteClick}
           className="flex items-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
         >
-          <Trash2 size={14} /> Delete Store
+          <Trash2 size={14} /> Delete Business Page
         </button>
         {deleteError && (
           <p className="text-red-500 text-sm flex items-center gap-2"><AlertCircle size={13} />{deleteError}</p>
@@ -418,13 +450,13 @@ export default function SettingsTab({
             {deleteStep === 1 ? (
               <>
                 <div>
-                  <p className="font-bold text-gray-900 text-base">Delete your store?</p>
+                  <p className="font-bold text-gray-900 text-base">Delete your business page?</p>
                   <p className="text-gray-500 text-sm mt-1">
-                    This will permanently delete your store, all products, and all customer enquiry data. This cannot be undone.
+                    This will permanently delete your business page, all listings, and all customer enquiry data. This cannot be undone.
                   </p>
                 </div>
                 <ul className="space-y-1.5">
-                  {['All products and images', 'All customer leads', 'Your store settings', 'Your store URL'].map(item => (
+                  {['All listings and images', 'All customer leads', 'Your page settings', 'Your business link'].map(item => (
                     <li key={item} className="flex items-center gap-2 text-sm text-red-600">
                       <X size={12} className="flex-shrink-0" />{item}
                     </li>

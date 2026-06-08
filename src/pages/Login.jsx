@@ -1,3 +1,4 @@
+//src/pages/Login.jsx/
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
@@ -32,6 +33,7 @@ export default function Login() {
     whatsappNumber: '',
     storeName: '',
     description: '',
+    vendorType: 'products',
   })
 
   // 3. Cache the referral tracking code safely if found in the link
@@ -94,6 +96,7 @@ export default function Login() {
           whatsappNumber: form.whatsappNumber.trim(),
           storeName: form.storeName.trim(),
           description: form.description.trim(),
+          vendorType: form.vendorType || 'products',
           referredBy: savedRefCode, // Injected into storeData payload
         })
 
@@ -118,9 +121,9 @@ export default function Login() {
             <ArrowLeft size={14} /> Back to home
           </Link>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</span>
-              <span className="font-bold text-lg text-gray-900">sellapage</span>
+            <div className="flex items-center gap-2.5 mb-6">
+              <img src="/og-image.png" alt="Sellapage logo" className="w-9 h-9 rounded-xl object-cover shadow-sm ring-1 ring-gray-100" />
+              <span className="font-bold text-lg text-gray-900 tracking-tight">Sellapage</span>
             </div>
 
             {resetSent ? (
@@ -198,9 +201,9 @@ export default function Login() {
         </Link>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-          <div className="flex items-center gap-2 mb-6">
-            <span className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</span>
-            <span className="font-bold text-lg text-gray-900">sellapage</span>
+          <div className="flex items-center gap-2.5 mb-6">
+            <img src="/og-image.png" alt="Sellapage logo" className="w-9 h-9 rounded-xl object-cover shadow-sm ring-1 ring-gray-100" />
+            <span className="font-bold text-lg text-gray-900 tracking-tight">Sellapage</span>
           </div>
 
           <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
@@ -220,8 +223,8 @@ export default function Login() {
 
           <p className="text-sm text-gray-500 mb-6">
             {mode === 'login'
-              ? 'Sign in to manage your Sellapage.'
-              : 'Fill in your details to get started in minutes.'}
+              ? 'Sign in to manage your Sellapage commerce workspace.'
+              : 'Create your live store workspace for products, services, orders, customers, and payments.'}
           </p>
 
           {error && (
@@ -245,7 +248,7 @@ export default function Login() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">WhatsApp Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Business Contact Number</label>
                   <input
                     name="whatsappNumber"
                     value={form.whatsappNumber}
@@ -287,6 +290,40 @@ export default function Login() {
                   />
                 </div>
               </>
+            )}
+
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  What do you sell?
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'products', label: '📦 Products', sub: 'Physical items' },
+                    { value: 'services', label: '🛠 Services', sub: 'Skills & bookings' },
+                    { value: 'both', label: '✨ Both', sub: 'Mixed offering' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, vendorType: opt.value }))}
+                      className={`flex flex-col items-center justify-center px-2 py-3 rounded-xl border text-center transition-all ${
+                        form.vendorType === opt.value
+                          ? 'bg-green-50 border-green-400 ring-2 ring-green-200'
+                          : 'border-gray-200 hover:border-green-300 hover:bg-green-50/40'
+                      }`}
+                    >
+                      <span className="text-lg leading-none mb-1">{opt.label.split(' ')[0]}</span>
+                      <span className={`text-xs font-semibold leading-tight ${form.vendorType === opt.value ? 'text-green-700' : 'text-gray-600'}`}>
+                        {opt.label.split(' ').slice(1).join(' ')}
+                      </span>
+                      <span className={`text-[10px] leading-tight mt-0.5 ${form.vendorType === opt.value ? 'text-green-500' : 'text-gray-400'}`}>
+                        {opt.sub}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             <div>
@@ -350,7 +387,7 @@ export default function Login() {
           {mode === 'register' && (
             <p className="text-xs text-gray-400 text-center mt-4">
               By creating a store you agree to our{' '}
-              <Link to="/terms-of-service" className="underline hover:text-gray-600">Terms</Link>
+              <Link to="/terms" className="underline hover:text-gray-600">Terms</Link>
               {' '}and{' '}
               <Link to="/privacy-policy" className="underline hover:text-gray-600">Privacy Policy</Link>.
             </p>

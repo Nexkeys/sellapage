@@ -9,8 +9,8 @@ const sections = [
   {
     title: 'What We Collect',
     content: [
-      'When you create an account: your name, email address, business name, and WhatsApp number.',
-      'Products you add to your store: names, prices, descriptions, and images.',
+      'When you create an account: your name, email address, business name, and business contact number.',
+      'Products or services you add to your store: names, prices, descriptions, categories, stock details, and images.',
       'Customer enquiries submitted through your store page: their name, phone number, and interest note.',
       'Basic usage data: which pages you visit and how long you spend on them. This helps us improve the platform.',
     ],
@@ -18,9 +18,9 @@ const sections = [
   {
     title: 'How We Use Your Data',
     content: [
-      'To run your store and dashboard — your store page works because we store your products.',
+      'To run your store, dashboard, customer records, orders, payments, analytics, and support experience.',
       'To send you important updates about your account or the platform.',
-      'To connect customers with you via WhatsApp when they place an order.',
+      'To connect customers with your business when they place an order or submit an enquiry.',
       'To improve Sellapage based on how it is being used.',
       'We do NOT sell your data to anyone. Ever.',
     ],
@@ -60,7 +60,7 @@ const sections = [
   {
     title: 'Changes to This Policy',
     content: [
-      'We may update this privacy policy as the platform grows.',
+      'We may update this privacy policy as the platform grows and adds more commerce tools.',
       'We will notify you of any major changes via email or a notice on your dashboard.',
       'The date at the top of this page shows when it was last updated.',
     ],
@@ -82,8 +82,10 @@ export default function PrivacyPolicy() {
           </h1>
           <p className="text-gray-400 text-sm">Last updated: {LAST_UPDATED}</p>
           <p className="text-gray-500 text-base mt-4 leading-relaxed max-w-xl">
-            We know legal pages can be confusing. This one is written in plain English so you
-            understand exactly what we do with your data — and what we don't.
+            We know legal pages can be confusing. 
+            <br></br>
+            This one is written in plain English so you
+            understand exactly what we do with your data and what we don't.
           </p>
         </div>
       </section>

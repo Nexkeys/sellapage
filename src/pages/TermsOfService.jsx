@@ -9,8 +9,6 @@ const sections = [
   {
     title: 'Who Can Use Sellapage',
     content: [
-      'You must be at least 18 years old to create an account.',
-      'If you are under 18, you need permission from a parent or guardian.',
       'You must provide accurate information when creating your account.',
       'One store per person. You cannot create multiple stores to abuse the free plan.',
     ],
@@ -37,18 +35,18 @@ const sections = [
   {
     title: 'Transactions and Payments',
     content: [
-      'Sellapage connects you with customers via WhatsApp. We are not involved in the actual transaction.',
-      'You and your customer agree on payment directly — via transfer, cash, or any method you both choose.',
-      'Sellapage is not responsible for disputes between sellers and buyers.',
+      'Sellapage helps you manage store pages, orders, customers, payments, delivery details, and related commerce workflows.',
+      'You are responsible for fulfilling orders accurately, communicating with customers clearly, and resolving customer issues fairly.',
+      'Where payment tools are used, payment processing is handled through supported licensed payment partners.',
       'Always be honest with your customers about prices, availability, and delivery.',
     ],
   },
   {
     title: 'The Free Plan',
     content: [
-      'The free plan is available to all users during our early access period.',
-      'We may introduce paid plans in the future with more features.',
-      'Your free store will always remain accessible — we will never force you onto a paid plan.',
+      'The Starter plan is free forever and available to all eligible users.',
+      'Paid plans unlock more tools for analytics, carts, customers, reviews, payments, themes, and growth.',
+      'Your free store remains accessible within the Starter plan limits.',
       'We reserve the right to change free plan limits with reasonable notice.',
     ],
   },

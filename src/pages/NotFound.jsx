@@ -9,10 +9,10 @@ export default function NotFound() {
           <Store size={36} className="text-brand-300" />
         </div>
         <h1 className="font-display text-5xl font-extrabold text-gray-900 mb-2">404</h1>
-        <h2 className="font-display text-xl font-bold text-gray-700 mb-3">Store not found</h2>
+        <h2 className="font-display text-xl font-bold text-gray-700 mb-3">Page or store not found</h2>
         <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-          The store you're looking for doesn't exist or may have moved.
-          Double-check the link and try again.
+          The Sellapage page you're looking for doesn't exist, has moved, or the store link is incorrect.
+          Double-check the URL and try again.
         </p>
         <Link
           to="/"

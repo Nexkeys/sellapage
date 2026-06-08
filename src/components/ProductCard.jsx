@@ -24,7 +24,7 @@ export default function ProductCard({
 
   const handleOrder = () => {
     if (onOrder) onOrder(product.id)
-    const url = buildOrderURL(whatsappNumber, product.name, product.price, product.id, storeUrl)
+    const url = buildOrderURL(whatsappNumber, product.name, product.price, product.id, storeUrl, product.type || 'physical')
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 

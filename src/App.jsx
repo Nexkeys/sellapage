@@ -1,3 +1,4 @@
+// src/App.jsx/
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import ScrollToTop from './components/ScrollToTop'
@@ -19,6 +20,9 @@ import ContactUs from './pages/ContactUs'
 import About from './pages/about'
 import BillingCallback from './pages/BillingCallback'
 import Admin from './pages/Admin'
+import Pricing from './pages/Pricing'
+import OfferNameLab from './pages/OfferNameLab'
+import PolicyGenerator from './pages/PolicyGenerator'
 
 
 export default function App() {
@@ -45,6 +49,9 @@ export default function App() {
           <Route path="/terms"          element={<TermsOfService />} />
           <Route path="/contact"        element={<ContactUs />} />
           <Route path="/about"          element={<About />} />
+          <Route path="/pricing"        element={<Pricing />} />
+          <Route path="/tools/offer-name-lab" element={<OfferNameLab />} />
+          <Route path="/tools/policy-generator" element={<PolicyGenerator />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/:storeName" element={<StorePage />} />
           <Route path="*"           element={<NotFound />} />

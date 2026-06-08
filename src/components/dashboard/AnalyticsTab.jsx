@@ -1,12 +1,12 @@
 //src/components/dashboard/AnalyticsTab.jsx/
 import { useState } from 'react'
-import { Eye, MousePointerClick, Users, TrendingUp, Lock, Loader2, BarChart2, RotateCcw, Check, Info } from 'lucide-react'
+import { Eye, MousePointerClick, Users, TrendingUp, Lock, Loader2, BarChart2, RotateCcw, Check, Info, Calendar } from 'lucide-react'
 import { doc, setDoc, writeBatch, collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 
 
 
-export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, navigateTo, analyticsData }) {
+export default function AnalyticsTab({ storeId, products, services = [], vendorType = 'products', isGrowthOrPro, isPro, navigateTo, analyticsData }) {
 
   // ── Plan gate ──
   if (!isGrowthOrPro) {
@@ -49,6 +49,7 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
   const totalViews  = analyticsData?.totalViews  ?? 0
   const totalClicks = analyticsData?.totalClicks ?? 0
   const engagedViews = analyticsData?.engagedViews ?? 0
+  const totalBookingRequests = analyticsData?.totalBookingRequests ?? 0
 
   let engagementRateNum = totalViews > 0 ? (engagedViews / totalViews) * 100 : 0;
   if (engagementRateNum > 100) engagementRateNum = 100;
@@ -81,6 +82,16 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
     },
   ]
 
+  // Add booking requests KPI if vendor includes services
+  if (vendorType === 'services' || vendorType === 'both') {
+    KPIS.push({
+      label: 'Booking Requests',
+      value: totalBookingRequests.toLocaleString(),
+      Icon:  Calendar,
+      color: 'bg-teal-50 text-teal-600',
+    })
+  }
+
   const topProducts = [...products]
     .filter(p => p.clicks > 0)
     .sort((a, b) => (b.clicks ?? 0) - (a.clicks ?? 0))
@@ -88,26 +99,45 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
 
   const maxClicks = topProducts.length > 0 ? topProducts[0].clicks : 1
 
+  const topServices = [...services]
+    .filter(s => s.bookingRequests > 0)
+    .sort((a, b) => (b.bookingRequests ?? 0) - (a.bookingRequests ?? 0))
+    .slice(0, 5)
+
+  const maxBookings = topServices.length > 0 ? topServices[0].bookingRequests : 1
 
 
   // ── Reset handler ──
   const handleReset = async () => {
-    if (!window.confirm('Reset all store views, product clicks, and per-product click counts to zero? This cannot be undone.')) return
+    if (!window.confirm('Reset all store views, product clicks, service booking requests, and per-item metrics to zero? This cannot be undone.')) return
     setResetting(true)
     try {
+      // Create a single batch for all operations
+      const batch = writeBatch(db)
+
       // 1. Reset the analytics summary document
-      await setDoc(
-        doc(db, 'stores', storeId, 'analytics', 'storeSummary'),
-        { totalViews: 0, totalClicks: 0, updatedAt: new Date() },
-        { merge: true }
-      )
+      const analyticsRef = doc(db, 'stores', storeId, 'analytics', 'storeSummary')
+      batch.set(analyticsRef, { 
+        totalViews: 0, 
+        totalClicks: 0, 
+        engagedViews: 0,
+        totalBookingRequests: 0,
+        updatedAt: new Date() 
+      }, { merge: true })
 
       // 2. Batch-reset clicks on every product document
-      const batch = writeBatch(db)
-      const prodsSnap = await getDocs(collection(db, 'stores', storeId, 'products'))
-      prodsSnap.docs.forEach(d => {
-        batch.update(d.ref, { clicks: 0 })
+      products.forEach(product => {
+        const productRef = doc(db, 'stores', storeId, 'products', product.id)
+        batch.update(productRef, { clicks: 0 })
       })
+
+      // 3. Batch-reset booking requests on every service document
+      services.forEach(service => {
+        const serviceRef = doc(db, 'stores', storeId, 'services', service.id)
+        batch.update(serviceRef, { bookingRequests: 0 })
+      })
+
+      // Commit the batch
       await batch.commit()
 
       setResetDone(true)
@@ -135,12 +165,12 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
       {/* Info banner */}
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-start gap-3 text-blue-700 text-sm mb-6">
         <Info size={15} className="flex-shrink-0 mt-0.5" />
-        <p>Engagement Rate counts one interaction per visitor session. Product Clicks count every tap on Order or Add to Cart. Both numbers update in real time.</p>
+        <p>Engagement Rate counts one interaction per visitor session. Product Clicks count every tap on Order or Add to Cart. Booking Requests count every service booking. All numbers update in real time.</p>
       </div>
 
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className={`grid gap-3 ${KPIS.length === 5 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'}`}>
         {KPIS.map(kpi => (
           <div key={kpi.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-start justify-between mb-3">
@@ -155,6 +185,9 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
             )}
             {kpi.label === 'Product Clicks' && (
               <p className="text-xs text-gray-400 mt-1">times customers tapped Order or Add to Cart</p>
+            )}
+            {kpi.label === 'Booking Requests' && (
+              <p className="text-xs text-gray-400 mt-1">times customers requested a service booking</p>
             )}
           </div>
         ))}
@@ -201,13 +234,55 @@ export default function AnalyticsTab({ storeId, products, isGrowthOrPro, isPro, 
         )}
       </div>
 
+      {/* Top Performing Services (only if vendor includes services) */}
+      {(vendorType === 'services' || vendorType === 'both') && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <p className="font-bold text-gray-900 text-sm">Top Performing Services</p>
+            <p className="text-gray-400 text-xs mt-0.5">By booking requests — all time</p>
+          </div>
+
+          {topServices.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6 gap-3 text-center">
+              <div className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center">
+                <Calendar size={20} className="text-gray-300" />
+              </div>
+              <p className="text-gray-400 text-sm font-medium max-w-xs">
+                No booking data yet — share your store to start tracking.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {topServices.map((s, i) => (
+                <div key={s.id} className="flex items-center gap-4 px-5 py-3.5">
+                  <span className="text-gray-300 font-bold text-sm w-5 flex-shrink-0">#{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p>
+                    <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[180px]">
+                      <div
+                        className="h-full bg-teal-400 rounded-full"
+                        style={{ width: `${((s.bookingRequests ?? 0) / maxBookings) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-bold text-gray-900">{s.bookingRequests ?? 0} booking{s.bookingRequests !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-teal-600 font-semibold">₦{Number(s.price).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* ── Reset Analytics ──────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <p className="font-bold text-gray-900 text-sm">Reset Analytics</p>
           <p className="text-gray-400 text-xs mt-0.5">
-            Permanently reset all store views, product clicks, and per-product click counts to zero.
+            Permanently reset all store views, product clicks, service booking requests, and per-item metrics to zero.
           </p>
         </div>
         <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

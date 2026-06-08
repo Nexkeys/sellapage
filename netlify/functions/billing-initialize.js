@@ -1,4 +1,4 @@
-//sellapage/netlify/functions/billing-initialize.js
+//sellapage/netlify/functions/billing-initialize.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
@@ -19,6 +19,7 @@ const CORS_HEADERS = {
 const PLAN_AMOUNTS = {
   growth: 500000,
   pro: 1200000,
+  premium: 2500000,
 }
 
 export const handler = async (event) => {
@@ -55,11 +56,11 @@ export const handler = async (event) => {
     }
   }
 
-  if (!['growth', 'pro'].includes(plan)) {
+  if (!['growth', 'pro', 'premium'].includes(plan)) {
     return {
       statusCode: 400,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: 'Invalid plan. Must be "growth" or "pro"' }),
+      body: JSON.stringify({ error: 'Invalid plan. Must be "growth", "pro", or "premium"' }),
     }
   }
 

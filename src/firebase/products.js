@@ -21,7 +21,7 @@ const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
 
-export const FREE_PLAN_LIMIT = 10
+export const FREE_PLAN_LIMIT = 15
 
 
 const uploadToCloudinary = async (imageFile, folder = 'sellapage/products') => {
@@ -71,13 +71,14 @@ export const checkProductLimit = async (storeId) => {
   const storeData = storeSnap.exists() ? storeSnap.data() : {}
   const existingPlan = storeData.plan || 'starter'
   const effectiveLimit = storeData.maxProducts ?? (
-    existingPlan === 'pro' ? 999999 : existingPlan === 'growth' ? 50 : FREE_PLAN_LIMIT
+    existingPlan === 'premium' ? 999999 : existingPlan === 'pro' ? 999999 : existingPlan === 'growth' ? 50 : FREE_PLAN_LIMIT
   )
 
-  const snap = await getCountFromServer(
-    collection(db, 'stores', storeId, 'products')
-  )
-  const count = snap.data().count
+  const [productsSnap, servicesSnap] = await Promise.all([
+    getCountFromServer(collection(db, 'stores', storeId, 'products')),
+    getCountFromServer(collection(db, 'stores', storeId, 'services')),
+  ])
+  const count = productsSnap.data().count + servicesSnap.data().count
   return { count, limitReached: count >= effectiveLimit }
 }
 
@@ -87,16 +88,18 @@ export const addProduct = async (storeId, productData, imageFiles = []) => {
   const storeData = storeSnap.exists() ? storeSnap.data() : {}
   const existingPlan = storeData.plan || 'starter'
   const effectiveLimit = storeData.maxProducts ?? (
-    existingPlan === 'pro' ? 999999 : existingPlan === 'growth' ? 50 : FREE_PLAN_LIMIT
+    existingPlan === 'premium' ? 999999 : existingPlan === 'pro' ? 999999 : existingPlan === 'growth' ? 50 : FREE_PLAN_LIMIT
   )
   const maxImages = storeData.maxImagesPerProduct ?? (
-    existingPlan === 'pro' ? 50 : existingPlan === 'growth' ? 10 : 3
+    existingPlan === 'premium' ? 50 : existingPlan === 'pro' ? 50 : existingPlan === 'growth' ? 10 : 3
   )
 
-  const snap = await getCountFromServer(
-    collection(db, 'stores', storeId, 'products')
-  )
-  if (snap.data().count >= effectiveLimit) throw new Error('FREE_PLAN_LIMIT_REACHED')
+  const [productsSnap, servicesSnap] = await Promise.all([
+    getCountFromServer(collection(db, 'stores', storeId, 'products')),
+    getCountFromServer(collection(db, 'stores', storeId, 'services')),
+  ])
+  const count = productsSnap.data().count + servicesSnap.data().count
+  if (count >= effectiveLimit) throw new Error('FREE_PLAN_LIMIT_REACHED')
 
   const imageUrls = await uploadMultipleImages(imageFiles.slice(0, maxImages))
 
@@ -126,7 +129,7 @@ export const getProducts = async (storeId) => {
     const imageUrls = data.imageUrls?.length
       ? data.imageUrls
       : data.imageUrl ? [data.imageUrl] : []
-    return { id: d.id, ...data, imageUrls, imageUrl: imageUrls[0] || '' }
+    return { id: d.id, ...data, type: data.type || 'physical', imageUrls, imageUrl: imageUrls[0] || '' }
   })
 }
 
@@ -134,7 +137,9 @@ export const getProducts = async (storeId) => {
 export const updateProduct = async (storeId, productId, updates, newImageFiles = []) => {
   const storeSnap = await getDoc(doc(db, 'stores', storeId))
   const storeData = storeSnap.exists() ? storeSnap.data() : {}
-  const maxImages = storeData.maxImagesPerProduct ?? 3
+  const maxImages = storeData.maxImagesPerProduct ?? (
+    storeData.plan === 'premium' ? 50 : storeData.plan === 'pro' ? 50 : storeData.plan === 'growth' ? 10 : 3
+  )
 
   let imageUrls = updates.imageUrls || []
 

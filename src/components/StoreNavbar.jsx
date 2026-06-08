@@ -20,6 +20,10 @@ export default function StoreNavbar({
   onCartOpen = null,
   activeThemeObj = null,
   previewMode = false,
+  hasServices = false,
+  hasProducts = false,
+  activeStoreSection = 'products',
+  onSectionChange = null,
 }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const searchRef = useRef(null)
@@ -79,6 +83,32 @@ export default function StoreNavbar({
             <span className="font-bold text-sm truncate" style={{ fontFamily: activeThemeObj?.typography?.headerFontFamily }}>{store?.businessName}</span>
           </div>
 
+          {/* Desktop Section Tabs */}
+          {hasProducts && hasServices && onSectionChange && (
+            <div className="hidden md:flex items-center gap-1 bg-stone-100/80 p-1 rounded-xl flex-shrink-0">
+              <button
+                onClick={() => onSectionChange('products')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeStoreSection === 'products'
+                    ? 'bg-white text-gray-900 shadow-sm border border-black/5'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                View Products
+              </button>
+              <button
+                onClick={() => onSectionChange('services')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeStoreSection === 'services'
+                    ? 'bg-white text-gray-900 shadow-sm border border-black/5'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                Book Service
+              </button>
+            </div>
+          )}
+
           {/* Desktop Search */}
           <div className={`${previewMode ? 'hidden' : 'hidden md:flex'} items-center flex-shrink-0`}>
             <div className={`flex items-center gap-2 rounded-xl px-3 py-2 transition-all duration-200 ${search ? 'ring-2' : ''}`} style={{ backgroundColor: 'rgba(0,0,0,0.05)' }}>
@@ -123,6 +153,16 @@ export default function StoreNavbar({
                     {cartCount > 9 ? '9+' : cartCount}
                   </span>
                 )}
+              </button>
+            )}
+
+            {/* Products/Services Toggle Button (when both offered) */}
+            {hasProducts && hasServices && onSectionChange && (
+              <button
+                onClick={() => onSectionChange(activeStoreSection === 'products' ? 'services' : 'products')}
+                className="flex items-center gap-1.5 active:scale-95 px-3 py-2 sm:px-4 text-xs transition-all shadow-sm border border-gray-200 rounded-xl font-bold bg-white hover:bg-gray-50 text-gray-700 whitespace-nowrap"
+              >
+                {activeStoreSection === 'products' ? 'Book Service' : 'View Products'}
               </button>
             )}
 

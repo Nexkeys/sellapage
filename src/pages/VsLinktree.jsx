@@ -10,9 +10,10 @@ const FEATURES = [
   { label: 'Show product photos',             linktree: false, sellapage: true  },
   { label: 'Show prices clearly',             linktree: false, sellapage: true  },
   { label: 'Product descriptions',            linktree: false, sellapage: true  },
-  { label: 'One-tap WhatsApp order button',   linktree: false, sellapage: true  },
+  { label: 'Direct customer ordering',        linktree: false, sellapage: true  },
   { label: 'Customer lead capture form',      linktree: false, sellapage: true  },
-  { label: 'Built for product sellers',       linktree: false, sellapage: true  },
+  { label: 'Sell products and services',      linktree: false, sellapage: true  },
+  { label: 'Dashboard to manage orders & leads', linktree: false, sellapage: true  },
   { label: 'Free to start',                   linktree: true,  sellapage: true  },
 ]
 
@@ -33,8 +34,8 @@ export default function VsLinktree() {
             Linktree shows links.<br />Sellapage sells products.
           </h1>
           <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
-            Linktree is a list of links. Sellapage is a real store where customers see your products,
-            check prices, and order — without leaving the page.
+            Linktree provides a list of links. Sellapage gives your business a real commerce page where customers see your products or services,
+            check prices, order, and enter your customer workflow.
           </p>
         </div>
       </section>
@@ -60,8 +61,8 @@ export default function VsLinktree() {
           {/* Rows */}
           <div className="space-y-2">
             {FEATURES.map((row, i) => (
-              <div key={i} className="grid grid-cols-3 gap-3 items-center bg-gray-50 rounded-xl px-4 py-3">
-                <p className="text-gray-700 text-sm font-medium leading-snug">{row.label}</p>
+              <div key={i} className="grid grid-cols-3 gap-2 sm:gap-3 items-center bg-gray-50 rounded-xl px-3 sm:px-4 py-3">
+                <p className="text-gray-700 text-xs sm:text-sm font-medium leading-snug">{row.label}</p>
                 <div className="flex justify-center">
                   {row.linktree
                     ? <Check size={18} className="text-green-500" />
@@ -97,8 +98,8 @@ export default function VsLinktree() {
               <p className="font-bold text-brand-600 text-sm mb-1">With Sellapage</p>
               <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
               <p className="text-gray-600 text-sm leading-relaxed">
-                Customer clicks your link. They see your products with real photos and prices.
-                They tap "Order Now". A WhatsApp message lands in your phone. Done — no extra steps.
+                Customer clicks your link. They see your products and services with real photos, prices, details, and ordering options.
+                They can order, leave details, and become a trackable customer in your Sellapage workspace.
               </p>
             </div>
           </div>
@@ -131,9 +132,9 @@ export default function VsLinktree() {
               <p className="font-bold text-brand-700 mb-4">Use Sellapage if...</p>
               <ul className="space-y-2.5">
                 {[
-                  'You sell products on WhatsApp or social media',
+                  'You sell through social media and need a real commerce page',
                   'You want customers to see real photos and prices',
-                  'You want orders to come in automatically',
+                  'You sell products, services, or both and want one page to manage it all',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-brand-700">
                     <Check size={14} className="text-brand-500 flex-shrink-0 mt-0.5" />
@@ -150,16 +151,16 @@ export default function VsLinktree() {
       <section className="py-20 px-4 bg-gradient-to-br from-brand-500 to-emerald-600">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="font-display font-extrabold text-white text-3xl mb-3">
-            Ready to sell smarter?
+            Start free. Sell today.
           </h2>
           <p className="text-brand-100 mb-8 text-base">
-            Create your free Sellapage store in minutes. No credit card needed.
+            Your store. Your products. Your services. One link. Zero cost to start.
           </p>
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login')}
             className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
           >
-            {user ? 'Go to My Dashboard' : 'Create Free Store'}
+            {user ? 'Check your growth workspace' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
         </div>

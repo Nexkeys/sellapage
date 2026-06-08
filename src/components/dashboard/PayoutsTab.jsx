@@ -1,3 +1,4 @@
+// src/components/dashboard/PayoutsTab.jsx/
 import { Wallet, ArrowRight, Info, Mail } from 'lucide-react'
 
 export default function PayoutsTab() {

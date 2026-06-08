@@ -7,6 +7,20 @@ const STATUS_STYLES = {
   closed:    'bg-green-50 text-green-700 border border-green-200',
 }
 
+const LEAD_TYPE_STYLES = {
+  product: 'bg-green-50 text-green-700 border border-green-200',
+  service: 'bg-blue-50 text-blue-700 border border-blue-200',
+}
+
+function LeadTypeBadge({ leadType }) {
+  if (!LEAD_TYPE_STYLES[leadType]) return null
+  return (
+    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${LEAD_TYPE_STYLES[leadType]}`}>
+      {leadType === 'product' ? 'Product' : 'Service'}
+    </span>
+  )
+}
+
 export default function LeadsTab({ leadsLoading, leads, isPro }) {
   // Non-Pro gate
   if (!isPro) {
@@ -101,6 +115,7 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
                       <span className="text-green-700 font-bold text-xs">{(lead.name || '?')[0].toUpperCase()}</span>
                     </div>
                     <p className="text-sm font-semibold text-gray-900 truncate">{lead.name || '—'}</p>
+                    <LeadTypeBadge leadType={lead.leadType} />
                   </div>
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Phone size={11} className="text-gray-400 flex-shrink-0 mt-1" />
@@ -126,7 +141,10 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-gray-900 text-sm">{lead.name || '—'}</p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="font-bold text-gray-900 text-sm truncate">{lead.name || '—'}</p>
+                        <LeadTypeBadge leadType={lead.leadType} />
+                      </div>
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize flex-shrink-0 ${STATUS_STYLES[lead.status || 'new']}`}>
                         {lead.status || 'new'}
                       </span>

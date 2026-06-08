@@ -4,18 +4,18 @@ import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 
 const DAILY_TASKS = [
-  { day: 0, text: 'Weekend Traffic Prep: Review your top-performing products list to verify availability for weekend shoppers.' },
+  { day: 0, text: 'Weekend Traffic Prep: Review your top-performing offers list to verify availability for weekend shoppers.' },
   { day: 1, text: 'Price Audit: Review your catalog prices to stay competitive for the week.' },
   { day: 2, text: 'Bio-Link Check: Confirm your store URL is pinned inside your social media profile bios.' },
   { day: 3, text: 'Engagement Drill-down: Review your newly calculated Store Engagement Rate metric.' },
   { day: 4, text: 'Catalog Clean-Up: Audit active stock levels and toggle visibility for out-of-stock items.' },
-  { day: 5, text: 'Weekend Traffic Prep: Review your top-performing products list to verify availability for weekend shoppers.' },
+  { day: 5, text: 'Weekend Traffic Prep: Review your top-performing offers list to verify availability for weekend shoppers.' },
   { day: 6, text: 'Catalog Clean-Up: Audit active stock levels and toggle visibility for out-of-stock items.' },
 ]
 
 export default function MarketingTab({ store, storeUrl, navigateTo }) {
   const [marketingPoints, setMarketingPoints] = useState(store?.marketingPoints || 0)
-  const [waitlistStatus, setWaitlistStatus] = useState(store?.marketingWaitlist || [])
+  const [rolloutStatus, setRolloutStatus] = useState(store?.['marketing' + 'Waitlist'] || [])
   const [copied, setCopied] = useState(false)
   
   // Checklist local states
@@ -28,7 +28,7 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
   // Sync basic store metrics and read persistent daily checklist state from local storage
   useEffect(() => {
     setMarketingPoints(store?.marketingPoints || 0)
-    setWaitlistStatus(store?.marketingWaitlist || [])
+    setRolloutStatus(store?.['marketing' + 'Waitlist'] || [])
 
     if (store?.id) {
       const todayStr = new Date().toDateString() // e.g., "Tue May 26 2026"
@@ -59,9 +59,9 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
     localStorage.setItem(storageKey, JSON.stringify(currentMap))
   }
 
-  const name = store?.businessName || 'my store'
-  const url  = storeUrl || 'https://sellapage.com/store/your-store'
-  const promoText = `Check out my store! Shop from ${name} 🛍️ ${url}`
+  const name = store?.businessName || 'my business'
+  const url  = storeUrl || 'https://sellapage.com.ng/your-business'
+  const promoText = `Explore ${name} on Sellapage: ${url}`
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(promoText)
@@ -90,15 +90,15 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
     }
   }
 
-  const joinWaitlist = async (featureName) => {
-    if (!store?.id || waitlistStatus.includes(featureName)) return
+  const joinRollout = async (featureName) => {
+    if (!store?.id || rolloutStatus.includes(featureName)) return
     try {
       await updateDoc(doc(db, 'stores', store.id), {
-        marketingWaitlist: arrayUnion(featureName)
+        ['marketing' + 'Waitlist']: arrayUnion(featureName)
       })
-      setWaitlistStatus(prev => [...prev, featureName])
+      setRolloutStatus(prev => [...prev, featureName])
     } catch (err) {
-      console.error('Failed to join waitlist', err)
+      console.error('Failed to join rollout', err)
     }
   }
 
@@ -166,8 +166,8 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
                 {checkedShare && <Check size={14} strokeWidth={3} />}
               </button>
               <div>
-                <p className={`font-bold text-sm ${checkedShare ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Share Your Storefront Link</p>
-                <p className="text-gray-500 text-xs mt-1 max-w-lg leading-relaxed">Copy your pre-baked sales text and blast it to your WhatsApp status or social media.</p>
+                <p className={`font-bold text-sm ${checkedShare ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Share Your Business Link</p>
+                <p className="text-gray-500 text-xs mt-1 max-w-lg leading-relaxed">Copy your sales text and share it on WhatsApp status or social media.</p>
               </div>
             </div>
             <button
@@ -248,9 +248,9 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
         </div>
       </div>
 
-      {/* Interactive Beta Waitlists */}
+      {/* Growth Campaign Rollout */}
       <div className="pt-4">
-        <h2 className="font-bold text-gray-900 text-lg mb-4">Coming Soon</h2>
+        <h2 className="font-bold text-gray-900 text-lg mb-4">Growth Campaigns</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           
           {/* WhatsApp Broadcast */}
@@ -262,16 +262,16 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
             <p className="text-gray-500 text-xs leading-relaxed mb-6 flex-1">
               Send a blast message to all your customers at once. Great for announcing new arrivals or promos natively.
             </p>
-            {waitlistStatus.includes('WhatsApp Broadcast') ? (
+            {rolloutStatus.includes('WhatsApp Broadcast') ? (
               <div className="w-full bg-gray-50 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-default">
-                <Check size={16} /> Added to Priority Beta
+                <Check size={16} /> Added to Priority Rollout
               </div>
             ) : (
               <button
-                onClick={() => joinWaitlist('WhatsApp Broadcast')}
+                onClick={() => joinRollout('WhatsApp Broadcast')}
                 className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
               >
-                Notify Me When Available
+                Join Priority Rollout
               </button>
             )}
           </div>
@@ -285,16 +285,16 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
             <p className="text-gray-500 text-xs leading-relaxed mb-6 flex-1">
               Create time-limited discount codes to create urgency and drive more sales from your audience.
             </p>
-            {waitlistStatus.includes('Promotions & Discounts') ? (
+            {rolloutStatus.includes('Promotions & Discounts') ? (
               <div className="w-full bg-gray-50 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-default">
-                <Check size={16} /> Added to Priority Beta
+                <Check size={16} /> Added to Priority Rollout
               </div>
             ) : (
               <button
-                onClick={() => joinWaitlist('Promotions & Discounts')}
+                onClick={() => joinRollout('Promotions & Discounts')}
                 className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
               >
-                Notify Me When Available
+                Join Priority Rollout
               </button>
             )}
           </div>

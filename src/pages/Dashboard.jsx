@@ -7,6 +7,10 @@ import {
   removeProductImage, checkProductLimit, FREE_PLAN_LIMIT,
   deleteAllStoreProducts, uploadSingleImage,
 } from '../firebase/products'
+import {
+  addService, getServices, updateService, deleteService,
+  toggleServiceActive, deleteAllStoreServices,
+} from '../firebase/services'
 import { logoutSeller, updateStore, deleteAuthUser } from '../firebase/auth'
 import { db } from '../firebase/config'
 import {
@@ -20,6 +24,7 @@ import {
 import DashboardLayout  from '../components/dashboard/DashboardLayout'
 import OverviewTab      from '../components/dashboard/Overview'
 import ProductsTab      from '../components/dashboard/Products'
+import ServicesTab      from '../components/dashboard/ServicesTab'
 import LeadsTab         from '../components/dashboard/LeadsTab'
 import SettingsTab      from '../components/dashboard/Settings'
 import SupportTab       from '../components/dashboard/SupportTab'
@@ -39,6 +44,13 @@ import BillingTab       from '../components/dashboard/BillingTab'
 
 const EMPTY_FORM = {
   name: '', price: '', description: '', category: '', stock: '',
+  type: 'physical',
+  imageFiles: [], imagePreviews: [], imageUrls: [],
+}
+
+const EMPTY_SERVICE_FORM = {
+  name: '', price: '', description: '', category: '',
+  duration: '', locationType: 'physical', bookingNote: '',
   imageFiles: [], imagePreviews: [], imageUrls: [],
 }
 
@@ -52,10 +64,11 @@ export default function Dashboard() {
   // ── Plan-aware derivations ─────────────────────────────────────────────────
   const plan                = store?.plan || 'starter'
   const planStatus          = store?.planStatus || 'active'
-  const isGrowthOrPro       = store?.hasGrowthFeatures ?? (plan === 'growth' || plan === 'pro')
-  const isPro               = store?.hasProFeatures ?? (plan === 'pro')
-  const maxProducts         = store?.maxProducts ?? (plan === 'pro' ? 999999 : plan === 'growth' ? 50 : FREE_PLAN_LIMIT)
-  const maxImagesPerProduct = store?.maxImagesPerProduct ?? (plan === 'pro' ? 50 : plan === 'growth' ? 10 : 3)
+  const isPremium           = store?.hasPremiumFeatures ?? (plan === 'premium')
+  const isGrowthOrPro       = store?.hasGrowthFeatures ?? (plan === 'growth' || plan === 'pro' || plan === 'premium')
+  const isPro               = store?.hasProFeatures ?? (plan === 'pro' || plan === 'premium')
+  const maxProducts         = store?.maxProducts ?? (plan === 'premium' ? 999999 : plan === 'pro' ? 999999 : plan === 'growth' ? 50 : FREE_PLAN_LIMIT)
+  const maxImagesPerProduct = store?.maxImagesPerProduct ?? (plan === 'premium' ? 50 : plan === 'pro' ? 50 : plan === 'growth' ? 10 : 3)
 
 
   const [activeTab, setActiveTab]           = useState('overview')
@@ -75,6 +88,16 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen]       = useState(false)
   const [generatingDesc, setGeneratingDesc] = useState(false)
   const [aiDescError, setAiDescError]       = useState('')
+
+  const [services, setServices]               = useState([])
+  const [serviceCount, setServiceCount]       = useState(0)
+  const [servicesLoading, setServicesLoading] = useState(true)
+  const [showServiceForm, setShowServiceForm] = useState(false)
+  const [editingService, setEditingService]   = useState(null)
+  const [serviceForm, setServiceForm]         = useState(EMPTY_SERVICE_FORM)
+  const [serviceFormError, setServiceFormError] = useState('')
+  const [savingService, setSavingService]     = useState(false)
+  const [deletingService, setDeletingService] = useState(null)
 
 
   const [settingsSaving, setSettingsSaving]   = useState(false)
@@ -100,7 +123,7 @@ export default function Dashboard() {
 
 
   // Analytics — lifted here so Overview and AnalyticsTab share the same data
-  const [analyticsData, setAnalyticsData] = useState({ totalViews: 0, totalClicks: 0, engagedViews: 0 })
+  const [analyticsData, setAnalyticsData] = useState({ totalViews: 0, totalClicks: 0, engagedViews: 0, totalBookingRequests: 0 })
 
 
   const limitReached = productCount >= maxProducts
@@ -108,7 +131,12 @@ export default function Dashboard() {
 
 
   // ── Effects ────────────────────────────────────────────────────────────────
-  useEffect(() => { if (store?.id) fetchProducts() }, [store])
+  useEffect(() => {
+    if (store?.id) {
+      fetchProducts()
+      fetchServices()
+    }
+  }, [store])
 
   // Setup Guide State initialization
   useEffect(() => {
@@ -156,16 +184,17 @@ export default function Dashboard() {
         if (snap.exists()) {
           const data = snap.data()
           setAnalyticsData({
-            totalViews:   data.totalViews   ?? 0,
-            totalClicks:  data.totalClicks  ?? 0,
-            engagedViews: data.engagedViews ?? 0,
+            totalViews:           data.totalViews           ?? 0,
+            totalClicks:          data.totalClicks          ?? 0,
+            engagedViews:         data.engagedViews         ?? 0,
+            totalBookingRequests: data.totalBookingRequests ?? 0,
           })
         } else {
-          setAnalyticsData({ totalViews: 0, totalClicks: 0, engagedViews: 0 })
+          setAnalyticsData({ totalViews: 0, totalClicks: 0, engagedViews: 0, totalBookingRequests: 0 })
         }
       },
       () => {
-        setAnalyticsData({ totalViews: 0, totalClicks: 0, engagedViews: 0 })
+        setAnalyticsData({ totalViews: 0, totalClicks: 0, engagedViews: 0, totalBookingRequests: 0 })
       }
     )
     return unsubscribe
@@ -186,12 +215,21 @@ export default function Dashboard() {
             const existingPlan = data.plan || 'starter'
             let planFields = {}
 
-            if (existingPlan === 'pro') {
+            if (existingPlan === 'premium') {
               planFields = {
                 maxProducts:         999999,
                 maxImagesPerProduct: 50,
                 hasGrowthFeatures:   true,
                 hasProFeatures:      true,
+                hasPremiumFeatures:  true,
+              }
+            } else if (existingPlan === 'pro') {
+              planFields = {
+                maxProducts:         999999,
+                maxImagesPerProduct: 50,
+                hasGrowthFeatures:   true,
+                hasProFeatures:      true,
+                hasPremiumFeatures:  false,
               }
             } else if (existingPlan === 'growth') {
               planFields = {
@@ -199,6 +237,7 @@ export default function Dashboard() {
                 maxImagesPerProduct: 10,
                 hasGrowthFeatures:   true,
                 hasProFeatures:      false,
+                hasPremiumFeatures:  false,
               }
             } else {
               planFields = {
@@ -206,6 +245,7 @@ export default function Dashboard() {
                 maxImagesPerProduct: 3,
                 hasGrowthFeatures:   false,
                 hasProFeatures:      false,
+                hasPremiumFeatures:  false,
               }
             }
 
@@ -266,6 +306,18 @@ export default function Dashboard() {
       console.error('Failed to fetch products', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchServices = async () => {
+    try {
+      const data = await getServices(store.id)
+      setServices(data)
+      setServiceCount(data.length)
+    } catch (err) {
+      console.error('Failed to fetch services', err)
+    } finally {
+      setServicesLoading(false)
     }
   }
 
@@ -421,6 +473,7 @@ export default function Dashboard() {
       description:   product.description || '',
       category:      product.category || '',
       stock:         product.stock ?? '',
+      type:          product.type || 'physical',
       imageFiles:    [],
       imagePreviews: [],
       imageUrls:     product.imageUrls || [],
@@ -430,20 +483,132 @@ export default function Dashboard() {
 
 
   const handleImageChange = e => {
+    const isService = activeTab === 'services'
     const files = Array.from(e.target.files)
     if (!files.length) return
-    const currentTotal = form.imageUrls.length + form.imageFiles.length
+    const targetForm = isService ? serviceForm : form
+    const currentTotal = targetForm.imageUrls.length + targetForm.imageFiles.length
     const slotsLeft = maxImagesPerProduct - currentTotal
-    if (slotsLeft <= 0) { setFormError(`Maximum ${maxImagesPerProduct} images allowed per product.`); return }
+    if (slotsLeft <= 0) {
+      if (isService) {
+        setServiceFormError(`Maximum ${maxImagesPerProduct} images allowed per service.`);
+      } else {
+        setFormError(`Maximum ${maxImagesPerProduct} images allowed per product.`);
+      }
+      return
+    }
     const toAdd = files.slice(0, slotsLeft)
     const previews = []
     toAdd.forEach(file => {
-      if (file.size > 5 * 1024 * 1024) { setFormError('Each image must be under 5MB.'); return }
+      if (file.size > 5 * 1024 * 1024) {
+        if (isService) {
+          setServiceFormError('Each image must be under 5MB.');
+        } else {
+          setFormError('Each image must be under 5MB.');
+        }
+        return
+      }
       const reader = new FileReader()
       reader.onloadend = () => {
         previews.push(reader.result)
         if (previews.length === toAdd.length) {
-          setForm(p => ({
+          if (isService) {
+            setServiceForm(p => ({
+              ...p,
+              imageFiles: [...p.imageFiles, ...toAdd],
+              imagePreviews: [...p.imagePreviews, ...previews],
+            }))
+          } else {
+            setForm(p => ({
+              ...p,
+              imageFiles: [...p.imageFiles, ...toAdd],
+              imagePreviews: [...p.imagePreviews, ...previews],
+            }))
+          }
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+    if (isService) setServiceFormError(''); else setFormError('')
+  }
+
+
+  const handleRemoveExistingImage = async url => {
+    const isService = activeTab === 'services'
+    const targetEditing = isService ? editingService : editingProduct
+    const targetForm = isService ? serviceForm : form
+    if (!targetEditing) {
+      if (isService) {
+        setServiceForm(p => ({ ...p, imageUrls: p.imageUrls.filter(u => u !== url) }))
+      } else {
+        setForm(p => ({ ...p, imageUrls: p.imageUrls.filter(u => u !== url) }))
+      }
+      return
+    }
+    try {
+      const newUrls = await removeProductImage(store.id, targetEditing.id, url, targetForm.imageUrls)
+      if (isService) {
+        setServiceForm(p => ({ ...p, imageUrls: newUrls }))
+        setServices(prev => prev.map(s =>
+          s.id === targetEditing.id ? { ...s, imageUrls: newUrls, imageUrl: newUrls[0] || '' } : s
+        ))
+      } else {
+        setForm(p => ({ ...p, imageUrls: newUrls }))
+        setProducts(prev => prev.map(p =>
+          p.id === targetEditing.id ? { ...p, imageUrls: newUrls, imageUrl: newUrls[0] || '' } : p
+        ))
+      }
+    } catch (err) {
+      console.error('Failed to remove image', err)
+      if (isService) {
+        setServiceFormError('Could not remove image. Please try again.')
+      } else {
+        setFormError('Could not remove image. Please try again.')
+      }
+    }
+  }
+
+
+  const handleRemoveNewImage = index => {
+    const isService = activeTab === 'services'
+    if (isService) {
+      setServiceForm(p => ({
+        ...p,
+        imageFiles: p.imageFiles.filter((_, i) => i !== index),
+        imagePreviews: p.imagePreviews.filter((_, i) => i !== index),
+      }))
+    } else {
+      setForm(p => ({
+        ...p,
+        imageFiles: p.imageFiles.filter((_, i) => i !== index),
+        imagePreviews: p.imagePreviews.filter((_, i) => i !== index),
+      }))
+    }
+  }
+
+
+  // ── Service-specific image handlers (parallel to product handlers) ──────────
+  const handleServiceImageChange = e => {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    const currentTotal = serviceForm.imageUrls.length + serviceForm.imageFiles.length
+    const slotsLeft = maxImagesPerProduct - currentTotal
+    if (slotsLeft <= 0) {
+      setServiceFormError(`Maximum ${maxImagesPerProduct} images allowed per service.`)
+      return
+    }
+    const toAdd = files.slice(0, slotsLeft)
+    const previews = []
+    toAdd.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        setServiceFormError('Each image must be under 5MB.')
+        return
+      }
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        previews.push(reader.result)
+        if (previews.length === toAdd.length) {
+          setServiceForm(p => ({
             ...p,
             imageFiles: [...p.imageFiles, ...toAdd],
             imagePreviews: [...p.imagePreviews, ...previews],
@@ -452,30 +617,29 @@ export default function Dashboard() {
       }
       reader.readAsDataURL(file)
     })
-    setFormError('')
+    setServiceFormError('')
   }
 
-
-  const handleRemoveExistingImage = async url => {
-    if (!editingProduct) {
-      setForm(p => ({ ...p, imageUrls: p.imageUrls.filter(u => u !== url) }))
+  const handleRemoveExistingServiceImage = async url => {
+    const targetEditing = editingService
+    if (!targetEditing) {
+      setServiceForm(p => ({ ...p, imageUrls: p.imageUrls.filter(u => u !== url) }))
       return
     }
     try {
-      const newUrls = await removeProductImage(store.id, editingProduct.id, url, form.imageUrls)
-      setForm(p => ({ ...p, imageUrls: newUrls }))
-      setProducts(prev => prev.map(p =>
-        p.id === editingProduct.id ? { ...p, imageUrls: newUrls, imageUrl: newUrls[0] || '' } : p
+      const newUrls = await removeProductImage(store.id, targetEditing.id, url, serviceForm.imageUrls)
+      setServiceForm(p => ({ ...p, imageUrls: newUrls }))
+      setServices(prev => prev.map(s =>
+        s.id === targetEditing.id ? { ...s, imageUrls: newUrls, imageUrl: newUrls[0] || '' } : s
       ))
     } catch (err) {
       console.error('Failed to remove image', err)
-      setFormError('Could not remove image. Please try again.')
+      setServiceFormError('Could not remove image. Please try again.')
     }
   }
 
-
-  const handleRemoveNewImage = index => {
-    setForm(p => ({
+  const handleRemoveNewServiceImage = index => {
+    setServiceForm(p => ({
       ...p,
       imageFiles: p.imageFiles.filter((_, i) => i !== index),
       imagePreviews: p.imagePreviews.filter((_, i) => i !== index),
@@ -572,6 +736,109 @@ export default function Dashboard() {
     }
   }
 
+  const resetServiceForm = () => {
+    setServiceForm(EMPTY_SERVICE_FORM)
+    setServiceFormError('')
+    setEditingService(null)
+    setShowServiceForm(false)
+  }
+
+  const startEditService = (service) => {
+    setEditingService(service)
+    setServiceForm({
+      name:          service.name,
+      price:         service.price,
+      description:   service.description || '',
+      category:      service.category || '',
+      duration:      service.duration || '',
+      locationType:  service.locationType || 'physical',
+      bookingNote:   service.bookingNote || '',
+      imageFiles:    [],
+      imagePreviews: [],
+      imageUrls:     service.imageUrls || [],
+    })
+    setShowServiceForm(true)
+  }
+
+  const handleSaveService = async () => {
+    if (!serviceForm.name.trim()) { setServiceFormError('Service name is required.'); return }
+    if (!serviceForm.price || isNaN(serviceForm.price) || Number(serviceForm.price) <= 0) {
+      setServiceFormError('Please enter a valid price.'); return
+    }
+    setSavingService(true)
+    setServiceFormError('')
+    try {
+      if (editingService) {
+        const updatedData = await updateService(
+          store.id, editingService.id,
+          {
+            name:         serviceForm.name.trim(),
+            price:        serviceForm.price,
+            description:  serviceForm.description.trim(),
+            category:     serviceForm.category.trim(),
+            duration:     serviceForm.duration.trim(),
+            locationType: serviceForm.locationType,
+            bookingNote:  serviceForm.bookingNote.trim(),
+            imageUrls:    serviceForm.imageUrls,
+          },
+          serviceForm.imageFiles
+        )
+        setServices(prev => prev.map(s => s.id === editingService.id ? { ...s, ...updatedData } : s))
+        resetServiceForm()
+      } else {
+        const { limitReached: reached } = await checkProductLimit(store.id)
+        if (reached) { setServiceFormError(`You've reached the ${maxProducts} listing limit.`); setSavingService(false); return }
+        const newService = await addService(
+          store.id,
+          {
+            name:         serviceForm.name.trim(),
+            price:        serviceForm.price,
+            description:  serviceForm.description.trim(),
+            category:     serviceForm.category.trim(),
+            duration:     serviceForm.duration.trim(),
+            locationType: serviceForm.locationType,
+            bookingNote:  serviceForm.bookingNote.trim(),
+          },
+          serviceForm.imageFiles
+        )
+        setServices(prev => [newService, ...prev])
+        setServiceCount(c => c + 1)
+        resetServiceForm()
+      }
+    } catch (err) {
+      console.error('Failed to save service', err)
+      setServiceFormError('Failed to save service. Please try again.')
+    } finally {
+      setSavingService(false)
+    }
+  }
+
+  const handleDeleteService = async (id) => {
+    if (!window.confirm('Delete this service? This cannot be undone.')) return
+    setDeletingService(id)
+    try {
+      await deleteService(store.id, id)
+      setServices(prev => prev.filter(s => s.id !== id))
+      setServiceCount(c => c - 1)
+    } catch (err) {
+      console.error('Failed to delete service', err)
+    } finally {
+      setDeletingService(null)
+    }
+  }
+
+  const handleToggleServiceActive = async (service) => {
+    if (!isGrowthOrPro) return
+    const newValue = !service.isActive
+    setServices(prev => prev.map(s => s.id === service.id ? { ...s, isActive: newValue } : s))
+    try {
+      await toggleServiceActive(store.id, service.id, newValue)
+    } catch (err) {
+      console.error('Service toggle failed', err)
+      setServices(prev => prev.map(s => s.id === service.id ? { ...s, isActive: !newValue } : s))
+    }
+  }
+
 
   const handleSettingsSave = async formData => {
     setSettingsSaving(true)
@@ -584,6 +851,7 @@ export default function Dashboard() {
         whatsappNumber: formData.whatsappNumber.trim(),
         description:    formData.description.trim(),
         themeColor:     formData.themeColor || '',
+        vendorType:     formData.vendorType,
       })
       setStore(prev => ({ ...prev, ...formData, themeColor: formData.themeColor || '' }))
       setSettingsSuccess('Settings saved successfully.')
@@ -642,7 +910,12 @@ export default function Dashboard() {
 
 
   const handleGenerateDescription = async () => {
-    if (!form.name.trim()) return
+    const isService = activeTab === 'services'
+    const targetName = isService ? serviceForm.name : form.name
+    const targetCategory = isService ? serviceForm.category : form.category
+    const targetPrice = isService ? serviceForm.price : form.price
+
+    if (!targetName.trim()) return
     if (!user || !store?.id) {
       setAiDescError('Please sign in again to generate descriptions.')
       return
@@ -659,9 +932,9 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           storeId: store.id,
-          productName: form.name.trim(),
-          category: form.category?.trim() || '',
-          price: form.price || '',
+          productName: targetName.trim(),
+          category: targetCategory?.trim() || '',
+          price: targetPrice || '',
         }),
       })
       let data = {}
@@ -671,7 +944,11 @@ export default function Dashboard() {
         data = {}
       }
       if (res.ok && data.description) {
-        setForm(p => ({ ...p, description: data.description }))
+        if (isService) {
+          setServiceForm(p => ({ ...p, description: data.description }))
+        } else {
+          setForm(p => ({ ...p, description: data.description }))
+        }
       } else {
         setAiDescError(data.error || 'Failed to generate description. Please try again.')
       }
@@ -683,12 +960,59 @@ export default function Dashboard() {
     }
   }
 
+  const handleGenerateServiceDescription = async () => {
+    const targetName = serviceForm.name
+    const targetCategory = serviceForm.category
+    const targetPrice = serviceForm.price
+
+    if (!targetName.trim()) return
+    if (!user || !store?.id) {
+      setServiceAiDescError('Please sign in again to generate descriptions.')
+      return
+    }
+    setGeneratingServiceDesc(true)
+    setServiceAiDescError('')
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch('/.netlify/functions/ai-describe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storeId: store.id,
+          productName: targetName.trim(),
+          category: targetCategory?.trim() || '',
+          price: targetPrice || '',
+        }),
+      })
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        data = {}
+      }
+      if (res.ok && data.description) {
+        setServiceForm(p => ({ ...p, description: data.description }))
+      } else {
+        setServiceAiDescError(data.error || 'Failed to generate description. Please try again.')
+      }
+    } catch (err) {
+      console.error('AI description generation failed', err)
+      setServiceAiDescError('Failed to generate description. Please try again.')
+    } finally {
+      setGeneratingServiceDesc(false)
+    }
+  }
+
 
   const handleDeleteAccount = async () => {
     setDeleteLoading(true)
     setDeleteError('')
     try {
       await deleteAllStoreProducts(store.id)
+      await deleteAllStoreServices(store.id)
       const leadsSnap = await getDocs(
         query(collection(db, 'leads'), orderBy('createdAt', 'desc'))
       )
@@ -786,6 +1110,7 @@ export default function Dashboard() {
       setSidebarOpen={setSidebarOpen}
       storeUrl={storeUrl}
       isGrowthOrPro={isGrowthOrPro}
+      vendorType={store?.vendorType || 'products'}
     >
       {activeTab === 'overview' && (
         <div className="animate-in fade-in duration-300 w-full">
@@ -835,6 +1160,9 @@ export default function Dashboard() {
             plan={plan}
             maxProducts={maxProducts}
             productCount={productCount}
+            serviceCount={serviceCount}
+            services={services}
+            vendorType={store?.vendorType || 'products'}
             limitReached={limitReached}
             isGrowthOrPro={isGrowthOrPro}
             isPro={isPro}
@@ -858,6 +1186,7 @@ export default function Dashboard() {
           maxProducts={maxProducts}
           maxImagesPerProduct={maxImagesPerProduct}
           isGrowthOrPro={isGrowthOrPro}
+          isPremium={isPremium}
           limitReached={limitReached}
           showForm={showForm}
           setShowForm={setShowForm}
@@ -887,6 +1216,44 @@ export default function Dashboard() {
         />
       )}
 
+      {activeTab === 'services' && (
+        <ServicesTab
+          plan={plan}
+          serviceCount={serviceCount}
+          maxServices={maxProducts}
+          maxImagesPerProduct={maxImagesPerProduct}
+          isGrowthOrPro={isGrowthOrPro}
+          limitReached={serviceCount >= maxProducts}
+          showForm={showServiceForm}
+          setShowForm={setShowServiceForm}
+          editingService={editingService}
+          form={serviceForm}
+          formError={serviceFormError}
+          saving={savingService}
+          loading={servicesLoading}
+          services={services}
+          deleting={deletingService}
+          handleImageChange={handleServiceImageChange}
+          handleRemoveExistingImage={handleRemoveExistingServiceImage}
+          handleRemoveNewImage={handleRemoveNewServiceImage}
+          handleFormName={e => setServiceForm(p => ({ ...p, name: e.target.value }))}
+          handleFormPrice={e => setServiceForm(p => ({ ...p, price: e.target.value }))}
+          handleFormDesc={e => setServiceForm(p => ({ ...p, description: e.target.value }))}
+          handleFormCategory={e => setServiceForm(p => ({ ...p, category: e.target.value }))}
+          handleFormDuration={e => setServiceForm(p => ({ ...p, duration: e.target.value }))}
+          handleFormLocationType={val => setServiceForm(p => ({ ...p, locationType: val }))}
+          handleFormBookingNote={e => setServiceForm(p => ({ ...p, bookingNote: e.target.value }))}
+          onGenerateDescription={handleGenerateDescription}
+          generatingDesc={generatingDesc}
+          aiDescError={aiDescError}
+          handleSave={handleSaveService}
+          resetForm={resetServiceForm}
+          startEdit={startEditService}
+          handleDelete={handleDeleteService}
+          onToggleActive={handleToggleServiceActive}
+        />
+      )}
+
 
       {activeTab === 'leads' && (
         <LeadsTab
@@ -904,6 +1271,7 @@ export default function Dashboard() {
           planStatus={planStatus}
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
+          isPremium={isPremium}
           onSave={handleSettingsSave}
           saveLoading={settingsSaving}
           saveError={settingsError}
@@ -939,6 +1307,7 @@ export default function Dashboard() {
           planStatus={planStatus}
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
+          isPremium={isPremium}
           onUpgrade={handleUpgrade}
           upgradeLoading={billingLoading}
           upgradeError={billingError}
@@ -965,6 +1334,8 @@ export default function Dashboard() {
           isGrowthOrPro={isGrowthOrPro}
           navigateTo={setActiveTab}
           products={products}
+          services={services}
+          vendorType={store?.vendorType || 'products'}
         />
       )}
       {activeTab === 'reviews'      && <ReviewsTab />}
@@ -972,6 +1343,8 @@ export default function Dashboard() {
         <AnalyticsTab
           storeId={store.id}
           products={products}
+          services={services}
+          vendorType={store?.vendorType || 'products'}
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
           navigateTo={setActiveTab}
@@ -986,6 +1359,7 @@ export default function Dashboard() {
           storeUrl={storeUrl}
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
+          isPremium={isPremium}
           navigateTo={setActiveTab}
           onLogoUpload={handleLogoUpload}
           onColorSave={handleColorSave}
