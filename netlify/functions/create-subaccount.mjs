@@ -1,4 +1,4 @@
-//sellapage/netlify/functions/create-subaccount.js/
+//sellapage/netlify/functions/create-subaccount.mjs/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
@@ -48,11 +48,11 @@ export const handler = async (event) => {
     return jsonResponse(400, { error: 'Invalid JSON body' })
   }
 
-  const { storeId, bankCode, accountNumber, businessName } = body
+  const { storeId, bankCode, accountNumber } = body
 
-  if (!storeId || !bankCode || !accountNumber || !businessName) {
+  if (!storeId || !bankCode || !accountNumber) {
     return jsonResponse(400, {
-      error: 'Missing required fields: storeId, bankCode, accountNumber, businessName',
+      error: 'Missing required fields: storeId, bankCode, accountNumber',
     })
   }
 
@@ -78,6 +78,9 @@ export const handler = async (event) => {
     if (!storeDoc.exists) {
       return jsonResponse(404, { error: 'Store not found' })
     }
+
+    const storeData = storeDoc.data();
+    const businessName = storeData?.storeName || storeData?.businessName || 'Sellapage Merchant';
 
     let paystackResponse
     try {
@@ -112,9 +115,38 @@ export const handler = async (event) => {
       return jsonResponse(502, { error: 'Paystack did not return a subaccount code' })
     }
 
-    await storeRef.update({ subaccountCode })
+    // Map of top 20 banks (code -> readable name) — keep in sync with frontend list
+    const BANK_MAP = {
+      '057': 'GTBank',
+      '044': 'Access Bank',
+      '058': 'Zenith Bank',
+      '033': 'UBA',
+      '011': 'First Bank',
+      '070': 'Fidelity Bank',
+      '221': 'Stanbic IBTC',
+      '232': 'Sterling Bank',
+      '076': 'Polaris Bank',
+      '50211': 'Kuda Bank',
+      '999992': 'Opay',
+      '50215': 'Moniepoint',
+      '035': 'Wema Bank',
+      '032': 'Union Bank',
+      '050': 'Ecobank',
+      '215': 'Unity Bank',
+      '082': 'Keystone Bank',
+      '030': 'Heritage Bank',
+      '101': 'Providus Bank',
+      '102': 'Titan Trust Bank',
+    }
 
-    return jsonResponse(200, { subaccountCode })
+    const payoutBankName = BANK_MAP[bankCode] || bankCode
+    const payoutAccountNumberMasked = accountNumber && accountNumber.length > 4
+      ? '*'.repeat(accountNumber.length - 4) + accountNumber.slice(-4)
+      : accountNumber
+
+    await storeRef.update({ subaccountCode, payoutBankName, payoutAccountNumberMasked, payoutsVerified: false })
+
+    return jsonResponse(200, { subaccountCode, payoutBankName, payoutAccountNumberMasked, payoutsVerified: false })
   } catch (err) {
     console.error('create-subaccount error:', err)
     return jsonResponse(500, { error: 'Internal server error' })

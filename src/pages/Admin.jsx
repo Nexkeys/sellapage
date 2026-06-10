@@ -31,6 +31,8 @@ export default function Admin() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [copiedId, setCopiedId] = useState(null);
+  const [payoutFilter, setPayoutFilter] = useState('all');
+  const [approvingId, setApprovingId] = useState(null);
   const LIMIT = 10;
 
   // ── Fetch Actions ──
@@ -63,7 +65,7 @@ export default function Admin() {
     setDirLoading(true);
     setDirError('');
     try {
-      const url = `/.netlify/functions/admin-health?action=directory&page=${pageNum}&limit=${LIMIT}&search=${encodeURIComponent(searchQuery)}`;
+      const url = `/.netlify/functions/admin-health?action=directory&page=${pageNum}&limit=${LIMIT}&search=${encodeURIComponent(searchQuery)}&payoutFilter=${payoutFilter}`;
       const res = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -125,6 +127,14 @@ export default function Admin() {
     return () => clearTimeout(timer);
   }, [search, activeTab, fetchDirectory]);
 
+  // Refetch directory when payoutFilter changes while on the directory tab
+  useEffect(() => {
+    if (activeTab === 'directory') {
+      setPage(1);
+      fetchDirectory(1, search);
+    }
+  }, [payoutFilter]);
+
 
   // ── Utils ──
   const copyToClipboard = (text, id) => {
@@ -164,6 +174,35 @@ export default function Admin() {
       </div>
     );
   }
+
+  const displayedStores = (dirData?.stores || []).filter(store => {
+    if (payoutFilter === 'unverified') {
+      // Only show stores that have a subaccount and payoutsVerified explicitly false
+      return store.subaccountCode && store.payoutsVerified === false;
+    }
+    return true;
+  });
+
+  const togglePayoutVerification = async (storeId, verified) => {
+    setApprovingId(storeId);
+    try {
+      const res = await fetch('/.netlify/functions/admin-health?action=verify_payout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '',
+        },
+        body: JSON.stringify({ storeId, verified }),
+      });
+      if (!res.ok) throw new Error('Failed to update payout verification');
+      // Refresh directory
+      fetchDirectory(page, search);
+    } catch (err) {
+      console.error('togglePayoutVerification error:', err);
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -234,7 +273,7 @@ export default function Admin() {
                 { id: 'firestore', name: 'Firebase Firestore', desc: 'Core platform document records', data: healthData?.platform, icon: <Database size={18} className="text-blue-600" /> },
                 { id: 'cloudinary', name: 'Cloudinary Storage', desc: 'Merchant images and cloud assets', data: healthData?.cloudinary, icon: <Cloud size={18} className="text-blue-600" /> },
                 { id: 'netlify', name: 'Netlify Instance', desc: 'Production site deployment state', data: healthData?.netlify, icon: <Globe size={18} className="text-blue-600" /> },
-                { id: 'ai', name: 'Gemini AI Engine', desc: 'Automatic descriptions generation', data: healthData?.ai, icon: <Sparkles size={18} className="text-blue-600" /> }
+                { id: 'ai', name: 'NVIDIA AI Engine', desc: 'Automatic descriptions generation', data: healthData?.ai, icon: <Sparkles size={18} className="text-blue-600" /> }
               ].map(service => {
                 const status = getStatusConfig(service.id, service.data);
                 return (
@@ -399,6 +438,20 @@ export default function Admin() {
               {dirLoading && <Loader2 size={16} className="text-gray-300 animate-spin mr-2" />}
             </div>
 
+            {/* Payout Filter Sub-nav */}
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                onClick={() => { setPayoutFilter('all'); setPage(1); fetchDirectory(1, search); }}
+                className={`text-sm font-semibold px-3 py-1 rounded-lg ${payoutFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-600'}`}>
+                All Stores
+              </button>
+              <button
+                onClick={() => { setPayoutFilter('unverified'); setPage(1); fetchDirectory(1, search); }}
+                className={`text-sm font-semibold px-3 py-1 rounded-lg ${payoutFilter === 'unverified' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-600'}`}>
+                Unverified Payouts Only
+              </button>
+            </div>
+
             <div className="bg-white rounded-2xl border border-gray-100 shadow-2xs overflow-hidden">
               {/* Desktop Render Frame */}
               <div className="hidden lg:block overflow-x-auto">
@@ -412,7 +465,7 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {dirData?.stores?.map((store) => (
+                    {displayedStores.map((store) => (
                       <tr key={store.id} className="hover:bg-gray-50/60 transition-colors group">
                         <td className="px-5 py-4">
                           <div className="font-bold text-gray-900 text-sm tracking-tight">{store.storeName || 'Unnamed Business'}</div>
@@ -435,6 +488,50 @@ export default function Admin() {
                                 <button onClick={() => copyToClipboard(store.whatsappNumber, `phone-${store.id}`)} className="text-gray-300 hover:text-blue-500 transition-colors">
                                   {copiedId === `phone-${store.id}` ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
                                 </button>
+                              )}
+                            </div>
+
+                            {/* Payout Profile */}
+                            <div className="mt-2 pt-2 border-t border-gray-100 pt-3">
+                              <div className="text-[11px] text-gray-500 font-medium mb-1">Payout Profile</div>
+                              {!store.subaccountCode ? (
+                                <div className="text-xs text-gray-400">No Bank Connected</div>
+                              ) : (
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="text-xs text-gray-600">
+                                    <div>Bank: {store.payoutBankName || 'Unknown'}</div>
+                                    <div className="mt-0.5">Account: {store.payoutAccountNumberMasked || 'Masked'}</div>
+                                    <div className="mt-0.5 font-mono text-[11px] text-gray-400">Subacct: {store.subaccountCode}</div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-2">
+                                    <div>
+                                      {store.payoutsVerified ? (
+                                        <span className="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">Verified Payouts</span>
+                                      ) : (
+                                        <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">Awaiting Verification</span>
+                                      )}
+                                    </div>
+                                    <div>
+                                      {store.subaccountCode && !store.payoutsVerified ? (
+                                        <button
+                                          onClick={() => togglePayoutVerification(store.id, true)}
+                                          disabled={approvingId === store.id}
+                                          className="text-xs bg-green-600 text-white px-3 py-1 rounded-lg"
+                                        >
+                                          {approvingId === store.id ? 'Approving...' : 'Approve Bank Details'}
+                                        </button>
+                                      ) : store.subaccountCode && store.payoutsVerified ? (
+                                        <button
+                                          onClick={() => togglePayoutVerification(store.id, false)}
+                                          disabled={approvingId === store.id}
+                                          className="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded-lg"
+                                        >
+                                          {approvingId === store.id ? 'Updating...' : 'Revoke Verification'}
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -503,7 +600,7 @@ export default function Admin() {
                         </td>
                       </tr>
                     ))}
-                    {!dirLoading && dirData?.stores?.length === 0 && (
+                    {!dirLoading && displayedStores.length === 0 && (
                       <tr>
                         <td colSpan="3" className="p-10 text-center text-gray-400 text-sm italic">
                           No merchants found matching your query.
@@ -516,7 +613,7 @@ export default function Admin() {
 
               {/* Mobile Stacked Cards */}
               <div className="block lg:hidden divide-y divide-gray-100">
-                {dirData?.stores?.map((store) => (
+                {displayedStores.map((store) => (
                   <div key={store.id} className="p-5 flex flex-col gap-4 bg-white">
                     <div className="flex justify-between items-start">
                       <div>
@@ -588,6 +685,50 @@ export default function Admin() {
                           <span className="text-gray-400 font-bold tracking-wider">WHATSAPP</span>
                           <span className="truncate max-w-[120px]">{store.whatsappNumber || 'No Phone'}</span>
                         </div>
+
+                        {/* Payout Profile */}
+                        <div className="mt-2 pt-2 border-t border-gray-100 pt-3">
+                          <div className="text-[11px] text-gray-500 font-medium mb-1">Payout Profile</div>
+                          {!store.subaccountCode ? (
+                            <div className="text-xs text-gray-400">No Bank Connected</div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="text-xs text-gray-600">
+                                <div>Bank: {store.payoutBankName || 'Unknown'}</div>
+                                <div className="mt-0.5">Account: {store.payoutAccountNumberMasked || 'Masked'}</div>
+                                <div className="mt-0.5 font-mono text-[11px] text-gray-400">Subacct: {store.subaccountCode}</div>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <div>
+                                  {store.payoutsVerified ? (
+                                    <span className="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">Verified Payouts</span>
+                                  ) : (
+                                    <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">Awaiting Verification</span>
+                                  )}
+                                </div>
+                                <div>
+                                  {store.subaccountCode && !store.payoutsVerified ? (
+                                    <button
+                                      onClick={() => togglePayoutVerification(store.id, true)}
+                                      disabled={approvingId === store.id}
+                                      className="text-xs bg-green-600 text-white px-3 py-1 rounded-lg"
+                                    >
+                                      {approvingId === store.id ? 'Approving...' : 'Approve Bank Details'}
+                                    </button>
+                                  ) : store.subaccountCode && store.payoutsVerified ? (
+                                    <button
+                                      onClick={() => togglePayoutVerification(store.id, false)}
+                                      disabled={approvingId === store.id}
+                                      className="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded-lg"
+                                    >
+                                      {approvingId === store.id ? 'Updating...' : 'Revoke Verification'}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="font-bold text-[9px] uppercase tracking-wider text-gray-400 mb-0.5">Leads</span>
@@ -596,7 +737,7 @@ export default function Admin() {
                     </div>
                   </div>
                 ))}
-                {!dirLoading && dirData?.stores?.length === 0 && (
+                {!dirLoading && displayedStores.length === 0 && (
                   <div className="p-10 text-center text-gray-400 text-sm italic">
                     No merchants found.
                   </div>

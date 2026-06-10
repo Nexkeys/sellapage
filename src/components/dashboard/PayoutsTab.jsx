@@ -1,5 +1,5 @@
 // src/components/dashboard/PayoutsTab.jsx/
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Wallet, Info, Check, Search, Calendar, User, Package, ArrowRight } from 'lucide-react'
 
 const NIGERIAN_BANKS = [
@@ -35,6 +35,35 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
   const [bankError, setBankError] = useState('')
   const [bankSuccess, setBankSuccess] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showChangeForm, setShowChangeForm] = useState(false)
+  const [localAccountNumber, setLocalAccountNumber] = useState('')
+  const [localBankName, setLocalBankName] = useState('')
+  const [resolvedAccountName, setResolvedAccountName] = useState('')
+  const [resolveLoading, setResolveLoading] = useState(false)
+
+  // When bank form account or bankCode changes and account is 10 digits, attempt resolve
+  const tryResolveAccount = async (accountNumber, bankCode) => {
+    setResolvedAccountName('')
+    if (!accountNumber || accountNumber.length !== 10 || !bankCode) return
+    setResolveLoading(true)
+    try {
+      const res = await fetch('/.netlify/functions/resolve-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountNumber, bankCode }),
+      })
+      const data = await res.json()
+      if (res.ok && data.accountName) {
+        setResolvedAccountName(data.accountName)
+      } else {
+        setResolvedAccountName('')
+      }
+    } catch (err) {
+      setResolvedAccountName('')
+    } finally {
+      setResolveLoading(false)
+    }
+  }
 
   const handleBankSubmit = async (e) => {
     e.preventDefault()
@@ -64,6 +93,14 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
       }
 
       setBankSuccess(true)
+      // Persist local display state immediately
+      setLocalAccountNumber(bankForm.accountNumber)
+      const selectedBank = NIGERIAN_BANKS.find(b => b.code === bankForm.bankCode)?.name || ''
+      setLocalBankName(selectedBank)
+
+      // Close change form if open
+      setShowChangeForm(false)
+
       if (onSubaccountCreated && data.subaccountCode) {
         onSubaccountCreated(data.subaccountCode)
       }
@@ -74,10 +111,35 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
     }
   }
 
+  // Watch account number and bankCode for resolution
+  const handleAccountNumberChange = (raw) => {
+    const value = raw.replace(/\D/g, '').slice(0, 10)
+    setBankForm({ ...bankForm, accountNumber: value })
+    setResolvedAccountName('')
+    if (value.length === 10 && bankForm.bankCode) {
+      tryResolveAccount(value, bankForm.bankCode)
+    }
+  }
+
+  // When bank selection changes, clear or attempt resolve
+  const handleBankCodeChange = (code) => {
+    setBankForm({ ...bankForm, bankCode: code })
+    setResolvedAccountName('')
+    if (bankForm.accountNumber.length === 10 && code) {
+      tryResolveAccount(bankForm.accountNumber, code)
+    }
+  }
+
   const maskAccountNumber = (number) => {
     if (!number || number.length < 4) return number
     return '*'.repeat(number.length - 4) + number.slice(-4)
   }
+
+  useEffect(() => {
+    if (store?.subaccountCode) {
+      setShowChangeForm(false)
+    }
+  }, [store?.subaccountCode])
 
   // Calculate earnings
   const checkoutOrders = orders?.filter(
@@ -154,7 +216,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bank Name</label>
                 <select
                   value={bankForm.bankCode}
-                  onChange={(e) => setBankForm({ ...bankForm, bankCode: e.target.value })}
+                  onChange={(e) => handleBankCodeChange(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   required
                 >
@@ -172,14 +234,15 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
                 <input
                   type="text"
                   value={bankForm.accountNumber}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10)
-                    setBankForm({ ...bankForm, accountNumber: value })
-                  }}
+                  onChange={(e) => handleAccountNumberChange(e.target.value)}
                   placeholder="10-digit account number"
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   required
                 />
+                {resolveLoading && <div className="text-xs text-gray-500 mt-1">Resolving account name...</div>}
+                {!resolveLoading && resolvedAccountName && (
+                  <div className="text-xs text-green-600 mt-1">Verified name: {resolvedAccountName}</div>
+                )}
               </div>
 
               <div>
@@ -208,24 +271,132 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-                <Wallet size={24} className="text-green-500" />
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                  <Wallet size={24} className="text-green-500" />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-gray-900 text-lg">Bank Account Connected</h2>
+                  <p className="text-sm text-gray-500">
+                    {(localAccountNumber || store?.payoutAccountNumberMasked)
+                      ? `Account ending in ${maskAccountNumber(localAccountNumber || store?.payoutAccountNumberMasked || '')}`
+                      : 'Account connected'}
+                  </p>
+                  {(localBankName || store?.payoutBankName) && (
+                    <p className="text-xs text-gray-500">Bank: {localBankName || store?.payoutBankName}</p>
+                  )}
+
+                  {/* Payout verification banner */}
+                  {store?.payoutsVerified ? (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <Check size={16} className="text-green-600" />
+                      </div>
+                      <p className="text-sm font-semibold text-green-800">Account verified successfully</p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-start gap-3">
+                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <Info size={16} className="text-yellow-700" />
+                      </div>
+                      <div className="text-sm text-yellow-800">Account verification takes 6 - 12 hours (in most cases immediately). Please test your store checkout after 6 hours.</div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <h2 className="font-extrabold text-gray-900 text-lg">Bank Account Connected</h2>
-                <p className="text-sm text-gray-500">Account ending in ****{store.subaccountCode?.slice(-4) || '****'}</p>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">Connected</span>
+                <button
+                  type="button"
+                  onClick={() => window.open('https://wa.me/2348120525256?text=Hello%20Sellapage%20Team%2C%20I%20need%20to%20update%20my%20payout%20bank%20details%20for%20my%20store.', '_blank', 'noopener,noreferrer')}
+                  className="text-sm bg-white border border-gray-200 px-3 py-1 rounded-lg text-green-700 hover:bg-gray-50 font-semibold"
+                >
+                  Request Account Update
+                </button>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">Connected</span>
-              <button className="text-sm text-green-600 hover:text-green-700 font-semibold">
-                Change
-              </button>
             </div>
           </div>
+
+          {showChangeForm && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h3 className="font-semibold text-gray-900 mb-3">Change connected account</h3>
+              {bankSuccess ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <Check size={20} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-800">Bank Account Connected</p>
+                    <p className="text-sm text-green-700">Account ending in {maskAccountNumber(bankForm.accountNumber)}</p>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleBankSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bank Name</label>
+                    <select
+                      value={bankForm.bankCode}
+                      onChange={(e) => handleBankCodeChange(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                      required
+                    >
+                      <option value="">Select your bank</option>
+                      {NIGERIAN_BANKS.map((bank) => (
+                        <option key={bank.code} value={bank.code}>
+                          {bank.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Account Number</label>
+                    <input
+                      type="text"
+                      value={bankForm.accountNumber}
+                      onChange={(e) => handleAccountNumberChange(e.target.value)}
+                      placeholder="10-digit account number"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                      required
+                    />
+                    {resolveLoading && <div className="text-xs text-gray-500 mt-1">Resolving account name...</div>}
+                    {!resolveLoading && resolvedAccountName && (
+                      <div className="text-xs text-green-600 mt-1">Verified name: {resolvedAccountName}</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Name</label>
+                    <input
+                      type="text"
+                      value={bankForm.businessName}
+                      onChange={(e) => setBankForm({ ...bankForm, businessName: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                      required
+                    />
+                  </div>
+
+                  {bankError && (
+                    <p className="text-sm text-red-600">{bankError}</p>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={bankSubmitting}
+                      className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      {bankSubmitting ? 'Connecting...' : 'Connect Bank Account'}
+                    </button>
+                    <button type="button" onClick={() => setShowChangeForm(false)} className="text-sm text-gray-600">Cancel</button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
         </div>
       )}
 

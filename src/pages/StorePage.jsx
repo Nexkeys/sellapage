@@ -285,9 +285,7 @@ function StoreCheckoutModal({
               steps.map((s, i) => (
                 <span
                   key={s.id}
-                  className={
-                    step === s.id ? "text-green-600" : "text-gray-400"
-                  }
+                  className={step === s.id ? "text-green-600" : "text-gray-400"}
                 >
                   {s.label}
                   {i < steps.length - 1 && (
@@ -458,8 +456,7 @@ function StoreCheckoutModal({
                   )}
                   {!loadingRates &&
                     deliveryRates.map((rate, idx) => {
-                      const name =
-                        rate.courier_name || rate.name || "Courier";
+                      const name = rate.courier_name || rate.name || "Courier";
                       const amount =
                         rate.total || rate.rate || rate.amount || 0;
                       return (
@@ -483,9 +480,7 @@ function StoreCheckoutModal({
                 <div className="flex justify-between">
                   <span className="text-gray-500">Delivery fee</span>
                   <span>
-                    {selectedZone
-                      ? `₦${deliveryFee.toLocaleString()}`
-                      : "—"}
+                    {selectedZone ? `₦${deliveryFee.toLocaleString()}` : "—"}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -796,16 +791,15 @@ export default function StorePage() {
   const storeUrl = store ? `${window.location.origin}/${store.storeName}` : "";
   const vendorType = store?.vendorType || "products";
   const hasProducts = vendorType === "products" || vendorType === "both";
+  const isProOrPremium =
+    store?.hasProFeatures === true ||
+    store?.plan === "pro" ||
+    store?.plan === "premium";
   const storeLayout = store?.storeLayout || "grid";
 
   const isCartEnabled =
     store?.hasGrowthFeatures === true ||
     store?.plan === "growth" ||
-    store?.plan === "pro" ||
-    store?.plan === "premium";
-
-  const isProOrPremium =
-    store?.hasProFeatures === true ||
     store?.plan === "pro" ||
     store?.plan === "premium";
 
@@ -858,7 +852,10 @@ export default function StorePage() {
             deliveryLga: selectedZone.lga || checkoutForm.deliveryLga,
             deliveryAddress: {
               streetAddress: checkoutForm.deliveryAddress,
-              city: selectedZone.lga || checkoutForm.deliveryLga || selectedZone.state,
+              city:
+                selectedZone.lga ||
+                checkoutForm.deliveryLga ||
+                selectedZone.state,
             },
           }),
         });
@@ -1263,6 +1260,7 @@ export default function StorePage() {
                           onOrder={handleProductClick}
                           listView={storeLayout === "list"}
                           onAddToCart={isCartEnabled ? handleAddToCart : null}
+                          isProOrPremium={isProOrPremium}
                           themeCardStyle={{
                             backgroundColor: themeCard,
                             color: themeText,

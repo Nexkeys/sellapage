@@ -8,7 +8,7 @@ import fetch from 'node-fetch';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type, x-admin-token',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
 if (!getApps().length) {
@@ -25,7 +25,7 @@ export const handler = async (event) => {
     return { statusCode: 204, headers: CORS_HEADERS, body: '' };
   }
 
-  if (event.httpMethod !== 'GET') {
+  if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
       headers: CORS_HEADERS,
@@ -66,6 +66,37 @@ export const handler = async (event) => {
   const queryParams = event.queryStringParameters || {};
   const action = queryParams.action || 'health';
 
+  // Handle admin action: verify_payout (POST)
+  if (event.httpMethod === 'POST' && action === 'verify_payout') {
+    try {
+      let parsedBody = {};
+      try { parsedBody = JSON.parse(event.body || '{}'); } catch {}
+      const { storeId, verified } = parsedBody;
+      if (!storeId) {
+        return {
+          statusCode: 400,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Missing storeId in request body' }),
+        };
+      }
+
+      await adminDb.collection('stores').doc(storeId).update({ payoutsVerified: !!verified });
+
+      return {
+        statusCode: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ success: true, storeId, payoutsVerified: !!verified }),
+      };
+    } catch (err) {
+      console.error('verify_payout error:', err);
+      return {
+        statusCode: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Failed to update payoutsVerified' }),
+      };
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // MODE: DIRECTORY (Paginated Stores Data & Leads)
   // ---------------------------------------------------------------------------
@@ -93,6 +124,11 @@ export const handler = async (event) => {
           const handle = (s.handle || '').toLowerCase();
           return sName.includes(search) || handle.includes(search);
         });
+      }
+
+      // Apply payoutFilter if provided: show only stores with a subaccount and payoutsVerified === false
+      if (queryParams.payoutFilter === 'unverified') {
+        filteredStores = filteredStores.filter((s) => s.subaccountCode && (s.payoutsVerified === false || !s.payoutsVerified));
       }
 
       const totalResults = filteredStores.length;
@@ -151,6 +187,11 @@ export const handler = async (event) => {
             isManualOverride,
             isPlanExpired,
             leadCount,
+            // Ensure payout/subaccount fields are included for admin directory
+            subaccountCode: store.subaccountCode || null,
+            payoutBankName: store.payoutBankName || null,
+            payoutAccountNumberMasked: store.payoutAccountNumberMasked || null,
+            payoutsVerified: store.payoutsVerified || false,
           };
         })
       );
@@ -230,7 +271,7 @@ export const handler = async (event) => {
         };
       })(),
 
-      // Group 2: Gemini AI Usage Data
+      // Group 2: NVIDIA AI Engine Usage Data
       (async () => {
         try {
           const aiProductsSnap = await adminDb
