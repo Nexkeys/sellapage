@@ -11,6 +11,7 @@ export default function CartDrawer({
   whatsappNumber,
   storeName,
   activeThemeObj = null,
+  onProceedToCheckout,
 }) {
   const [name, setName]   = useState('')
   const [phone, setPhone] = useState('')
@@ -228,15 +229,25 @@ export default function CartDrawer({
             )}
           </div>
 
-          {/* Send order button */}
-          <button
-            onClick={handleSendOrder}
-            disabled={cartItems.length === 0}
-            className={`w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 text-sm transition-all shadow-sm ${activeThemeObj?.structuralStyle?.buttonClasses || 'bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold'}`}
-          >
-            <MessageCircle size={15} />
-            Send Order on WhatsApp
-          </button>
+          {/* Checkout / WhatsApp CTA */}
+          {onProceedToCheckout ? (
+            <button
+              onClick={onProceedToCheckout}
+              disabled={cartItems.length === 0}
+              className={`w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 text-sm transition-all shadow-sm ${activeThemeObj?.structuralStyle?.buttonClasses || 'bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold'}`}
+            >
+              Proceed to Checkout
+            </button>
+          ) : (
+            <button
+              onClick={handleSendOrder}
+              disabled={cartItems.length === 0}
+              className={`w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 text-sm transition-all shadow-sm ${activeThemeObj?.structuralStyle?.buttonClasses || 'bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold'}`}
+            >
+              <MessageCircle size={15} />
+              Send Order on WhatsApp
+            </button>
+          )}
 
           {/* Validation error */}
           {error && (

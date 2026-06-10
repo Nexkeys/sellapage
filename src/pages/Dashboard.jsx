@@ -39,6 +39,7 @@ import OnlineStoreTab   from '../components/dashboard/OnlineStoreTab'
 import MobileAppTab     from '../components/dashboard/MobileAppTab'
 import PayoutsTab       from '../components/dashboard/PayoutsTab'
 import BillingTab       from '../components/dashboard/BillingTab'
+import DeliveryTab      from '../components/dashboard/DeliveryTab'
 
 
 
@@ -103,6 +104,9 @@ export default function Dashboard() {
   const [settingsSaving, setSettingsSaving]   = useState(false)
   const [settingsError, setSettingsError]     = useState('')
   const [settingsSuccess, setSettingsSuccess] = useState('')
+  const [deliverySaving, setDeliverySaving]   = useState(false)
+  const [deliveryError, setDeliveryError]     = useState('')
+  const [deliverySuccess, setDeliverySuccess] = useState('')
   const [deleteLoading, setDeleteLoading]     = useState(false)
   const [deleteError, setDeleteError]         = useState('')
   const [logoUploading, setLogoUploading]     = useState(false)
@@ -162,7 +166,7 @@ export default function Dashboard() {
   }, [activeTab])
 
   useEffect(() => {
-    if (activeTab === 'orders' && !isGrowthOrPro) setActiveTab('overview')
+    if ((activeTab === 'orders' || activeTab === 'delivery') && !isGrowthOrPro) setActiveTab('overview')
   }, [activeTab, isGrowthOrPro])
 
   useEffect(() => {
@@ -864,6 +868,37 @@ export default function Dashboard() {
     }
   }
 
+  const handleDeliverySave = async formData => {
+    setDeliverySaving(true)
+    setDeliveryError('')
+    setDeliverySuccess('')
+    try {
+      await updateStore(store.id, {
+        pickupAddress: {
+          streetAddress: formData.streetAddress.trim(),
+          city: formData.city.trim(),
+          state: formData.state,
+        }
+      })
+      setStore(prev => ({ ...prev, pickupAddress: {
+        streetAddress: formData.streetAddress.trim(),
+        city: formData.city.trim(),
+        state: formData.state,
+      } }))
+      setDeliverySuccess('Address saved successfully.')
+      setTimeout(() => setDeliverySuccess(''), 3000)
+    } catch (err) {
+      console.error('Delivery address save failed', err)
+      setDeliveryError('Failed to save address. Please try again.')
+    } finally {
+      setDeliverySaving(false)
+    }
+  }
+
+  const handleDeliveryZonesUpdate = (zones) => {
+    setStore(prev => ({ ...prev, deliveryZones: zones }))
+  }
+
 
   const handleLogoUpload = async file => {
     setLogoUploading(true)
@@ -905,6 +940,15 @@ export default function Dashboard() {
       setStore(prev => ({ ...prev, storeTheme: themeId, themeMetadata }))
     } catch (err) {
       console.error('Theme save failed', err)
+    }
+  }
+
+  const handleSubaccountCreated = async (subaccountCode) => {
+    try {
+      await updateStore(store.id, { subaccountCode })
+      setStore(prev => ({ ...prev, subaccountCode }))
+    } catch (err) {
+      console.error('Failed to save subaccount code', err)
     }
   }
 
@@ -1318,6 +1362,7 @@ export default function Dashboard() {
       {activeTab === 'orders' && isGrowthOrPro && (
         <OrdersTab
           store={store}
+          user={user}
           whatsappNumber={store?.whatsappNumber}
           orders={orders}
           ordersLoading={ordersLoading}
@@ -1326,6 +1371,18 @@ export default function Dashboard() {
           onDeleteOrder={handleDeleteOrder}
           isGrowthOrPro={isGrowthOrPro}
           navigateTo={setActiveTab}
+        />
+      )}
+      {activeTab === 'delivery' && isGrowthOrPro && (
+        <DeliveryTab
+          store={store}
+          onSave={handleDeliverySave}
+          saveLoading={deliverySaving}
+          saveError={deliveryError}
+          saveSuccess={deliverySuccess}
+          isPro={isPro}
+          onDeliveryZonesUpdate={handleDeliveryZonesUpdate}
+          orders={orders}
         />
       )}
       {activeTab === 'customers'    && <CustomersTab />}
@@ -1369,7 +1426,7 @@ export default function Dashboard() {
         />
       )}
       {activeTab === 'mobile-app'   && <MobileAppTab />}
-      {activeTab === 'payouts'      && <PayoutsTab />}
+      {activeTab === 'payouts'      && <PayoutsTab store={store} orders={orders} ordersLoading={ordersLoading} user={user} onSubaccountCreated={handleSubaccountCreated} />}
     </DashboardLayout>
   )
 }

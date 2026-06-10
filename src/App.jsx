@@ -6,6 +6,7 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import StorePage from './pages/StorePage'
+import ServiceStorePage from './pages/ServiceStorePage'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/tools/policy-generator" element={<PolicyGenerator />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/:storeName" element={<StorePage />} />
+          <Route path="/:storeName/services" element={<ServiceStorePage />} />
           <Route path="*"           element={<NotFound />} />
           <Route path="/admin" element={<Admin />} />
         </Routes>

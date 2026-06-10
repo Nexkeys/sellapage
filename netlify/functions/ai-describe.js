@@ -12,6 +12,7 @@ const CORS_HEADERS = {
 const DAILY_LIMITS = {
   growth: 20,
   pro: 50,
+  premium: 50,
 }
 
 const GENERATION_COOLDOWN_MS = 15000
@@ -79,8 +80,8 @@ export const handler = async (event) => {
   let usageReserved = false
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('Missing GEMINI_API_KEY')
+    if (!process.env.NVIDIA_API_KEY) {
+      throw new Error('Missing NVIDIA_API_KEY')
     }
 
     const { db, adminAuth } = getAdminServices()
@@ -223,7 +224,7 @@ export const handler = async (event) => {
     usageReserved = true
 
     const prompt = [
-      'You are a product copywriter for Nigerian small business sellers. Write one short, cool, attractive product description line for the following item. Keep it simple and natural, maximum 12 words. Use plain friendly English. Do not exaggerate, do not sound robotic, and do not make it long. Do not include the price. Do not use bullet points. Write only one flowing sentence fragment or sentence.',
+      'You are a product copywriter for Nigerian small business sellers and service providers. Write one short, cool, attractive product/service description line for the following item. Keep it simple and natural, maximum 12 words. Use plain friendly English. Do not exaggerate, do not sound robotic, and do not make it long. Do not include the price. Do not use bullet points. Write only one flowing sentence fragment or sentence.',
       '',
       `Product name: ${String(productName).trim()}`,
       category ? `Category: ${String(category).trim()}` : null,
@@ -232,32 +233,38 @@ export const handler = async (event) => {
       'Write only the description. No preamble, no label, no quotation marks.',
     ].filter(line => line !== null).join('\n')
 
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    const aiResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.NVIDIA_API_KEY}`,
       },
       body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
+        model: 'meta/llama-3.1-8b-instruct',
+        max_tokens: 40,
+        temperature: 0.5,
+        messages: [
+          { role: 'user', content: prompt }
         ],
-        generationConfig: {
-          maxOutputTokens: 40,
-          temperature: 0.5,
-        },
       }),
     })
 
-    const data = await geminiResponse.json()
+    if (!aiResponse.ok) {
+      // Read raw body first (may be HTML or plain text when errors occur)
+      const errorText = await aiResponse.text()
+      console.error('NVIDIA API Error Raw Body:', errorText)
 
-    if (!geminiResponse.ok) {
-      console.error('Gemini API error', data)
-      if (geminiResponse.status === 429) {
-        const retryMatch = data.error?.message?.match(/retry in ([\d.]+)s/i)
-        const retryAfter = retryMatch ? Math.ceil(Number(retryMatch[1])) : 15
+      if (aiResponse.status === 429) {
+        // Try to parse a retry window defensively from JSON error body, else default
+        let retryAfter = 15
+        try {
+          const parsed = JSON.parse(errorText)
+          const msg = parsed?.error?.message || parsed?.message || ''
+          const retryMatch = msg.match(/retry in ([\d.]+)s/i)
+          retryAfter = retryMatch ? Math.ceil(Number(retryMatch[1])) : 15
+        } catch (parseErr) {
+          // Non-JSON error body (HTML or text) — fall back to default retryAfter
+        }
 
         if (usageReserved && usageRef) {
           usageReserved = false
@@ -280,16 +287,42 @@ export const handler = async (event) => {
           retryAfter,
         })
       }
-      throw new Error('Gemini API request failed')
+
+      // Non-429 error — include short snippet for debugging in logs, but return specific provider error to frontend
+      let errorDetail = 'Unknown API error'
+      try {
+        const parsedError = JSON.parse(errorText)
+        errorDetail = parsedError.detail || parsedError.title || parsedError.error?.message || parsedError.message || errorText
+      } catch (e) {
+        errorDetail = String(errorText).substring(0, 100)
+      }
+
+      // Refund usage if we reserved it, since the request failed
+      if (usageReserved && usageRef) {
+        usageReserved = false
+        try {
+          await usageRef.set({
+            count: FieldValue.increment(-1),
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true })
+        } catch (refundErr) {
+          console.error('Failed to refund AI usage count', refundErr)
+        }
+      }
+
+      // Return the specific NVIDIA status code to the frontend instead of throwing a 500
+      return jsonResponse(aiResponse.status, {
+        error: `AI Provider Error: ${errorDetail}`,
+        isProviderError: true
+      })
     }
 
-    const description = data.candidates?.[0]?.content?.parts
-      ?.map(part => part.text || '')
-      .join('')
-      .trim()
+    // Only parse JSON when response is OK
+    const aiData = await aiResponse.json()
+    const description = aiData.choices?.[0]?.message?.content?.trim()
 
     if (!description) {
-      throw new Error('Gemini API returned no description')
+      throw new Error('NVIDIA API returned no description')
     }
 
     return jsonResponse(200, {

@@ -178,7 +178,7 @@ export default function OverviewTab({
             </a>
           </div>
         </div>
-        <p className="text-gray-400 text-xs mt-3">Share on WhatsApp status, Instagram bio, and more.</p>
+        <p className="text-gray-400 text-xs mt-3">Share on WhatsApp status, Instagram bio and many more.</p>
       </div>
 
 

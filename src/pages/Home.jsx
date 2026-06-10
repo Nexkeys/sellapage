@@ -290,7 +290,8 @@ export default function Home() {
               </div>
 
               <h1 className="font-display text-[2.6rem] sm:text-5xl lg:text-[3.35rem] font-extrabold leading-[1.08] tracking-tight text-gray-950 mb-6 max-w-xl">
-                Your store. Your rules.<br />
+                Your Business - Your rules
+                <br />
                 <span className="text-brand-600">Sell anything,</span><br />
                 from anywhere.
               </h1>

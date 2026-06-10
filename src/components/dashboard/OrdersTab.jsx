@@ -20,8 +20,11 @@ import {
   X,
   Search,
   Filter,
-  ArrowDownUp
+  ArrowDownUp,
+  Truck,
+  Download
 } from 'lucide-react'
+import { generateOrderReceipt } from '../../utils/generateReceipt'
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -162,7 +165,8 @@ function PaymentMethodLabel({ method }) {
 }
 
 export default function OrdersTab({
-  store: _store,
+  store,
+  user,
   whatsappNumber: _whatsappNumber,
   orders = [],
   ordersLoading = false,
@@ -181,11 +185,38 @@ export default function OrdersTab({
   const [confirmingDelete, setConfirmingDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+
+  // Shipbubble Shipment Booking States
+  const [bookingShipmentOrder, setBookingShipmentOrder] = useState(null)
+  const [shipbubbleRates, setShipbubbleRates] = useState([])
+  const [loadingRates, setLoadingRates] = useState(false)
+  const [bookingSubmitting, setBookingSubmitting] = useState(false)
+  const [bookingError, setBookingError] = useState('')
+  const [bookingSuccess, setBookingSuccess] = useState('')
+  const [selectedCourierId, setSelectedCourierId] = useState('')
+  const [packageWeight, setPackageWeight] = useState(1)
+
+  // Address Details states for editing in the modal
+  const [senderName, setSenderName] = useState('')
+  const [senderPhone, setSenderPhone] = useState('')
+  const [senderEmail, setSenderEmail] = useState('')
+  const [senderStreet, setSenderStreet] = useState('')
+  const [senderCity, setSenderCity] = useState('')
+  const [senderState, setSenderState] = useState('')
+
+  const [receiverName, setReceiverName] = useState('')
+  const [receiverPhone, setReceiverPhone] = useState('')
+  const [receiverEmail, setReceiverEmail] = useState('')
+  const [receiverStreet, setReceiverStreet] = useState('')
+  const [receiverCity, setReceiverCity] = useState('')
+  const [receiverState, setReceiverState] = useState('')
+  const [receiverLga, setReceiverLga] = useState('')
   
   // Filtering States
   const [filterSearch, setFilterSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPayment, setFilterPayment] = useState('all')
+  const [filterOrderType, setFilterOrderType] = useState('all')
   const [filterSort, setFilterSort] = useState('newest')
 
   const formRef = useRef(null)
@@ -323,6 +354,198 @@ export default function OrdersTab({
     }
   }
 
+  const handleDownloadReceipt = async (order) => {
+    try {
+      const blobUrl = await generateOrderReceipt(order, store)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `receipt_${order.paystackReference || order.id || 'order'}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error('Failed to generate receipt:', err)
+      alert('Failed to generate receipt. Please try again.')
+    }
+  }
+
+  const openShipbubbleModal = (order) => {
+    setBookingShipmentOrder(order)
+    setBookingError('')
+    setBookingSuccess('')
+    setShipbubbleRates([])
+    setSelectedCourierId('')
+    setPackageWeight(1)
+
+    // Pre-fill sender details
+    setSenderName(store?.businessName || '')
+    setSenderPhone(store?.whatsappNumber || '')
+    setSenderEmail(store?.email || '')
+    setSenderStreet(store?.pickupAddress?.streetAddress || '')
+    setSenderCity(store?.pickupAddress?.city || '')
+    setSenderState(store?.pickupAddress?.state || '')
+
+    // Pre-fill receiver details
+    setReceiverName(order.customerName || '')
+    setReceiverPhone(order.customerPhone || '')
+    setReceiverEmail(order.customerEmail || '')
+    setReceiverStreet(order.deliveryAddress?.address || order.deliveryAddress?.streetAddress || '')
+    setReceiverCity(order.deliveryAddress?.city || order.deliveryAddress?.lga || '')
+    setReceiverState(order.deliveryAddress?.state || '')
+    setReceiverLga(order.deliveryAddress?.lga || '')
+
+    // If pickup address exists, fetch rates immediately for default weight 1kg
+    if (store?.pickupAddress?.streetAddress && store?.pickupAddress?.state) {
+      triggerFetchRates(1, {
+        senderStreet: store.pickupAddress.streetAddress,
+        senderCity: store.pickupAddress.city,
+        senderState: store.pickupAddress.state,
+        receiverStreet: order.deliveryAddress?.address || order.deliveryAddress?.streetAddress || '',
+        receiverCity: order.deliveryAddress?.city || order.deliveryAddress?.lga || '',
+        receiverState: order.deliveryAddress?.state || '',
+        receiverLga: order.deliveryAddress?.lga || '',
+      })
+    } else {
+      setBookingError('Please configure your pickup address in the Delivery tab first.')
+    }
+  }
+
+  const triggerFetchRates = async (weightVal, detailsObj = {}) => {
+    const sStreet = detailsObj.senderStreet ?? senderStreet
+    const sCity = detailsObj.senderCity ?? senderCity
+    const sState = detailsObj.senderState ?? senderState
+    const rStreet = detailsObj.receiverStreet ?? receiverStreet
+    const rCity = detailsObj.receiverCity ?? receiverCity
+    const rState = detailsObj.receiverState ?? receiverState
+    const rLga = detailsObj.receiverLga ?? receiverLga
+
+    if (!store?.id) return
+    if (!sStreet || !sState) {
+      setBookingError('Vendor pickup address (street and state) is required to calculate rates.')
+      return
+    }
+    if (!rStreet || !rState) {
+      setBookingError('Receiver delivery address (street and state) is required to calculate rates.')
+      return
+    }
+
+    setLoadingRates(true)
+    setBookingError('')
+    try {
+      const res = await fetch('/.netlify/functions/shipbubble-rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: store.id,
+          deliveryState: rState,
+          deliveryLga: rLga || rCity,
+          deliveryAddress: {
+            streetAddress: rStreet,
+            city: rCity,
+          },
+          weight: Number(weightVal) || 1,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && Array.isArray(data.rates)) {
+        setShipbubbleRates(data.rates)
+        if (data.rates.length > 0) {
+          setSelectedCourierId(data.rates[0].courier_id || '')
+        }
+      } else {
+        setBookingError(data.error || 'Failed to fetch rates from Shipbubble.')
+      }
+    } catch (err) {
+      console.error(err)
+      setBookingError('Failed to fetch shipping rates. Please check your connection.')
+    } finally {
+      setLoadingRates(false)
+    }
+  }
+
+  const confirmBooking = async () => {
+    if (!bookingShipmentOrder || !store?.id) return
+    if (!selectedCourierId) {
+      setBookingError('Please select a courier to book shipment.')
+      return
+    }
+    if (!senderName || !senderPhone || !senderStreet || !senderCity || !senderState) {
+      setBookingError('Please complete all sender details.')
+      return
+    }
+    if (!receiverName || !receiverPhone || !receiverStreet || !receiverCity || !receiverState) {
+      setBookingError('Please complete all receiver details.')
+      return
+    }
+
+    setBookingSubmitting(true)
+    setBookingError('')
+    setBookingSuccess('')
+    try {
+      const token = await user?.getIdToken()
+      if (!token) {
+        setBookingError('Authentication expired. Please log in again.')
+        setBookingSubmitting(false)
+        return
+      }
+
+      const res = await fetch('/.netlify/functions/shipbubble-create-shipment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storeId: store.id,
+          orderId: bookingShipmentOrder.id,
+          courierId: selectedCourierId,
+          senderDetails: {
+            name: senderName,
+            phone: senderPhone,
+            email: senderEmail || store.email || '',
+            address: senderStreet,
+            city: senderCity,
+            state: senderState,
+            country: 'NG',
+          },
+          receiverDetails: {
+            name: receiverName,
+            phone: receiverPhone,
+            email: receiverEmail || '',
+            address: receiverStreet,
+            city: receiverCity,
+            state: receiverState,
+            country: 'NG',
+          },
+          packageDetails: {
+            weight: Number(packageWeight) || 1,
+            weight_unit: 'kg',
+          },
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.trackingId) {
+        setBookingSuccess(`Shipment booked successfully! Tracking ID: ${data.trackingId}`)
+        // Update Firestore & Local state
+        await onUpdateOrder?.(bookingShipmentOrder.id, {
+          shipbubbleTrackingId: data.trackingId,
+          shipbubbleStatus: 'created',
+        })
+        setTimeout(() => {
+          setBookingShipmentOrder(null)
+        }, 2000)
+      } else {
+        setBookingError(data.error || 'Failed to book shipment.')
+      }
+    } catch (err) {
+      console.error(err)
+      setBookingError('Failed to book shipment. Please try again.')
+    } finally {
+      setBookingSubmitting(false)
+    }
+  }
+
   // --- Filtering Engine ---
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
@@ -342,14 +565,20 @@ export default function OrdersTab({
       if (filterPayment !== 'all' && normalizePaymentStatus(order.paymentStatus) !== filterPayment) {
         return false
       }
+      // 4. Order Type
+      if (filterOrderType !== 'all') {
+        const isService = order.orderType === 'service'
+        if (filterOrderType === 'products' && isService) return false
+        if (filterOrderType === 'service_bookings' && !isService) return false
+      }
       return true
     }).sort((a, b) => {
-      // 4. Date Sorting
+      // 5. Date Sorting
       const dateA = typeof a.createdAt?.toDate === 'function' ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime()
       const dateB = typeof b.createdAt?.toDate === 'function' ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime()
       return filterSort === 'oldest' ? dateA - dateB : dateB - dateA
     })
-  }, [orders, filterSearch, filterStatus, filterPayment, filterSort])
+  }, [orders, filterSearch, filterStatus, filterPayment, filterOrderType, filterSort])
 
 
   if (!isGrowthOrPro) {
@@ -388,13 +617,13 @@ export default function OrdersTab({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.2em] text-green-600">
-            Manual bookkeeping
+            Orders & Bookings
           </p>
           <h1 className="text-2xl font-extrabold tracking-tight text-gray-950 sm:text-[1.7rem]">
             Order Ledger
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-gray-500">
-            Log WhatsApp checkout orders, track payments, and move fulfillment statuses as work happens.
+            Track product orders and service bookings in one place. WhatsApp orders can be logged manually.
           </p>
         </div>
         <button
@@ -408,7 +637,7 @@ export default function OrdersTab({
       </div>
 
       {/* Operational Filter Strip */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-5 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={16} className="text-gray-400" />
@@ -444,6 +673,18 @@ export default function OrdersTab({
             {PAYMENT_STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
+          </select>
+          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
+        <div className="relative">
+          <select
+            value={filterOrderType}
+            onChange={(e) => setFilterOrderType(e.target.value)}
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+          >
+            <option value="all">All Orders</option>
+            <option value="products">Products</option>
+            <option value="service_bookings">Service Bookings</option>
           </select>
           <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
@@ -679,6 +920,7 @@ export default function OrdersTab({
               setFilterSearch('');
               setFilterStatus('all');
               setFilterPayment('all');
+              setFilterOrderType('all');
               setFilterSort('newest');
             }} 
             className="mt-4 text-xs font-bold text-green-600 hover:text-green-700 underline underline-offset-2"
@@ -715,21 +957,45 @@ export default function OrdersTab({
                         </div>
                       </td>
                       <td className="border-r border-gray-100 px-4 py-4 align-top">
-                        <p className="text-sm font-extrabold leading-tight text-gray-950">
-                          {order.customerName || '-'}
-                        </p>
-                        <p className="mt-1 text-xs font-medium text-gray-400">
-                          {order.customerPhone || 'No phone'}
-                        </p>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm font-extrabold leading-tight text-gray-950">
+                            {order.customerName || '-'}
+                          </p>
+                          {order.orderType && (
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${order.orderType === 'service' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                              {order.orderType === 'service' ? 'Booking' : 'Order'}
+                            </span>
+                          )}
+                          <p className="text-xs font-medium text-gray-400">
+                            {order.customerPhone || 'No phone'}
+                          </p>
+                          {order.shipbubbleTrackingId && (
+                            <div className="mt-1.5 flex flex-col gap-0.5">
+                              <span className="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-700 border border-indigo-100 w-fit">
+                                Tracking: {order.shipbubbleTrackingId}
+                              </span>
+                              <span className="text-[9px] text-indigo-500 italic">
+                                Status: {order.shipbubbleStatus || 'created'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="border-r border-gray-100 px-4 py-4 align-top">
-                        <p className="max-w-[260px] whitespace-pre-line text-sm leading-relaxed text-gray-700">
-                          {order.items || '-'}
-                        </p>
+                        <div className="flex flex-col gap-1">
+                          <p className="max-w-[260px] whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                            {order.orderType === 'service' ? (order.serviceName || order.items || '-') : (order.items || '-')}
+                          </p>
+                          {order.orderType === 'service' && order.bookingDate && order.bookingTime && (
+                            <p className="text-xs font-semibold text-gray-500">
+                              Scheduled: {order.bookingDate} at {order.bookingTime}
+                            </p>
+                          )}
+                        </div>
                       </td>
                       <td className="border-r border-gray-100 px-4 py-4 align-top">
                         <span className="whitespace-nowrap text-sm font-extrabold text-green-700">
-                          {formatTotal(order.total)}
+                          {formatTotal(order.orderType === 'service' ? (order.servicePrice ?? order.total) : order.total)}
                         </span>
                       </td>
                       <td className="border-r border-gray-100 px-4 py-4 align-top">
@@ -753,6 +1019,28 @@ export default function OrdersTab({
                       </td>
                       <td className="px-4 py-4 align-top">
                         <div className="flex justify-end gap-1">
+                          {order.orderType === 'checkout' && !order.shipbubbleTrackingId && (
+                            <button
+                              type="button"
+                              onClick={() => openShipbubbleModal(order)}
+                              className="inline-flex items-center justify-center rounded-xl p-2 text-gray-300 opacity-0 transition-all duration-200 hover:bg-green-50 hover:text-green-600 group-hover:opacity-100 focus:opacity-100"
+                              title="Book Shipment"
+                              aria-label="Book Shipment"
+                            >
+                              <Truck size={15} />
+                            </button>
+                          )}
+                          {order.orderType === 'checkout' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadReceipt(order)}
+                              className="inline-flex items-center justify-center rounded-xl p-2 text-gray-300 opacity-0 transition-all duration-200 hover:bg-amber-50 hover:text-amber-600 group-hover:opacity-100 focus:opacity-100"
+                              title="Download Receipt"
+                              aria-label="Download Receipt"
+                            >
+                              <Download size={15} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => startEdit(order)}
@@ -783,12 +1071,29 @@ export default function OrdersTab({
               <article key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-extrabold leading-tight text-gray-950">
-                      {order.customerName || 'Unknown customer'}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-base font-extrabold leading-tight text-gray-950">
+                        {order.customerName || 'Unknown customer'}
+                      </p>
+                      {order.orderType && (
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${order.orderType === 'service' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                          {order.orderType === 'service' ? 'Booking' : 'Order'}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 truncate text-xs font-medium text-gray-400">
                       {order.customerPhone || 'No phone'}
                     </p>
+                    {order.shipbubbleTrackingId && (
+                      <div className="mt-1.5 flex flex-col gap-0.5">
+                        <span className="inline-flex items-center rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 border border-indigo-100 w-fit">
+                          Tracking: {order.shipbubbleTrackingId}
+                        </span>
+                        <span className="text-[10px] text-indigo-500 italic">
+                          Status: {order.shipbubbleStatus || 'created'}
+                        </span>
+                      </div>
+                    )}
                     <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
                       <Calendar size={12} className="flex-shrink-0" />
                       {formatOrderDate(order.createdAt)}
@@ -803,11 +1108,16 @@ export default function OrdersTab({
                 <div className="mb-3 rounded-xl border border-gray-100/80 bg-gray-50/50 p-3">
                   <p className="mb-1.5 flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
                     <FileText size={11} />
-                    Items
+                    {order.orderType === 'service' ? 'Service' : 'Items'}
                   </p>
                   <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
-                    {order.items || '-'}
+                    {order.orderType === 'service' ? (order.serviceName || order.items || '-') : (order.items || '-')}
                   </p>
+                  {order.orderType === 'service' && order.bookingDate && order.bookingTime && (
+                    <p className="mt-1 text-xs font-semibold text-gray-500">
+                      Scheduled: {order.bookingDate} at {order.bookingTime}
+                    </p>
+                  )}
                 </div>
 
                 <div className="mb-3 grid grid-cols-2 gap-3">
@@ -816,7 +1126,7 @@ export default function OrdersTab({
                       Total
                     </p>
                     <p className="text-sm font-extrabold text-green-700">
-                      {formatTotal(order.total)}
+                      {formatTotal(order.orderType === 'service' ? (order.servicePrice ?? order.total) : order.total)}
                     </p>
                   </div>
                   <div className="rounded-xl border border-gray-100/80 bg-gray-50/50 p-3">
@@ -842,6 +1152,26 @@ export default function OrdersTab({
                 )}
 
                 <div className="flex items-center justify-end gap-2 border-t border-gray-50 pt-3">
+                  {order.orderType === 'checkout' && !order.shipbubbleTrackingId && (
+                    <button
+                      type="button"
+                      onClick={() => openShipbubbleModal(order)}
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold text-green-600 transition-all duration-200 hover:bg-green-50"
+                    >
+                      <Truck size={14} />
+                      Shipment
+                    </button>
+                  )}
+                  {order.orderType === 'checkout' && (
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadReceipt(order)}
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold text-amber-600 transition-all duration-200 hover:bg-amber-50"
+                    >
+                      <Download size={14} />
+                      Receipt
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => startEdit(order)}
@@ -868,7 +1198,7 @@ export default function OrdersTab({
       <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
         <Info size={15} className="mt-0.5 flex-shrink-0 text-blue-500" />
         <p className="text-sm leading-relaxed text-blue-700">
-          Orders are logged manually. When a checkout reaches your WhatsApp, record the order here and keep payment and fulfillment tracking up to date.
+          Track product orders and service bookings in one place. WhatsApp orders can be logged manually. Service bookings appear here automatically when customers book through your store.
         </p>
       </div>
 
@@ -939,6 +1269,283 @@ export default function OrdersTab({
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bookingShipmentOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-extrabold text-gray-950 flex items-center gap-2">
+                  <Truck className="text-green-600" size={20} />
+                  Book Shipment
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Prepare shipment details and calculate rates with Shipbubble
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBookingShipmentOrder(null)}
+                className="rounded-xl p-2 text-gray-400 transition-all duration-200 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close booking modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 text-sm text-stone-750">
+              {bookingError && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+                  <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
+                  {bookingError}
+                </div>
+              )}
+
+              {bookingSuccess && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700">
+                  <Check size={15} className="mt-0.5 flex-shrink-0" />
+                  {bookingSuccess}
+                </div>
+              )}
+
+              {/* Sender Details */}
+              <div className="space-y-3">
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-400 flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+                  <User size={13} />
+                  Sender Details (Pickup Address)
+                </h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={senderName}
+                      onChange={(e) => setSenderName(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Phone</label>
+                    <input
+                      type="text"
+                      value={senderPhone}
+                      onChange={(e) => setSenderPhone(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Street Address</label>
+                    <input
+                      type="text"
+                      value={senderStreet}
+                      onChange={(e) => setSenderStreet(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">City</label>
+                    <input
+                      type="text"
+                      value={senderCity}
+                      onChange={(e) => setSenderCity(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">State</label>
+                    <input
+                      type="text"
+                      value={senderState}
+                      onChange={(e) => setSenderState(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Receiver Details */}
+              <div className="space-y-3">
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-400 flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+                  <ShoppingBag size={13} />
+                  Receiver Details (Delivery Address)
+                </h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={receiverName}
+                      onChange={(e) => setReceiverName(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Phone</label>
+                    <input
+                      type="text"
+                      value={receiverPhone}
+                      onChange={(e) => setReceiverPhone(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Street Address</label>
+                    <input
+                      type="text"
+                      value={receiverStreet}
+                      onChange={(e) => setReceiverStreet(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">City / LGA</label>
+                    <input
+                      type="text"
+                      value={receiverCity}
+                      onChange={(e) => {
+                        setReceiverCity(e.target.value)
+                        setReceiverLga(e.target.value)
+                      }}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">State</label>
+                    <input
+                      type="text"
+                      value={receiverState}
+                      onChange={(e) => setReceiverState(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Package Details & Courier List */}
+              <div className="space-y-3">
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-400 flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+                  <Package size={13} />
+                  Package & Courier Rates
+                </h3>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Package Weight (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={packageWeight}
+                      onChange={(e) => {
+                        const val = Number(e.target.value)
+                        setPackageWeight(e.target.value)
+                        if (val > 0) {
+                          triggerFetchRates(val)
+                        }
+                      }}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => triggerFetchRates(packageWeight)}
+                    disabled={loadingRates}
+                    className="rounded-xl border border-green-500 text-green-600 px-5 py-2.5 text-xs font-extrabold transition-all hover:bg-green-50 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {loadingRates && <Loader2 size={13} className="animate-spin" />}
+                    Recalculate Rates
+                  </button>
+                </div>
+
+                {/* Rates List */}
+                <div className="space-y-2 mt-3">
+                  <label className="block text-xs font-semibold text-gray-600">Select Courier Rate</label>
+                  
+                  {loadingRates ? (
+                    <div className="flex flex-col items-center justify-center py-8 border border-gray-150 rounded-xl bg-gray-50/50">
+                      <Loader2 size={24} className="animate-spin text-green-600" />
+                      <p className="text-xs text-gray-400 mt-2 font-medium">Fetching courier rates...</p>
+                    </div>
+                  ) : shipbubbleRates.length === 0 ? (
+                    <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 font-medium bg-gray-50/20">
+                      No rates retrieved. Enter valid sender/receiver details and click Recalculate Rates.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                      {shipbubbleRates.map((rate) => (
+                        <label
+                          key={rate.courier_id}
+                          className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition-all ${
+                            selectedCourierId === rate.courier_id
+                              ? 'border-green-500 bg-green-50/30 shadow-sm'
+                              : 'border-gray-200 hover:border-green-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name="courier_choice"
+                              value={rate.courier_id}
+                              checked={selectedCourierId === rate.courier_id}
+                              onChange={() => setSelectedCourierId(rate.courier_id)}
+                              className="text-green-600 focus:ring-green-500 h-4 w-4 border-gray-300"
+                            />
+                            <div>
+                              <p className="font-extrabold text-gray-900 text-xs sm:text-sm">
+                                {rate.courier_name}
+                              </p>
+                              <p className="text-[10px] text-gray-400 font-medium">
+                                Estimated Delivery: {rate.delivery_eta || '—'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-black text-green-700">
+                              ₦{Number(rate.total_shipping_fee || 0).toLocaleString()}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-100 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setBookingShipmentOrder(null)}
+                disabled={bookingSubmitting}
+                className="rounded-xl border border-gray-200 px-5 py-2.5 text-xs font-extrabold text-gray-600 transition-all hover:bg-white disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmBooking}
+                disabled={bookingSubmitting || !selectedCourierId || loadingRates}
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-green-700 disabled:bg-green-400 disabled:shadow-none"
+              >
+                {bookingSubmitting ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Booking Shipment...
+                  </>
+                ) : (
+                  <>
+                    <Check size={13} />
+                    Confirm & Book Shipment
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

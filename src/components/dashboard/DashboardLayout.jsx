@@ -23,6 +23,7 @@ import {
   Wallet,
   CreditCard,
   Sparkles,
+  Truck,
 } from "lucide-react";
 import { logoutSeller } from "../../firebase/auth";
 
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { id: "services", label: "Services", icon: Sparkles },
   { id: "categories", label: "Categories", icon: Tag },
   { id: "orders", label: "Orders", icon: ShoppingCart },
+  { id: "delivery", label: "Delivery", icon: Truck },
   { id: "customers", label: "Customers", icon: Users },
   { id: "leads", label: "Leads", icon: Users },
   { type: "group", label: "Grow" },
@@ -111,6 +113,7 @@ export default function DashboardLayout({
     () =>
       ALL_TABS.filter((item) => {
         if (item.id === "orders" && !isGrowthOrPro) return false;
+        if (item.id === "delivery" && !isGrowthOrPro) return false;
         if (item.id === "products" && vendorType === "services") return false;
         if (item.id === "services" && vendorType === "products") return false;
         return true;
@@ -185,6 +188,7 @@ export default function DashboardLayout({
           }
           const { id, label, icon: Icon } = item;
           if (id === "orders" && !isGrowthOrPro) return null;
+          if (id === "delivery" && !isGrowthOrPro) return null;
           if (id === "products" && vendorType === "services") return null;
           if (id === "services" && vendorType === "products") return null;
           const active = activeTab === id;
