@@ -9,5 +9,11 @@
       "source": "/((?!api/|assets/|.*\\..*).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/[...route].js": {
+      "memory": 1024,
+      "maxDuration": 15
+    }
+  }
 }
