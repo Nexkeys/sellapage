@@ -86,7 +86,21 @@ export default function Login() {
     setLoading(true)
     try {
       if (mode === 'login') {
-        await loginSeller(form.email, form.password)
+        const credential = await loginSeller(form.email, form.password)
+        const token = await credential.user.getIdToken()
+
+        try {
+          await fetch('/.netlify/functions/notify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ type: 'login_alert' }),
+          })
+        } catch (err) {
+          console.error('Error sending login alert notification:', err)
+        }
       } else {
         // 4. Fetch tracking code from cache right at submission (fallback to null if organic signup)
         const savedRefCode = localStorage.getItem('vendor_referral_code') || null

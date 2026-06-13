@@ -23,6 +23,8 @@ export default function ProductCard({
   themeCardStyle = {},
   buttonStyle = "",
   structuralClasses = "rounded-2xl border border-stone-100",
+  avgRating = 0,
+  reviewCount = 0,
 }) {
   const [activeImg, setActiveImg] = useState(0);
   const [popupIndex, setPopupIndex] = useState(null);
@@ -198,6 +200,13 @@ export default function ProductCard({
                   {product.description}
                 </p>
               )}
+              {reviewCount > 0 && (
+                <div className="flex items-center gap-1 mt-2 text-xs">
+                  <span className="text-amber-400">★</span>
+                  <span className="font-bold text-gray-800">{Number(avgRating).toFixed(1)}</span>
+                  <span className="text-gray-400">({reviewCount})</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between gap-2 mt-2">
               <span className="text-green-600 font-extrabold text-base leading-none flex-shrink-0">
@@ -246,6 +255,13 @@ export default function ProductCard({
             <p className="min-h-[1rem] text-stone-400 text-[11px] sm:text-xs line-clamp-1 leading-snug">
               {product.description || ""}
             </p>
+            {reviewCount > 0 && (
+              <div className="flex items-center gap-1 mt-2 text-xs">
+                <span className="text-amber-400">★</span>
+                <span className="font-bold text-gray-800">{Number(avgRating).toFixed(1)}</span>
+                <span className="text-gray-400">({reviewCount})</span>
+              </div>
+            )}
 
             {/* Price */}
             <span className="text-green-600 font-extrabold text-lg leading-none mt-auto">
@@ -356,6 +372,13 @@ export default function ProductCard({
             <p className="text-white/80 text-sm font-semibold drop-shadow text-center">
               {product.name}
             </p>
+            {reviewCount > 0 && (
+              <div className="mt-1 flex items-center gap-1 text-xs text-white/90">
+                <span className="text-amber-300">★</span>
+                <span className="font-bold">{Number(avgRating).toFixed(1)}</span>
+                <span className="opacity-80">({reviewCount})</span>
+              </div>
+            )}
             {hideWhatsAppOrder ? (
               <button
                 onClick={(e) => {

@@ -4,9 +4,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendPasswordResetEmail,
   deleteUser,
-} from 'firebase/auth'
+} from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from './config'
 
@@ -35,6 +34,21 @@ export const registerSeller = async (email, password, storeData) => {
     createdAt: new Date(),
   })
 
+  // Send welcome notification
+  try {
+    const token = await user.getIdToken()
+    await fetch('/.netlify/functions/notify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ type: 'welcome' }),
+    })
+  } catch (err) {
+    console.error('Error sending welcome notification:', err)
+  }
+
   return user
 }
 
@@ -47,8 +61,21 @@ export const logoutSeller = async () => {
 }
 
 export const resetPassword = async (email) => {
-  return await sendPasswordResetEmail(auth, email)
-}
+  const res = await fetch('/.netlify/functions/reset-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to send reset email');
+  }
+
+  return true;
+};
 
 export const getSellerStore = async (uid) => {
   const snap = await getDoc(doc(db, 'stores', uid))

@@ -819,6 +819,8 @@ export default function ServiceStorePage() {
                           service={service}
                           isHighlighted={highlightedService === service.id}
                           onOrder={handleServiceClick}
+                          avgRating={service.avgRating || 0}
+                          reviewCount={service.reviewCount || 0}
                           onBook={openBookingModal}
                           listView={storeLayout === "list"}
                           themeCardStyle={{

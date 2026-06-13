@@ -86,6 +86,7 @@ export default function DashboardLayout({
   setSidebarOpen,
   storeUrl,
   isGrowthOrPro = false,
+  isPro = false,
   vendorType = "products",
   children,
 }) {
@@ -101,10 +102,10 @@ export default function DashboardLayout({
   const planStatus = store?.planStatus || "active";
   const badge = PLAN_BADGE[plan] ?? null;
   const isGrace = planStatus === "grace";
-  const isPro = store?.hasProFeatures ?? plan === "pro";
+  const effectiveIsPro = isPro || (store?.hasProFeatures ?? (plan === "pro" || plan === "premium"));
   const isGrowth =
     (store?.hasGrowthFeatures ?? (plan === "growth" || plan === "pro")) &&
-    !isPro;
+    !effectiveIsPro;
   const mainContentRef = useRef(null);
   const sidebarNavRef = useRef(null);
   const sidebarScrollTopRef = useRef(0);
@@ -116,9 +117,13 @@ export default function DashboardLayout({
         if (item.id === "delivery" && !isGrowthOrPro) return false;
         if (item.id === "products" && vendorType === "services") return false;
         if (item.id === "services" && vendorType === "products") return false;
+        if (item.id === "payouts" && !effectiveIsPro) return false;
+        if (item.id === "customers" && !effectiveIsPro) return false;
+        if (item.id === "reviews" && !effectiveIsPro) return false;
+        if (item.id === "discounts" && !effectiveIsPro) return false;
         return true;
       }),
-    [isGrowthOrPro, vendorType],
+    [isGrowthOrPro, vendorType, effectiveIsPro],
   );
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -191,6 +196,10 @@ export default function DashboardLayout({
           if (id === "delivery" && !isGrowthOrPro) return null;
           if (id === "products" && vendorType === "services") return null;
           if (id === "services" && vendorType === "products") return null;
+          if (id === "payouts" && !effectiveIsPro) return null;
+          if (id === "customers" && !effectiveIsPro) return null;
+          if (id === "reviews" && !effectiveIsPro) return null;
+          if (id === "discounts" && !effectiveIsPro) return null;
           const active = activeTab === id;
           return (
             <button
@@ -210,7 +219,7 @@ export default function DashboardLayout({
       </nav>
 
       {/* Upgrade Banner — hidden for Pro */}
-      {!isPro && (
+      {!effectiveIsPro && (
         <div className="mx-3 mb-3 p-4 rounded-2xl bg-gradient-to-br from-green-600/30 to-green-700/20 border border-green-500/20 shadow-lg shadow-black/10">
           <div className="flex items-center gap-2 mb-1">
             <Star size={14} className="text-yellow-400" />

@@ -45,6 +45,13 @@ const calcSubtotal = (items) =>
 const calcProcessingFee = (subtotal) =>
   Math.min(Math.ceil(subtotal * 0.015) + 100, 2000);
 
+const calcDiscountAmount = (subtotal, appliedDiscount) => {
+  if (!appliedDiscount) return 0;
+  return appliedDiscount.type === "percentage"
+    ? Math.floor((subtotal * Number(appliedDiscount.value)) / 100)
+    : Math.min(Number(appliedDiscount.value), subtotal);
+};
+
 const getInitials = (name = "") => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "?";
@@ -228,11 +235,20 @@ function StoreCheckoutModal({
   onPay,
   onDownloadReceipt,
   receiptDownloading,
+  promoCode,
+  setPromoCode,
+  appliedDiscount,
+  setAppliedDiscount,
+  promoLoading,
+  setPromoLoading,
+  promoError,
+  setPromoError,
 }) {
   const subtotal = calcSubtotal(cart);
   const deliveryFee = selectedZone ? Number(selectedZone.price) : 0;
   const processingFee = calcProcessingFee(subtotal);
-  const grandTotal = subtotal + deliveryFee + processingFee;
+  const discountAmount = calcDiscountAmount(subtotal, appliedDiscount);
+  const grandTotal = subtotal + deliveryFee + processingFee - discountAmount;
   const deliveryZones = store?.deliveryZones || [];
 
   const steps = [
@@ -267,6 +283,39 @@ function StoreCheckoutModal({
   const handleContinueDelivery = () => {
     if (!selectedZone || !form.deliveryAddress.trim()) return;
     setStep("payment");
+  };
+
+  const handleApplyPromo = async () => {
+    const normalizedCode = promoCode.trim().toUpperCase();
+    if (!normalizedCode || !store?.id) return;
+
+    setPromoLoading(true);
+    setPromoError("");
+
+    try {
+      const res = await fetch("/.netlify/functions/validate-discount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: store.id,
+          code: normalizedCode,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setPromoError(data.error || "Could not apply promo code.");
+        return;
+      }
+
+      setAppliedDiscount(data);
+      setPromoCode(data.code);
+    } catch {
+      setPromoError("Could not apply promo code.");
+    } finally {
+      setPromoLoading(false);
+    }
   };
 
   return (
@@ -448,6 +497,65 @@ function StoreCheckoutModal({
                     />
                   </div>
 
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                      Promo Code (optional)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(
+                            e.target.value
+                              .toUpperCase()
+                              .replace(/[^A-Z0-9]/g, ""),
+                          );
+                          setPromoError("");
+                        }}
+                        placeholder="SAVE10"
+                        className="flex-1 px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        disabled={promoLoading || !promoCode.trim()}
+                        className="px-4 py-3 rounded-xl bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold transition-all"
+                      >
+                        {promoLoading ? "Applying..." : "Apply"}
+                      </button>
+                    </div>
+
+                    {appliedDiscount && (
+                      <div className="mt-2 flex items-center justify-between gap-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2 text-sm text-green-700">
+                        <span>
+                          {appliedDiscount.code} applied —{" "}
+                          {appliedDiscount.type === "percentage"
+                            ? `${Number(appliedDiscount.value)}% off`
+                            : `₦${Number(appliedDiscount.value).toLocaleString()} off`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAppliedDiscount(null);
+                            setPromoCode("");
+                            setPromoError("");
+                          }}
+                          className="p-1 rounded-md hover:bg-green-100"
+                          aria-label="Remove promo code"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+
+                    {promoError && (
+                      <p className="mt-2 text-red-500 text-sm bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                        {promoError}
+                      </p>
+                    )}
+                  </div>
+
                   {loadingRates && (
                     <p className="text-xs text-gray-400 flex items-center gap-2">
                       <Loader2 size={12} className="animate-spin" />
@@ -483,6 +591,12 @@ function StoreCheckoutModal({
                     {selectedZone ? `₦${deliveryFee.toLocaleString()}` : "—"}
                   </span>
                 </div>
+                {appliedDiscount && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount ({appliedDiscount.code})</span>
+                    <span>−₦{discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Processing fee</span>
                   <span>₦{processingFee.toLocaleString()}</span>
@@ -520,6 +634,12 @@ function StoreCheckoutModal({
                   <span className="text-gray-500">Delivery fee</span>
                   <span>₦{deliveryFee.toLocaleString()}</span>
                 </div>
+                {appliedDiscount && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount ({appliedDiscount.code})</span>
+                    <span>−₦{discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Processing fee</span>
                   <span>₦{processingFee.toLocaleString()}</span>
@@ -621,6 +741,10 @@ export default function StorePage() {
   const [checkoutProcessing, setCheckoutProcessing] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
   const [receiptDownloading, setReceiptDownloading] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
 
   const allProdsRef = useRef(null);
   const viewCountedRef = useRef(false);
@@ -899,7 +1023,8 @@ export default function StorePage() {
     const subtotal = calcSubtotal(cart);
     const processingFee = calcProcessingFee(subtotal);
     const deliveryFee = Number(selectedZone.price);
-    const grandTotal = subtotal + deliveryFee + processingFee;
+    const discountAmount = calcDiscountAmount(subtotal, appliedDiscount);
+    const grandTotal = subtotal + deliveryFee + processingFee - discountAmount;
 
     try {
       const res = await fetch("/.netlify/functions/checkout-initialize", {
@@ -918,6 +1043,8 @@ export default function StorePage() {
             address: checkoutForm.deliveryAddress.trim(),
           },
           notes: checkoutForm.notes.trim(),
+          promoCode: appliedDiscount?.code || "",
+          discountAmount: discountAmount || 0,
         }),
       });
 
@@ -939,6 +1066,8 @@ export default function StorePage() {
         cartItems: cart,
         deliveryFee,
         processingFee,
+        discountAmount,
+        promoCode: appliedDiscount?.code || "",
         grandTotal,
         createdAt: new Date().toISOString(),
       };
@@ -978,6 +1107,10 @@ export default function StorePage() {
 
   const handleCloseCheckout = () => {
     setCheckoutOpen(false);
+    setPromoCode("");
+    setAppliedDiscount(null);
+    setPromoError("");
+    setPromoLoading(false);
     if (checkoutStep === "success") {
       setCart([]);
       setCheckoutForm(EMPTY_CHECKOUT_FORM);
@@ -1256,6 +1389,8 @@ export default function StorePage() {
                           product={product}
                           whatsappNumber={store.whatsappNumber}
                           storeUrl={storeUrl}
+                          avgRating={product.avgRating || 0}
+                          reviewCount={product.reviewCount || 0}
                           isHighlighted={highlightedProduct === product.id}
                           onOrder={handleProductClick}
                           listView={storeLayout === "list"}
@@ -1347,6 +1482,14 @@ export default function StorePage() {
           checkoutError={checkoutError}
           checkoutProcessing={checkoutProcessing}
           completedOrder={completedOrder}
+          promoCode={promoCode}
+          setPromoCode={setPromoCode}
+          appliedDiscount={appliedDiscount}
+          setAppliedDiscount={setAppliedDiscount}
+          promoLoading={promoLoading}
+          setPromoLoading={setPromoLoading}
+          promoError={promoError}
+          setPromoError={setPromoError}
           onClose={handleCloseCheckout}
           onPay={handleCheckoutPay}
           onDownloadReceipt={handleDownloadReceipt}

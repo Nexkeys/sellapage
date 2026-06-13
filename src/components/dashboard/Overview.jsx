@@ -36,6 +36,7 @@ export default function OverviewTab({
     starter: { text: 'Free Plan',    cls: 'bg-gray-100 text-gray-600' },
     growth:  { text: 'Growth Plan',  cls: 'bg-blue-100 text-blue-700' },
     pro:     { text: 'Pro Plan ✦',   cls: 'bg-yellow-100 text-yellow-700' },
+    premium: { text: 'Premium Plan ✦', cls: 'bg-orange-100 text-orange-700' },
   }
   const planLabel = PLAN_LABEL[plan] || PLAN_LABEL.starter
 

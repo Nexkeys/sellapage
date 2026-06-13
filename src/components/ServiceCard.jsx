@@ -19,6 +19,8 @@ export default function ServiceCard({
   themeCardStyle = {},
   buttonStyle = '',
   structuralClasses = 'rounded-2xl border border-stone-100',
+  avgRating = 0,
+  reviewCount = 0,
 }) {
   const [activeImg, setActiveImg] = useState(0)
   const [popupIndex, setPopupIndex] = useState(null)
@@ -114,6 +116,13 @@ export default function ServiceCard({
                   {service.description}
                 </p>
               )}
+              {reviewCount > 0 && (
+                <div className="flex items-center gap-1 mt-2 text-xs">
+                  <span className="text-amber-400">★</span>
+                  <span className="font-bold text-gray-800">{Number(avgRating).toFixed(1)}</span>
+                  <span className="text-gray-400">({reviewCount})</span>
+                </div>
+              )}
               <div className="flex flex-wrap gap-1 mt-2">
                 {service.duration && (
                   <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
@@ -155,6 +164,13 @@ export default function ServiceCard({
             <p className="min-h-[1rem] text-stone-400 text-[11px] sm:text-xs line-clamp-1 leading-snug">
               {service.description || ''}
             </p>
+            {reviewCount > 0 && (
+              <div className="flex items-center gap-1 mt-2 text-xs">
+                <span className="text-amber-400">★</span>
+                <span className="font-bold text-gray-800">{Number(avgRating).toFixed(1)}</span>
+                <span className="text-gray-400">({reviewCount})</span>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-1">
               {service.duration && (
@@ -211,6 +227,13 @@ export default function ServiceCard({
             <p className="text-white/80 text-sm font-semibold drop-shadow text-center">
               {service.name}
             </p>
+            {reviewCount > 0 && (
+              <div className="mt-1 flex items-center gap-1 text-xs text-white/90">
+                <span className="text-amber-300">★</span>
+                <span className="font-bold">{Number(avgRating).toFixed(1)}</span>
+                <span className="opacity-80">({reviewCount})</span>
+              </div>
+            )}
             <button
               onClick={e => {
                 e.stopPropagation()

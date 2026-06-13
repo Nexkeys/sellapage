@@ -102,7 +102,12 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
       setShowChangeForm(false)
 
       if (onSubaccountCreated && data.subaccountCode) {
-        onSubaccountCreated(data.subaccountCode)
+        const selectedBank = NIGERIAN_BANKS.find(b => b.code === bankForm.bankCode)?.name || ''
+        onSubaccountCreated({
+          subaccountCode: data.subaccountCode,
+          payoutBankName: data.payoutBankName || selectedBank,
+          payoutAccountNumberMasked: data.payoutAccountNumberMasked || maskAccountNumber(bankForm.accountNumber),
+        })
       }
     } catch (err) {
       setBankError(err.message)

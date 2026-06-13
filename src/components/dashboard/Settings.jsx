@@ -20,44 +20,44 @@ const getInitials = (name = '') => {
 
 const PLAN_INFO = {
   free: {
-    label:        'Starter (Free)',
-    products:     '15 listings',
-    images:       '3 images / listing',
-    features:     ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
+    label: 'Starter (Free)',
+    products: '15 listings',
+    images: '3 images / listing',
+    features: ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
     upgradeLabel: 'Upgrade to Growth - ₦5,000/mo',
-    upgradePlan:  'growth',
+    upgradePlan: 'growth',
   },
   starter: {
-    label:        'Starter (Free)',
-    products:     '15 listings',
-    images:       '3 images / listing',
-    features:     ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
+    label: 'Starter (Free)',
+    products: '15 listings',
+    images: '3 images / listing',
+    features: ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
     upgradeLabel: 'Upgrade to Growth - ₦5,000/mo',
-    upgradePlan:  'growth',
+    upgradePlan: 'growth',
   },
   growth: {
-    label:        'Growth',
-    products:     '50 listings',
-    images:       '10 images / listing',
-    features:     ['Everything in Starter', 'Logo and brand colours', 'Analytics and click tracking', 'Offer visibility toggle', 'Priority WhatsApp support'],
+    label: 'Growth',
+    products: '50 listings',
+    images: '10 images / listing',
+    features: ['Everything in Starter', 'Logo and brand colours', 'Analytics and click tracking', 'Offer visibility toggle', 'Priority WhatsApp support'],
     upgradeLabel: 'Upgrade to Pro - ₦12,000/mo',
-    upgradePlan:  'pro',
+    upgradePlan: 'pro',
   },
   pro: {
-    label:        'Pro',
-    products:     'Unlimited listings',
-    images:       '50 images / listing',
-    features:     ['Everything in Growth', 'Hot leads list', 'Top performing offers', 'Better commerce insights', 'Pro badge', 'Early access features'],
+    label: 'Pro',
+    products: 'Unlimited listings',
+    images: '50 images / listing',
+    features: ['Everything in Growth', 'Hot leads list', 'Top performing offers', 'Better commerce insights', 'Pro badge', 'Early access features'],
     upgradeLabel: null,
-    upgradePlan:  null,
+    upgradePlan: null,
   },
   premium: {
-    label:        'Premium',
-    products:     'Unlimited listings',
-    images:       '50 images / listing',
-    features:     ['Everything in Pro', 'White-label customer experience', 'WhatsApp Business automation', 'Broadcast and loyalty tools', 'Staff access controls', 'Advanced integrations'],
+    label: 'Premium',
+    products: 'Unlimited listings',
+    images: '50 images / listing',
+    features: ['Everything in Pro', 'White-label customer experience', 'WhatsApp Business automation', 'Broadcast and loyalty tools', 'Staff access controls', 'Advanced integrations'],
     upgradeLabel: null,
-    upgradePlan:  null,
+    upgradePlan: null,
   },
 }
 
@@ -69,17 +69,18 @@ export default function SettingsTab({
   onLogoUpload, logoUploading,
 }) {
   const [form, setForm] = useState({
-    businessName:   store?.businessName   || '',
-    storeName:      store?.storeName      || '',
+    businessName: store?.businessName || '',
+    storeName: store?.storeName || '',
     whatsappNumber: store?.whatsappNumber || '',
-    description:    store?.description    || '',
-    vendorType:     store?.vendorType     || 'products',
+    description: store?.description || '',
+    vendorType: store?.vendorType || 'products',
   })
-  const [slugError, setSlugError]             = useState('')
+  const [slugError, setSlugError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteStep, setDeleteStep]           = useState(1)
-  const [upgradeLoading, setUpgradeLoading]   = useState('')
-  const [upgradeError, setUpgradeError]       = useState('')
+  const [deleteStep, setDeleteStep] = useState(1)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [upgradeLoading, setUpgradeLoading] = useState('')
+  const [upgradeError, setUpgradeError] = useState('')
 
 
   const planInfo = PLAN_INFO[plan] || PLAN_INFO.starter
@@ -87,11 +88,11 @@ export default function SettingsTab({
 
   useEffect(() => {
     setForm({
-      businessName:   store?.businessName   || '',
-      storeName:      store?.storeName      || '',
+      businessName: store?.businessName || '',
+      storeName: store?.storeName || '',
       whatsappNumber: store?.whatsappNumber || '',
-      description:    store?.description    || '',
-      vendorType:     store?.vendorType     || 'products',
+      description: store?.description || '',
+      vendorType: store?.vendorType || 'products',
     })
   }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.description, store?.vendorType])
 
@@ -112,9 +113,16 @@ export default function SettingsTab({
   }
 
 
-  const handleDeleteClick = () => { onClearDeleteError(); setDeleteStep(1); setShowDeleteModal(true) }
-  const closeModal        = () => { setShowDeleteModal(false); setDeleteStep(1) }
-  const handleConfirmStep = () => { if (deleteStep === 1) setDeleteStep(2); else onDeleteAccount() }
+  const handleDeleteClick = () => { onClearDeleteError(); setDeleteStep(1); setDeletePassword(''); setShowDeleteModal(true) }
+  const closeModal = () => { setShowDeleteModal(false); setDeleteStep(1); setDeletePassword('') }
+  const handleConfirmStep = () => {
+    if (deleteStep === 1) {
+      setDeleteStep(2);
+    } else {
+      if (!deletePassword.trim()) return;
+      onDeleteAccount(deletePassword);
+    }
+  }
 
 
   const handleUpgrade = async (targetPlan) => {
@@ -199,11 +207,10 @@ export default function SettingsTab({
                 key={type.id}
                 type="button"
                 onClick={() => setForm(p => ({ ...p, vendorType: type.id }))}
-                className={`py-3 px-3 rounded-xl border-2 text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1.5 ${
-                  form.vendorType === type.id
+                className={`py-3 px-3 rounded-xl border-2 text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1.5 ${form.vendorType === type.id
                     ? 'border-green-500 bg-green-50/50 text-green-700'
                     : 'border-gray-100 hover:border-gray-200 text-gray-600 bg-white'
-                }`}
+                  }`}
               >
                 {type.label}
               </button>
@@ -289,7 +296,7 @@ export default function SettingsTab({
 
 
         {/* Save */}
-        {saveError   && <p className="text-red-500 text-sm flex items-center gap-2"><AlertCircle size={14} />{saveError}</p>}
+        {saveError && <p className="text-red-500 text-sm flex items-center gap-2"><AlertCircle size={14} />{saveError}</p>}
         {saveSuccess && <p className="text-green-600 text-sm flex items-center gap-2"><CheckCircle size={14} />{saveSuccess}</p>}
 
 
@@ -464,11 +471,28 @@ export default function SettingsTab({
                 </ul>
               </>
             ) : (
-              <div>
+              <div className="space-y-4">
                 <p className="font-bold text-gray-900 text-base">Are you absolutely sure?</p>
                 <p className="text-gray-500 text-sm mt-1">
                   You're about to delete <strong>{store?.businessName}</strong> and everything associated with it. This is the last step. There is no going back.
                 </p>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Enter your password to confirm</label>
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20 transition-all"
+                    placeholder="Your account password"
+                    autoComplete="current-password"
+                  />
+                </div>
+                {deleteError && (
+                  <p className="text-red-500 text-sm flex items-center gap-2">
+                    <AlertCircle size={13} />
+                    {deleteError}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex gap-3">
@@ -477,7 +501,7 @@ export default function SettingsTab({
               </button>
               <button
                 onClick={handleConfirmStep}
-                disabled={deleteLoading}
+                disabled={deleteLoading || (deleteStep === 2 && !deletePassword.trim())}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-70 flex items-center justify-center gap-2"
               >
                 {deleteLoading ? <Loader2 size={14} className="animate-spin" /> : null}

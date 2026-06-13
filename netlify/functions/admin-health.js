@@ -155,7 +155,7 @@ export const handler = async (event) => {
             console.error(`Failed to fetch leads count for store ${store.id}`, err);
           }
 
-          const isPremium = store.plan === 'growth' || store.plan === 'pro';
+          const isPremium = store.plan === 'premium';
           const hasWebhookFields =
             !!store.paystackSubscriptionId || !!store.subscriptionCode;
             
@@ -237,6 +237,7 @@ export const handler = async (event) => {
           adminDb.collection('stores').count().get(),
           adminDb.collection('stores').where('plan', '==', 'growth').count().get(),
           adminDb.collection('stores').where('plan', '==', 'pro').count().get(),
+          adminDb.collection('stores').where('plan', '==', 'premium').count().get(),
           adminDb.collection('stores').orderBy('createdAt', 'desc').limit(10).get(),
           adminDb.collectionGroup('products').count().get(),
           adminDb.collection('leads').count().get(),
@@ -245,6 +246,7 @@ export const handler = async (event) => {
         const totalStores = totalStoresSnap.data().count;
         const growthStores = growthSnap.data().count;
         const proStores = proSnap.data().count;
+        const premiumStores = premiumSnap.data().count;
 
         const recentStores = recentSnap.docs.map((doc) => {
           const data = doc.data();
@@ -262,9 +264,10 @@ export const handler = async (event) => {
 
         return {
           totalStores,
-          starterStores: totalStores - growthStores - proStores,
+          starterStores: totalStores - growthStores - proStores - premiumStores,
           growthStores,
           proStores,
+          premiumStores,
           totalProducts: productsSnap.data().count,
           totalLeads: leadsSnap.data().count,
           recentStores,

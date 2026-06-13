@@ -1,14 +1,16 @@
 // src/App.jsx/
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './hooks/useAuth'
-import ScrollToTop from './components/ScrollToTop'
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './hooks/useAuth';
+import ScrollToTop from './components/ScrollToTop';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
+import Dashboard from './pages/Dashboard';
 import StorePage from './pages/StorePage'
 import ServiceStorePage from './pages/ServiceStorePage'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/ProtectedRoute'
+import ReviewPage from './pages/ReviewPage'
 
 import VsLinktree from './pages/VsLinktree'
 import VsShopify from './pages/VsShopify'
@@ -34,6 +36,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/dashboard"
             element={
@@ -54,6 +57,7 @@ export default function App() {
           <Route path="/tools/offer-name-lab" element={<OfferNameLab />} />
           <Route path="/tools/policy-generator" element={<PolicyGenerator />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
+          <Route path="/review" element={<ReviewPage />} />
           <Route path="/:storeName" element={<StorePage />} />
           <Route path="/:storeName/services" element={<ServiceStorePage />} />
           <Route path="*"           element={<NotFound />} />

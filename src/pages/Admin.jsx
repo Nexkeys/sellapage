@@ -313,10 +313,11 @@ export default function Admin() {
                 { label: 'Total Stores', value: healthData?.platform?.totalStores, desc: `Starter: ${healthData?.platform?.starterStores || 0}`, icon: <TrendingUp size={16} /> },
                 { 
                   label: 'Paying Subscribers', 
-                  value: (healthData?.platform?.growthStores || 0) + (healthData?.platform?.proStores || 0), 
-                  subLabel: `Growth: ${healthData?.platform?.growthStores || 0} · Pro: ${healthData?.platform?.proStores || 0}`, 
+                  value: (healthData?.platform?.growthStores || 0) + (healthData?.platform?.proStores || 0) + (healthData?.platform?.premiumStores || 0), 
+                  subLabel: `Growth: ${healthData?.platform?.growthStores || 0} · Pro: ${healthData?.platform?.proStores || 0} · Premium: ${healthData?.platform?.premiumStores || 0}`, 
                   icon: <Users size={16} /> 
                 },
+                { label: 'Premium Stores', value: healthData?.platform?.premiumStores || 0, desc: 'Paid premium-tier subscribers', icon: <Star size={16} /> },
                 { label: 'Total Products', value: healthData?.platform?.totalProducts, desc: 'Across entire collection group', icon: <Package size={16} /> },
                 { label: 'Total Leads', value: healthData?.platform?.totalLeads, desc: 'Registered interest records', icon: <Clock size={16} /> }
               ].map((stat, i) => (

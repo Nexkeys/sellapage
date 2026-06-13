@@ -4,6 +4,7 @@ import {
   AlertCircle,
   Calendar,
   Check,
+  CheckCircle,
   ChevronDown,
   CreditCard,
   FileText,
@@ -195,6 +196,8 @@ export default function OrdersTab({
   const [bookingSuccess, setBookingSuccess] = useState('')
   const [selectedCourierId, setSelectedCourierId] = useState('')
   const [packageWeight, setPackageWeight] = useState(1)
+  const [markingDelivered, setMarkingDelivered] = useState(null)
+  const [markDeliveredError, setMarkDeliveredError] = useState('')
 
   // Address Details states for editing in the modal
   const [senderName, setSenderName] = useState('')
@@ -366,6 +369,47 @@ export default function OrdersTab({
     } catch (err) {
       console.error('Failed to generate receipt:', err)
       alert('Failed to generate receipt. Please try again.')
+    }
+  }
+
+  const handleMarkDelivered = async (order) => {
+    setMarkingDelivered(order.id)
+    setMarkDeliveredError('')
+
+    const token = await user?.getIdToken()
+    if (!token) {
+      setMarkDeliveredError('Authentication expired. Please log in again.')
+      setMarkingDelivered(null)
+      return
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/mark-delivered', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ storeId: store.id, orderId: order.id }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        onUpdateOrder?.(order.id, {
+          status: 'delivered',
+          reviewToken: data.reviewToken,
+          reviewTokenUsed: false,
+          reviewSubmitted: false,
+        })
+      } else {
+        setMarkDeliveredError(data.error || 'Failed to mark as delivered. Please try again.')
+      }
+    } catch (error) {
+      console.error('Failed to mark as delivered:', error)
+      setMarkDeliveredError('Failed to mark as delivered. Please try again.')
+    } finally {
+      setMarkingDelivered(null)
     }
   }
 
@@ -711,6 +755,22 @@ export default function OrdersTab({
         </div>
       )}
 
+      {markDeliveredError && (
+        <div className="flex items-start justify-between gap-2.5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+            {markDeliveredError}
+          </div>
+          <button
+            type="button"
+            onClick={() => setMarkDeliveredError('')}
+            className="text-red-700 hover:text-red-900"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {showForm && (
         <section
           ref={formRef}
@@ -1019,6 +1079,18 @@ export default function OrdersTab({
                       </td>
                       <td className="px-4 py-4 align-top">
                         <div className="flex justify-end gap-1">
+                          {order.orderType === 'checkout' && normalizeStatus(order.status) !== 'delivered' && normalizeStatus(order.status) !== 'cancelled' && (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkDelivered(order)}
+                              disabled={markingDelivered === order.id}
+                              className="inline-flex items-center justify-center rounded-xl p-2 text-gray-300 opacity-0 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-600 group-hover:opacity-100 focus:opacity-100"
+                              title="Mark as Delivered"
+                              aria-label="Mark as Delivered"
+                            >
+                              {markingDelivered === order.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
+                            </button>
+                          )}
                           {order.orderType === 'checkout' && !order.shipbubbleTrackingId && (
                             <button
                               type="button"
@@ -1152,6 +1224,17 @@ export default function OrdersTab({
                 )}
 
                 <div className="flex items-center justify-end gap-2 border-t border-gray-50 pt-3">
+                  {order.orderType === 'checkout' && normalizeStatus(order.status) !== 'delivered' && normalizeStatus(order.status) !== 'cancelled' && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkDelivered(order)}
+                      disabled={markingDelivered === order.id}
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold text-emerald-600 transition-all duration-200 hover:bg-emerald-50"
+                    >
+                      {markingDelivered === order.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                      Delivered
+                    </button>
+                  )}
                   {order.orderType === 'checkout' && !order.shipbubbleTrackingId && (
                     <button
                       type="button"
