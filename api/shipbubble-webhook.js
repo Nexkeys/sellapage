@@ -1,4 +1,4 @@
-//sellapage/netlify/functions/shipbubble-webhook.js/
+//sellapage/api/shipbubble-webhook.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
@@ -18,16 +18,16 @@ const getAdminServices = () => {
   }
 }
 
-export const handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' }
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).send('Method not allowed')
   }
 
   let body
   try {
-    body = JSON.parse(event.body)
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
   } catch {
-    return { statusCode: 400, body: 'Invalid JSON' }
+    return res.status(400).send('Invalid JSON')
   }
 
   try {
@@ -49,9 +49,9 @@ export const handler = async (event) => {
       }
     }
 
-    return { statusCode: 200, body: 'OK' }
+    return res.status(200).send('OK')
   } catch (err) {
     console.error('shipbubble-webhook error:', err)
-    return { statusCode: 200, body: 'OK' }
+    return res.status(200).send('OK')
   }
 }

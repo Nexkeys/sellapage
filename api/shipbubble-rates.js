@@ -1,18 +1,6 @@
-//sellapage/netlify/functions/shipbubble-rates.js/
+//sellapage/api/shipbubble-rates.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const jsonResponse = (statusCode, body) => ({
-  statusCode,
-  headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-})
 
 const getAdminServices = () => {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -30,47 +18,52 @@ const getAdminServices = () => {
   }
 }
 
-export const handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' }
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' })
-  }
-
-  let body
+export default async function handler(req, res) {
   try {
-    body = JSON.parse(event.body)
-  } catch {
-    return jsonResponse(400, { error: 'Invalid JSON body' })
-  }
+    // Standardize CORS headers for Vercel execution context
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
 
-  const { storeId, deliveryState, deliveryLga, deliveryAddress, weight } = body
-  const parsedWeight = weight != null ? Number(weight) : 1
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
 
-  if (!storeId || !deliveryState?.trim() || !deliveryLga?.trim() || !deliveryAddress || typeof deliveryAddress !== 'object') {
-    return jsonResponse(400, {
-      error: 'Missing required fields: storeId, deliveryState, deliveryLga, deliveryAddress',
-    })
-  }
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
 
-  if (Number.isNaN(parsedWeight) || parsedWeight <= 0) {
-    return jsonResponse(400, { error: 'weight must be a number > 0' })
-  }
+    let body
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON body' })
+    }
 
-  try {
+    const { storeId, deliveryState, deliveryLga, deliveryAddress, weight } = body
+    const parsedWeight = weight != null ? Number(weight) : 1
+
+    if (!storeId || !deliveryState?.trim() || !deliveryLga?.trim() || !deliveryAddress || typeof deliveryAddress !== 'object') {
+      return res.status(400).json({
+        error: 'Missing required fields: storeId, deliveryState, deliveryLga, deliveryAddress',
+      })
+    }
+
+    if (Number.isNaN(parsedWeight) || parsedWeight <= 0) {
+      return res.status(400).json({ error: 'weight must be a number > 0' })
+    }
+
     const { db } = getAdminServices()
 
     const storeDoc = await db.collection('stores').doc(storeId).get()
     if (!storeDoc.exists) {
-      return jsonResponse(404, { error: 'Store not found' })
+      return res.status(404).json({ error: 'Store not found' })
     }
 
     const store = storeDoc.data()
     const pickupAddress = store.pickupAddress
     if (!pickupAddress) {
-      return jsonResponse(400, { error: 'Store has not set up a pickup address' })
+      return res.status(400).json({ error: 'Store has not set up a pickup address' })
     }
 
     const shipbubbleResponse = await fetch('https://api.shipbubble.com/v1/shipping/fetch_rates', {
@@ -104,15 +97,15 @@ export const handler = async (event) => {
 
     if (!shipbubbleResponse.ok) {
       const errorData = await shipbubbleResponse.json().catch(() => ({}))
-      return jsonResponse(shipbubbleResponse.status, {
+      return res.status(shipbubbleResponse.status).json({
         error: errorData.message || 'Failed to fetch shipping rates from Shipbubble',
       })
     }
 
     const shipbubbleData = await shipbubbleResponse.json()
-    return jsonResponse(200, { rates: shipbubbleData.data?.couriers || [] })
+    return res.status(200).json({ rates: shipbubbleData.data?.couriers || [] })
   } catch (err) {
     console.error('shipbubble-rates error:', err)
-    return jsonResponse(500, { error: 'Internal server error' })
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

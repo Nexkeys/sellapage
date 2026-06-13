@@ -40,7 +40,7 @@ export default function Admin() {
     setHealthLoading(true);
     setHealthError('');
     try {
-      const res = await fetch('/.netlify/functions/admin-health?action=health', {
+      const res = await fetch('/api/admin-health?action=health', {
         headers: {
           'Content-Type': 'application/json',
           'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '',
@@ -65,7 +65,7 @@ export default function Admin() {
     setDirLoading(true);
     setDirError('');
     try {
-      const url = `/.netlify/functions/admin-health?action=directory&page=${pageNum}&limit=${LIMIT}&search=${encodeURIComponent(searchQuery)}&payoutFilter=${payoutFilter}`;
+      const url = `/api/admin-health?action=directory&page=${pageNum}&limit=${LIMIT}&search=${encodeURIComponent(searchQuery)}&payoutFilter=${payoutFilter}`;
       const res = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ export default function Admin() {
   const togglePayoutVerification = async (storeId, verified) => {
     setApprovingId(storeId);
     try {
-      const res = await fetch('/.netlify/functions/admin-health?action=verify_payout', {
+      const res = await fetch('/api/admin-health?action=verify_payout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

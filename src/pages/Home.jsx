@@ -290,10 +290,7 @@ export default function Home() {
               </div>
 
               <h1 className="font-display text-[2.6rem] sm:text-5xl lg:text-[3.35rem] font-extrabold leading-[1.08] tracking-tight text-gray-950 mb-6 max-w-xl">
-                Your Business - Your rules
-                <br />
-                <span className="text-brand-600">Sell anything,</span><br />
-                from anywhere.
+                Run Your Entire Business from One Dashboard. <br className="hidden sm:block" />
               </h1>
 
               <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">

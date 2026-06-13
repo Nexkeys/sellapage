@@ -293,7 +293,7 @@ function StoreCheckoutModal({
     setPromoError("");
 
     try {
-      const res = await fetch("/.netlify/functions/validate-discount", {
+      const res = await fetch("/api/validate-discount", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -967,7 +967,7 @@ export default function StorePage() {
     const timer = setTimeout(async () => {
       setLoadingRates(true);
       try {
-        const res = await fetch("/.netlify/functions/shipbubble-rates", {
+        const res = await fetch("/api/shipbubble-rates", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1027,7 +1027,7 @@ export default function StorePage() {
     const grandTotal = subtotal + deliveryFee + processingFee - discountAmount;
 
     try {
-      const res = await fetch("/.netlify/functions/checkout-initialize", {
+      const res = await fetch("/api/checkout-initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,4 +1,4 @@
-//sellapage/netlify/functions/create-subaccount.mjs/
+//sellapage/api/create-subaccount.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
@@ -8,12 +8,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
-
-const jsonResponse = (statusCode, body) => ({
-  statusCode,
-  headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-})
 
 const getAdminServices = () => {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -32,51 +26,56 @@ const getAdminServices = () => {
   }
 }
 
-export const handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' }
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' })
-  }
-
-  let body
+export default async function handler(req, res) {
   try {
-    body = JSON.parse(event.body)
-  } catch {
-    return jsonResponse(400, { error: 'Invalid JSON body' })
-  }
+    // Standardize CORS headers for Vercel execution context
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
 
-  const { storeId, bankCode, accountNumber } = body
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
 
-  if (!storeId || !bankCode || !accountNumber) {
-    return jsonResponse(400, {
-      error: 'Missing required fields: storeId, bankCode, accountNumber',
-    })
-  }
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
 
-  try {
+    let body
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON body' })
+    }
+
+    const { storeId, bankCode, accountNumber } = body
+
+    if (!storeId || !bankCode || !accountNumber) {
+      return res.status(400).json({
+        error: 'Missing required fields: storeId, bankCode, accountNumber',
+      })
+    }
+
     const { db, adminAuth } = getAdminServices()
 
-    const authHeader = event.headers.authorization || event.headers.Authorization || ''
+    const authHeader = req.headers.authorization || req.headers.Authorization || ''
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
 
     if (!idToken) {
-      return jsonResponse(401, { error: 'Please sign in again to set up payouts.' })
+      return res.status(401).json({ error: 'Please sign in again to set up payouts.' })
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
 
     if (decodedToken.uid !== storeId) {
-      return jsonResponse(403, { error: 'You can only set up payouts for your own store.' })
+      return res.status(403).json({ error: 'You can only set up payouts for your own store.' })
     }
 
     const storeRef = db.collection('stores').doc(storeId)
     const storeDoc = await storeRef.get()
 
     if (!storeDoc.exists) {
-      return jsonResponse(404, { error: 'Store not found' })
+      return res.status(404).json({ error: 'Store not found' })
     }
 
     const storeData = storeDoc.data();
@@ -98,13 +97,13 @@ export const handler = async (event) => {
         }),
       })
     } catch {
-      return jsonResponse(502, { error: 'Failed to reach Paystack API' })
+      return res.status(502).json({ error: 'Failed to reach Paystack API' })
     }
 
     const paystackData = await paystackResponse.json()
 
     if (!paystackResponse.ok || !paystackData.status) {
-      return jsonResponse(paystackResponse.status >= 400 ? paystackResponse.status : 502, {
+      return res.status(paystackResponse.status >= 400 ? paystackResponse.status : 502).json({
         error: paystackData.message || 'Paystack subaccount creation failed',
       })
     }
@@ -112,7 +111,7 @@ export const handler = async (event) => {
     const subaccountCode = paystackData.data?.subaccount_code
 
     if (!subaccountCode) {
-      return jsonResponse(502, { error: 'Paystack did not return a subaccount code' })
+      return res.status(502).json({ error: 'Paystack did not return a subaccount code' })
     }
 
     // Map of top 20 banks (code -> readable name) — keep in sync with frontend list
@@ -146,9 +145,9 @@ export const handler = async (event) => {
 
     await storeRef.update({ subaccountCode, payoutBankName, payoutAccountNumberMasked, payoutsVerified: false })
 
-    return jsonResponse(200, { subaccountCode, payoutBankName, payoutAccountNumberMasked, payoutsVerified: false })
+    return res.status(200).json({ subaccountCode, payoutBankName, payoutAccountNumberMasked, payoutsVerified: false })
   } catch (err) {
     console.error('create-subaccount error:', err)
-    return jsonResponse(500, { error: 'Internal server error' })
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

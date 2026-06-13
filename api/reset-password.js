@@ -1,7 +1,7 @@
-// netlify/functions/reset-password.js/
+// sellapage/api/reset-password.js
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
-import { sendEmail } from './send-email.js'
+import { sendEmail } from './_lib/send-email.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -11,26 +11,35 @@ if (!getApps().length) {
 
 const auth = getAuth()
 
-export const handler = async (event) => {
+export default async function handler(req, res) {
   try {
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' }
+    // Standardize CORS headers for Vercel execution context
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
+    if (req.method !== 'POST') {
+      return res.status(405).send('Method Not Allowed')
     }
 
     let body
     try {
-      body = JSON.parse(event.body)
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
     } catch (err) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) }
+      return res.status(400).json({ error: 'Invalid JSON' })
     }
 
     const { email } = body
     if (!email) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Email is required' }) }
+      return res.status(400).json({ error: 'Email is required' })
     }
 
     // Determine base URL from host header (use http for localhost)
-    const host = (event && event.headers && event.headers.host) || ''
+    const host = req.headers.host || ''
     const isLocal = host.includes('localhost')
     const base = isLocal ? `http://${host}` : 'https://sellapage.com.ng'
 
@@ -40,25 +49,21 @@ export const handler = async (event) => {
       rawLink = await auth.generatePasswordResetLink(email)
     } catch (err) {
       console.error('Password reset generation error:', err)
-      return {
-        statusCode: 404,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: "No active user account matches this email address." }),
-      }
+      return res.status(404).json({ error: "No active user account matches this email address." })
     }
 
-    // Extract oobCode from raw link
+    // Extract oobCode from raw link securely
     const url = new URL(rawLink)
     const oobCode = url.searchParams.get('oobCode')
 
     if (!oobCode) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to extract reset code' }) }
+      return res.status(500).json({ error: 'Failed to extract reset code' })
     }
 
-    // Construct custom branded link
+    // Construct custom branded link mapping perfectly
     const customResetLink = `${base}/reset-password?oobCode=${oobCode}`
 
-    // Email template
+    // Precise unabridged HTML Email template execution
     const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; padding: 48px 20px; text-align: center;">
   <div style="max-width: 540px; margin: 0 auto; background-color: #ffffff; border: 1px solid #f3f4f6; border-radius: 16px; padding: 40px; text-align: left; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -80,9 +85,9 @@ export const handler = async (event) => {
     // Send email
     await sendEmail(email, 'Reset your Sellapage password', html)
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) }
+    return res.status(200).json({ success: true })
   } catch (err) {
     console.error('Internal server error:', err)
-    return { statusCode: 500, body: JSON.stringify({ error: 'Failed to send reset email' }) }
+    return res.status(500).json({ error: 'Failed to send reset email' })
   }
 }

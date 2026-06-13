@@ -47,7 +47,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
     if (!accountNumber || accountNumber.length !== 10 || !bankCode) return
     setResolveLoading(true)
     try {
-      const res = await fetch('/.netlify/functions/resolve-account', {
+      const res = await fetch('/api/resolve-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountNumber, bankCode }),
@@ -72,7 +72,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
 
     try {
       const token = await user.getIdToken()
-      const response = await fetch('/.netlify/functions/create-subaccount', {
+      const response = await fetch('/api/create-subaccount', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

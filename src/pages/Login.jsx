@@ -90,7 +90,7 @@ export default function Login() {
         const token = await credential.user.getIdToken()
 
         try {
-          await fetch('/.netlify/functions/notify', {
+          await fetch('/api/notify', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

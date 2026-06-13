@@ -1,9 +1,9 @@
-//sellapage/netlify/functions/paystack-webhook.js/
+//sellapage/api/paystack-webhook.js/
 import crypto from "crypto";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
-import { sendEmail } from "./send-email.js";
-import { sendPush } from "./send-push.js";
+import { sendEmail } from "./_lib/send-email.js";
+import { sendPush } from "./_lib/send-push.js";
 
 if (!getApps().length) {
   initializeApp({
@@ -43,13 +43,13 @@ const PLAN_LIMITS = {
   },
 };
 
-export const handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method not allowed" };
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method not allowed");
   }
 
-  const signature = event.headers["x-paystack-signature"];
-  const rawBody = event.body;
+  const signature = req.headers["x-paystack-signature"];
+  const rawBody = req.body;
 
   const expectedSignature = crypto
     .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
@@ -57,20 +57,20 @@ export const handler = async (event) => {
     .digest("hex");
 
   if (signature !== expectedSignature) {
-    return { statusCode: 401, body: "Invalid signature" };
+    return res.status(401).send("Invalid signature");
   }
 
   let payload;
   try {
-    payload = JSON.parse(rawBody);
+    payload = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
   } catch {
-    return { statusCode: 400, body: "Invalid JSON" };
+    return res.status(400).send("Invalid JSON");
   }
 
   const { event: eventType, data } = payload;
 
   if (eventType !== "charge.success" || data?.status !== "success") {
-    return { statusCode: 200, body: "Event ignored" };
+    return res.status(200).send("Event ignored");
   }
 
   // Branch on transaction type
@@ -95,7 +95,7 @@ export const handler = async (event) => {
     } = data.metadata || {};
 
     if (!storeId) {
-      return { statusCode: 400, body: "Missing storeId in metadata" };
+      return res.status(400).send("Missing storeId in metadata");
     }
 
     // Parse JSON strings
@@ -105,10 +105,7 @@ export const handler = async (event) => {
       parsedCartItems = JSON.parse(cartItems);
       parsedDeliveryAddress = JSON.parse(deliveryAddress);
     } catch {
-      return {
-        statusCode: 400,
-        body: "Invalid JSON in cartItems or deliveryAddress",
-      };
+      return res.status(400).send("Invalid JSON in cartItems or deliveryAddress");
     }
 
     // Idempotency check for orders
@@ -121,7 +118,7 @@ export const handler = async (event) => {
       .get();
 
     if (!existingOrderSnap.empty) {
-      return { statusCode: 200, body: "Already processed" };
+      return res.status(200).send("Already processed");
     }
 
     // Create order document
@@ -316,25 +313,22 @@ export const handler = async (event) => {
       console.error("[Checkout Notifications] Error:", error);
     }
 
-    return { statusCode: 200, body: "OK" };
+    return res.status(200).send("OK");
   }
 
   // Subscription handling (existing logic)
   const { storeId, plan } = data.metadata || {};
 
   if (!storeId || !plan) {
-    return { statusCode: 400, body: "Missing storeId or plan in metadata" };
+    return res.status(400).send("Missing storeId or plan in metadata");
   }
 
   if (!["growth", "pro", "premium"].includes(plan)) {
-    return { statusCode: 400, body: "Invalid plan in metadata" };
+    return res.status(400).send("Invalid plan in metadata");
   }
 
   if (data.amount !== PLAN_AMOUNTS[plan]) {
-    return {
-      statusCode: 400,
-      body: `Amount mismatch: expected ${PLAN_AMOUNTS[plan]}, got ${data.amount}`,
-    };
+    return res.status(400).send(`Amount mismatch: expected ${PLAN_AMOUNTS[plan]}, got ${data.amount}`);
   }
 
   // W1 idempotency guard
@@ -347,7 +341,7 @@ export const handler = async (event) => {
     .get();
 
   if (!existingSubSnap.empty) {
-    return { statusCode: 200, body: "Already processed" };
+    return res.status(200).send("Already processed");
   }
 
   const now = Timestamp.now();
@@ -445,5 +439,5 @@ export const handler = async (event) => {
     console.error("[Subscription Notifications] Error:", error);
   }
 
-  return { statusCode: 200, body: "OK" };
+  return res.status(200).send("OK");
 };

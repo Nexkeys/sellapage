@@ -1142,7 +1142,7 @@ export default function Dashboard() {
     setAiDescError("");
     try {
       const token = await user.getIdToken();
-      const res = await fetch("/.netlify/functions/ai-describe", {
+      const res = await fetch("/api/ai-describe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1194,7 +1194,7 @@ export default function Dashboard() {
     setServiceAiDescError("");
     try {
       const token = await user.getIdToken();
-      const res = await fetch("/.netlify/functions/ai-describe", {
+      const res = await fetch("/api/ai-describe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1242,7 +1242,7 @@ export default function Dashboard() {
       const token = await user.getIdToken();
 
       // Fire-and-forget background deletion request; do not await.
-      void fetch("/.netlify/functions/delete-account", {
+      void fetch("/api/delete-account", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1310,7 +1310,7 @@ export default function Dashboard() {
     setBillingLoading(selectedPlan);
     setBillingError("");
     try {
-      const res = await fetch("/.netlify/functions/billing-initialize", {
+      const res = await fetch("/api/billing-initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storeId: store.id, plan: selectedPlan }),

@@ -1,7 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
-import { sendEmail } from './send-email.js'
-import { sendPush } from './send-push.js'
+import { sendEmail } from './_lib/send-email.js'
+import { sendPush } from './_lib/send-push.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -11,50 +11,49 @@ if (!getApps().length) {
 
 const db = getFirestore()
 
-export const handler = async (event) => {
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  }
-
+export default async function handler(req, res) {
   try {
-    if (event.httpMethod === 'OPTIONS') {
-      return { statusCode: 204, headers: CORS_HEADERS, body: '' }
+    // Standardize CORS headers for Vercel execution context
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end()
     }
 
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method Not Allowed' }) }
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method Not Allowed' })
     }
 
     let body
     try {
-      body = JSON.parse(event.body)
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
     } catch (err) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Invalid JSON' }) }
+      return res.status(400).json({ error: 'Invalid JSON' })
     }
 
     const { token, rating, reviewText } = body || {}
     if (!token) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Review token is required' }) }
+      return res.status(400).json({ error: 'Review token is required' })
     }
 
-    // Find order by reviewToken using collectionGroup
+    // Find order by review token using collectionGroup
     const ordersQuery = await db.collectionGroup('orders').where('reviewToken', '==', token).limit(1).get()
     if (ordersQuery.empty) {
-      return { statusCode: 404, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Invalid or expired review link' }) }
+      return res.status(404).json({ error: 'Invalid or expired review link' })
     }
 
     const orderDoc = ordersQuery.docs[0]
     const orderData = orderDoc.data() || {}
 
     if (orderData.reviewTokenUsed === true) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'This review link has already been used' }) }
+      return res.status(400).json({ error: 'This review link has already been used' })
     }
 
     const numericRating = Number(rating)
     if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Rating must be between 1 and 5' }) }
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' })
     }
 
     const storeId = orderData.storeId
@@ -64,7 +63,7 @@ export const handler = async (event) => {
     const customerName = orderData.customerName || ''
 
     if (!storeId || !itemId) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Associated order missing item or store information' }) }
+      return res.status(400).json({ error: 'Associated order missing item or store information' })
     }
 
     const cleanedReviewText = (typeof reviewText === 'string' ? reviewText.trim().slice(0, 500) : '')
@@ -104,14 +103,14 @@ export const handler = async (event) => {
       const subject = `New ${numericRating}-star review on ${itemName || 'your item'}`
       const html = `
         <div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto;">
-          <div style="background:#16a34a;padding:18px;color:#fff;font-weight:700">${storeData.businessName || 'Sellapage'}</div>
-          <div style="padding:20px;background:#fff;color:#111827">
-            <h2 style="margin:0 0 12px 0">A customer left you a review</h2>
-            <p style="margin:0 0 8px 0"><strong>${customerName || 'A customer'}</strong></p>
-            <p style="margin:0 0 8px 0">${'★'.repeat(Math.max(0, Math.min(5, Math.round(numericRating))))}</p>
-            <p style="color:#6b7280;margin:0 0 12px 0">${cleanedReviewText || ''}</p>
-            <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0"/>
-            <p style="color:#9ca3af;font-size:12px">This review was submitted via Sellapage.</p>
+          <div style="background:#16a34a;padding:18px;color:#fff;font-weight:700;">${storeData.businessName || 'Sellapage'}</div>
+          <div style="padding:20px;background:#fff;color:#111827;">
+            <h2 style="margin:0 0 12px 0;">A customer left you a review</h2>
+            <p style="margin:0 0 8px 0;"><strong>${customerName || 'A customer'}</strong></p>
+            <p style="margin:0 0 8px 0;">${'★'.repeat(Math.max(0, Math.min(5, Math.round(numericRating))))}</p>
+            <p style="color:#6b7280;margin:0 0 12px 0;">${cleanedReviewText || ''}</p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;"/>
+            <p style="color:#9ca3af;font-size:12px;">This review was submitted via Sellapage.</p>
           </div>
         </div>
       `
@@ -127,9 +126,9 @@ export const handler = async (event) => {
       console.error('[Notify] failed', err)
     }
 
-    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true, message: 'Review submitted successfully' }) }
+    return res.status(200).json({ success: true, message: 'Review submitted successfully' })
   } catch (err) {
     console.error('[submit-review] error', err)
-    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Internal server error' }) }
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

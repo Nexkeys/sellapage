@@ -1,19 +1,7 @@
-//sellapage/netlify/functions/shipbubble-create-shipment.js/
+//sellapage/api/shipbubble-create-shipment.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const jsonResponse = (statusCode, body) => ({
-  statusCode,
-  headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-})
 
 const getAdminServices = () => {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -32,52 +20,57 @@ const getAdminServices = () => {
   }
 }
 
-export const handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' }
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' })
-  }
-
-  let body
+export default async function handler(req, res) {
   try {
-    body = JSON.parse(event.body)
-  } catch {
-    return jsonResponse(400, { error: 'Invalid JSON body' })
-  }
+    // Standardize CORS headers for Vercel execution context
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
 
-  const { storeId, orderId, courierId, senderDetails, receiverDetails, packageDetails } = body
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
 
-  if (!storeId || !orderId || !courierId || !senderDetails || !receiverDetails || !packageDetails) {
-    return jsonResponse(400, {
-      error: 'Missing required fields: storeId, orderId, courierId, senderDetails, receiverDetails, packageDetails',
-    })
-  }
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
 
-  try {
+    let body
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON body' })
+    }
+
+    const { storeId, orderId, courierId, senderDetails, receiverDetails, packageDetails } = body
+
+    if (!storeId || !orderId || !courierId || !senderDetails || !receiverDetails || !packageDetails) {
+      return res.status(400).json({
+        error: 'Missing required fields: storeId, orderId, courierId, senderDetails, receiverDetails, packageDetails',
+      })
+    }
+
     const { db, adminAuth } = getAdminServices()
 
-    const authHeader = event.headers.authorization || event.headers.Authorization || ''
+    const authHeader = req.headers.authorization || req.headers.Authorization || ''
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
     if (!idToken) {
-      return jsonResponse(401, { error: 'Unauthorized' })
+      return res.status(401).json({ error: 'Unauthorized' })
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
     if (decodedToken.uid !== storeId) {
-      return jsonResponse(403, { error: 'Forbidden' })
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     const storeDoc = await db.collection('stores').doc(storeId).get()
     if (!storeDoc.exists) {
-      return jsonResponse(404, { error: 'Store not found' })
+      return res.status(404).json({ error: 'Store not found' })
     }
 
     const orderDoc = await db.collection('stores').doc(storeId).collection('orders').doc(orderId).get()
     if (!orderDoc.exists) {
-      return jsonResponse(404, { error: 'Order not found' })
+      return res.status(404).json({ error: 'Order not found' })
     }
 
     const shipbubbleResponse = await fetch('https://api.shipbubble.com/v1/shipping/create', {
@@ -96,7 +89,7 @@ export const handler = async (event) => {
 
     if (!shipbubbleResponse.ok) {
       const errorData = await shipbubbleResponse.json().catch(() => ({}))
-      return jsonResponse(shipbubbleResponse.status, {
+      return res.status(shipbubbleResponse.status).json({
         error: errorData.message || 'Failed to create shipment with Shipbubble',
       })
     }
@@ -106,7 +99,7 @@ export const handler = async (event) => {
     const trackingUrl = shipbubbleData.data?.tracking_url
 
     if (!trackingId) {
-      return jsonResponse(502, { error: 'Shipbubble did not return a tracking ID' })
+      return res.status(502).json({ error: 'Shipbubble did not return a tracking ID' })
     }
 
     const orderRef = db.collection('stores').doc(storeId).collection('orders').doc(orderId)
@@ -115,9 +108,9 @@ export const handler = async (event) => {
       shipbubbleStatus: 'created',
     })
 
-    return jsonResponse(200, { trackingId, trackingUrl })
+    return res.status(200).json({ trackingId, trackingUrl })
   } catch (err) {
     console.error('shipbubble-create-shipment error:', err)
-    return jsonResponse(500, { error: 'Internal server error' })
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

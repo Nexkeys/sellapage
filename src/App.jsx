@@ -1,4 +1,5 @@
 // src/App.jsx/
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import ScrollToTop from './components/ScrollToTop';

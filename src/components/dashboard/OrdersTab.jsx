@@ -384,7 +384,7 @@ export default function OrdersTab({
     }
 
     try {
-      const res = await fetch('/.netlify/functions/mark-delivered', {
+      const res = await fetch('/api/mark-delivered', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -476,7 +476,7 @@ export default function OrdersTab({
     setLoadingRates(true)
     setBookingError('')
     try {
-      const res = await fetch('/.netlify/functions/shipbubble-rates', {
+      const res = await fetch('/api/shipbubble-rates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -533,7 +533,7 @@ export default function OrdersTab({
         return
       }
 
-      const res = await fetch('/.netlify/functions/shipbubble-create-shipment', {
+      const res = await fetch('/api/shipbubble-create-shipment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

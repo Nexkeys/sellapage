@@ -12,3 +12,5 @@ firestore.rules
 # Local Netlify folder
 .netlify
 .aider*
+.vercel
+.env*

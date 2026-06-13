@@ -1,7 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
-import { sendEmail } from './send-email.js'
+import { sendEmail } from './_lib/send-email.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -12,16 +12,16 @@ if (!getApps().length) {
 const db = getFirestore()
 const auth = getAuth()
 
-export const handler = async (event) => {
+export default async function handler(req, res) {
   try {
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' }
+    if (req.method !== 'POST') {
+      return res.status(405).send('Method Not Allowed')
     }
 
     // Validate Bearer token
-    const authHeader = event.headers.authorization
+    const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return { statusCode: 401, body: 'Unauthorized' }
+      return res.status(401).send('Unauthorized')
     }
 
     const token = authHeader.split('Bearer ')[1]
@@ -45,7 +45,7 @@ export const handler = async (event) => {
       }
     } catch (err) {
       console.error('Token verification failed:', err)
-      return { statusCode: 401, body: 'Unauthorized' }
+      return res.status(401).send('Unauthorized')
     }
 
     const uid = decodedToken.uid
@@ -53,7 +53,7 @@ export const handler = async (event) => {
     // Get store data
     const storeSnap = await db.collection('stores').doc(uid).get()
     if (!storeSnap.exists) {
-      return { statusCode: 404, body: JSON.stringify({ error: 'Store not found' }) }
+      return res.status(404).json({ error: 'Store not found' })
     }
     const storeData = storeSnap.data()
     const businessName = storeData.businessName || 'Merchant'
@@ -115,7 +115,7 @@ export const handler = async (event) => {
     <p style="font-size: 14px; line-height: 24px; color: #4b5563; margin: 0 0 16px 0;">Hi ${businessName},</p>
     <p style="font-size: 14px; line-height: 24px; color: #4b5563; margin: 0 0 24px 0;">This email confirms that your Sellapage store directory, listing data, and profile records have been completely and permanently removed as requested.</p>
     <p style="font-size: 14px; line-height: 24px; color: #4b5563; margin: 0 0 32px 0;">We are truly sorry to see you go. If our tool didn't fully solve your DM sales tracking workflow, or if there is something we could do to improve, we would value your insights. Reply directly to this email to let us know.</p>
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;"/>
     <p style="font-size: 12px; line-height: 20px; color: #9ca3af; margin: 0; text-align: center;">
       Thank you for building with us. Our doors are always open if you decide to launch a new product pipeline in the future.
     </p>
@@ -125,9 +125,9 @@ export const handler = async (event) => {
       await sendEmail(email, 'Your Sellapage workspace has been closed', html)
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) }
+    return res.status(200).json({ success: true })
   } catch (err) {
     console.error('Internal server error:', err)
-    return { statusCode: 500, body: JSON.stringify({ error: 'Failed to delete account' }) }
+    return res.status(500).json({ error: 'Failed to delete account' })
   }
 }

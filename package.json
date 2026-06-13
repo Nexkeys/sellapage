@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
+    "@vercel/speed-insights": "^2.0.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.8.0",
     "lucide-react": "^0.303.0",

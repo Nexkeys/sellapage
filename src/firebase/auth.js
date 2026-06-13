@@ -37,7 +37,7 @@ export const registerSeller = async (email, password, storeData) => {
   // Send welcome notification
   try {
     const token = await user.getIdToken()
-    await fetch('/.netlify/functions/notify', {
+    await fetch('/api/notify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export const logoutSeller = async () => {
 }
 
 export const resetPassword = async (email) => {
-  const res = await fetch('/.netlify/functions/reset-password', {
+  const res = await fetch('/api/reset-password', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

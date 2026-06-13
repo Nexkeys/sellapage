@@ -1,9 +1,9 @@
-// netlify/functions/notify.js/
+// sellapage/api/notify.js
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
-import { sendEmail } from './send-email.js'
-import { sendPush } from './send-push.js'
+import { sendEmail } from './_lib/send-email.js'
+import { sendPush } from './_lib/send-push.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -14,15 +14,24 @@ if (!getApps().length) {
 const db = getFirestore()
 const auth = getAuth()
 
-export const handler = async (event) => {
+export default async function handler(req, res) {
   try {
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' }
+    // Standardize CORS headers for Vercel execution context
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
     }
 
-    const authHeader = event.headers.authorization
+    if (req.method !== 'POST') {
+      return res.status(405).send('Method Not Allowed')
+    }
+
+    const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return { statusCode: 401, body: 'Unauthorized' }
+      return res.status(401).send('Unauthorized')
     }
 
     const token = authHeader.split('Bearer ')[1]
@@ -31,24 +40,24 @@ export const handler = async (event) => {
       decodedToken = await auth.verifyIdToken(token)
     } catch (err) {
       console.error('Token verification failed:', err)
-      return { statusCode: 401, body: 'Unauthorized' }
+      return res.status(401).send('Unauthorized')
     }
 
     let body
     try {
-      body = JSON.parse(event.body)
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
     } catch (err) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) }
+      return res.status(400).json({ error: 'Invalid JSON' })
     }
 
     const { type } = body
     if (!type || !['welcome', 'login_alert'].includes(type)) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Invalid or missing notification type' }) }
+      return res.status(400).json({ error: 'Invalid or missing notification type' })
     }
 
     const storeSnap = await db.collection('stores').doc(decodedToken.uid).get()
     if (!storeSnap.exists) {
-      return { statusCode: 404, body: 'Not Found' }
+      return res.status(404).send('Not Found')
     }
     const storeData = storeSnap.data()
 
@@ -152,9 +161,9 @@ export const handler = async (event) => {
       console.error('Error sending notifications:', err)
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) }
+    return res.status(200).json({ success: true })
   } catch (err) {
     console.error('Internal server error:', err)
-    return { statusCode: 500, body: 'Internal Server Error' }
+    return res.status(500).send('Internal Server Error')
   }
 }

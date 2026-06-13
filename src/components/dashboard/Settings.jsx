@@ -129,7 +129,7 @@ export default function SettingsTab({
     setUpgradeError('')
     setUpgradeLoading(targetPlan)
     try {
-      const res = await fetch('/.netlify/functions/billing-initialize', {
+      const res = await fetch('/api/billing-initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId: store.id, plan: targetPlan }),

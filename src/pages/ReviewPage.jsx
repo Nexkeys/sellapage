@@ -31,7 +31,7 @@ export default function ReviewPage() {
     if (rating <= 0) { setError('Please select a star rating before submitting'); return }
     setSubmitting(true)
     try {
-      const res = await fetch('/.netlify/functions/submit-review', {
+      const res = await fetch('/api/submit-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, rating, reviewText })

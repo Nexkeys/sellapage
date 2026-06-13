@@ -423,7 +423,7 @@ export default function ServiceStorePage() {
 
     try {
       if (isProOrPremium) {
-        const res = await fetch("/.netlify/functions/checkout-initialize", {
+        const res = await fetch("/api/checkout-initialize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
