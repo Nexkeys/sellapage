@@ -1,11 +1,10 @@
 //src/pages/Home.jsx/
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ShoppingBag, ShoppingCart, MessageCircle, Zap, ChevronDown, Check, X,
   Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
   Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift,
-  Grid, Users,
+  Grid, Users, Truck, CreditCard, Tag, Download, Globe, Shield,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -35,7 +34,7 @@ const features = [
   {
     icon: Smartphone,
     title: 'Sharp on Every Phone',
-    description: 'Whether you sell clothes, offer a service, or run a food business your page loads clean and fast on every phone.',
+    description: 'Whether you sell clothes, offer a service, or run a food business, your page loads clean and fast on every phone.',
   },
   {
     icon: MessageCircle,
@@ -50,7 +49,7 @@ const features = [
   {
     icon: Share2,
     title: 'One Link That Works Everywhere',
-    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram, flyers anywhere you promote yourself.',
+    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram, flyers — anywhere you promote yourself.',
   },
   {
     icon: TrendingUp,
@@ -74,18 +73,63 @@ const features = [
   },
   {
     icon: Grid,
-    title: 'Categories',
-    description: 'Vendors can organize offers clearly so customers can filter items by category on the live page.',
+    title: 'Categories & Search',
+    description: 'Organize offers with categories so customers can filter and search items on the live page.',
   },
   {
     icon: Sparkles,
     title: 'AI Product Descriptions (Growth+)',
-    description: 'Generate a sharp, ready-to-publish product description in seconds. Tap one button and AI writes it for you.',
+    description: 'Generate a sharp, ready-to-publish product or service description in seconds. Tap one button and AI writes it for you.',
   },
   {
     icon: Palette,
     title: '20 Premium Store Themes (Pro)',
     description: 'Pick from 20 professionally designed store themes. Each one changes your fonts, colours, layout, and card style completely.',
+  },
+  {
+    icon: ShoppingBag,
+    title: 'In-App Paystack Checkout (Pro+)',
+    description: 'Accept card, bank transfer, and USSD payments directly on your store. Orders create automatically in your dashboard.',
+  },
+  {
+    icon: Truck,
+    title: 'Shipbubble Delivery Integration (Pro+)',
+    description: 'Show live delivery rates at checkout, book shipments, and share tracking links with customers from your dashboard.',
+  },
+  {
+    icon: CreditCard,
+    title: 'Payouts & Bank Settlement (Pro+)',
+    description: 'Connect your bank via Paystack subaccount. View earnings KPIs, transaction history, and get paid on your schedule.',
+  },
+  {
+    icon: Users,
+    title: 'Customer CRM (Pro+)',
+    description: 'Auto-built from confirmed orders. Expandable profiles, WhatsApp direct links, sort by spend, orders, or recency.',
+  },
+  {
+    icon: Star,
+    title: 'Verified Reviews (Pro+)',
+    description: 'Buyers leave star ratings and reviews after delivery. Aggregate scores show on product and service cards.',
+  },
+  {
+    icon: Tag,
+    title: 'Discounts & Promo Codes (Pro+)',
+    description: 'Create percentage or flat discounts, set usage limits and expiry dates. Applied automatically at checkout.',
+  },
+  {
+    icon: Download,
+    title: 'Product Export (Pro+)',
+    description: 'Export your catalogue to PDF, CSV, Excel, and downloadable files for offline records or marketing.',
+  },
+  {
+    icon: Globe,
+    title: 'Custom Domain (Pro+)',
+    description: 'Use your own domain (yourbrand.com) for a fully branded store experience.',
+  },
+  {
+    icon: Shield,
+    title: 'CAC Verification (Pro+)',
+    description: 'Verify your business with Corporate Affairs Commission for added trust and credibility.',
   },
 ]
 
@@ -208,15 +252,15 @@ const plans = [
 const trustBadges = [
   { icon: Zap, label: 'No Coding Required', sub: 'Set up in minutes' },
   { icon: Smartphone, label: 'Mobile-First', sub: 'Looks sharp on any phone' },
-  { icon: BarChart2, label: 'Products & Services', sub: 'Sell anything you offer' },
+  { icon: BarChart2, label: 'Sell Products & Services', sub: 'Physical goods, digital, bookings' },
   { icon: MessageCircle, label: 'Structured Orders', sub: 'Customers order clearly' },
   { icon: Lock, label: 'Always Online', sub: 'Your store never sleeps' },
 ]
 
 const stats = [
-  { value: '100+', label: 'Active Stores' },
+  { value: '100+', label: 'Active Nigerian Stores' },
   { value: '₦0', label: 'To Get Started' },
-  { value: 'Take Less Than 2 mins', label: 'To Go Live' },
+  { value: '< 2 min', label: 'To Go Live' },
   { value: '24/7', label: 'Always Online' },
 ]
 
@@ -252,20 +296,25 @@ const storeExamples = [
 
 const platformFeatures = [
   { icon: Settings, title: 'Structured Checkout', desc: 'Give customers a clear path from browsing to payment confirmation and order follow-up.' },
-  { icon: Package, title: 'Delivery Planning', desc: 'Prepare location-aware delivery workflows for faster fulfilment and cleaner customer communication.' },
-  { icon: Users, title: 'Customers CRM', desc: 'See customer history, repeat buyers, and follow up smarter from one dashboard.' },
-  { icon: Star, title: 'Reviews & Ratings', desc: 'Let happy customers leave reviews and build trust on your store page.' },
+  { icon: CreditCard, title: 'In-App Paystack Checkout', desc: 'Accept card, bank transfer, and USSD payments directly on your store. Orders create automatically.' },
+  { icon: Truck, title: 'Shipbubble Delivery Integration', desc: 'Show live delivery rates at checkout, book shipments, and share tracking links from your dashboard.' },
+  { icon: CreditCard, title: 'Payouts & Bank Settlement', desc: 'Connect your bank via Paystack subaccount. View earnings KPIs, transaction history, and get paid on your schedule.' },
+  { icon: Users, title: 'Customer CRM', desc: 'Auto-built from confirmed orders. Expandable profiles, WhatsApp direct links, sort by spend, orders, or recency.' },
+  { icon: Star, title: 'Verified Reviews & Ratings', desc: 'Buyers leave star ratings and reviews after delivery. Aggregate scores show on product and service cards.' },
+  { icon: Tag, title: 'Discounts & Promo Codes', desc: 'Create percentage or flat discounts, set usage limits and expiry dates. Applied automatically at checkout.' },
+  { icon: BarChart2, title: 'Advanced Analytics', desc: 'Track store views, clicks, engagement rate, top-performing products and services from one dashboard.' },
+  { icon: Download, title: 'Product Export', desc: 'Export your catalogue to PDF, CSV, Excel, and downloadable files for offline records or marketing.' },
+  { icon: Globe, title: 'Custom Domain', desc: 'Use your own domain (yourbrand.com) for a fully branded store experience.' },
+  { icon: Shield, title: 'CAC Verification', desc: 'Verify your business with Corporate Affairs Commission for added trust and credibility.' },
   { icon: MessageCircle, title: 'Business Messaging', desc: 'Automate order confirmations and customer support from the same commerce flow.' },
 ]
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [openFaq, setOpenFaq] = useState(null)
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const toggleFaq = (i) => setOpenFaq(openFaq === i ? null : i)
   const handleCTA = () => navigate(user ? '/dashboard' : '/login')
 
   return (
@@ -294,10 +343,10 @@ export default function Home() {
               </h1>
 
               <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
-                Set up a professional e-commerce page for your products or services.
+                Set up a professional store page for your products or services. Accept Paystack payments, manage Shipbubble delivery, track customers in your CRM, run discounts, collect reviews, and grow with analytics — all from one dashboard.
                 <br></br> 
                 <br></br>
-                Share one link anywhere - Instagram, Facebook, TikTok, WhatsApp, Twitter, flyers, or DMs and let customers browse, order, pay and reach you directly. 
+                Share one link anywhere — Instagram, Facebook, TikTok, WhatsApp, Twitter, flyers, or DMs — and let customers browse, order, pay, and reach you directly. 
                 <br></br>
                 <br></br>
                 No coding. No stress.
@@ -412,11 +461,12 @@ export default function Home() {
             {[
               { icon: Store, title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
               { icon: Package, title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
-              { icon: MessageCircle, title: 'Receive Orders', desc: 'Customers order directly from your page. You get notified and fulfil with ease.' },
-              { icon: TrendingUp, title: 'Track Performance', desc: "See what's working. Track visitors, orders and sales all in one place." },
-              { icon: ShoppingCart, title: 'Cart Checkout (Growth+)', desc: 'Customers can add multiple items to a cart and send one structured order with their details and notes.' },
-              { icon: Package, title: 'Stock Count Management', desc: 'Vendors can set precise stock levels. Out-of-stock products automatically sort to the bottom of the store page.' },
-              { icon: Grid, title: 'Categories', desc: 'Vendors can organize offers clearly so customers can filter items by category on the live page.' },
+              { icon: CreditCard, title: 'Accept Payments (Pro+)', desc: 'In-app Paystack checkout for card, transfer, and USSD. Orders create automatically in your dashboard.' },
+              { icon: Truck, title: 'Manage Delivery (Pro+)', desc: 'Shipbubble integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
+              { icon: Users, title: 'Customer CRM (Pro+)', desc: 'Auto-built from confirmed orders. Profiles, WhatsApp links, sort by spend, orders, or recency.' },
+              { icon: Star, title: 'Reviews & Ratings (Pro+)', desc: 'Verified buyer reviews with aggregate stars on product and service cards.' },
+              { icon: Tag, title: 'Discounts & Promos (Pro+)', desc: 'Percentage or flat discounts, usage limits, expiry dates. Applied automatically at checkout.' },
+              { icon: BarChart2, title: 'Analytics & Growth', desc: 'Track store views, clicks, engagement, top performers. Marketing tab with daily tasks and points.' },
             ].map((item) => (
               <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm shadow-gray-100/80 hover:shadow-lg hover:shadow-gray-200/80 hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
                 <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-4 group-hover:bg-brand-100 transition-colors">
@@ -450,8 +500,10 @@ export default function Home() {
                 {[
                   'Your full catalogue in one shareable link',
                   'Orders come in structured, not buried in chats',
-                  'Manage products, leads and analytics from one dashboard',
+                  'Manage products, services, leads and analytics from one dashboard',
                   'Supports products, services and bookings',
+                  'In-app Paystack checkout and Shipbubble delivery (Pro+)',
+                  'Customer CRM, verified reviews, and discounts (Pro+)',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <span className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -484,7 +536,7 @@ export default function Home() {
             <div className="relative flex justify-center">
               <img
                 src="/midpageshowcase-secondarylaptop.png"
-                alt="Sellapage store showcase"
+                alt="Sellapage dashboard showing products, orders, analytics, and customers"
                 width={560}
                 height={420}
                 loading="lazy"
@@ -536,6 +588,18 @@ export default function Home() {
                 problem: 'Expensive tools weren\'t built for you',
                 detail: 'Shopify costs ₦47,000 a month and needs a developer. Linktree has no catalogue. WhatsApp Business has no store page.',
               },
+              {
+                problem: 'No checkout or delivery tools',
+                detail: 'Customers can\'t pay on your page. You can\'t show delivery rates or book shipments. Money and logistics stay manual.',
+              },
+              {
+                problem: 'No customer memory',
+                detail: 'Repeat buyers are strangers every time. No purchase history, no WhatsApp shortcuts, no way to reward loyalty.',
+              },
+              {
+                problem: 'No growth toolkit',
+                detail: 'No analytics, no discounts, no reviews, no export. You\'re flying blind while competitors optimize.',
+              },
             ].map((item) => (
               <div
                 key={item.problem}
@@ -557,7 +621,7 @@ export default function Home() {
               Sellapage fixes all of this for free.
             </h3>
             <p className="text-brand-100 max-w-xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
-              Get a professional catalogue link that never expires, receive organised orders, manage customers, track performance and run your business from one dashboard.
+              Get a professional catalogue link that never expires, receive organised orders, manage customers, track performance, accept payments, handle delivery, run discounts, collect reviews, and run your entire business from one dashboard.
             </p>
           </div>
         </div>
@@ -572,7 +636,7 @@ export default function Home() {
               From sign-up to first order in one session
             </h2>
             <p className="text-gray-500 max-w-md mx-auto text-base">
-              No technical setup. No waiting. Just create, add and share.
+              No technical setup. No waiting. Just create, add, share, and manage from your dashboard.
             </p>
           </div>
 
@@ -590,6 +654,10 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          <p className="text-center text-gray-500 text-sm mt-8 max-w-2xl mx-auto">
+            After going live, your dashboard gives you: order management, delivery booking, customer CRM, analytics, discounts, reviews, payouts, and growth tools — all in one place.
+          </p>
         </div>
       </section>
 
@@ -601,6 +669,9 @@ export default function Home() {
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
               Built to help you sell more
             </h2>
+            <p className="text-gray-500 max-w-xl mx-auto text-base">
+              Every feature is live today. Starter gives you the essentials. Growth, Pro, and Premium unlock the full commerce workspace.
+            </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f) => (
@@ -625,6 +696,9 @@ export default function Home() {
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
                 See How Others Sell with Ease
               </h2>
+              <p className="text-gray-500 text-base mt-2 max-w-xl">
+                Live Nigerian businesses using Sellapage for products, services, and bookings.
+              </p>
             </div>
           </div>
 
@@ -641,7 +715,7 @@ export default function Home() {
                 <div className="relative overflow-hidden h-64 sm:h-72 lg:h-80 w-full bg-gray-50">
                   <img
                     src={store.image}
-                    alt={store.name}
+                    alt={`${store.name} store page on Sellapage`}
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -678,7 +752,9 @@ export default function Home() {
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3">
               Loved by Business Owners
             </h2>
-            <p className="text-gray-400 text-base">What sellers like you could expect.</p>
+            <p className="text-gray-500 text-base max-w-xl mx-auto">
+              Real Nigerian merchants, service providers, and freelancers sharing their experience with Sellapage.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -715,18 +791,18 @@ export default function Home() {
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
               Built for the full selling workflow
             </h2>
-            <p className="text-gray-400 text-base max-w-sm mx-auto">
-              From checkout to delivery, customers, reviews, and follow-up, Sellapage gives Nigerian businesses the operating layer to sell with confidence.
+            <p className="text-gray-500 text-base max-w-2xl mx-auto">
+              From checkout to delivery, customers, reviews, discounts, analytics, and growth — Sellapage gives Nigerian businesses the operating layer to sell with confidence. Pro and Premium unlock the full suite.
             </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
             {platformFeatures.map((item) => (
               <div key={item.title} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 transition-all duration-200 group">
                 <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
                   <item.icon className="w-5 h-5 text-brand-600" />
                 </div>
                 <h3 className="font-display font-bold text-gray-900 text-sm mb-1">{item.title}</h3>
-                <p className="text-gray-400 text-xs leading-relaxed">{item.desc}</p>
+                <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -744,31 +820,21 @@ export default function Home() {
           </div>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
-              <div
-                key={i}
-                className="border border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm shadow-gray-100/60"
-              >
-                <button
-                  onClick={() => toggleFaq(i)}
-                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
-                >
+              <details key={i} className="group border border-gray-100 rounded-2xl bg-white shadow-sm shadow-gray-100/60">
+                <summary className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer list-none hover:bg-gray-50 transition-colors">
                   <span className="font-display font-semibold text-gray-900 text-sm">{faq.q}</span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-5 pt-0">
-                    <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
-                  </div>
-                )}
-              </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
+                </summary>
+                <div className="px-5 pb-5 pt-0">
+                  <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
+                </div>
+              </details>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
+       {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
       <section className="py-20 bg-brand-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -783,10 +849,10 @@ export default function Home() {
               </div>
               <div>
                 <h2 className="font-display font-extrabold text-white text-2xl sm:text-3xl leading-tight mb-1">
-                  Your store is one link away.
+                  Run Your Entire Business from One Dashboard.
                 </h2>
                 <p className="text-brand-100 text-sm leading-relaxed">
-                  Create your free store in minutes and manage products, services, orders, customers, payments and growth from one place.
+                  Create your free store in minutes. Manage products, services, checkout, delivery, customers, analytics, and growth — all in one place.
                 </p>
               </div>
             </div>

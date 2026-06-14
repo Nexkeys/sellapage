@@ -6,17 +6,32 @@ import { useAuth } from '../hooks/useAuth'
 
 
 const FEATURES = [
-  { label: 'Shareable public store link',          wa: false, sellapage: true  },
-  { label: 'Works outside WhatsApp (web browser)', wa: false, sellapage: true  },
-  { label: 'Product search for customers',         wa: false, sellapage: true  },
-  { label: 'Customer lead capture form',           wa: false, sellapage: true  },
-  { label: 'Pre-filled order messages',            wa: false, sellapage: true  },
-  { label: 'Sell products and services',           wa: false, sellapage: true  },
-  { label: 'Dashboard to manage orders & leads',   wa: false, sellapage: true  },
-  { label: 'Share in Instagram bio',               wa: false, sellapage: true  },
-  { label: 'Business messaging & quick replies',   wa: true,  sellapage: true  },
-  { label: 'Basic product catalogue',              wa: true,  sellapage: true  },
-  { label: 'Free to use',                          wa: true,  sellapage: true  },
+  { category: 'Store & Discovery', items: [
+    { label: 'Shareable public store link',          wa: false, sellapage: true  },
+    { label: 'Works outside WhatsApp (web browser)', wa: false, sellapage: true  },
+    { label: 'Show prices, photos, descriptions',    wa: false, sellapage: true  },
+    { label: 'Product search for customers',         wa: false, sellapage: true  },
+    { label: 'Category filters',                     wa: false, sellapage: true  },
+    { label: 'Sell products and services',           wa: false, sellapage: true  },
+    { label: '20 premium store themes',              wa: false, sellapage: true  },
+  ]},
+  { category: 'Orders & Checkout', items: [
+    { label: 'Pre-filled order messages',            wa: false, sellapage: true  },
+    { label: 'WhatsApp order button',                wa: false, sellapage: true  },
+    { label: 'Multi-item cart checkout (Growth+)',   wa: false, sellapage: true  },
+    { label: 'In-app Paystack checkout (Pro+)',      wa: false, sellapage: true  },
+    { label: 'Customer lead capture form',           wa: false, sellapage: true  },
+  ]},
+  { category: 'Growth & Operations', items: [
+    { label: 'Dashboard to manage orders & leads',   wa: false, sellapage: true  },
+    { label: 'Customer CRM and analytics',           wa: false, sellapage: true  },
+    { label: 'Delivery integration & tracking',      wa: false, sellapage: true  },
+    { label: 'Reviews and discount codes',           wa: false, sellapage: true  },
+    { label: 'Share in Instagram bio',               wa: false, sellapage: true  },
+    { label: 'Business messaging & quick replies',   wa: true,  sellapage: true  },
+    { label: 'Basic product catalogue',              wa: true,  sellapage: true  },
+    { label: 'Free to use',                          wa: true,  sellapage: true  },
+  ]},
 ]
 
 
@@ -35,9 +50,12 @@ export default function VsWhatsAppBusiness() {
           <h1 className="font-display text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
             WhatsApp Business is for chatting.<br />Sellapage is for running commerce.
           </h1>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed mb-6">
             WhatsApp Business is useful for conversations. Sellapage gives you the broader workspace:
             products, services, orders, customers, payments, analytics, and a public store link you can share anywhere.
+          </p>
+          <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
+            Sellapage gives your business a full commerce workspace alongside WhatsApp: store pages for products and services, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, and a public link you can share on Instagram, Twitter, flyers, and DMs.
           </p>
         </div>
       </section>
@@ -59,23 +77,28 @@ export default function VsWhatsAppBusiness() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            {FEATURES.map((row, i) => (
-              <div key={i} className="grid grid-cols-3 gap-2 sm:gap-3 items-center bg-gray-50 rounded-xl px-3 sm:px-4 py-3">
-                <p className="text-gray-700 text-xs sm:text-sm font-medium leading-snug">{row.label}</p>
-                <div className="flex justify-center">
-                  {row.wa
-                    ? <Check size={18} className="text-green-500" />
-                    : <X     size={18} className="text-red-400"   />}
-                </div>
-                <div className="flex justify-center">
-                  {row.sellapage
-                    ? <Check size={18} className="text-brand-500" />
-                    : <X     size={18} className="text-red-400"   />}
-                </div>
+          {FEATURES.map((section, si) => (
+            <div key={si} className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 px-1">{section.category}</p>
+              <div className="space-y-2">
+                {section.items.map((row, i) => (
+                  <div key={i} className="grid grid-cols-3 gap-2 sm:gap-3 items-center bg-gray-50 rounded-xl px-3 sm:px-4 py-3">
+                    <p className="text-gray-700 text-xs sm:text-sm font-medium leading-snug">{row.label}</p>
+                    <div className="flex justify-center">
+                      {row.wa
+                        ? <Check size={18} className="text-green-500" />
+                        : <X     size={18} className="text-red-400"   />}
+                    </div>
+                    <div className="flex justify-center">
+                      {row.sellapage
+                        ? <Check size={18} className="text-brand-500" />
+                        : <X     size={18} className="text-red-400"   />}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -113,7 +136,7 @@ export default function VsWhatsAppBusiness() {
           <h2 className="font-display font-bold text-gray-900 text-2xl mb-4">
             Actually, Use Both Together
           </h2>
-          <p className="text-gray-500 text-sm leading-relaxed max-w-xl mx-auto">
+          <p className="text-gray-600 text-base leading-relaxed max-w-xl mx-auto">
             WhatsApp Business can still handle conversations. Sellapage handles the commerce layer:
             catalogue, orders, customers, checkout, reviews, and analytics. They work well together.
           </p>
@@ -133,7 +156,7 @@ export default function VsWhatsAppBusiness() {
             onClick={() => navigate(user ? '/dashboard' : '/login')}
             className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
           >
-            {user ? 'Check your growth workspace' : 'Create Free Account'}
+            {user ? 'Open Your Dashboard' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
         </div>

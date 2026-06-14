@@ -17,6 +17,11 @@ const FEATURES = [
   { label: 'Dashboard to manage orders & leads',   shopify: true,  sellapage: true  },
   { label: 'Online payment processing',            shopify: true,  sellapage: true  },
   { label: 'Inventory and customer management',    shopify: true,  sellapage: true  },
+  { label: 'Delivery integration & tracking',      shopify: true,  sellapage: true  },
+  { label: 'Verified customer reviews',            shopify: true,  sellapage: true  },
+  { label: 'Discounts & promo codes',              shopify: true,  sellapage: true  },
+  { label: 'AI product descriptions',              shopify: false, sellapage: true  },
+  { label: 'Custom domain included in plan',       shopify: false, sellapage: true  },
 ]
 
 
@@ -35,9 +40,12 @@ export default function VsShopify() {
           <h1 className="font-display text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
             Shopify is expensive and complex.<br />Sellapage gets you selling today.
           </h1>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed mb-6">
             Shopify is a powerful platform built for big businesses with a tech team and a budget.
             We built Sellapage for everyday Nigerian sellers who want to start now, not next month.
+          </p>
+          <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
+            Sellapage gives you a live commerce workspace: store pages for products and services, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one Nigerian-built dashboard. No developer required.
           </p>
         </div>
       </section>
@@ -48,11 +56,11 @@ export default function VsShopify() {
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4">
             <AlertCircle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-amber-800 text-sm mb-1">The real cost of Shopify</p>
+              <p className="font-bold text-amber-800 text-sm mb-1">The real cost of Shopify for Nigerian businesses</p>
               <p className="text-amber-700 text-sm leading-relaxed">
-                Shopify's basic plan starts at $29/month — that's roughly <strong>₦47,000+ every month</strong>,
-                plus domain fees, app add-ons, and payment transaction fees. For many Nigerian businesses,
-                that cost is not worth it.
+                Shopify Basic starts at $29/month — roughly <strong>₦47,000+ monthly</strong> at current rates.
+                Add domain (₦15,000+/yr), essential apps (₦10,000–₦50,000/mo), and 2% transaction fees on top of Paystack fees.
+                For a Nigerian SME, that's ₦60,000–₦100,000+ monthly before you sell a single item.
               </p>
             </div>
           </div>

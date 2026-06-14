@@ -41,7 +41,8 @@ export default function Navbar() {
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
             <a href="/#how-it-works" className="hover:text-gray-900 transition-colors">How It Works</a>
             <a href="/#features" className="hover:text-gray-900 transition-colors">Features</a>
-            <Link to="/tools/offer-name-lab" className="hover:text-gray-900 transition-colors">Tools</Link>
+            <a href="/tools/offer-name-lab" className="hover:text-gray-900 transition-colors">Offer & Name Lab</a>
+            <a href="/tools/policy-generator" className="hover:text-gray-900 transition-colors">Policy Generator</a>
             <a href="/pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
 
             {user ? (
@@ -96,7 +97,8 @@ export default function Navbar() {
           {[
             { label: 'How It Works', href: '/#how-it-works' },
             { label: 'Features', href: '/#features' },
-            { label: 'Tools', href: '/tools/offer-name-lab' },
+            { label: 'Offer & Name Lab', href: '/tools/offer-name-lab' },
+            { label: 'Policy Generator', href: '/tools/policy-generator' },
             { label: 'Pricing', href: '/pricing' },
           ].map(link => (
             <a

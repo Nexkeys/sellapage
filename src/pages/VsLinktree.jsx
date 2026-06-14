@@ -6,15 +6,31 @@ import { useAuth } from '../hooks/useAuth'
 
 
 const FEATURES = [
-  { label: 'Share a link anywhere',           linktree: true,  sellapage: true  },
-  { label: 'Show product photos',             linktree: false, sellapage: true  },
-  { label: 'Show prices clearly',             linktree: false, sellapage: true  },
-  { label: 'Product descriptions',            linktree: false, sellapage: true  },
-  { label: 'Direct customer ordering',        linktree: false, sellapage: true  },
-  { label: 'Customer lead capture form',      linktree: false, sellapage: true  },
-  { label: 'Sell products and services',      linktree: false, sellapage: true  },
-  { label: 'Dashboard to manage orders & leads', linktree: false, sellapage: true  },
-  { label: 'Free to start',                   linktree: true,  sellapage: true  },
+  { category: 'Store & Discovery', items: [
+    { label: 'Share a link anywhere',           linktree: true,  sellapage: true  },
+    { label: 'Show product photos',             linktree: false, sellapage: true  },
+    { label: 'Show prices clearly',             linktree: false, sellapage: true  },
+    { label: 'Product descriptions',            linktree: false, sellapage: true  },
+    { label: 'Category filters and search',     linktree: false, sellapage: true  },
+    { label: 'Sell products and services',      linktree: false, sellapage: true  },
+    { label: '20 premium store themes',         linktree: false, sellapage: true  },
+  ]},
+  { category: 'Orders & Checkout', items: [
+    { label: 'Direct customer ordering',        linktree: false, sellapage: true  },
+    { label: 'WhatsApp order button',           linktree: false, sellapage: true  },
+    { label: 'Multi-item cart checkout (Growth+)', linktree: false, sellapage: true  },
+    { label: 'In-app Paystack checkout (Pro+)', linktree: false, sellapage: true  },
+    { label: 'Customer lead capture form',      linktree: false, sellapage: true  },
+  ]},
+  { category: 'Growth & Operations', items: [
+    { label: 'Dashboard to manage orders & leads', linktree: false, sellapage: true  },
+    { label: 'Customer CRM and analytics',      linktree: false, sellapage: true  },
+    { label: 'Delivery integration & tracking',  linktree: false, sellapage: true  },
+    { label: 'Reviews and discount codes',       linktree: false, sellapage: true  },
+    { label: 'AI product descriptions',          linktree: false, sellapage: true  },
+    { label: 'Custom domain',                    linktree: false, sellapage: true  },
+    { label: 'Free to start',                    linktree: true,  sellapage: true  },
+  ]},
 ]
 
 
@@ -33,9 +49,12 @@ export default function VsLinktree() {
           <h1 className="font-display text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
             Linktree shows links.<br />Sellapage sells products.
           </h1>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed mb-6">
             Linktree provides a list of links. Sellapage gives your business a real commerce page where customers see your products or services,
             check prices, order, and enter your customer workflow.
+          </p>
+          <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
+            Sellapage replaces your Linktree with a full commerce workspace: store pages for products and services, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one dashboard.
           </p>
         </div>
       </section>
@@ -58,24 +77,28 @@ export default function VsLinktree() {
             </div>
           </div>
 
-          {/* Rows */}
-          <div className="space-y-2">
-            {FEATURES.map((row, i) => (
-              <div key={i} className="grid grid-cols-3 gap-2 sm:gap-3 items-center bg-gray-50 rounded-xl px-3 sm:px-4 py-3">
-                <p className="text-gray-700 text-xs sm:text-sm font-medium leading-snug">{row.label}</p>
-                <div className="flex justify-center">
-                  {row.linktree
-                    ? <Check size={18} className="text-green-500" />
-                    : <X     size={18} className="text-red-400"   />}
-                </div>
-                <div className="flex justify-center">
-                  {row.sellapage
-                    ? <Check size={18} className="text-brand-500" />
-                    : <X     size={18} className="text-red-400"   />}
-                </div>
+          {FEATURES.map((section, si) => (
+            <div key={si} className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 px-1">{section.category}</p>
+              <div className="space-y-2">
+                {section.items.map((row, i) => (
+                  <div key={i} className="grid grid-cols-3 gap-2 sm:gap-3 items-center bg-gray-50 rounded-xl px-3 sm:px-4 py-3">
+                    <p className="text-gray-700 text-xs sm:text-sm font-medium leading-snug">{row.label}</p>
+                    <div className="flex justify-center">
+                      {row.linktree
+                        ? <Check size={18} className="text-green-500" />
+                        : <X     size={18} className="text-red-400"   />}
+                    </div>
+                    <div className="flex justify-center">
+                      {row.sellapage
+                        ? <Check size={18} className="text-brand-500" />
+                        : <X     size={18} className="text-red-400"   />}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -160,7 +183,7 @@ export default function VsLinktree() {
             onClick={() => navigate(user ? '/dashboard' : '/login')}
             className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
           >
-            {user ? 'Check your growth workspace' : 'Create Free Account'}
+            {user ? 'Open Your Dashboard' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
         </div>

@@ -6,9 +6,9 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-4 py-14">
         <div className="bg-gray-900 rounded-[28px] p-6 md:p-8 mb-14 flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10">
           <div>
-            <p className="text-orange-300 text-sm font-semibold mb-1">Stay ahead</p>
+            <p className="text-orange-300 text-sm font-semibold mb-1">Grow your business</p>
             <p className="font-display font-bold text-xl text-white">
-              Get practical growth tips for your Sellapage workspace
+              Get free tips on selling, marketing, and running your store
             </p>
           </div>
           <div className="flex w-full md:w-auto gap-2">
@@ -33,9 +33,16 @@ export default function Footer() {
               />
               <span className="font-display font-bold text-white text-lg tracking-tight">Sellapage</span>
             </Link>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              A live commerce workspace for Nigerian businesses to manage offers, orders, customers, payments, and growth.
+            <p className="text-gray-400 text-sm leading-relaxed mb-4">
+              The all-in-one commerce workspace for Nigerian businesses. Products, services, checkout, delivery, customers, analytics, and growth — one dashboard.
             </p>
+            <div className="flex flex-wrap gap-3">
+              {['CAC Registered', 'Paystack Secured', 'Firebase Encrypted'].map((badge) => (
+                <span key={badge} className="inline-flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                  {badge}
+                </span>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -111,7 +118,7 @@ export default function Footer() {
             >
               NexKeys Agency
             </a>{' '}
-            - Made for Nigerians
+            — Made for Nigerians
           </p>
         </div>
       </div>

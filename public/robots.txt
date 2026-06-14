@@ -1,0 +1,20 @@
+# Sellapage robots.txt
+# Allow all crawlers to access public pages
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://sellapage.com.ng/sitemap.xml
+
+# Disallow private/admin paths
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /billing
+Disallow: /login
+Disallow: /reset-password
+Disallow: /review
+Disallow: /:storeName/
+Disallow: /:storeName/services
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 10
