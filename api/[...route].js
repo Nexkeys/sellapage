@@ -20,11 +20,27 @@ import resetPassword from "../src/api-handlers/reset-password.js";
 
 export default async function handler(req, res) {
   try {
-    const { route } = req.query || {};
-    const rawEndpoint = route ? route[0] : "";
+    let rawEndpoint = "";
 
-    // Normalize underscores from frontend requests to hyphens for backend matching
-    // (e.g., converts billing_initialize -> billing-initialize)
+    // 1. Try reading from Vercel's native query parameters
+    if (req.query && req.query.route && req.query.route[0]) {
+      rawEndpoint = req.query.route[0];
+    }
+
+    // 2. Fallback: Parse the raw URL directly to bypass vercel.json rewrite edge cases
+    if (!rawEndpoint && req.url) {
+      const urlPath = req.url.split("?")[0]; // Remove any query strings (?code=...)
+      const segments = urlPath.split("/").filter(Boolean); // Split and clear empty spaces
+      
+      // If URL is /api/billing-initialize -> segments are ["api", "billing-initialize"]
+      if (segments[0] === "api" && segments[1]) {
+        rawEndpoint = segments[1];
+      } else if (segments[0]) {
+        rawEndpoint = segments[0];
+      }
+    }
+
+    // Normalize underscores from frontend requests to hyphens for matching
     const endpoint = rawEndpoint.replace(/_/g, "-");
 
     switch (endpoint) {
@@ -63,7 +79,7 @@ export default async function handler(req, res) {
       case "reset-password":
         return await resetPassword(req, res);
       default:
-        res.status(404).json({ error: `Route [${rawEndpoint}] not found` });
+        res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
         return;
     }
   } catch (err) {
