@@ -21,7 +21,11 @@ import resetPassword from "../src/api-handlers/reset-password.js";
 export default async function handler(req, res) {
   try {
     const { route } = req.query || {};
-    const endpoint = route ? route[0] : "";
+    const rawEndpoint = route ? route[0] : "";
+
+    // Normalize underscores from frontend requests to hyphens for backend matching
+    // (e.g., converts billing_initialize -> billing-initialize)
+    const endpoint = rawEndpoint.replace(/_/g, "-");
 
     switch (endpoint) {
       case "paystack-webhook":
@@ -59,7 +63,7 @@ export default async function handler(req, res) {
       case "reset-password":
         return await resetPassword(req, res);
       default:
-        res.status(404).json({ error: "Not found" });
+        res.status(404).json({ error: `Route [${rawEndpoint}] not found` });
         return;
     }
   } catch (err) {
