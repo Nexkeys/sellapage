@@ -161,7 +161,7 @@ export default async function handler(req, res) {
       console.error('Error sending notifications:', err)
     }
 
-    return res.status(200).json({ success: true })
+    return res.status(200).json({ success: true, type, channels: notifications.length > 0 ? ['email', 'push'] : [] })
   } catch (err) {
     console.error('Internal server error:', err)
     return res.status(500).send('Internal Server Error')

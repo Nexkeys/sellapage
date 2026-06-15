@@ -387,6 +387,44 @@ export default async function handler(req, res) {
   const storeData = storeSnap.data() || {};
   const planLabel = { growth: "Growth", pro: "Pro", premium: "Premium" }[plan];
 
+  const planFeatures = {
+    growth: [
+      "Up to 50 products",
+      "10 images per product",
+      "Custom domain connection",
+      "Discount & promo codes",
+      "Data export (CSV)",
+    ],
+    pro: [
+      "Unlimited products",
+      "50 images per product",
+      "Advanced analytics dashboard",
+      "Priority support",
+      "All Growth features included",
+    ],
+    premium: [
+      "Unlimited products",
+      "50 images per product",
+      "Premium support & onboarding",
+      "Full analytics suite",
+      "All Pro features included",
+    ],
+  };
+
+  const features = planFeatures[plan] || planFeatures.growth;
+  const featureRows = features
+    .map(
+      (f) => `
+      <tr>
+        <td style="padding: 6px 0; color: #16a34a; font-size: 14px; width: 24px; vertical-align: top;">✓</td>
+        <td style="padding: 6px 0; color: #374151; font-size: 14px;">${f}</td>
+      </tr>`
+    )
+    .join("");
+
+  const renewDate = planEndDate.toDate().toLocaleDateString("en-NG", { dateStyle: "long" });
+  const startDate = planStartDate.toDate().toLocaleDateString("en-NG", { dateStyle: "long" });
+
   try {
     await Promise.all([
       storeData.email
@@ -399,25 +437,41 @@ export default async function handler(req, res) {
               <h1 style="color: white; font-size: 22px; margin: 0; font-weight: bold;">Sellapage</h1>
             </div>
             <div style="padding: 32px;">
-              <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px 0;">${planLabel} Plan Activated!</h2>
-              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Your ${planLabel} plan is live and your new features are unlocked.</p>
+              <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px 0;">${planLabel} Plan Activated!</h2>
+              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${storeData.businessName || "there"}, your ${planLabel} plan is live and your new features are unlocked.</p>
+
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin: 24px 0;">
+                <h3 style="color: #16a34a; font-size: 14px; font-weight: bold; margin: 0 0 12px 0;">What You Unlocked</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  ${featureRows}
+                </table>
+              </div>
+
               <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
+                <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 12px 0;">Receipt</h3>
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr>
-                    <td style="padding: 8px 0; color: #374151; font-size: 14px;">Plan</td>
-                    <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: bold; text-align: right;">${planLabel}</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Plan</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: bold; text-align: right;">${planLabel}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #374151; font-size: 14px;">Amount Paid</td>
-                    <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">₦${(data.amount / 100).toLocaleString("en-NG")}</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Amount Paid</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">₦${(data.amount / 100).toLocaleString("en-NG")}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #374151; font-size: 14px;">Valid Until</td>
-                    <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${planEndDate.toDate().toLocaleDateString("en-NG", { dateStyle: "long" })}</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Activated</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">${startDate}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Renews</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">${renewDate}</td>
                   </tr>
                 </table>
               </div>
-              <p style="color: #6b7280; font-size: 14px; margin: 0;">Visit your dashboard to start using your new features.</p>
+
+              <div style="text-align: center; margin-top: 28px;">
+                <a href="https://sellapage.com.ng/dashboard" style="background-color: #16a34a; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Open My Dashboard</a>
+              </div>
             </div>
             <div style="background-color: #f3f4f6; padding: 16px; text-align: center; color: #6b7280; font-size: 12px;">
               Sellapage · sellapage.com.ng
@@ -430,7 +484,7 @@ export default async function handler(req, res) {
         ? sendPush(
             storeData.fcmToken,
             `${planLabel} Plan Active ✅`,
-            `Your ${planLabel} plan is live. Enjoy your new features!`,
+            `Your ${planLabel} plan is active until ${renewDate}. Enjoy your new features!`,
             { type: "subscription", plan },
           )
         : Promise.resolve(),

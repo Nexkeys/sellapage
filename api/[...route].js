@@ -1,24 +1,5 @@
 // Master catch-all router for Vercel Hobby tier consolidation
 
-import paystackWebhook from "../src/api-handlers/paystack-webhook.js";
-import createSubaccount from "../src/api-handlers/create-subaccount.js";
-import resolveAccount from "../src/api-handlers/resolve-account.js";
-import shipbubbleRates from "../src/api-handlers/shipbubble-rates.js";
-import shipbubbleCreateShipment from "../src/api-handlers/shipbubble-create-shipment.js";
-import shipbubbleWebhook from "../src/api-handlers/shipbubble-webhook.js";
-import aiDescribe from "../src/api-handlers/ai-describe.js";
-import checkoutInitialize from "../src/api-handlers/checkout-initialize.js";
-import billingInitialize from "../src/api-handlers/billing-initialize.js";
-import validateDiscount from "../src/api-handlers/validate-discount.js";
-import submitReview from "../src/api-handlers/submit-review.js";
-import markDelivered from "../src/api-handlers/mark-delivered.js";
-import deleteAccount from "../src/api-handlers/delete-account.js";
-import expiryCron from "../src/api-handlers/expiry-cron.js";
-import adminHealth from "../src/api-handlers/admin-health.js";
-import notify from "../src/api-handlers/notify.js";
-import resetPassword from "../src/api-handlers/reset-password.js";
-
-
 export default async function handler(req, res) {
   try {
     let rawEndpoint = "";

@@ -2,6 +2,9 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
+// NOTE: This module is currently unused. Handlers initialize Firebase Admin inline.
+// Kept for potential future consolidation.
+
 let initialized = false;
 
 function parseServiceAccount() {

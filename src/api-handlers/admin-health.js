@@ -1,7 +1,6 @@
 // sellapage/api/admin-health.js
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import fetch from 'node-fetch';
 
 
 if (!getApps().length) {

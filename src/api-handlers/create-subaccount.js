@@ -3,12 +3,6 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
 const getAdminServices = () => {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
     throw new Error('Missing FIREBASE_SERVICE_ACCOUNT')
