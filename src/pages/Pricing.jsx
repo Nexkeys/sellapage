@@ -1,11 +1,20 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ArrowRight, X, HelpCircle } from 'lucide-react'
+import { Check, ArrowRight, X, HelpCircle, TrendingDown } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
+import {
+  PLAN_PERIODS,
+  PLAN_PRICES,
+  formatPrice,
+  getMonthlyEquivalent,
+  getSavingsPercent,
+} from '../utils/billingPlans'
 
 const PLANS = [
   {
+    id: 'starter',
     name: 'Starter',
     price: 'Free',
     period: 'forever',
@@ -24,9 +33,8 @@ const PLANS = [
     popular: false,
   },
   {
+    id: 'growth',
     name: 'Growth',
-    price: '₦5,000',
-    period: '/month',
     description: 'For growing businesses that need analytics, carts, branding, AI descriptions, and stronger page control.',
     features: [
       'Everything in Starter',
@@ -47,9 +55,8 @@ const PLANS = [
     popular: true,
   },
   {
+    id: 'pro',
     name: 'Pro',
-    price: '₦12,000',
-    period: '/month',
     description: 'For serious businesses managing orders, customers, reviews, payouts, checkout, delivery, and premium operations from one dashboard.',
     features: [
       'Everything in Growth',
@@ -75,9 +82,8 @@ const PLANS = [
     popular: false,
   },
   {
+    id: 'premium',
     name: 'Premium',
-    price: '₦25,000',
-    period: '/month',
     description: 'The flagship plan for established operators. Everything in Pro plus white-label experience and premium positioning.',
     features: [
       'Everything in Pro',
@@ -146,6 +152,10 @@ const FAQS = [
     a: 'We use Paystack for subscription billing. You can pay with card, bank transfer, or USSD. All payments are processed securely in Nigerian Naira (NGN).'
   },
   {
+    q: 'Can I save money with longer billing periods?',
+    a: 'Yes! Quarterly billing saves 10%, 6-month billing saves 15%, and annual billing saves 20% compared to paying monthly. Choose the period that works best for your budget.'
+  },
+  {
     q: 'Is there a free trial for paid plans?',
     a: 'The Starter plan is free forever — no trial needed. You can explore all Starter features without entering payment details. Paid plans activate immediately upon payment.'
   },
@@ -174,6 +184,7 @@ const FAQS = [
 export default function Pricing() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [selectedPeriod, setSelectedPeriod] = useState('monthly')
 
   return (
     <div className="min-h-screen bg-white">
@@ -187,49 +198,98 @@ export default function Pricing() {
             Start free. Upgrade when you're ready.
           </h1>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
-            Simple, transparent pricing built for Nigerians. 
+            Simple, transparent pricing built for Nigerians.
             Manage your store, customers, payments, orders and growth tools from one live workspace.
           </p>
+        </div>
+      </section>
+
+      {/* Period Toggle */}
+      <section className="py-8 px-4 bg-white">
+        <div className="max-w-7xl mx-auto flex justify-center">
+          <div className="inline-flex items-center gap-1 bg-gray-100 p-1 rounded-2xl">
+            {PLAN_PERIODS.map(period => {
+              const isActive = selectedPeriod === period.id
+              const savings = getSavingsPercent('growth', period.id)
+              return (
+                <button
+                  key={period.id}
+                  onClick={() => setSelectedPeriod(period.id)}
+                  className={`relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    isActive
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {period.label}
+                  {savings > 0 && (
+                    <span className="absolute -top-2 -right-3 bg-brand-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                      <TrendingDown size={9} />
+                      {savings}%
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </section>
 
       {/* Plan Cards */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          {PLANS.map((plan) => (
-            <div key={plan.name} className={`rounded-3xl border p-8 flex flex-col transition-all hover:-translate-y-1 ${plan.popular ? 'border-brand-500 shadow-2xl shadow-brand-100/60 relative' : 'border-gray-200 shadow-sm hover:shadow-lg'}`}>
-              {plan.popular && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full">
-                  Most Popular
+          {PLANS.map((planItem) => {
+            const isStarter = planItem.id === 'starter'
+            const price = isStarter ? null : PLAN_PRICES[planItem.id]?.[selectedPeriod]
+            const monthlyEquiv = isStarter ? null : getMonthlyEquivalent(planItem.id, selectedPeriod)
+            const periodObj = isStarter ? null : PLAN_PERIODS.find(p => p.id === selectedPeriod)
+
+            return (
+              <div key={planItem.id} className={`rounded-3xl border p-8 flex flex-col transition-all hover:-translate-y-1 ${planItem.popular ? 'border-brand-500 shadow-2xl shadow-brand-100/60 relative' : 'border-gray-200 shadow-sm hover:shadow-lg'}`}>
+                {planItem.popular && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full">
+                    Most Popular
+                  </div>
+                )}
+                <h3 className="font-display text-2xl font-bold text-gray-900 mb-2">{planItem.name}</h3>
+                <p className="text-gray-500 text-sm mb-6">{planItem.description}</p>
+                <div className="mb-6">
+                  {isStarter ? (
+                    <span className="font-display text-4xl font-extrabold text-gray-900">Free</span>
+                  ) : (
+                    <>
+                      <span className="font-display text-4xl font-extrabold text-gray-900">{formatPrice(price)}</span>
+                      <span className="text-gray-500 text-sm font-medium ml-1">/{periodObj?.shortLabel}</span>
+                      {selectedPeriod !== 'monthly' && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatPrice(monthlyEquiv)}/mo equivalent
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
-              <h3 className="font-display text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-              <p className="text-gray-500 text-sm mb-6">{plan.description}</p>
-              <div className="mb-6">
-                <span className="font-display text-4xl font-extrabold text-gray-900">{plan.price}</span>
-                <span className="text-gray-500 text-sm font-medium ml-1">{plan.period}</span>
+                <ul className="space-y-3 mb-8 flex-1" role="list">
+                  {planItem.features.map((feat, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
+                      <Check size={16} className="text-brand-500 flex-shrink-0 mt-0.5" />
+                      {feat}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => navigate(planItem.contactOnly ? '/contact' : user ? '/dashboard' : '/login')}
+                  className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                    planItem.popular
+                      ? 'bg-brand-600 text-white hover:bg-brand-700 shadow-lg shadow-brand-200/50'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {planItem.cta}
+                  <ArrowRight size={16} />
+                </button>
               </div>
-              <ul className="space-y-3 mb-8 flex-1" role="list">
-                {plan.features.map((feat, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
-                    <Check size={16} className="text-brand-500 flex-shrink-0 mt-0.5" />
-                    {feat}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => navigate(plan.contactOnly ? '/contact' : user ? '/dashboard' : '/login')}
-                className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                  plan.popular 
-                    ? 'bg-brand-600 text-white hover:bg-brand-700 shadow-lg shadow-brand-200/50' 
-                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {plan.cta}
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
@@ -257,9 +317,9 @@ export default function Pricing() {
                     <tr>
                       <th className="text-left px-6 py-3 font-medium text-gray-500 w-72">Feature</th>
                       <th className="text-center px-4 py-3 font-medium text-gray-500">Starter<br /><span className="text-xs font-normal text-gray-400">Free</span></th>
-                      <th className="text-center px-4 py-3 font-medium text-brand-600">Growth<br /><span className="text-xs font-normal text-gray-400">₦5,000/mo</span></th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-900">Pro<br /><span className="text-xs font-normal text-gray-400">₦12,000/mo</span></th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-900">Premium<br /><span className="text-xs font-normal text-gray-400">₦25,000/mo</span></th>
+                      <th className="text-center px-4 py-3 font-medium text-brand-600">Growth<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.growth[selectedPeriod])}/{PLAN_PERIODS.find(p => p.id === selectedPeriod)?.shortLabel}</span></th>
+                      <th className="text-center px-4 py-3 font-medium text-gray-900">Pro<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.pro[selectedPeriod])}/{PLAN_PERIODS.find(p => p.id === selectedPeriod)?.shortLabel}</span></th>
+                      <th className="text-center px-4 py-3 font-medium text-gray-900">Premium<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.premium[selectedPeriod])}/{PLAN_PERIODS.find(p => p.id === selectedPeriod)?.shortLabel}</span></th>
                     </tr>
                   </thead>
                   <tbody>

@@ -46,7 +46,8 @@ export function buildCartOrderURL(phoneNumber, storeName, cartItems, customerDet
   const itemLines = cartItems.map(item => {
     const lineTotal = Number(item.price) * Number(item.quantity)
     const label = item.type === 'service' ? 'service' : 'item'
-    return `- ${item.quantity}x ${item.name} (${label}) - ₦${lineTotal.toLocaleString()}`
+    const variationStr = item.variationLabel ? `\n  ${item.variationLabel}` : ''
+    return `- ${item.quantity}x ${item.name} (${label}) - ₦${lineTotal.toLocaleString()}${variationStr}`
   })
 
   const orderTotal = cartItems.reduce(

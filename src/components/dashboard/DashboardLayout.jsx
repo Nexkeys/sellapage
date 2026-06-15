@@ -102,10 +102,17 @@ export default function DashboardLayout({
   const planStatus = store?.planStatus || "active";
   const badge = PLAN_BADGE[plan] ?? null;
   const isGrace = planStatus === "grace";
+  const isExpired = planStatus === "expired";
   const effectiveIsPro = isPro || (store?.hasProFeatures ?? (plan === "pro" || plan === "premium"));
   const isGrowth =
     (store?.hasGrowthFeatures ?? (plan === "growth" || plan === "pro")) &&
     !effectiveIsPro;
+
+  const planEndDate = store?.planEndDate?.toDate?.();
+  const daysUntilExpiry = planEndDate
+    ? Math.ceil((planEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+  const isExpiringSoon = !isGrace && !isExpired && daysUntilExpiry !== null && daysUntilExpiry <= 7 && daysUntilExpiry > 0;
   const mainContentRef = useRef(null);
   const sidebarNavRef = useRef(null);
   const sidebarScrollTopRef = useRef(0);
@@ -424,6 +431,18 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <main ref={mainContentRef} className="flex-1 overflow-y-auto">
+          {/* 7-day Expiry Alert */}
+          {isExpiringSoon && (
+            <div className="w-full bg-amber-50 border-b border-amber-200 text-amber-700 text-sm font-semibold text-center px-4 py-2.5 flex-shrink-0">
+              Your plan expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? 's' : ''}. Renew now to keep all your listings live.{" "}
+              <button
+                onClick={() => handleTabChange("billing")}
+                className="underline underline-offset-2 hover:no-underline ml-1"
+              >
+                Renew Plan
+              </button>
+            </div>
+          )}
           {children}
         </main>
       </div>

@@ -13,11 +13,13 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-const PLAN_AMOUNTS = {
-  growth: 500000,
-  pro: 1200000,
-  premium: 2500000,
-};
+const PRICE_MATRIX = {
+  growth: { monthly: 500000, quarterly: 1350000, biannual: 2550000, annual: 4800000 },
+  pro: { monthly: 1200000, quarterly: 3240000, biannual: 6120000, annual: 11520000 },
+  premium: { monthly: 2500000, quarterly: 6750000, biannual: 12750000, annual: 24000000 },
+}
+
+const PERIOD_MONTHS = { monthly: 1, quarterly: 3, biannual: 6, annual: 12 }
 
 const PLAN_LIMITS = {
   growth: {
@@ -317,7 +319,7 @@ export default async function handler(req, res) {
   }
 
   // Subscription handling (existing logic)
-  const { storeId, plan } = data.metadata || {};
+  const { storeId, plan, billingPeriod = 'monthly' } = data.metadata || {};
 
   if (!storeId || !plan) {
     return res.status(400).send("Missing storeId or plan in metadata");
@@ -327,8 +329,13 @@ export default async function handler(req, res) {
     return res.status(400).send("Invalid plan in metadata");
   }
 
-  if (data.amount !== PLAN_AMOUNTS[plan]) {
-    return res.status(400).send(`Amount mismatch: expected ${PLAN_AMOUNTS[plan]}, got ${data.amount}`);
+  const expectedAmount = PRICE_MATRIX[plan]?.[billingPeriod];
+  if (!expectedAmount) {
+    return res.status(400).send(`Invalid plan/period combination: ${plan}/${billingPeriod}`);
+  }
+
+  if (data.amount !== expectedAmount) {
+    return res.status(400).send(`Amount mismatch: expected ${expectedAmount}, got ${data.amount}`);
   }
 
   // W1 idempotency guard
@@ -345,14 +352,24 @@ export default async function handler(req, res) {
   }
 
   const now = Timestamp.now();
-  const planStartDate = now;
-  const planEndDate = Timestamp.fromMillis(
-    now.toMillis() + 30 * 24 * 60 * 60 * 1000,
-  );
-  const graceUntil = Timestamp.fromMillis(
-    planEndDate.toMillis() + 2 * 24 * 60 * 60 * 1000,
-  );
+  
+  // Fetch store data early to check for existing active subscription time
+  const storeCheckSnap = await db.collection("stores").doc(storeId).get();
+  const storeCheckData = storeCheckSnap.data() || {};
+  const existingEndMillis = storeCheckData.planEndDate?.toMillis?.() || 0;
+  const nowMillis = now.toMillis();
+  
+  // If current plan is still active, append time to the existing end date. Otherwise, start from now.
+  const baseDate = existingEndMillis > nowMillis ? new Date(existingEndMillis) : now.toDate();
+  const planStartDate = existingEndMillis > nowMillis ? Timestamp.fromMillis(existingEndMillis) : now;
 
+  const monthsCount = PERIOD_MONTHS[billingPeriod] || 1;
+  const endDateObj = new Date(baseDate);
+  endDateObj.setMonth(endDateObj.getMonth() + monthsCount);
+  const planEndDate = Timestamp.fromDate(endDateObj);
+
+  // Calculate grace period (strictly 2 days past the calculated plan end date)
+  const graceUntil = Timestamp.fromMillis(endDateObj.getTime() + 2 * 24 * 60 * 60 * 1000);
   const limits = PLAN_LIMITS[plan];
 
   const storeRef = db.collection("stores").doc(storeId);
@@ -362,6 +379,7 @@ export default async function handler(req, res) {
 
   batch.update(storeRef, {
     plan,
+    billingPeriod,
     planStatus: "active",
     planStartDate,
     planEndDate,
@@ -371,6 +389,7 @@ export default async function handler(req, res) {
 
   batch.set(subscriptionRef, {
     plan,
+    billingPeriod,
     amount: data.amount,
     currency: "NGN",
     status: "success",
@@ -382,10 +401,10 @@ export default async function handler(req, res) {
 
   await batch.commit();
 
-  // Send notifications
-  const storeSnap = await db.collection("stores").doc(storeId).get();
-  const storeData = storeSnap.data() || {};
+  // Send notifications — reuse storeCheckSnap from earlier
+  const storeData = storeCheckSnap.data() || {};
   const planLabel = { growth: "Growth", pro: "Pro", premium: "Premium" }[plan];
+  const periodLabel = { monthly: "Monthly", quarterly: "Quarterly", biannual: "6-Month", annual: "Annual" }[billingPeriod];
 
   const planFeatures = {
     growth: [
@@ -430,7 +449,7 @@ export default async function handler(req, res) {
       storeData.email
         ? sendEmail(
             storeData.email,
-            `Your Sellapage ${planLabel} plan is now active ✓`,
+            `Your Sellapage ${planLabel} plan (${periodLabel}) is now active ✓`,
             `
           <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
             <div style="background-color: #16a34a; padding: 24px;">
@@ -438,7 +457,7 @@ export default async function handler(req, res) {
             </div>
             <div style="padding: 32px;">
               <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px 0;">${planLabel} Plan Activated!</h2>
-              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${storeData.businessName || "there"}, your ${planLabel} plan is live and your new features are unlocked.</p>
+              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${storeData.businessName || "there"}, your ${periodLabel} ${planLabel} plan is live and your new features are unlocked.</p>
 
               <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin: 24px 0;">
                 <h3 style="color: #16a34a; font-size: 14px; font-weight: bold; margin: 0 0 12px 0;">What You Unlocked</h3>
@@ -452,7 +471,7 @@ export default async function handler(req, res) {
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr>
                     <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Plan</td>
-                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: bold; text-align: right;">${planLabel}</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: bold; text-align: right;">${planLabel} (${periodLabel})</td>
                   </tr>
                   <tr>
                     <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Amount Paid</td>
@@ -484,8 +503,8 @@ export default async function handler(req, res) {
         ? sendPush(
             storeData.fcmToken,
             `${planLabel} Plan Active ✅`,
-            `Your ${planLabel} plan is active until ${renewDate}. Enjoy your new features!`,
-            { type: "subscription", plan },
+            `Your ${periodLabel} ${planLabel} plan is active until ${renewDate}. Enjoy your new features!`,
+            { type: "subscription", plan, billingPeriod },
           )
         : Promise.resolve(),
     ]);

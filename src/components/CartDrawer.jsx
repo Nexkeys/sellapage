@@ -119,6 +119,11 @@ export default function CartDrawer({
                     <p className="font-semibold text-sm leading-snug line-clamp-2">
                       {item.name}
                     </p>
+                    {item.variationLabel && (
+                      <p className="text-[11px] mt-0.5 opacity-50 font-medium">
+                        {item.variationLabel}
+                      </p>
+                    )}
                     <p className="text-xs mt-0.5 opacity-60">
                       ₦{Number(item.price).toLocaleString()} each
                     </p>

@@ -26,6 +26,7 @@ import ProductCard from "../components/ProductCard";
 import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
 import CartDrawer from "../components/CartDrawer";
+import ProductDetailOverlay from "../components/ProductDetailOverlay";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 
@@ -729,6 +730,7 @@ export default function StorePage() {
 
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -854,11 +856,18 @@ export default function StorePage() {
 
   const handleAddToCart = (product) => {
     triggerSessionEngagement();
+    const productVariations = product.selectedVariations || {};
+    const variationLabel = product.variationLabel || '';
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const existing = prev.find(
+        (item) =>
+          item.id === product.id &&
+          JSON.stringify(item.selectedVariations || {}) === JSON.stringify(productVariations),
+      );
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id
+          item.id === product.id &&
+          JSON.stringify(item.selectedVariations || {}) === JSON.stringify(productVariations)
             ? { ...item, quantity: item.quantity + 1 }
             : item,
         );
@@ -871,6 +880,9 @@ export default function StorePage() {
           price: Number(product.price),
           type: product.type || "physical",
           quantity: 1,
+          selectedVariations:
+            Object.keys(productVariations).length > 0 ? productVariations : undefined,
+          variationLabel: variationLabel || undefined,
         },
       ];
     });
@@ -1405,6 +1417,7 @@ export default function StorePage() {
                             activeThemeObj.structuralStyle.buttonClasses
                           }
                           structuralClasses={`${activeThemeObj.structuralStyle.cardBorderRadius} ${activeThemeObj.structuralStyle.cardBorder}`}
+                          onViewProduct={setSelectedProduct}
                         />
                       ))}
                     </div>
@@ -1451,6 +1464,25 @@ export default function StorePage() {
           />
         )}
       </main>
+
+      {selectedProduct && (
+        <ProductDetailOverlay
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={handleAddToCart}
+          onOrder={handleProductClick}
+          isCartEnabled={isCartEnabled}
+          isProOrPremium={isProOrPremium}
+          activeThemeObj={activeThemeObj}
+          themePrimary={themePrimary}
+          themeCard={themeCard}
+          themeText={themeText}
+          bodyFont={bodyFont}
+          headerFont={headerFont}
+          whatsappNumber={store.whatsappNumber}
+          storeUrl={storeUrl}
+        />
+      )}
 
       {cartOpen && isCartEnabled && (
         <CartDrawer

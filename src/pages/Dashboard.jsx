@@ -12,6 +12,8 @@ import {
   FREE_PLAN_LIMIT,
   deleteAllStoreProducts,
   uploadSingleImage,
+  saveCustomCategory,
+  getCustomCategories,
 } from "../firebase/products";
 import {
   addService,
@@ -71,6 +73,7 @@ const EMPTY_FORM = {
   imageFiles: [],
   imagePreviews: [],
   imageUrls: [],
+  variations: [],
 };
 
 const EMPTY_SERVICE_FORM = {
@@ -135,6 +138,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
   const [aiDescError, setAiDescError] = useState("");
+  const [customCategories, setCustomCategories] = useState([]);
   const [generatingServiceDesc, setGeneratingServiceDesc] = useState(false);
   const [serviceAiDescError, setServiceAiDescError] = useState("");
 
@@ -385,6 +389,8 @@ export default function Dashboard() {
       const data = await getProducts(store.id);
       setProducts(data);
       setProductCount(data.length);
+      const cats = await getCustomCategories(store.id);
+      setCustomCategories(cats);
     } catch (err) {
       console.error("Failed to fetch products", err);
     } finally {
@@ -558,6 +564,7 @@ export default function Dashboard() {
       imageFiles: [],
       imagePreviews: [],
       imageUrls: product.imageUrls || [],
+      variations: product.variations || [],
     });
     setShowForm(true);
   };
@@ -763,6 +770,18 @@ export default function Dashboard() {
     }));
   };
 
+  const handleSaveCustomCategory = async (categoryName) => {
+    try {
+      const id = await saveCustomCategory(store.id, categoryName);
+      const cats = await getCustomCategories(store.id);
+      setCustomCategories(cats);
+      return id;
+    } catch (err) {
+      console.error("Failed to save custom category", err);
+      return null;
+    }
+  };
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       setFormError("Product name is required.");
@@ -791,6 +810,7 @@ export default function Dashboard() {
                 ? Number(form.stock)
                 : null,
             imageUrls: form.imageUrls,
+            variations: form.variations || [],
           },
           form.imageFiles,
         );
@@ -820,6 +840,7 @@ export default function Dashboard() {
               form.stock !== undefined
                 ? Number(form.stock)
                 : null,
+            variations: form.variations || [],
           },
           form.imageFiles,
         );
@@ -1305,7 +1326,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleUpgrade = async (selectedPlan) => {
+  const handleUpgrade = async (selectedPlan, billingPeriod = 'monthly') => {
     if (!store?.id || !selectedPlan) return;
     setBillingLoading(selectedPlan);
     setBillingError("");
@@ -1313,7 +1334,7 @@ export default function Dashboard() {
       const res = await fetch("/api/billing-initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId: store.id, plan: selectedPlan }),
+        body: JSON.stringify({ storeId: store.id, plan: selectedPlan, billingPeriod }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1535,6 +1556,9 @@ export default function Dashboard() {
           startEdit={startEdit}
           handleDelete={handleDelete}
           onToggleActive={handleToggleActive}
+          customCategories={customCategories}
+          onSaveCustomCategory={handleSaveCustomCategory}
+          setForm={setForm}
         />
       )}
 

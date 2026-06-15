@@ -25,6 +25,7 @@ export default function ProductCard({
   structuralClasses = "rounded-2xl border border-stone-100",
   avgRating = 0,
   reviewCount = 0,
+  onViewProduct = null,
 }) {
   const [activeImg, setActiveImg] = useState(0);
   const [popupIndex, setPopupIndex] = useState(null);
@@ -32,7 +33,8 @@ export default function ProductCard({
   const images = product.imageUrls?.length ? product.imageUrls : [];
   const hasMultiple = images.length > 1;
 
-  const handleOrder = () => {
+  const handleOrder = (e) => {
+    if (e) e.stopPropagation();
     if (onOrder) onOrder(product.id);
     const url = buildOrderURL(
       whatsappNumber,
@@ -45,9 +47,14 @@ export default function ProductCard({
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const handleAdd = () => {
+  const handleAdd = (e) => {
+    e.stopPropagation();
     if (onAddToCart) onAddToCart(product);
     if (onOrder) onOrder(product.id);
+  };
+
+  const handleCardClick = () => {
+    if (onViewProduct) onViewProduct(product);
   };
 
   const isOutOfStock = typeof product.stock === "number" && product.stock === 0;
@@ -76,7 +83,7 @@ export default function ProductCard({
         {/* Image area */}
         {listView ? (
           // ── List view image ──
-          <div className="relative z-0 bg-stone-100 overflow-hidden flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-l-2xl rounded-r-none">
+          <div className="relative z-0 bg-stone-100 overflow-hidden flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-l-2xl rounded-r-none cursor-pointer" onClick={handleCardClick}>
             {images.length > 0 ? (
               <img
                 src={images[activeImg]}
@@ -108,7 +115,7 @@ export default function ProductCard({
           </div>
         ) : (
           // ── Default (grid/compact) view image ──
-          <div className="relative z-0 aspect-square w-full bg-stone-100 overflow-hidden">
+          <div className="relative z-0 aspect-square w-full bg-stone-100 overflow-hidden cursor-pointer" onClick={handleCardClick}>
             {images.length > 0 ? (
               <>
                 <img

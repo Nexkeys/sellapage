@@ -10,11 +10,13 @@ if (!getApps().length) {
 
 const db = getFirestore()
 
-const PLAN_AMOUNTS = {
-  growth: 500000,
-  pro: 1200000,
-  premium: 2500000,
+const PRICE_MATRIX = {
+  growth: { monthly: 500000, quarterly: 1350000, biannual: 2550000, annual: 4800000 },
+  pro: { monthly: 1200000, quarterly: 3240000, biannual: 6120000, annual: 11520000 },
+  premium: { monthly: 2500000, quarterly: 6750000, biannual: 12750000, annual: 24000000 },
 }
+
+const VALID_PERIODS = ['monthly', 'quarterly', 'biannual', 'annual']
 
 export default async function handler(req, res) {
   try {
@@ -38,7 +40,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid JSON body' })
     }
 
-    const { storeId, plan } = body
+    const { storeId, plan, billingPeriod = 'monthly' } = body
 
     if (!storeId || !plan) {
       return res.status(400).json({ error: 'Missing required fields: storeId, plan' })
@@ -46,6 +48,10 @@ export default async function handler(req, res) {
 
     if (!['growth', 'pro', 'premium'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan. Must be "growth", "pro", or "premium"' })
+    }
+
+    if (!VALID_PERIODS.includes(billingPeriod)) {
+      return res.status(400).json({ error: 'Invalid billingPeriod. Must be "monthly", "quarterly", "biannual", or "annual"' })
     }
 
     let storeDoc
@@ -66,7 +72,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Store has no email address on file' })
     }
 
-    const amount = PLAN_AMOUNTS[plan]
+    const amount = PRICE_MATRIX[plan][billingPeriod]
 
     let paystackResponse
     try {
@@ -83,6 +89,7 @@ export default async function handler(req, res) {
           metadata: {
             storeId,
             plan,
+            billingPeriod,
             type: 'subscription',
             app: 'sellapage',
           },

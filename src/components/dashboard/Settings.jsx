@@ -5,6 +5,7 @@ import {
   Trash2, X, Sparkles, ArrowRight, Check, Shield, Lock,
 } from 'lucide-react'
 import { FREE_PLAN_LIMIT } from '../../firebase/products'
+import { PLAN_PRICES, formatPrice } from '../../utils/billingPlans'
 
 
 const getInitials = (name = '') => {
@@ -24,7 +25,7 @@ const PLAN_INFO = {
     products: '15 listings',
     images: '3 images / listing',
     features: ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
-    upgradeLabel: 'Upgrade to Growth - ₦5,000/mo',
+    upgradeLabel: `Upgrade to Growth - ${formatPrice(PLAN_PRICES.growth.monthly)}/mo`,
     upgradePlan: 'growth',
   },
   starter: {
@@ -32,7 +33,7 @@ const PLAN_INFO = {
     products: '15 listings',
     images: '3 images / listing',
     features: ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
-    upgradeLabel: 'Upgrade to Growth - ₦5,000/mo',
+    upgradeLabel: `Upgrade to Growth - ${formatPrice(PLAN_PRICES.growth.monthly)}/mo`,
     upgradePlan: 'growth',
   },
   growth: {
@@ -40,7 +41,7 @@ const PLAN_INFO = {
     products: '50 listings',
     images: '10 images / listing',
     features: ['Everything in Starter', 'Logo and brand colours', 'Analytics and click tracking', 'Offer visibility toggle', 'Priority WhatsApp support'],
-    upgradeLabel: 'Upgrade to Pro - ₦12,000/mo',
+    upgradeLabel: `Upgrade to Pro - ${formatPrice(PLAN_PRICES.pro.monthly)}/mo`,
     upgradePlan: 'pro',
   },
   pro: {
@@ -342,7 +343,7 @@ export default function SettingsTab({
             >
               {upgradeLoading === 'growth'
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> Upgrade to Growth - ₦5,000/mo</>
+                : <><Sparkles size={15} /> Upgrade to Growth - {formatPrice(PLAN_PRICES.growth.monthly)}/mo</>
               }
             </button>
             <button
@@ -352,7 +353,7 @@ export default function SettingsTab({
             >
               {upgradeLoading === 'pro'
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> Upgrade to Pro - ₦12,000/mo</>
+                : <><Sparkles size={15} /> Upgrade to Pro - {formatPrice(PLAN_PRICES.pro.monthly)}/mo</>
               }
             </button>
             <button
@@ -362,7 +363,7 @@ export default function SettingsTab({
             >
               {upgradeLoading === 'premium'
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> Upgrade to Premium - ₦25,000/mo</>
+                : <><Sparkles size={15} /> Upgrade to Premium - {formatPrice(PLAN_PRICES.premium.monthly)}/mo</>
               }
             </button>
           </div>
@@ -377,7 +378,7 @@ export default function SettingsTab({
             >
               {upgradeLoading === 'pro'
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> Upgrade to Pro - ₦12,000/mo</>
+                : <><Sparkles size={15} /> Upgrade to Pro - {formatPrice(PLAN_PRICES.pro.monthly)}/mo</>
               }
             </button>
             <button
@@ -387,7 +388,7 @@ export default function SettingsTab({
             >
               {upgradeLoading === 'premium'
                 ? <Loader2 size={15} className="animate-spin" />
-                : <><Sparkles size={15} /> Upgrade to Premium - ₦25,000/mo</>
+                : <><Sparkles size={15} /> Upgrade to Premium - {formatPrice(PLAN_PRICES.premium.monthly)}/mo</>
               }
             </button>
           </div>
@@ -401,7 +402,7 @@ export default function SettingsTab({
           >
             {upgradeLoading === 'premium'
               ? <Loader2 size={15} className="animate-spin" />
-              : <><Sparkles size={15} /> Upgrade to Premium - ₦25,000/mo</>
+              : <><Sparkles size={15} /> Upgrade to Premium - {formatPrice(PLAN_PRICES.premium.monthly)}/mo</>
             }
           </button>
         )}

@@ -196,3 +196,26 @@ export const getStoreBySlug = async (storeName) => {
   }
   return null
 }
+
+
+export const saveCustomCategory = async (storeId, categoryName) => {
+  const normalized = categoryName.trim()
+  if (!normalized) return null
+  const q = query(
+    collection(db, 'stores', storeId, 'categories'),
+    where('name', '==', normalized)
+  )
+  const existing = await getDocs(q)
+  if (!existing.empty) return existing.docs[0].id
+  const ref = await addDoc(collection(db, 'stores', storeId, 'categories'), {
+    name: normalized,
+    createdAt: new Date(),
+  })
+  return ref.id
+}
+
+
+export const getCustomCategories = async (storeId) => {
+  const snap = await getDocs(collection(db, 'stores', storeId, 'categories'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
