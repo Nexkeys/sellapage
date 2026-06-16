@@ -148,6 +148,7 @@ export default function ProductDetailOverlay({
             headerFam={headerFam}
             btnBg={btnBg}
             btnClasses={btnClasses}
+            cardBg={cardBg}
             isCartEnabled={isCartEnabled}
             isProOrPremium={isProOrPremium}
             allVariationsSelected={allVariationsSelected}
@@ -257,7 +258,7 @@ function MobileContent({
   product, images, hasMultiple, activeImg, setActiveImg,
   variations, hasVariations, selectedVariations, handleVariationSelect,
   quantity, setQuantity, isOutOfStock, isLowStock,
-  textCol, headerFam, btnBg, btnClasses,
+  textCol, headerFam, btnBg, btnClasses, cardBg,
   isCartEnabled, isProOrPremium, allVariationsSelected,
   handleAddToCart, handleOrder, addedFeedback,
 }) {
