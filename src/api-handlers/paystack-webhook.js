@@ -5,6 +5,15 @@ import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail } from "./_lib/send-email.js";
 import { sendPush } from "./_lib/send-push.js";
 
+async function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', (err) => reject(err));
+  });
+}
+
 if (!getApps().length) {
   initializeApp({
     credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
@@ -46,13 +55,13 @@ const PLAN_LIMITS = {
 };
 
 export default async function handler(req, res) {
-  console.log('[webhook] typeof req.body:', typeof req.body, 'is buffer:', Buffer.isBuffer(req.body));
   if (req.method !== "POST") {
     return res.status(405).send("Method not allowed");
   }
 
   const signature = req.headers["x-paystack-signature"];
-  const rawBody = req.body;
+  const rawBodyBuffer = await getRawBody(req);
+  const rawBody = rawBodyBuffer.toString("utf8");
 
   const expectedSignature = crypto
     .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
