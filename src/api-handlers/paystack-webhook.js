@@ -46,6 +46,7 @@ const PLAN_LIMITS = {
 };
 
 export default async function handler(req, res) {
+  console.log('[webhook] typeof req.body:', typeof req.body, 'is buffer:', Buffer.isBuffer(req.body));
   if (req.method !== "POST") {
     return res.status(405).send("Method not allowed");
   }
