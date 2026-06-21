@@ -1,3 +1,4 @@
+//src/components/dashboard/MarketingTab.jsx/
 import { useState, useEffect } from 'react'
 import { Megaphone, Share2, MessageCircle, Zap, Check, ChevronRight, Copy, Loader2, ArrowRight } from 'lucide-react'
 import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore'

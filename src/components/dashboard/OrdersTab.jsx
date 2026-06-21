@@ -625,7 +625,7 @@ export default function OrdersTab({
   }, [orders, filterSearch, filterStatus, filterPayment, filterOrderType, filterSort])
 
 
-  if (!isGrowthOrPro) {
+  if (!isPro) {
     return (
       <div className="mx-auto max-w-5xl p-4 sm:p-6">
         <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100/80">
@@ -634,10 +634,10 @@ export default function OrdersTab({
               <Lock size={34} className="text-green-600" strokeWidth={1.8} />
             </div>
             <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.22em] text-green-600">
-              Growth and Pro
+              Pro and Premium
             </p>
             <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-gray-950 sm:text-3xl">
-              Unlock the Order Ledger
+              Pro & Premium Feature
             </h1>
             <p className="mx-auto mb-8 max-w-lg text-sm leading-relaxed text-gray-500 sm:text-base">
               Track manual WhatsApp orders, payment progress, fulfillment status, and customer notes in a clean bookkeeping workspace.
@@ -667,17 +667,9 @@ export default function OrdersTab({
             Order Ledger
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-gray-500">
-            Track product orders and service bookings in one place. WhatsApp orders can be logged manually.
+            Track product orders and service bookings in one place. WhatsApp orders can be logged manually in the ledger tab.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openNewOrderForm}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-sm shadow-green-200/60 transition-all duration-200 hover:bg-green-700 hover:shadow-md"
-        >
-          <Plus size={16} strokeWidth={2.25} />
-          Log Order
-        </button>
       </div>
 
       {/* Operational Filter Strip */}
@@ -1278,12 +1270,6 @@ export default function OrdersTab({
         </>
       )}
 
-      <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
-        <Info size={15} className="mt-0.5 flex-shrink-0 text-blue-500" />
-        <p className="text-sm leading-relaxed text-blue-700">
-          Track product orders and service bookings in one place. WhatsApp orders can be logged manually. Service bookings appear here automatically when customers book through your store.
-        </p>
-      </div>
 
       {confirmingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm">

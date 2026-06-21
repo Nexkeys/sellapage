@@ -22,40 +22,6 @@ function LeadTypeBadge({ leadType }) {
 }
 
 export default function LeadsTab({ leadsLoading, leads, isPro }) {
-  // Non-Pro gate
-  if (!isPro) {
-    return (
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto flex items-center justify-center min-h-[70vh]">
-        <div className="text-center space-y-5 w-full">
-          <div className="flex justify-center">
-            <div className="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center">
-              <Lock size={32} className="text-gray-400" />
-            </div>
-          </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-gray-900">Hot Leads — Pro Feature</h2>
-            <p className="text-gray-400 text-sm mt-2 max-w-xs mx-auto leading-relaxed">
-              See every customer who left their details on your store — name, phone, message, and status tracking.
-            </p>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 text-left max-w-xs mx-auto space-y-2.5">
-            {['Full name, phone & message','Product they enquired about','Mark as new / contacted / closed','Never miss a potential sale'].map(f => (
-              <div key={f} className="flex items-center gap-2.5 text-sm text-gray-700">
-                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                {f}
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col gap-2 items-center">
-            <span className="text-xs text-gray-400">Available on Pro — ₦12,000/month</span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // Pro view
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
@@ -63,7 +29,7 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Leads</h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">Pro</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">Leads</span>
           </div>
           <p className="text-gray-400 text-sm mt-1">People who left their details on your store page.</p>
         </div>

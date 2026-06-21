@@ -1,3 +1,4 @@
+//src/components/dashboard/DiscountsTab.jsx/
 import { useEffect, useState } from "react";
 import { Percent, Lock, Plus, X, Loader2, Trash2 } from "lucide-react";
 import {

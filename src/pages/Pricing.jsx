@@ -1,3 +1,4 @@
+//src/pages/Pricing.jsx/
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ArrowRight, X, HelpCircle, TrendingDown } from 'lucide-react'
@@ -22,12 +23,14 @@ const PLANS = [
     features: [
       '15 total listings (products + services combined)',
       '3 images per listing',
-      'WhatsApp order button on every listing',
-      'Lead capture enquiry form',
       'Basic store page with hero, categories, search',
+      'Lead capture enquiry form',
+      'Manual Ledger — log and track orders offline',
+      'Download ledger as CSV or PDF',
+      'Stock and category basics',
       'Offer & Name Lab tool',
       'Policy Generator tool',
-      'Stock and category basics',
+      'Marketing tab with daily tasks',
     ],
     cta: 'Start for Free',
     popular: false,
@@ -42,14 +45,11 @@ const PLANS = [
       '10 images per listing',
       'Custom visual palette (colours, fonts, logo)',
       'Analytics & click tracking (store views, top clicks)',
-      'WhatsApp cart & multi-item orders',
-      'AI description generation — 20/day',
-      'Product & service visibility toggle',
-      'Manual orders tab (offline/ledger orders)',
-      'Delivery tab with pickup address setup',
-      'Marketing tab with daily tasks & points',
+      'AI description generation — 20 per day',
       'Stock count management & out-of-stock sorting',
       'Categories for products and services',
+      'Marketing tab with daily tasks & points',
+      'Priority support',
     ],
     cta: 'Upgrade to Growth',
     popular: true,
@@ -88,13 +88,18 @@ const PLANS = [
     features: [
       'Everything in Pro',
       'White-label customer experience (no Sellapage branding)',
-      'Brand-only presentation for the vendor',
-      'Highest tier experience',
-      'Premium positioning',
+      'AI Business Partner (context-aware dashboard assistant)',
+      'WhatsApp Business API automation & broadcast manager',
+      'Loyalty Points System for repeat customers',
+      'Abandoned Cart Recovery via WhatsApp',
+      'Multi-staff account access with role controls',
+      'Meta Ads integration (self-managed or Sellapage-managed)',
+      'Google Ads integration (self-managed or Sellapage-managed)',
+      'Custom Domain Engine with SSL',
+      'Advanced integrations & premium positioning',
     ],
-    cta: 'Contact Sales',
+    cta: 'Upgrade to Premium',
     popular: false,
-    contactOnly: true,
   }
 ]
 
@@ -131,6 +136,7 @@ const COMPARISON_ROWS = [
     { label: 'Top-performing analytics', starter: false, growth: false, pro: true, premium: true },
     { label: 'Marketing tab (tasks & points)', starter: false, growth: true, pro: true, premium: true },
     { label: 'AI descriptions', starter: false, growth: '20/day', pro: '50/day', premium: '50/day' },
+    { label: 'WhatsApp Community Group Sync', starter: false, growth: false, pro: true, premium: true },
   ]},
   { category: 'Operations & Extras', items: [
     { label: 'Stock management & visibility toggle', starter: 'Basics', growth: true, pro: true, premium: true },
@@ -139,6 +145,13 @@ const COMPARISON_ROWS = [
     { label: 'Payouts & bank settlement', starter: false, growth: false, pro: true, premium: true },
     { label: 'Priority support', starter: false, growth: 'Responsive', pro: 'Same-day', premium: 'Same-day' },
     { label: 'Offer & Name Lab / Policy Generator', starter: true, growth: true, pro: true, premium: true },
+    { label: 'Manual Ledger (log & export offline orders)', starter: true, growth: true, pro: true, premium: true },
+    { label: 'AI Business Partner', starter: false, growth: false, pro: false, premium: true },
+    { label: 'Loyalty Points System', starter: false, growth: false, pro: false, premium: true },
+    { label: 'Abandoned Cart Recovery', starter: false, growth: false, pro: false, premium: true },
+    { label: 'Meta & Google Ads integration', starter: false, growth: false, pro: false, premium: true },
+    { label: 'Multi-staff account access', starter: false, growth: false, pro: false, premium: true },
+    { label: 'WhatsApp Business API & broadcasts', starter: false, growth: false, pro: false, premium: true },
   ]},
 ]
 

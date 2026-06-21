@@ -62,6 +62,7 @@ import MobileAppTab from "../components/dashboard/MobileAppTab";
 import PayoutsTab from "../components/dashboard/PayoutsTab";
 import BillingTab from "../components/dashboard/BillingTab";
 import DeliveryTab from "../components/dashboard/DeliveryTab";
+import LedgerTab from "../components/dashboard/LedgerTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -1680,6 +1681,7 @@ export default function Dashboard() {
           navigateTo={setActiveTab}
         />
       )}
+      {activeTab === "ledger" && <LedgerTab />}
       {activeTab === "delivery" && isGrowthOrPro && (
         <DeliveryTab
           store={store}

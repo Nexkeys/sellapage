@@ -24,6 +24,7 @@ import {
   CreditCard,
   Sparkles,
   Truck,
+  BookOpen,
 } from "lucide-react";
 import { logoutSeller } from "../../firebase/auth";
 
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { id: "products", label: "Products", icon: Package },
   { id: "services", label: "Services", icon: Sparkles },
   { id: "categories", label: "Categories", icon: Tag },
+  { id: "ledger", label: "Ledger", icon: BookOpen },
   { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "delivery", label: "Delivery", icon: Truck },
   { id: "customers", label: "Customers", icon: Users },
@@ -107,6 +109,7 @@ export default function DashboardLayout({
   const isGrowth =
     (store?.hasGrowthFeatures ?? (plan === "growth" || plan === "pro")) &&
     !effectiveIsPro;
+  const isGrowthOrAbove = plan === 'growth' || plan === 'pro' || plan === 'premium';
 
   const planEndDate = store?.planEndDate?.toDate?.();
   const daysUntilExpiry = planEndDate
@@ -120,17 +123,18 @@ export default function DashboardLayout({
   const searchableTabs = useMemo(
     () =>
       ALL_TABS.filter((item) => {
-        if (item.id === "orders" && !isGrowthOrPro) return false;
-        if (item.id === "delivery" && !isGrowthOrPro) return false;
-        if (item.id === "products" && vendorType === "services") return false;
-        if (item.id === "services" && vendorType === "products") return false;
-        if (item.id === "payouts" && !effectiveIsPro) return false;
-        if (item.id === "customers" && !effectiveIsPro) return false;
-        if (item.id === "reviews" && !effectiveIsPro) return false;
-        if (item.id === "discounts" && !effectiveIsPro) return false;
+        if (item.id === 'orders' && !effectiveIsPro) return false;
+        if (item.id === 'delivery' && !effectiveIsPro) return false;
+        if (item.id === 'payouts' && !effectiveIsPro) return false;
+        if (item.id === 'customers' && !effectiveIsPro) return false;
+        if (item.id === 'reviews' && !effectiveIsPro) return false;
+        if (item.id === 'discounts' && !effectiveIsPro) return false;
+        if (item.id === 'analytics' && !isGrowthOrAbove) return false;
+        if (item.id === 'products' && vendorType === 'services') return false;
+        if (item.id === 'services' && vendorType === 'products') return false;
         return true;
       }),
-    [isGrowthOrPro, vendorType, effectiveIsPro],
+    [isGrowthOrAbove, vendorType, effectiveIsPro],
   );
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -199,14 +203,15 @@ export default function DashboardLayout({
             );
           }
           const { id, label, icon: Icon } = item;
-          if (id === "orders" && !isGrowthOrPro) return null;
-          if (id === "delivery" && !isGrowthOrPro) return null;
-          if (id === "products" && vendorType === "services") return null;
-          if (id === "services" && vendorType === "products") return null;
-          if (id === "payouts" && !effectiveIsPro) return null;
-          if (id === "customers" && !effectiveIsPro) return null;
-          if (id === "reviews" && !effectiveIsPro) return null;
-          if (id === "discounts" && !effectiveIsPro) return null;
+          if (id === 'orders' && !effectiveIsPro) return null;
+          if (id === 'delivery' && !effectiveIsPro) return null;
+          if (id === 'payouts' && !effectiveIsPro) return null;
+          if (id === 'customers' && !effectiveIsPro) return null;
+          if (id === 'reviews' && !effectiveIsPro) return null;
+          if (id === 'discounts' && !effectiveIsPro) return null;
+          if (id === 'analytics' && !isGrowthOrAbove) return null;
+          if (id === 'products' && vendorType === 'services') return null;
+          if (id === 'services' && vendorType === 'products') return null;
           const active = activeTab === id;
           return (
             <button
@@ -231,13 +236,13 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2 mb-1">
             <Star size={14} className="text-yellow-400" />
             <span className="text-white text-sm font-semibold">
-              {isGrowth ? "Upgrade to Pro" : "Upgrade to Growth"}
+              {isGrowthOrAbove ? 'Upgrade to Pro' : 'Upgrade to Growth'}
             </span>
           </div>
           <p className="text-gray-400 text-xs leading-relaxed mb-3">
-            {isGrowth
-              ? "Get unlimited listings, hot leads, and deeper commerce insights."
-              : "Unlock 50 listings, analytics, carts, and priority support."}
+            {isGrowthOrAbove
+              ? 'Get unlimited listings, in-app checkout, payouts, CRM, and full commerce tools.'
+              : 'Unlock 50 listings, analytics, AI descriptions, and priority support.'}
           </p>
           <button
             onClick={() => handleTabChange("billing", { closeSidebar: true })}

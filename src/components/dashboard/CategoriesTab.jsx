@@ -22,35 +22,6 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
   const productData = processItems(products)
   const serviceData = processItems(services)
 
-  // ── Plan gate ──
-  if (!isGrowthOrPro) {
-    return (
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
-        <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Categories</h1>
-          <p className="text-gray-400 text-sm mt-1">Organise your products and services for easier browsing.</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center py-16 px-6 gap-5 text-center">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
-            <Lock size={22} className="text-gray-400" />
-          </div>
-          <div>
-            <h2 className="font-bold text-gray-900 text-base mb-1">Categories — Growth+ Feature</h2>
-            <p className="text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
-              Organise your products and services into categories so customers can browse your store more easily. Available on Growth and Pro plans.
-            </p>
-          </div>
-          <button
-            onClick={() => navigateTo('billing')}
-            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-          >
-            Upgrade to unlock Categories
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   // Reusable component for category section
   const CategorySection = ({ title, data, itemType, manageTab }) => (
     <div className="space-y-5">
