@@ -625,7 +625,7 @@ export default function OrdersTab({
   }, [orders, filterSearch, filterStatus, filterPayment, filterOrderType, filterSort])
 
 
-  if (!isPro) {
+  if (!isGrowthOrPro) {
     return (
       <div className="mx-auto max-w-5xl p-4 sm:p-6">
         <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100/80">

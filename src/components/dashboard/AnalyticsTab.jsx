@@ -11,24 +11,24 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
   // ── Plan gate ──
   if (!isGrowthOrPro) {
     return (
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
+      <div className="p-4 sm:p-5 max-w-4xl mx-auto space-y-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Analytics</h1>
-          <p className="text-gray-400 text-sm mt-1">Track your store's performance in real time.</p>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Analytics</h1>
+          <p className="text-gray-400 text-xs mt-0.5">Track your store's performance in real time.</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center py-16 px-6 gap-5 text-center">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
-            <Lock size={22} className="text-gray-400" />
+        <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-14 px-6 gap-4 text-center">
+          <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center">
+            <Lock size={20} className="text-gray-400" />
           </div>
           <div>
-            <h2 className="font-bold text-gray-900 text-base mb-1">Analytics — Growth+ Feature</h2>
-            <p className="text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
+            <h2 className="font-bold text-gray-900 text-sm mb-1">Analytics — Growth+ Feature</h2>
+            <p className="text-gray-400 text-xs max-w-xs mx-auto leading-relaxed">
               Store visit tracking and product click analytics are available on the Growth and Pro plans.
             </p>
           </div>
           <button
             onClick={() => navigateTo('billing')}
-            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all"
           >
             Upgrade to unlock Analytics
           </button>
@@ -152,42 +152,42 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
 
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-4 sm:p-5 max-w-4xl mx-auto space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Analytics</h1>
-          <p className="text-gray-400 text-sm mt-1">Track your store's performance in real time.</p>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Analytics</h1>
+          <p className="text-gray-400 text-xs mt-0.5">Track your store's performance in real time.</p>
         </div>
-        <p className="text-xs text-gray-400 font-medium">Updated in real time.</p>
+        <p className="text-[11px] text-gray-400 font-medium">Updated in real time.</p>
       </div>
 
 
       {/* Info banner */}
-      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-start gap-3 text-blue-700 text-sm mb-6">
-        <Info size={15} className="flex-shrink-0 mt-0.5" />
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-start gap-3 text-blue-700 text-xs">
+        <Info size={14} className="flex-shrink-0 mt-0.5" />
         <p>Engagement Rate counts one interaction per visitor session. Product Clicks count every tap on Order or Add to Cart. Booking Requests count every service booking. All numbers update in real time.</p>
       </div>
 
 
       {/* KPI cards */}
-      <div className={`grid gap-3 ${KPIS.length === 5 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'}`}>
+      <div className={`grid gap-3 ${KPIS.length === 5 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
         {KPIS.map(kpi => (
-          <div key={kpi.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${kpi.color}`}>
-                <kpi.Icon size={15} strokeWidth={1.8} />
+          <div key={kpi.label} className="bg-white rounded-2xl border border-gray-100 p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${kpi.color}`}>
+                <kpi.Icon size={14} strokeWidth={1.8} />
               </div>
             </div>
-            <p className="text-xl font-extrabold text-gray-900">{kpi.value}</p>
-            <p className="text-gray-400 text-xs mt-0.5 font-medium">{kpi.label}</p>
+            <p className="text-lg font-bold text-gray-900">{kpi.value}</p>
+            <p className="text-gray-400 text-[11px] mt-0.5">{kpi.label}</p>
             {kpi.label === 'Store Engagement Rate' && (
-              <p className="text-xs text-gray-400 mt-1">of visitors who tapped a product or added to cart</p>
+              <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">of visitors who tapped a product or added to cart</p>
             )}
             {kpi.label === 'Product Clicks' && (
-              <p className="text-xs text-gray-400 mt-1">times customers tapped Order or Add to Cart</p>
+              <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">times customers tapped Order or Add to Cart</p>
             )}
             {kpi.label === 'Booking Requests' && (
-              <p className="text-xs text-gray-400 mt-1">times customers requested a service booking</p>
+              <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">times customers requested a service booking</p>
             )}
           </div>
         ))}
@@ -195,29 +195,29 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
 
 
       {/* Top Performing Products */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="font-bold text-gray-900 text-sm">Top Performing Products</p>
-          <p className="text-gray-400 text-xs mt-0.5">By product page clicks — all time</p>
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <p className="font-semibold text-gray-800 text-xs">Top Performing Products</p>
+          <p className="text-gray-400 text-[11px] mt-0.5">By product page clicks — all time</p>
         </div>
 
         {topProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 px-6 gap-3 text-center">
-            <div className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center">
-              <BarChart2 size={20} className="text-gray-300" />
+          <div className="flex flex-col items-center justify-center py-10 px-6 gap-3 text-center">
+            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center">
+              <BarChart2 size={18} className="text-gray-300" />
             </div>
-            <p className="text-gray-400 text-sm font-medium max-w-xs">
+            <p className="text-gray-400 text-xs max-w-xs">
               No click data yet — share your store to start tracking.
             </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
             {topProducts.map((p, i) => (
-              <div key={p.id} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="text-gray-300 font-bold text-sm w-5 flex-shrink-0">#{i + 1}</span>
+              <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                <span className="text-gray-300 font-bold text-xs w-4 flex-shrink-0">#{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
-                  <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[180px]">
+                  <p className="text-xs font-semibold text-gray-800 truncate">{p.name}</p>
+                  <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden max-w-[160px]">
                     <div
                       className="h-full bg-green-400 rounded-full"
                       style={{ width: `${((p.clicks ?? 0) / maxClicks) * 100}%` }}
@@ -225,8 +225,8 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-gray-900">{p.clicks ?? 0} click{p.clicks !== 1 ? 's' : ''}</p>
-                  <p className="text-xs text-green-600 font-semibold">₦{Number(p.price).toLocaleString()}</p>
+                  <p className="text-xs font-bold text-gray-800">{p.clicks ?? 0} click{p.clicks !== 1 ? 's' : ''}</p>
+                  <p className="text-[11px] text-green-600 font-semibold">₦{Number(p.price).toLocaleString()}</p>
                 </div>
               </div>
             ))}
@@ -236,29 +236,29 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
 
       {/* Top Performing Services (only if vendor includes services) */}
       {(vendorType === 'services' || vendorType === 'both') && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <p className="font-bold text-gray-900 text-sm">Top Performing Services</p>
-            <p className="text-gray-400 text-xs mt-0.5">By booking requests — all time</p>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="font-semibold text-gray-800 text-xs">Top Performing Services</p>
+            <p className="text-gray-400 text-[11px] mt-0.5">By booking requests — all time</p>
           </div>
 
           {topServices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-6 gap-3 text-center">
-              <div className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center">
-                <Calendar size={20} className="text-gray-300" />
+            <div className="flex flex-col items-center justify-center py-10 px-6 gap-3 text-center">
+              <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center">
+                <Calendar size={18} className="text-gray-300" />
               </div>
-              <p className="text-gray-400 text-sm font-medium max-w-xs">
+              <p className="text-gray-400 text-xs max-w-xs">
                 No booking data yet — share your store to start tracking.
               </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
               {topServices.map((s, i) => (
-                <div key={s.id} className="flex items-center gap-4 px-5 py-3.5">
-                  <span className="text-gray-300 font-bold text-sm w-5 flex-shrink-0">#{i + 1}</span>
+                <div key={s.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-gray-300 font-bold text-xs w-4 flex-shrink-0">#{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p>
-                    <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[180px]">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{s.name}</p>
+                    <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden max-w-[160px]">
                       <div
                         className="h-full bg-teal-400 rounded-full"
                         style={{ width: `${((s.bookingRequests ?? 0) / maxBookings) * 100}%` }}
@@ -266,8 +266,8 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-gray-900">{s.bookingRequests ?? 0} booking{s.bookingRequests !== 1 ? 's' : ''}</p>
-                    <p className="text-xs text-teal-600 font-semibold">₦{Number(s.price).toLocaleString()}</p>
+                    <p className="text-xs font-bold text-gray-800">{s.bookingRequests ?? 0} booking{s.bookingRequests !== 1 ? 's' : ''}</p>
+                    <p className="text-[11px] text-teal-600 font-semibold">₦{Number(s.price).toLocaleString()}</p>
                   </div>
                 </div>
               ))}
@@ -278,21 +278,21 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
 
 
       {/* ── Reset Analytics ──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="font-bold text-gray-900 text-sm">Reset Analytics</p>
-          <p className="text-gray-400 text-xs mt-0.5">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <p className="font-semibold text-gray-800 text-xs">Reset Analytics</p>
+          <p className="text-gray-400 text-[11px] mt-0.5">
             Permanently reset all store views, product clicks, service booking requests, and per-item metrics to zero.
           </p>
         </div>
-        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-gray-400 text-xs leading-relaxed max-w-sm">
+        <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-gray-400 text-[11px] leading-relaxed max-w-sm">
             Useful when starting a new marketing campaign or after testing your store. This cannot be undone.
           </p>
           <button
             onClick={handleReset}
             disabled={resetting}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 disabled:opacity-50 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 disabled:opacity-50 ${
               resetDone
                 ? 'bg-green-500 text-white'
                 : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100'

@@ -173,15 +173,15 @@ export default function DashboardLayout({
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
-        <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
+        <div className="w-7 h-7 flex items-center justify-center flex-shrink-0">
           <img
             src="/og-image.png"
             alt="Sellapage logo"
             className="w-8 h-9 rounded-xl object-cover shadow-sm ring-1 ring-white/10"
           />
         </div>
-        <span className="text-white font-bold text-lg tracking-tight">
+        <span className="text-white font-bold text-base tracking-tight">
           sellapage
         </span>
       </div>
@@ -196,7 +196,7 @@ export default function DashboardLayout({
             return (
               <p
                 key={`g-${idx}`}
-                className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-600 select-none"
+                className="px-3 pt-5 pb-1.5 text-[9px] font-extrabold uppercase tracking-[0.15em] text-gray-600 select-none"
               >
                 {item.label}
               </p>
@@ -217,13 +217,13 @@ export default function DashboardLayout({
             <button
               key={id}
               onClick={() => handleTabChange(id, { closeSidebar: true })}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-150 ${
                 active
-                  ? "bg-green-500 text-white shadow-lg shadow-green-950/20"
-                  : "text-gray-400 hover:text-white hover:bg-white/10"
+                  ? "bg-green-500/15 text-green-400 font-semibold"
+                  : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
               }`}
             >
-              <Icon size={17} strokeWidth={1.8} />
+              <Icon size={16} strokeWidth={1.8} />
               {label}
             </button>
           );
@@ -232,21 +232,21 @@ export default function DashboardLayout({
 
       {/* Upgrade Banner — hidden for Pro */}
       {!effectiveIsPro && (
-        <div className="mx-3 mb-3 p-4 rounded-2xl bg-gradient-to-br from-green-600/30 to-green-700/20 border border-green-500/20 shadow-lg shadow-black/10">
+        <div className="mx-3 mb-3 p-3.5 rounded-2xl bg-white/5 border border-white/8">
           <div className="flex items-center gap-2 mb-1">
-            <Star size={14} className="text-yellow-400" />
-            <span className="text-white text-sm font-semibold">
+            <Star size={13} className="text-yellow-400" />
+            <span className="text-white text-xs font-bold">
               {isGrowthOrAbove ? 'Upgrade to Pro' : 'Upgrade to Growth'}
             </span>
           </div>
-          <p className="text-gray-400 text-xs leading-relaxed mb-3">
+          <p className="text-gray-500 text-[11px] leading-relaxed mb-2.5">
             {isGrowthOrAbove
               ? 'Get unlimited listings, in-app checkout, payouts, CRM, and full commerce tools.'
               : 'Unlock 50 listings, analytics, AI descriptions, and priority support.'}
           </p>
           <button
             onClick={() => handleTabChange("billing", { closeSidebar: true })}
-            className="w-full py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-xs font-semibold transition-colors shadow-sm"
+            className="w-full py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-[11px] font-bold transition-colors"
           >
             Upgrade Now
           </button>
@@ -255,8 +255,8 @@ export default function DashboardLayout({
 
       {/* User Profile */}
       <div className="px-3 pb-4">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-white/5 border border-white/10 shadow-sm shadow-black/10">
-          <div className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/8">
+          <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
             {store?.logoUrl ? (
               <img
                 src={store.logoUrl}
@@ -264,14 +264,14 @@ export default function DashboardLayout({
                 className="w-9 h-9 rounded-full object-cover"
               />
             ) : (
-              <span className="text-white text-sm font-bold">
+              <span className="text-white text-xs font-bold">
                 {getInitials(store?.businessName)}
               </span>
             )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
-              <p className="text-white text-sm font-medium truncate">
+              <p className="text-white text-xs font-semibold truncate">
                 {store?.businessName || "Your Business"}
               </p>
               {badge && (
@@ -282,13 +282,13 @@ export default function DashboardLayout({
                 </span>
               )}
             </div>
-            <p className="text-gray-500 text-xs truncate">
+            <p className="text-gray-600 text-[11px] truncate">
               {store?.email || "Business Owner"}
             </p>
           </div>
           <button
             onClick={handleLogout}
-            className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
             title="Logout"
           >
             <LogOut size={15} />
@@ -328,7 +328,7 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Grace Period Banner */}
         {isGrace && (
-          <div className="w-full bg-amber-500 text-white text-sm font-semibold text-center px-4 py-2.5 flex-shrink-0">
+          <div className="w-full bg-amber-500 text-white text-xs font-semibold text-center px-4 py-2 flex-shrink-0">
             Your plan expires soon. Renew now to keep all your listings live.{" "}
             <button
               onClick={() => handleTabChange("billing")}
@@ -340,16 +340,16 @@ export default function DashboardLayout({
         )}
 
         {/* Top Bar */}
-        <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm flex-shrink-0">
+        <header className="flex items-center justify-between px-4 md:px-5 py-3 bg-white border-b border-gray-100 flex-shrink-0 min-h-[52px]">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
             <div className="hidden md:block">
-              <h1 className="text-gray-900 font-semibold text-base">
+              <h1 className="text-gray-800 font-semibold text-sm">
                 {ALL_TABS.find((n) => n.id === activeTab)?.label || "Dashboard"}
               </h1>
             </div>
@@ -357,9 +357,9 @@ export default function DashboardLayout({
 
           <form
             onSubmit={handleSearchSubmit}
-            className="hidden md:block flex-1 max-w-sm mx-8 relative"
+            className="hidden md:block flex-1 max-w-xs mx-6 relative"
           >
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-500 shadow-inner shadow-gray-100 focus-within:border-green-300 focus-within:ring-2 focus-within:ring-green-100">
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-400 focus-within:border-green-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-green-400/15 transition-all">
               <svg
                 width="14"
                 height="14"
@@ -412,13 +412,13 @@ export default function DashboardLayout({
                 href={storeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:text-green-600 hover:border-green-300 hover:bg-green-50/40 text-xs font-medium transition-all"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300 hover:bg-green-50/50 text-xs font-medium transition-all"
               >
                 <ExternalLink size={13} />
                 View Page
               </a>
             )}
-            <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center ring-2 ring-green-100">
               {store?.logoUrl ? (
                 <img
                   src={store.logoUrl}
@@ -438,7 +438,7 @@ export default function DashboardLayout({
         <main ref={mainContentRef} className="flex-1 overflow-y-auto">
           {/* 7-day Expiry Alert */}
           {isExpiringSoon && (
-            <div className="w-full bg-amber-50 border-b border-amber-200 text-amber-700 text-sm font-semibold text-center px-4 py-2.5 flex-shrink-0">
+            <div className="w-full bg-amber-50 border-b border-amber-100 text-amber-700 text-xs font-semibold text-center px-4 py-2 flex-shrink-0">
               Your plan expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? 's' : ''}. Renew now to keep all your listings live.{" "}
               <button
                 onClick={() => handleTabChange("billing")}
