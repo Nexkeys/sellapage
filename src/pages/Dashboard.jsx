@@ -1667,17 +1667,17 @@ export default function Dashboard() {
         />
       )}
 
-      {activeTab === "orders" && isGrowthOrPro && (
+      {activeTab === "orders" && (
         <OrdersTab
           store={store}
           user={user}
           whatsappNumber={store?.whatsappNumber}
           orders={orders}
           ordersLoading={ordersLoading}
-          onAddOrder={handleAddOrder}
           onUpdateOrder={handleUpdateOrder}
           onDeleteOrder={handleDeleteOrder}
           isGrowthOrPro={isGrowthOrPro}
+          isPro={isPro}
           navigateTo={setActiveTab}
         />
       )}
