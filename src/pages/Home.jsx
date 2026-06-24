@@ -343,7 +343,7 @@ export default function Home() {
               </h1>
 
               <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
-                Set up a professional store page for your products or services. Accept Paystack payments, manage Shipbubble delivery, track customers in your CRM, run discounts, collect reviews, and grow with analytics — all from one dashboard.
+                Set up a professional store page for your products or services. Accept payments, manage delivery, track customers in your CRM, run discounts, collect reviews, and grow with analytics — all from one dashboard.
                 <br></br> 
                 <br></br>
                 Share one link anywhere — Instagram, Facebook, TikTok, WhatsApp, Twitter, flyers, or DMs — and let customers browse, order, pay, and reach you directly. 
@@ -621,7 +621,7 @@ export default function Home() {
               Sellapage fixes all of this for free.
             </h3>
             <p className="text-brand-100 max-w-xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
-              Get a professional catalogue link that never expires, receive organised orders, manage customers, track performance, accept payments, handle delivery, run discounts, collect reviews, and run your entire business from one dashboard.
+              Get a professional store link that never expires, receive organised orders, manage customers, track performance, accept payments, handle delivery, run discounts, collect reviews, and run your entire business from one dashboard.
             </p>
           </div>
         </div>
