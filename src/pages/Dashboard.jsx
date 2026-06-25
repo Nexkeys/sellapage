@@ -1681,7 +1681,7 @@ export default function Dashboard() {
           navigateTo={setActiveTab}
         />
       )}
-      {activeTab === "ledger" && <LedgerTab />}
+      {activeTab === "ledger" && <LedgerTab store={store} />}
       {activeTab === "delivery" && isGrowthOrPro && (
         <DeliveryTab
           store={store}
