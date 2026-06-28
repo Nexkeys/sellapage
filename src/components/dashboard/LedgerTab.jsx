@@ -1,7 +1,12 @@
 //src/components/dashboard/LedgerTab.jsx/
 import { useState, useMemo, useEffect } from 'react'
-import { Trash2, Plus, Download, FileText, BookOpen, Search, X, Pencil, Check, ChevronLeft, ChevronRight, Calendar, TrendingUp, ArrowUpRight, ArrowDownRight, Minus, ChevronDown } from 'lucide-react'
+import { Trash2, Plus, Download, FileText, BookOpen, Search, X, Pencil, Check, ChevronLeft, ChevronRight, Calendar, TrendingUp, ArrowUpRight, ArrowDownRight, Minus, ChevronDown, Loader2 } from 'lucide-react'
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-pdf/renderer'
+
+// Firebase Cloud Sync Imports
+import { db } from '../../firebase/config'
+import { useAuth } from '../../hooks/useAuth'
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 
 const INPUT_CLASS = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
 
@@ -172,12 +177,9 @@ const EMPTY_FORM = {
 }
 
 export default function LedgerTab({ store }) {
-  const [entries, setEntries] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sellapage_ledger_entries')
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
-  })
+  const { user } = useAuth()
+  const [entries, setEntries] = useState([])
+  const [loadingEntries, setLoadingEntries] = useState(true)
 
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -191,9 +193,25 @@ export default function LedgerTab({ store }) {
   const [pdfStartDate, setPdfStartDate] = useState('')
   const [pdfEndDate, setPdfEndDate] = useState('')
 
+  // Firestore Real-time Sync
   useEffect(() => {
-    localStorage.setItem('sellapage_ledger_entries', JSON.stringify(entries))
-  }, [entries])
+    if (!user?.uid) return
+
+    const ledgerRef = collection(db, 'stores', user.uid, 'ledger')
+    const unsubscribe = onSnapshot(ledgerRef, (snapshot) => {
+      const liveData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      setEntries(liveData)
+      setLoadingEntries(false)
+    }, (error) => {
+      console.error("Firestore Ledger Sync Error: ", error)
+      setLoadingEntries(false)
+    })
+
+    return () => unsubscribe()
+  }, [user?.uid])
 
   useEffect(() => {
     setCurrentPage(1)
@@ -347,36 +365,44 @@ export default function LedgerTab({ store }) {
     setShowForm(false)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setFormError('')
     if (!form.customerName.trim()) { setFormError('Customer name is required.'); return }
     if (!form.itemName.trim()) { setFormError('Item name is required.'); return }
     if (!form.amount || Number(form.amount) < 0) { setFormError('Enter a valid amount.'); return }
     if (!form.date) { setFormError('Date is required.'); return }
+    if (!user?.uid) { setFormError('Authentication context missing.'); return }
 
-    if (editingId) {
-      setEntries((prev) =>
-        prev.map((entry) =>
-          entry.id === editingId
-            ? { ...entry, customerName: form.customerName.trim(), itemName: form.itemName.trim(), amount: Number(form.amount), date: form.date, notes: form.notes.trim(), status: form.status }
-            : entry
-        )
-      )
-    } else {
-      const newEntry = {
-        id: Date.now().toString(),
-        customerName: form.customerName.trim(),
-        itemName: form.itemName.trim(),
-        amount: Number(form.amount),
-        date: form.date,
-        notes: form.notes.trim(),
-        status: form.status || 'Paid',
-        createdAt: new Date().toISOString(),
+    try {
+      if (editingId) {
+        const docRef = doc(db, 'stores', user.uid, 'ledger', editingId)
+        await updateDoc(docRef, {
+          customerName: form.customerName.trim(),
+          itemName: form.itemName.trim(),
+          amount: Number(form.amount),
+          date: form.date,
+          notes: form.notes.trim(),
+          status: form.status
+        })
+      } {
+        const newDocId = Date.now().toString()
+        const docRef = doc(db, 'stores', user.uid, 'ledger', newDocId)
+        await setDoc(docRef, {
+          customerName: form.customerName.trim(),
+          itemName: form.itemName.trim(),
+          amount: Number(form.amount),
+          date: form.date,
+          notes: form.notes.trim(),
+          status: form.status || 'Paid',
+          createdAt: new Date().toISOString(),
+        })
       }
-      setEntries((prev) => [...prev, newEntry])
+      resetForm()
+    } catch (err) {
+      console.error("Error writing to cloud ledger: ", err)
+      setFormError('Failed to sync data with cloud database. Try again.')
     }
-    resetForm()
   }
 
   const handleEdit = (entry) => {
@@ -394,9 +420,15 @@ export default function LedgerTab({ store }) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = (id) => {
-    setEntries((prev) => prev.filter((entry) => entry.id !== id))
-    if (editingId === id) resetForm()
+  const handleDelete = async (id) => {
+    if (!user?.uid) return
+    try {
+      const docRef = doc(db, 'stores', user.uid, 'ledger', id)
+      await deleteDoc(docRef)
+      if (editingId === id) resetForm()
+    } catch (err) {
+      console.error("Error deleting from cloud ledger: ", err)
+    }
   }
 
   const handleDownloadCSV = () => {
@@ -452,8 +484,9 @@ export default function LedgerTab({ store }) {
         </div>
         <button
           type="button"
+          disabled={loadingEntries}
           onClick={() => { if (showForm && !editingId) { resetForm() } else { setEditingId(null); setForm(EMPTY_FORM); setFormError(''); setShowForm(true) } }}
-          className={`flex-shrink-0 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${showForm && !editingId ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'}`}
+          className={`flex-shrink-0 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all disabled:opacity-50 ${showForm && !editingId ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'}`}
         >
           {showForm && !editingId ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Log Order</>}
         </button>
@@ -467,9 +500,9 @@ export default function LedgerTab({ store }) {
               <Calendar size={13} className="text-green-600" />
             </div>
           </div>
-          <p className="text-xl font-bold text-gray-900">{activePeriodSummary.totalOrders}</p>
+          <p className="text-xl font-bold text-gray-900">{loadingEntries ? '...' : activePeriodSummary.totalOrders}</p>
           <p className="text-[11px] text-gray-400 mt-0.5">{activePeriodSummary.labelOrders}</p>
-          {activePeriodSummary.orderTrend ? (
+          {!loadingEntries && activePeriodSummary.orderTrend ? (
             <div className={`mt-1 inline-flex items-center gap-0.5 text-[10px] font-semibold ${activePeriodSummary.orderTrend.up ? 'text-green-600' : 'text-red-500'}`}>
               {activePeriodSummary.orderTrend.up ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
               {activePeriodSummary.orderTrend.pct}% vs prior period
@@ -487,9 +520,9 @@ export default function LedgerTab({ store }) {
               <TrendingUp size={13} className="text-blue-600" />
             </div>
           </div>
-          <p className="text-xl font-bold text-gray-900">{formatNaira(activePeriodSummary.totalAmount)}</p>
+          <p className="text-xl font-bold text-gray-900">{loadingEntries ? '...' : formatNaira(activePeriodSummary.totalAmount)}</p>
           <p className="text-[11px] text-gray-400 mt-0.5">{activePeriodSummary.labelRevenue}</p>
-          {activePeriodSummary.revenueTrend ? (
+          {!loadingEntries && activePeriodSummary.revenueTrend ? (
             <div className={`mt-1 inline-flex items-center gap-0.5 text-[10px] font-semibold ${activePeriodSummary.revenueTrend.up ? 'text-green-600' : 'text-red-500'}`}>
               {activePeriodSummary.revenueTrend.up ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
               {activePeriodSummary.revenueTrend.pct}% vs prior period
@@ -507,7 +540,7 @@ export default function LedgerTab({ store }) {
               <BookOpen size={13} className="text-purple-600" />
             </div>
           </div>
-          <p className="text-xl font-bold text-gray-900">{activePeriodSummary.allTimeCount}</p>
+          <p className="text-xl font-bold text-gray-900">{loadingEntries ? '...' : activePeriodSummary.allTimeCount}</p>
           <p className="text-[11px] text-gray-400 mt-0.5">All time entries</p>
         </div>
         <div className="rounded-2xl border border-gray-100 bg-white p-4">
@@ -516,7 +549,7 @@ export default function LedgerTab({ store }) {
               <FileText size={13} className="text-amber-600" />
             </div>
           </div>
-          <p className="text-xl font-bold text-gray-900">{formatNaira(activePeriodSummary.allTimeTotal)}</p>
+          <p className="text-xl font-bold text-gray-900">{loadingEntries ? '...' : formatNaira(activePeriodSummary.allTimeTotal)}</p>
           <p className="text-[11px] text-gray-400 mt-0.5">All time revenue</p>
         </div>
       </div>
@@ -667,8 +700,7 @@ export default function LedgerTab({ store }) {
             <div>
               <p className="text-sm font-bold text-gray-900">{getFilterLabel()}</p>
               <p className="text-[11px] text-gray-400 mt-0.5">
-                {filteredEntries.length} record{filteredEntries.length !== 1 ? 's' : ''}
-                {(searchQuery || filterMonth !== 'all' || filterYear !== 'all') ? ' found' : ' total'}
+                {loadingEntries ? 'Loading server storage...' : `${filteredEntries.length} record${filteredEntries.length !== 1 ? 's' : ''} ${(searchQuery || filterMonth !== 'all' || filterYear !== 'all') ? ' found' : ' total'}`}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -743,7 +775,6 @@ export default function LedgerTab({ store }) {
                       setPdfStartDate(`${year}-${String(month + 1).padStart(2, '0')}-01`)
                       setPdfEndDate(`${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`)
                     } else {
-                      // Full year selected
                       setPdfStartDate(`${year}-01-01`)
                       setPdfEndDate(`${year}-12-31`)
                     }
@@ -760,8 +791,13 @@ export default function LedgerTab({ store }) {
           </div>
         </div>
 
-        {/* Empty state */}
-        {filteredEntries.length === 0 ? (
+        {/* Sync Loader State */}
+        {loadingEntries ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+            <p className="text-xs font-medium text-gray-500">Securing real-time cloud data stream...</p>
+          </div>
+        ) : filteredEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
               <BookOpen size={24} className="text-gray-300" strokeWidth={1.75} />
@@ -912,8 +948,9 @@ export default function LedgerTab({ store }) {
       {!showForm && (
         <button
           type="button"
+          disabled={loadingEntries}
           onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setFormError(''); setShowForm(true) }}
-          className="sm:hidden fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-lg shadow-green-600/30 hover:bg-green-700 active:scale-95 transition-all"
+          className="sm:hidden fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-lg shadow-green-600/30 hover:bg-green-700 active:scale-95 transition-all disabled:opacity-50"
         >
           <Plus size={22} />
         </button>
