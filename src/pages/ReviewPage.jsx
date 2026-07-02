@@ -1,8 +1,10 @@
+//src/pages/ReviewPage.jsx/
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 
 export default function ReviewPage() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const token = searchParams.get('token') || ''
 
   const [loading, setLoading] = useState(true)
@@ -90,7 +92,7 @@ export default function ReviewPage() {
         <h2 className="font-extrabold text-gray-900 text-lg mb-2">Thank you for your review!</h2>
         <p className="text-gray-500 text-sm">Your feedback has been submitted and will help other customers.</p>
         <div className="mt-4">
-          <button className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold" onClick={() => {}}>Done</button>
+          <button className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold" onClick={() => navigate('/')}>Done</button>
         </div>
       </div>
     </div>
