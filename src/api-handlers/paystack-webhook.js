@@ -320,6 +320,77 @@ export default async function handler(req, res) {
               { orderId: orderRef.id, type: "new_order" },
             )
           : Promise.resolve(),
+        storeData.email
+          ? sendEmail(
+              storeData.email,
+              `New order received — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+              `
+                <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
+                  <div style="background-color: #16a34a; padding: 24px;">
+                    <h1 style="color: white; font-size: 22px; margin: 0; font-weight: bold;">${storeData.businessName || "Sellapage"}</h1>
+                  </div>
+                  <div style="padding: 32px;">
+                    <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px 0;">New Order Received 🛍️</h2>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">You just got a new order from ${customerName}. Here are the details:</p>
+                    <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
+                      <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 16px 0;">Order Details</h3>
+                      <table style="width: 100%; border-collapse: collapse;">
+                        ${parsedCartItems
+                          .map(
+                            (item) => `
+                          <tr>
+                            <td style="padding: 8px 0; color: #374151; font-size: 14px;">${item.name}</td>
+                            <td style="padding: 8px 0; color: #16a34a; font-weight: bold; font-size: 14px; text-align: right;">₦${(item.price * item.quantity).toLocaleString("en-NG")}</td>
+                          </tr>
+                        `,
+                          )
+                          .join("")}
+                      </table>
+                      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 12px 0;">
+                      <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                          <td style="padding: 8px 0; color: #374151; font-size: 16px; font-weight: bold;">Total Paid</td>
+                          <td style="padding: 8px 0; color: #16a34a; font-weight: bold; font-size: 16px; text-align: right;">₦${Number(grandTotal).toLocaleString("en-NG")}</td>
+                        </tr>
+                      </table>
+                    </div>
+                    <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
+                      <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 12px 0;">Customer Details</h3>
+                      <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                          <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Name</td>
+                          <td style="padding: 6px 0; color: #111827; font-size: 14px; text-align: right;">${customerName || "-"}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Phone</td>
+                          <td style="padding: 6px 0; color: #111827; font-size: 14px; text-align: right;">${customerPhone || "-"}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Email</td>
+                          <td style="padding: 6px 0; color: #111827; font-size: 14px; text-align: right;">${customerEmail || "-"}</td>
+                        </tr>
+                      </table>
+                    </div>
+                    ${
+                      parsedDeliveryAddress?.state || parsedDeliveryAddress?.address
+                        ? `
+                      <p style="color: #6b7280; font-size: 13px; margin: 0 0 16px 0;">
+                        Delivery to: ${parsedDeliveryAddress.address || ""}${parsedDeliveryAddress.address && parsedDeliveryAddress.state ? ", " : ""}${parsedDeliveryAddress.state || ""}
+                      </p>
+                    `
+                        : ""
+                    }
+                    <div style="text-align: center; margin-top: 28px;">
+                      <a href="https://sellapage.com.ng/dashboard" style="background-color: #16a34a; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">View in Dashboard</a>
+                    </div>
+                  </div>
+                  <div style="background-color: #f3f4f6; padding: 16px; text-align: center; color: #6b7280; font-size: 12px;">
+                    This order was placed via Sellapage · sellapage.com.ng
+                  </div>
+                </div>
+              `,
+            )
+          : Promise.resolve(),
       ]);
     } catch (error) {
       console.error("[Checkout Notifications] Error:", error);

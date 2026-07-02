@@ -1,3 +1,4 @@
+//src/api-handlers/submit-review.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { sendEmail } from './_lib/send-email.js'
@@ -56,7 +57,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' })
     }
 
-    const storeId = orderData.storeId
+    const storeId = orderDoc.ref.parent.parent.id
     const itemId = orderData.itemId || ''
     const itemType = orderData.itemType || 'product'
     const itemName = orderData.itemName || ''

@@ -1,3 +1,4 @@
+//src/api-handlers/_lib/send-email.js/
 export async function sendEmail(to, subject, html) {
   try {
     const from = process.env.RESEND_FROM_EMAIL || 'Sellapage <onboarding@resend.dev>';

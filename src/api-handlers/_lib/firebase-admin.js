@@ -1,3 +1,4 @@
+//src/api-handlers/_lib/firebase-admin.js/
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
