@@ -148,6 +148,7 @@ export default async function handler(req, res) {
       customerPhone,
       customerEmail,
       items: itemsString,
+      cartItems: parsedCartItems,
       total: grandTotal,
       deliveryFee,
       processingFee,
