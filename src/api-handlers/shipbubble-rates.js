@@ -1,4 +1,4 @@
-import { getFirebaseAdmin } from './_lib/firebase-admin.js'
+import { getAdminDb } from './_lib/firebase-admin.js'
 
 const SHIPBUBBLE_BASE = 'https://api.shipbubble.com/v1'
 const SHIPBUBBLE_TOKEN = process.env.SHIPBUBBLE_API_KEY
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { db } = getFirebaseAdmin()
+    const db = getAdminDb()
     const storeDoc = await db.collection('stores').doc(storeId).get()
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })

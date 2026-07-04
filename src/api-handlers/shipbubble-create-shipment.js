@@ -1,4 +1,4 @@
-import { getFirebaseAdmin } from './_lib/firebase-admin.js'
+import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
 const SHIPBUBBLE_BASE = 'https://api.shipbubble.com/v1'
 const SHIPBUBBLE_TOKEN = process.env.SHIPBUBBLE_API_KEY
@@ -29,7 +29,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { auth, db } = getFirebaseAdmin()
+    const db = getAdminDb()
+    const auth = getAdminAuth()
 
     // Verify vendor auth
     let decodedToken

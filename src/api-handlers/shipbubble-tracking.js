@@ -1,5 +1,5 @@
 //src/api-handlers/shipbubble-tracking.js/
-import { getFirebaseAdmin } from './_lib/firebase-admin.js'
+import { getAdminAuth } from './_lib/firebase-admin.js'
 const SHIPBUBBLE_BASE = 'https://api.shipbubble.com/v1'
 const SHIPBUBBLE_TOKEN = process.env.SHIPBUBBLE_API_KEY
 export default async function handler(req, res) {
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { auth } = getFirebaseAdmin()
+    const auth = getAdminAuth()
 
     let decodedToken
     try {
