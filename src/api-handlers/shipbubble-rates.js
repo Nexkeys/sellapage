@@ -1,111 +1,154 @@
-//sellapage/api/shipbubble-rates.js/
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirebaseAdmin } from './_lib/firebase-admin.js'
 
-const getAdminServices = () => {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    throw new Error('Missing FIREBASE_SERVICE_ACCOUNT')
-  }
+const SHIPBUBBLE_BASE = 'https://api.shipbubble.com/v1'
+const SHIPBUBBLE_TOKEN = process.env.SHIPBUBBLE_API_KEY
 
-  if (!getApps().length) {
-    initializeApp({
-      credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
-    })
+async function validateAddress(addressObj) {
+  const res = await fetch(`${SHIPBUBBLE_BASE}/shipping/address/validate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SHIPBUBBLE_TOKEN}`,
+    },
+    body: JSON.stringify(addressObj),
+  })
+  const data = await res.json()
+  if (!res.ok || !data?.data?.address_code) {
+    const msg = data?.message || data?.error || 'Address validation failed'
+    throw new Error(`Address validation failed: ${msg}`)
   }
-
-  return {
-    db: getFirestore(),
-  }
+  return data.data
 }
 
 export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const {
+    storeId,
+    senderDetails,
+    receiverDetails,
+    weight = 1,
+    categoryId = 98246239,
+    packageAmount = 5000,
+  } = req.body
+
+  if (!storeId) {
+    return res.status(400).json({ error: 'Missing storeId' })
+  }
+  if (
+    !senderDetails?.name ||
+    !senderDetails?.phone ||
+    !senderDetails?.address ||
+    !senderDetails?.state
+  ) {
+    return res.status(400).json({ error: 'Incomplete sender details' })
+  }
+  if (
+    !receiverDetails?.name ||
+    !receiverDetails?.phone ||
+    !receiverDetails?.address ||
+    !receiverDetails?.state
+  ) {
+    return res.status(400).json({ error: 'Incomplete receiver details' })
+  }
+
   try {
-    // Standardize CORS headers for Vercel execution context
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-
-    if (req.method === 'OPTIONS') {
-      return res.status(200).end();
-    }
-
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    let body
-    try {
-      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
-    } catch {
-      return res.status(400).json({ error: 'Invalid JSON body' })
-    }
-
-    const { storeId, deliveryState, deliveryLga, deliveryAddress, weight } = body
-    const parsedWeight = weight != null ? Number(weight) : 1
-
-    if (!storeId || !deliveryState?.trim() || !deliveryLga?.trim() || !deliveryAddress || typeof deliveryAddress !== 'object') {
-      return res.status(400).json({
-        error: 'Missing required fields: storeId, deliveryState, deliveryLga, deliveryAddress',
-      })
-    }
-
-    if (Number.isNaN(parsedWeight) || parsedWeight <= 0) {
-      return res.status(400).json({ error: 'weight must be a number > 0' })
-    }
-
-    const { db } = getAdminServices()
-
+    const { db } = getFirebaseAdmin()
     const storeDoc = await db.collection('stores').doc(storeId).get()
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
 
-    const store = storeDoc.data()
-    const pickupAddress = store.pickupAddress
-    if (!pickupAddress) {
-      return res.status(400).json({ error: 'Store has not set up a pickup address' })
+    // Step 1: Validate sender address
+    let senderAddressData
+    try {
+      senderAddressData = await validateAddress({
+        name: senderDetails.name,
+        email: senderDetails.email || 'noreply@sellapage.com.ng',
+        phone: senderDetails.phone,
+        address: `${senderDetails.address}, ${senderDetails.city || ''}, ${senderDetails.state}, Nigeria`,
+      })
+    } catch (err) {
+      return res.status(422).json({ error: `Sender address invalid: ${err.message}` })
     }
 
-    const shipbubbleResponse = await fetch('https://api.shipbubble.com/v1/shipping/fetch_rates', {
+    // Step 2: Validate receiver address
+    let receiverAddressData
+    try {
+      receiverAddressData = await validateAddress({
+        name: receiverDetails.name,
+        email: receiverDetails.email || 'customer@sellapage.com.ng',
+        phone: receiverDetails.phone,
+        address: `${receiverDetails.address}, ${receiverDetails.city || ''}, ${receiverDetails.state}, Nigeria`,
+      })
+    } catch (err) {
+      return res.status(422).json({ error: `Receiver address invalid: ${err.message}` })
+    }
+
+    // Step 3: Fetch rates using address codes
+    const today = new Date()
+    const pickupDate = today.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+
+    const ratesRes = await fetch(`${SHIPBUBBLE_BASE}/shipping/fetch_rates`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.SHIPBUBBLE_API_KEY}`,
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${SHIPBUBBLE_TOKEN}`,
       },
       body: JSON.stringify({
-        sender: {
-          address: pickupAddress.streetAddress,
-          city: pickupAddress.city,
-          state: pickupAddress.state,
-          country: 'NG',
-        },
-        receiver: {
-          address: deliveryAddress.streetAddress,
-          city: deliveryAddress.city,
-          state: deliveryState,
-          lga: deliveryLga,
-          country: 'NG',
-        },
+        sender_address_code: senderAddressData.address_code,
+        reciever_address_code: receiverAddressData.address_code,
+        pickup_date: pickupDate,
+        category_id: categoryId,
         package_items: [
           {
-            weight: parsedWeight,
-            weight_unit: 'kg',
+            name: 'Package',
+            description: 'Sellapage order',
+            unit_weight: Number(weight) || 1,
+            unit_amount: Number(packageAmount) || 5000,
+            quantity: 1,
           },
         ],
+        package_dimension: {
+          length: 10,
+          width: 10,
+          height: 10,
+        },
       }),
     })
 
-    if (!shipbubbleResponse.ok) {
-      const errorData = await shipbubbleResponse.json().catch(() => ({}))
-      return res.status(shipbubbleResponse.status).json({
-        error: errorData.message || 'Failed to fetch shipping rates from Shipbubble',
-      })
+    const ratesData = await ratesRes.json()
+
+    if (!ratesRes.ok) {
+      const errMsg = ratesData?.message || ratesData?.error || 'Failed to fetch rates'
+      console.error('[shipbubble-rates] fetch_rates error:', ratesData)
+      return res.status(ratesRes.status).json({ error: errMsg })
     }
 
-    const shipbubbleData = await shipbubbleResponse.json()
-    return res.status(200).json({ rates: shipbubbleData.data?.couriers || [] })
+    const couriers = ratesData?.data?.couriers || []
+    const requestToken = ratesData?.data?.request_token || ''
+
+    return res.status(200).json({
+      rates: couriers.map((c) => ({
+        courier_id: c.courier_id,
+        courier_name: c.courier_name,
+        courier_image: c.courier_image || '',
+        service_code: c.service_code,
+        total_shipping_fee: c.total || c.rate_card_amount || 0,
+        delivery_eta: c.delivery_eta || '',
+        pickup_eta: c.pickup_eta || '',
+        service_type: c.service_type || '',
+      })),
+      request_token: requestToken,
+    })
   } catch (err) {
-    console.error('shipbubble-rates error:', err)
+    console.error('[shipbubble-rates] Unexpected error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

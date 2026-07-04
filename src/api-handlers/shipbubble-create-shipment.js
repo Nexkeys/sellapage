@@ -1,116 +1,120 @@
-//sellapage/api/shipbubble-create-shipment.js/
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirebaseAdmin } from './_lib/firebase-admin.js'
 
-const getAdminServices = () => {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    throw new Error('Missing FIREBASE_SERVICE_ACCOUNT')
+const SHIPBUBBLE_BASE = 'https://api.shipbubble.com/v1'
+const SHIPBUBBLE_TOKEN = process.env.SHIPBUBBLE_API_KEY
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  if (!getApps().length) {
-    initializeApp({
-      credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+  const authHeader = req.headers.authorization || ''
+  const idToken = authHeader.replace('Bearer ', '').trim()
+  if (!idToken) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  const {
+    storeId,
+    orderId,
+    requestToken,
+    courierId,
+    serviceCode,
+  } = req.body
+
+  if (!storeId || !orderId || !requestToken || !courierId || !serviceCode) {
+    return res.status(400).json({
+      error: 'Missing required fields: storeId, orderId, requestToken, courierId, serviceCode',
     })
   }
 
-  return {
-    db: getFirestore(),
-    adminAuth: getAuth(),
-  }
-}
-
-export default async function handler(req, res) {
   try {
-    // Standardize CORS headers for Vercel execution context
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    const { auth, db } = getFirebaseAdmin()
 
-    if (req.method === 'OPTIONS') {
-      return res.status(200).end();
-    }
-
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    let body
+    // Verify vendor auth
+    let decodedToken
     try {
-      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+      decodedToken = await auth.verifyIdToken(idToken)
     } catch {
-      return res.status(400).json({ error: 'Invalid JSON body' })
-    }
-
-    const { storeId, orderId, courierId, senderDetails, receiverDetails, packageDetails } = body
-
-    if (!storeId || !orderId || !courierId || !senderDetails || !receiverDetails || !packageDetails) {
-      return res.status(400).json({
-        error: 'Missing required fields: storeId, orderId, courierId, senderDetails, receiverDetails, packageDetails',
-      })
-    }
-
-    const { db, adminAuth } = getAdminServices()
-
-    const authHeader = req.headers.authorization || req.headers.Authorization || ''
-    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-    if (!idToken) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
-
-    const decodedToken = await adminAuth.verifyIdToken(idToken)
-    if (decodedToken.uid !== storeId) {
-      return res.status(403).json({ error: 'Forbidden' })
+      return res.status(401).json({ error: 'Invalid or expired token' })
     }
 
     const storeDoc = await db.collection('stores').doc(storeId).get()
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
+    if (storeDoc.data().ownerId !== decodedToken.uid) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
 
-    const orderDoc = await db.collection('stores').doc(storeId).collection('orders').doc(orderId).get()
+    const orderDoc = await db
+      .collection('stores')
+      .doc(storeId)
+      .collection('orders')
+      .doc(orderId)
+      .get()
     if (!orderDoc.exists) {
       return res.status(404).json({ error: 'Order not found' })
     }
 
-    const shipbubbleResponse = await fetch('https://api.shipbubble.com/v1/shipping/create', {
+    // Create shipment label using request_token from rates call
+    const shipRes = await fetch(`${SHIPBUBBLE_BASE}/shipping/labels`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.SHIPBUBBLE_API_KEY}`,
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${SHIPBUBBLE_TOKEN}`,
       },
       body: JSON.stringify({
+        request_token: requestToken,
+        service_code: serviceCode,
         courier_id: courierId,
-        sender: senderDetails,
-        receiver: receiverDetails,
-        package_items: [packageDetails],
       }),
     })
 
-    if (!shipbubbleResponse.ok) {
-      const errorData = await shipbubbleResponse.json().catch(() => ({}))
-      return res.status(shipbubbleResponse.status).json({
-        error: errorData.message || 'Failed to create shipment with Shipbubble',
+    const shipData = await shipRes.json()
+
+    if (!shipRes.ok) {
+      const errMsg = shipData?.message || shipData?.error || 'Failed to create shipment'
+      console.error('[shipbubble-create-shipment] labels error:', shipData)
+      return res.status(shipRes.status).json({ error: errMsg })
+    }
+
+    const shipment = shipData?.data
+    const trackingId =
+      shipment?.order_id ||
+      shipment?.tracking_code ||
+      shipment?.courier?.tracking_code ||
+      ''
+    const waybillUrl = shipment?.waybill_document || ''
+    const trackingUrl = shipment?.tracking_url || ''
+
+    // Save shipment info to Firestore order document
+    await db
+      .collection('stores')
+      .doc(storeId)
+      .collection('orders')
+      .doc(orderId)
+      .update({
+        shipbubbleTrackingId: trackingId,
+        shipbubbleOrderId: shipment?.order_id || '',
+        shipbubbleStatus: 'created',
+        shipbubbleCourier: courierId,
+        shipbubbleServiceCode: serviceCode,
+        shipbubbleWaybillUrl: waybillUrl,
+        shipbubbleTrackingUrl: trackingUrl,
+        status: 'dispatched',
+        updatedAt: new Date().toISOString(),
       })
-    }
 
-    const shipbubbleData = await shipbubbleResponse.json()
-    const trackingId = shipbubbleData.data?.tracking_id
-    const trackingUrl = shipbubbleData.data?.tracking_url
-
-    if (!trackingId) {
-      return res.status(502).json({ error: 'Shipbubble did not return a tracking ID' })
-    }
-
-    const orderRef = db.collection('stores').doc(storeId).collection('orders').doc(orderId)
-    await orderRef.update({
-      shipbubbleTrackingId: trackingId,
-      shipbubbleStatus: 'created',
+    return res.status(200).json({
+      success: true,
+      trackingId,
+      waybillUrl,
+      trackingUrl,
+      orderId: shipment?.order_id || '',
     })
-
-    return res.status(200).json({ trackingId, trackingUrl })
   } catch (err) {
-    console.error('shipbubble-create-shipment error:', err)
+    console.error('[shipbubble-create-shipment] Unexpected error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

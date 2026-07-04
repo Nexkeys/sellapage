@@ -146,7 +146,12 @@ export default function OrdersTab({
   const [bookingError, setBookingError] = useState('')
   const [bookingSuccess, setBookingSuccess] = useState('')
   const [selectedCourierId, setSelectedCourierId] = useState('')
+  const [shipRequestToken, setShipRequestToken] = useState('')
+  const [selectedServiceCode, setSelectedServiceCode] = useState('')
   const [packageWeight, setPackageWeight] = useState(1)
+  const [packageCategory, setPackageCategory] = useState(98246239)
+  const [shipbubbleCategories, setShipbubbleCategories] = useState([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
   const [markingDelivered, setMarkingDelivered] = useState(null)
   const [markDeliveredError, setMarkDeliveredError] = useState('')
 
@@ -266,13 +271,33 @@ export default function OrdersTab({
     }
   }
 
+  const fetchShipbubbleCategories = async () => {
+    if (shipbubbleCategories.length > 0) return
+    setLoadingCategories(true)
+    try {
+      const res = await fetch('/api/shipbubble-categories')
+      const data = await res.json()
+      if (res.ok && Array.isArray(data.categories)) {
+        setShipbubbleCategories(data.categories)
+      }
+    } catch (err) {
+      console.error('Failed to fetch Shipbubble categories:', err)
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
+
   const openShipbubbleModal = (order) => {
     setBookingShipmentOrder(order)
     setBookingError('')
     setBookingSuccess('')
     setShipbubbleRates([])
     setSelectedCourierId('')
+    setSelectedServiceCode('')
+    setShipRequestToken('')
     setPackageWeight(1)
+    setPackageCategory(98246239)
+    fetchShipbubbleCategories()
 
     // Pre-fill sender details
     setSenderName(store?.businessName || '')
@@ -314,7 +339,6 @@ export default function OrdersTab({
     const rStreet = detailsObj.receiverStreet ?? receiverStreet
     const rCity = detailsObj.receiverCity ?? receiverCity
     const rState = detailsObj.receiverState ?? receiverState
-    const rLga = detailsObj.receiverLga ?? receiverLga
 
     if (!store?.id) return
     if (!sStreet || !sState) {
@@ -328,26 +352,42 @@ export default function OrdersTab({
 
     setLoadingRates(true)
     setBookingError('')
+    setShipbubbleRates([])
+    setShipRequestToken('')
     try {
       const res = await fetch('/api/shipbubble-rates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: store.id,
-          deliveryState: rState,
-          deliveryLga: rLga || rCity,
-          deliveryAddress: {
-            streetAddress: rStreet,
+          senderDetails: {
+            name: senderName || store?.businessName || '',
+            phone: senderPhone || store?.whatsappNumber || '',
+            email: senderEmail || store?.email || '',
+            address: sStreet,
+            city: sCity,
+            state: sState,
+          },
+          receiverDetails: {
+            name: receiverName || '',
+            phone: receiverPhone || '',
+            email: receiverEmail || '',
+            address: rStreet,
             city: rCity,
+            state: rState,
           },
           weight: Number(weightVal) || 1,
+          categoryId: packageCategory,
+          packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 5000),
         }),
       })
       const data = await res.json()
       if (res.ok && Array.isArray(data.rates)) {
         setShipbubbleRates(data.rates)
+        setShipRequestToken(data.request_token || '')
         if (data.rates.length > 0) {
           setSelectedCourierId(data.rates[0].courier_id || '')
+          setSelectedServiceCode(data.rates[0].service_code || '')
         }
       } else {
         setBookingError(data.error || 'Failed to fetch rates from Shipbubble.')
@@ -395,39 +435,27 @@ export default function OrdersTab({
         body: JSON.stringify({
           storeId: store.id,
           orderId: bookingShipmentOrder.id,
+          requestToken: shipRequestToken,
           courierId: selectedCourierId,
-          senderDetails: {
-            name: senderName,
-            phone: senderPhone,
-            email: senderEmail || store.email || '',
-            address: senderStreet,
-            city: senderCity,
-            state: senderState,
-            country: 'NG',
-          },
-          receiverDetails: {
-            name: receiverName,
-            phone: receiverPhone,
-            email: receiverEmail || '',
-            address: receiverStreet,
-            city: receiverCity,
-            state: receiverState,
-            country: 'NG',
-          },
-          packageDetails: {
-            weight: Number(packageWeight) || 1,
-            weight_unit: 'kg',
-          },
+          serviceCode: selectedServiceCode,
         }),
       })
 
       const data = await res.json()
-      if (res.ok && data.trackingId) {
-        setBookingSuccess(`Shipment booked successfully! Tracking ID: ${data.trackingId}`)
+      if (res.ok && data.success) {
+        setBookingSuccess(
+          data.trackingId
+            ? `Shipment booked! Tracking ID: ${data.trackingId}`
+            : 'Shipment booked successfully!'
+        )
         // Update Firestore & Local state
         await onUpdateOrder?.(bookingShipmentOrder.id, {
-          shipbubbleTrackingId: data.trackingId,
+          shipbubbleTrackingId: data.trackingId || '',
+          shipbubbleOrderId: data.orderId || '',
           shipbubbleStatus: 'created',
+          shipbubbleTrackingUrl: data.trackingUrl || '',
+          shipbubbleWaybillUrl: data.waybillUrl || '',
+          status: 'dispatched',
         })
         setTimeout(() => {
           setBookingShipmentOrder(null)
@@ -1046,13 +1074,13 @@ export default function OrdersTab({
       )}
 
       {bookingShipmentOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+          <div className="relative w-full sm:max-w-xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
             
             {/* Modal Header */}
-            <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+            <div className="border-b border-gray-100 px-5 py-3.5 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-extrabold text-gray-950 flex items-center gap-2">
+                <h2 className="text-lg font-bold text-gray-950 flex items-center gap-2">
                   <Truck className="text-green-600" size={20} />
                   Book Shipment
                 </h2>
@@ -1071,7 +1099,7 @@ export default function OrdersTab({
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 text-sm text-stone-750">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4 text-sm text-stone-750">
               {bookingError && (
                 <div className="flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
                   <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
@@ -1082,7 +1110,24 @@ export default function OrdersTab({
               {bookingSuccess && (
                 <div className="flex items-start gap-2.5 rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700">
                   <Check size={15} className="mt-0.5 flex-shrink-0" />
-                  {bookingSuccess}
+                  <div>
+                    {bookingSuccess}
+                    {shipbubbleRates.length === 0 && bookingSuccess && (
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          const order = orders.find(o => o.id === bookingShipmentOrder?.id)
+                          if (order?.shipbubbleWaybillUrl) {
+                            window.open(order.shipbubbleWaybillUrl, '_blank')
+                          }
+                        }}
+                        className="ml-2 text-xs font-bold text-green-700 underline underline-offset-2 hover:text-green-800"
+                      >
+                        Download Waybill
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1205,6 +1250,40 @@ export default function OrdersTab({
                   <Package size={13} />
                   Package & Courier Rates
                 </h3>
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Package Category
+                    <span className="ml-1 text-gray-400 font-normal">(helps match the right courier)</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={packageCategory}
+                      onChange={(e) => setPackageCategory(Number(e.target.value))}
+                      className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 pr-10 text-sm text-gray-900 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                      disabled={loadingCategories}
+                    >
+                      {loadingCategories ? (
+                        <option>Loading categories...</option>
+                      ) : shipbubbleCategories.length > 0 ? (
+                        shipbubbleCategories.map((cat) => (
+                          <option key={cat.category_id} value={cat.category_id}>
+                            {cat.category}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value={98246239}>Fashion Wears</option>
+                          <option value={90097994}>Accessories</option>
+                          <option value={3035980}>Electronics</option>
+                          <option value={70830897}>Electronic Gadgets</option>
+                          <option value={66484941}>Jewelry</option>
+                          <option value={69709726}>Food</option>
+                        </>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  </div>
+                </div>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                   <div className="flex-1">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Package Weight (kg)</label>
@@ -1264,7 +1343,10 @@ export default function OrdersTab({
                               name="courier_choice"
                               value={rate.courier_id}
                               checked={selectedCourierId === rate.courier_id}
-                              onChange={() => setSelectedCourierId(rate.courier_id)}
+                              onChange={() => {
+                                setSelectedCourierId(rate.courier_id)
+                                setSelectedServiceCode(rate.service_code || '')
+                              }}
                               className="text-green-600 focus:ring-green-500 h-4 w-4 border-gray-300"
                             />
                             <div>
@@ -1290,7 +1372,7 @@ export default function OrdersTab({
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-gray-100 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+            <div className="border-t border-gray-100 bg-gray-50/80 px-4 sm:px-6 py-3.5 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setBookingShipmentOrder(null)}
@@ -1303,7 +1385,7 @@ export default function OrdersTab({
                 type="button"
                 onClick={confirmBooking}
                 disabled={bookingSubmitting || !selectedCourierId || loadingRates}
-                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-green-700 disabled:bg-green-400 disabled:shadow-none"
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-700 disabled:bg-green-400 active:scale-95"
               >
                 {bookingSubmitting ? (
                   <>

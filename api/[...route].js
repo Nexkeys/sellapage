@@ -94,6 +94,14 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/reset-password.js");
         return await handlerFunc(req, res);
       }
+      case "shipbubble-categories": {
+        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-categories.js");
+        return await handlerFunc(req, res);
+      }
+      case "shipbubble-tracking": {
+        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-tracking.js");
+        return await handlerFunc(req, res);
+      }
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
     }
