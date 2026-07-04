@@ -67,8 +67,12 @@ export default async function handler(req, res) {
       senderAddressData = await validateAddress({
         name: senderDetails.name,
         email: senderDetails.email || 'noreply@sellapage.com.ng',
-        phone: senderDetails.phone,
-        address: `${senderDetails.address}, ${senderDetails.city || ''}, ${senderDetails.state}, Nigeria`,
+        phone: senderDetails.phone
+          ? senderDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
+          : '+2348000000000',
+        address: [senderDetails.address, senderDetails.city, senderDetails.state, 'Nigeria']
+          .filter(Boolean)
+          .join(', '),
       })
     } catch (err) {
       return res.status(422).json({ error: `Sender address invalid: ${err.message}` })
@@ -80,20 +84,25 @@ export default async function handler(req, res) {
       receiverAddressData = await validateAddress({
         name: receiverDetails.name,
         email: receiverDetails.email || 'customer@sellapage.com.ng',
-        phone: receiverDetails.phone,
-        address: `${receiverDetails.address}, ${receiverDetails.city || ''}, ${receiverDetails.state}, Nigeria`,
+        phone: receiverDetails.phone
+          ? receiverDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
+          : '+2348000000000',
+        address: [receiverDetails.address, receiverDetails.city, receiverDetails.state, 'Nigeria']
+          .filter(Boolean)
+          .join(', '),
       })
     } catch (err) {
       return res.status(422).json({ error: `Receiver address invalid: ${err.message}` })
     }
 
     // Step 3: Fetch rates using address codes
-    const today = new Date()
-    const pickupDate = today.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    })
+    const pickupDateObj = req.body.pickupDate
+      ? new Date(req.body.pickupDate)
+      : new Date()
+    const yyyy = pickupDateObj.getFullYear()
+    const mm = String(pickupDateObj.getMonth() + 1).padStart(2, '0')
+    const dd = String(pickupDateObj.getDate()).padStart(2, '0')
+    const pickupDate = `${yyyy}-${mm}-${dd}`
 
     const ratesRes = await fetch(`${SHIPBUBBLE_BASE}/shipping/fetch_rates`, {
       method: 'POST',
@@ -110,7 +119,7 @@ export default async function handler(req, res) {
           {
             name: 'Package',
             description: 'Sellapage order',
-            unit_weight: Number(weight) || 1,
+            unit_weight: String(Number(weight) || 1),
             unit_amount: Number(packageAmount) || 5000,
             quantity: 1,
           },

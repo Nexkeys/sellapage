@@ -150,6 +150,7 @@ export default function OrdersTab({
   const [selectedServiceCode, setSelectedServiceCode] = useState('')
   const [packageWeight, setPackageWeight] = useState(1)
   const [packageCategory, setPackageCategory] = useState(98246239)
+  const [pickupDate, setPickupDate] = useState(new Date().toISOString().split('T')[0])
   const [shipbubbleCategories, setShipbubbleCategories] = useState([])
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [markingDelivered, setMarkingDelivered] = useState(null)
@@ -297,6 +298,7 @@ export default function OrdersTab({
     setShipRequestToken('')
     setPackageWeight(1)
     setPackageCategory(98246239)
+    setPickupDate(new Date().toISOString().split('T')[0])
     fetchShipbubbleCategories()
 
     // Pre-fill sender details
@@ -378,6 +380,7 @@ export default function OrdersTab({
           },
           weight: Number(weightVal) || 1,
           categoryId: packageCategory,
+          pickupDate: pickupDate,
           packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 5000),
         }),
       })
@@ -1250,6 +1253,19 @@ export default function OrdersTab({
                   <Package size={13} />
                   Package & Courier Rates
                 </h3>
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Pickup Date
+                    <span className="ml-1 text-gray-400 font-normal">(when should courier collect?)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={pickupDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setPickupDate(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                  />
+                </div>
                 <div className="mb-3">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">
                     Package Category
