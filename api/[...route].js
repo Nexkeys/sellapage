@@ -1,3 +1,4 @@
+//sellapage/api/[...route].js/
 // Master catch-all router for Vercel Hobby tier consolidation
 
 export default async function handler(req, res) {
@@ -100,6 +101,14 @@ export default async function handler(req, res) {
       }
       case "shipbubble-tracking": {
         const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-tracking.js");
+        return await handlerFunc(req, res);
+      }
+      case "shipbubble-payment-initialize": {
+        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-payment-initialize.js");
+        return await handlerFunc(req, res);
+      }
+      case "shipbubble-payment-verify": {
+        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-payment-verify.js");
         return await handlerFunc(req, res);
       }
       default:

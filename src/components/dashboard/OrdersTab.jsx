@@ -1,5 +1,5 @@
 //src/components/dashboard/OrdersTab.jsx/
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   AlertCircle,
   Calendar,
@@ -153,6 +153,10 @@ export default function OrdersTab({
   const [pickupDate, setPickupDate] = useState(new Date().toISOString().split('T')[0])
   const [shipbubbleCategories, setShipbubbleCategories] = useState([])
   const [loadingCategories, setLoadingCategories] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentInitializing, setPaymentInitializing] = useState(false)
+  const [paymentError, setPaymentError] = useState('')
+  const [shipmentPaymentResult, setShipmentPaymentResult] = useState(null)
   const [markingDelivered, setMarkingDelivered] = useState(null)
   const [markDeliveredError, setMarkDeliveredError] = useState('')
 
@@ -178,6 +182,66 @@ export default function OrdersTab({
   const [filterPayment, setFilterPayment] = useState('all')
   const [filterOrderType, setFilterOrderType] = useState('all')
   const [filterSort, setFilterSort] = useState('newest')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const shipmentStatus = params.get('shipment')
+    const reference = params.get('reference')
+    if (shipmentStatus !== 'pending' || !reference) return
+
+    const saved = sessionStorage.getItem(`sellapage_shipment_${reference}`)
+    if (!saved) return
+
+    let parsed
+    try { parsed = JSON.parse(saved) } catch { return }
+
+    const verifyAndBook = async () => {
+      try {
+        const token = await user?.getIdToken()
+        const verifyRes = await fetch('/api/shipbubble-payment-verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ reference, storeId: parsed.storeId }),
+        })
+        const verifyData = await verifyRes.json()
+        if (!verifyRes.ok || !verifyData.success) {
+          setShipmentPaymentResult({ success: false, error: verifyData.error || 'Payment verification failed.' })
+          return
+        }
+        const bookRes = await fetch('/api/shipbubble-create-shipment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            storeId: parsed.storeId,
+            orderId: verifyData.orderId,
+            requestToken: verifyData.requestToken,
+            courierId: verifyData.courierId,
+            serviceCode: verifyData.serviceCode,
+          }),
+        })
+        const bookData = await bookRes.json()
+        if (bookRes.ok && bookData.success) {
+          sessionStorage.removeItem(`sellapage_shipment_${reference}`)
+          const newUrl = window.location.pathname
+          window.history.replaceState({}, '', newUrl)
+          await onUpdateOrder?.(verifyData.orderId, {
+            shipbubbleTrackingId: bookData.trackingId || '',
+            shipbubbleOrderId: bookData.orderId || '',
+            shipbubbleStatus: 'created',
+            shipbubbleTrackingUrl: bookData.trackingUrl || '',
+            shipbubbleWaybillUrl: bookData.waybillUrl || '',
+            status: 'dispatched',
+          })
+          setShipmentPaymentResult({ success: true, trackingId: bookData.trackingId || '' })
+        } else {
+          setShipmentPaymentResult({ success: false, error: bookData.error || 'Shipment booking failed after payment.' })
+        }
+      } catch {
+        setShipmentPaymentResult({ success: false, error: 'Something went wrong. Contact support.' })
+      }
+    }
+    verifyAndBook()
+  }, [user, store?.id])
 
   const handleInlineUpdate = async (order, updates) => {
     setLedgerError('')
@@ -403,74 +467,56 @@ export default function OrdersTab({
     }
   }
 
-  const confirmBooking = async () => {
+  const initializeShipmentPayment = async () => {
     if (!bookingShipmentOrder || !store?.id) return
-    if (!selectedCourierId) {
-      setBookingError('Please select a courier to book shipment.')
+    if (!selectedCourierId || !shipRequestToken) {
+      setBookingError('Please select a courier rate first.')
       return
     }
-    if (!senderName || !senderPhone || !senderStreet || !senderCity || !senderState) {
-      setBookingError('Please complete all sender details.')
+    const selectedRate = shipbubbleRates.find(r => r.courier_id === selectedCourierId)
+    if (!selectedRate) {
+      setBookingError('Selected rate not found. Please recalculate rates.')
       return
     }
-    if (!receiverName || !receiverPhone || !receiverStreet || !receiverCity || !receiverState) {
-      setBookingError('Please complete all receiver details.')
-      return
-    }
+    setShowPaymentModal(true)
+    setPaymentError('')
+  }
 
-    setBookingSubmitting(true)
-    setBookingError('')
-    setBookingSuccess('')
+  const proceedToPaystack = async () => {
+    if (!bookingShipmentOrder || !store?.id) return
+    const selectedRate = shipbubbleRates.find(r => r.courier_id === selectedCourierId)
+    if (!selectedRate) return
+    setPaymentInitializing(true)
+    setPaymentError('')
     try {
       const token = await user?.getIdToken()
-      if (!token) {
-        setBookingError('Authentication expired. Please log in again.')
-        setBookingSubmitting(false)
-        return
-      }
-
-      const res = await fetch('/api/shipbubble-create-shipment', {
+      const res = await fetch('/api/shipbubble-payment-initialize', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           storeId: store.id,
           orderId: bookingShipmentOrder.id,
+          courierName: selectedRate.courier_name,
+          shippingFee: Number(selectedRate.total_shipping_fee),
           requestToken: shipRequestToken,
           courierId: selectedCourierId,
           serviceCode: selectedServiceCode,
         }),
       })
-
       const data = await res.json()
-      if (res.ok && data.success) {
-        setBookingSuccess(
-          data.trackingId
-            ? `Shipment booked! Tracking ID: ${data.trackingId}`
-            : 'Shipment booked successfully!'
+      if (res.ok && data.authorization_url) {
+        sessionStorage.setItem(
+          `sellapage_shipment_${data.reference}`,
+          JSON.stringify({ storeId: store.id, orderId: bookingShipmentOrder.id })
         )
-        // Update Firestore & Local state
-        await onUpdateOrder?.(bookingShipmentOrder.id, {
-          shipbubbleTrackingId: data.trackingId || '',
-          shipbubbleOrderId: data.orderId || '',
-          shipbubbleStatus: 'created',
-          shipbubbleTrackingUrl: data.trackingUrl || '',
-          shipbubbleWaybillUrl: data.waybillUrl || '',
-          status: 'dispatched',
-        })
-        setTimeout(() => {
-          setBookingShipmentOrder(null)
-        }, 2000)
+        window.location.href = data.authorization_url
       } else {
-        setBookingError(data.error || 'Failed to book shipment.')
+        setPaymentError(data.error || 'Failed to initialize payment. Please try again.')
       }
-    } catch (err) {
-      console.error(err)
-      setBookingError('Failed to book shipment. Please try again.')
+    } catch {
+      setPaymentError('Could not connect to payment service. Check your connection.')
     } finally {
-      setBookingSubmitting(false)
+      setPaymentInitializing(false)
     }
   }
 
@@ -1076,6 +1122,113 @@ export default function OrdersTab({
         </div>
       )}
 
+      {shipmentPaymentResult && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+          <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-5 py-8 text-center space-y-4">
+              {shipmentPaymentResult.success ? (
+                <>
+                  <div className="mx-auto w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center border border-green-100">
+                    <CheckCircle size={28} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-base">Shipment Booked!</p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      {shipmentPaymentResult.trackingId
+                        ? `Tracking ID: ${shipmentPaymentResult.trackingId}`
+                        : 'Your shipment has been booked successfully.'}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-gray-400">View tracking details in the Delivery tab.</p>
+                </>
+              ) : (
+                <>
+                  <div className="mx-auto w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center border border-red-100">
+                    <AlertCircle size={28} className="text-red-500" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-base">Payment Failed</p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">{shipmentPaymentResult.error}</p>
+                  </div>
+                </>
+              )}
+              <div className="flex gap-3 pt-2">
+                {!shipmentPaymentResult.success && (
+                  <button
+                    type="button"
+                    onClick={() => { setShipmentPaymentResult(null); setShowPaymentModal(true) }}
+                    className="flex-1 rounded-xl bg-green-600 hover:bg-green-700 py-2.5 text-xs font-bold text-white transition-all"
+                  >
+                    Try Again
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShipmentPaymentResult(null)}
+                  className="flex-1 rounded-xl border border-gray-200 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all"
+                >
+                  {shipmentPaymentResult.success ? 'Done' : 'Go Back'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPaymentModal && (() => {
+        const selectedRate = shipbubbleRates.find(r => r.courier_id === selectedCourierId)
+        const shippingFee = Number(selectedRate?.total_shipping_fee || 0)
+        const serviceCharge = 250
+        const total = shippingFee + serviceCharge
+        return (
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+            <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">Confirm & Pay for Shipment</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Review payment before proceeding</p>
+                </div>
+                <button type="button" onClick={() => setShowPaymentModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Courier</span>
+                    <span className="text-xs font-bold text-gray-900">{selectedRate?.courier_name}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Shipping fee</span>
+                    <span className="text-xs font-semibold text-gray-700">₦{shippingFee.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Sellapage service charge</span>
+                    <span className="text-xs font-semibold text-gray-700">₦{serviceCharge.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-2.5 flex items-center justify-between">
+                    <span className="text-sm font-bold text-gray-900">Total</span>
+                    <span className="text-sm font-black text-green-600">₦{total.toLocaleString()}</span>
+                  </div>
+                </div>
+                {paymentError && (
+                  <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{paymentError}</p>
+                )}
+                <p className="text-[11px] text-gray-400 text-center">You will be redirected to Paystack to complete payment. After payment, the shipment is booked automatically.</p>
+              </div>
+              <div className="px-5 pb-5 flex gap-3">
+                <button type="button" onClick={() => setShowPaymentModal(false)} className="flex-1 rounded-xl border border-gray-200 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">
+                  Cancel
+                </button>
+                <button type="button" onClick={proceedToPaystack} disabled={paymentInitializing} className="flex-1 rounded-xl bg-green-600 hover:bg-green-700 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                  {paymentInitializing ? <><Loader2 size={13} className="animate-spin" />Processing...</> : <><CreditCard size={13} />Pay Now</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {bookingShipmentOrder && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
           <div className="relative w-full sm:max-w-xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
@@ -1399,7 +1552,7 @@ export default function OrdersTab({
               </button>
               <button
                 type="button"
-                onClick={confirmBooking}
+                onClick={initializeShipmentPayment}
                 disabled={bookingSubmitting || !selectedCourierId || loadingRates}
                 className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-700 disabled:bg-green-400 active:scale-95"
               >

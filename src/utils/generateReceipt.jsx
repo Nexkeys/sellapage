@@ -156,7 +156,7 @@ function ReceiptDocument({ order, store }) {
         </View>
 
         <Text style={styles.footer}>
-          Thank you for your order{'\n'}
+          Thank you for shopping{'\n'}
           WhatsApp: {store.whatsappNumber || '—'}
         </Text>
       </Page>
