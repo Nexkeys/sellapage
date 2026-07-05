@@ -1088,7 +1088,6 @@ export default function StorePage() {
             state: state,
           },
           weight: 1,
-          categoryId: 98246239,
           packageAmount: subtotal,
         }),
       });

@@ -146,7 +146,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
     order => order.orderType === 'checkout' && order.paymentStatus === 'paid'
   ) || []
 
-  const totalEarnings = checkoutOrders.reduce((sum, order) => sum + (order.grandTotal || 0), 0)
+  const totalEarnings = checkoutOrders.reduce((sum, order) => sum + Number(order.grandTotal || 0), 0)
 
   const now = new Date()
   const currentMonth = now.getMonth()
@@ -156,7 +156,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
       const orderDate = order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt)
       return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear
     })
-    .reduce((sum, order) => sum + (order.grandTotal || 0), 0)
+    .reduce((sum, order) => sum + Number(order.grandTotal || 0), 0)
 
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   const pendingSettlement = checkoutOrders
@@ -164,7 +164,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, user, onSubac
       const orderDate = order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt)
       return orderDate >= twentyFourHoursAgo
     })
-    .reduce((sum, order) => sum + (order.grandTotal || 0), 0)
+    .reduce((sum, order) => sum + Number(order.grandTotal || 0), 0)
 
   const formatNaira = (amount) => {
     return new Intl.NumberFormat('en-NG', {
