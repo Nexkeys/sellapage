@@ -25,71 +25,79 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
   const CategorySection = ({ title, data, itemType, manageTab }) => (
     <div className="space-y-6">
       {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="space-y-1">
           <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">{title}</h2>
+          <div className="h-1 w-12 bg-emerald-500 rounded-full" />
         </div>
         <button
           onClick={() => navigateTo(manageTab)}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-emerald-600/10"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-emerald-600/10 group"
         >
-          <span className="text-lg leading-none font-light">+</span> Manage in {manageTab === 'products' ? 'Products' : 'Services'}
+          <span>+ Manage in {manageTab === 'products' ? 'Products' : 'Services'}</span>
+          <ArrowRight size={14} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
         </button>
       </div>
 
-      {/* Summary Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4 sm:p-5 transition-all hover:border-slate-300/80">
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">{data.categoryList.length}</p>
-          <p className="text-slate-500 text-xs font-medium mt-2 tracking-wide uppercase">Total Categories</p>
+      {/* Analytics-Style Metrics Track */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Total Categories */}
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-2xl border border-slate-200/60 p-5 flex items-center justify-between shadow-sm">
+          <div className="space-y-1">
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Groups</p>
+            <p className="text-3xl font-black text-slate-900 tracking-tight">{data.categoryList.length}</p>
+          </div>
+          <div className="w-10 h-10 bg-slate-100/80 rounded-xl flex items-center justify-center text-slate-600">
+            <Tag size={18} />
+          </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4 sm:p-5 transition-all hover:border-slate-300/80">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight leading-none">{data.categorised.length}</p>
-            <div className="p-1.5 bg-emerald-50 rounded-lg">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-            </div>
+        {/* Categorized Count */}
+        <div className="bg-gradient-to-br from-white to-emerald-50/10 rounded-2xl border border-slate-200/60 p-5 flex items-center justify-between shadow-sm">
+          <div className="space-y-1">
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Categorised {itemType}s</p>
+            <p className="text-3xl font-black text-emerald-600 tracking-tight">{data.categorised.length}</p>
           </div>
-          <p className="text-slate-500 text-xs font-medium mt-2 tracking-wide uppercase">Categorised {itemType}s</p>
+          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+            <CheckCircle2 size={18} />
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4 sm:p-5 transition-all hover:border-slate-300/80">
-          <div className="flex items-center justify-between gap-2">
-            <p className={`text-2xl sm:text-3xl font-black tracking-tight leading-none ${data.uncategorised.length > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+        {/* Uncategorized Alert Tracker */}
+        <div className={`bg-gradient-to-br from-white ${data.uncategorised.length > 0 ? 'to-amber-50/20 border-amber-200/70' : 'to-slate-50/50 border-slate-200/60'} rounded-2xl border p-5 flex items-center justify-between shadow-sm transition-colors`}>
+          <div className="space-y-1">
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Unassigned</p>
+            <p className={`text-3xl font-black tracking-tight ${data.uncategorised.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
               {data.uncategorised.length}
             </p>
-            {data.uncategorised.length > 0 && (
-              <div className="p-1.5 bg-amber-50 rounded-lg">
-                <AlertCircle size={16} className="text-amber-600" />
-              </div>
-            )}
           </div>
-          <p className="text-slate-500 text-xs font-medium mt-2 tracking-wide uppercase">Uncategorised Items</p>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${data.uncategorised.length > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
+            <AlertCircle size={18} />
+          </div>
         </div>
       </div>
 
-      {/* Category Cards / Empty State Grid Container */}
+      {/* Main Grid Content Area */}
       {data.categoryList.length === 0 ? (
-        <div className="bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center py-12 sm:py-16 px-4 sm:px-6 gap-4 text-center">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 rounded-2xl flex items-center justify-center shadow-inner shadow-emerald-600/5">
-            <Tag size={22} className="text-emerald-600" />
+        /* Empty State */
+        <div className="bg-slate-50/60 rounded-3xl border-2 border-dashed border-slate-200/80 flex flex-col items-center justify-center py-14 px-4 text-center max-w-xl mx-auto">
+          <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center shadow-md shadow-slate-200/50 mb-4 animate-pulse">
+            <Tag size={26} className="text-emerald-600" />
           </div>
-          <div className="space-y-1 max-w-sm">
-            <h3 className="font-bold text-slate-900 text-base">No categories configured</h3>
-            <p className="text-slate-500 text-sm leading-relaxed">
-              Assign a category marker to any {itemType.toLowerCase()} inside your {manageTab === 'products' ? 'Products' : 'Services'} tab to automatically generate directories here.
-            </p>
-          </div>
+          <h3 className="font-bold text-slate-900 text-base mb-1">No structural categories yet</h3>
+          <p className="text-slate-500 text-sm max-w-sm leading-relaxed mb-6">
+            Assign a custom category identity to any {itemType.toLowerCase()} inside your inventory management tab to populate this dashboard dynamically.
+          </p>
           <button
             onClick={() => navigateTo(manageTab)}
-            className="mt-2 flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 active:scale-[0.98] text-slate-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm"
+            className="flex items-center gap-2 bg-white border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] text-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
           >
             Go to {manageTab === 'products' ? 'Products' : 'Services'}
             <ArrowRight size={14} className="text-slate-400" />
           </button>
         </div>
       ) : (
+        /* Populated Category Directory Card Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {data.categoryList.map(category => {
             const previewItems = category.items.slice(0, 3)
@@ -98,43 +106,42 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
             return (
               <div
                 key={category.name}
-                className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-5 hover:border-emerald-300 hover:shadow-md hover:shadow-emerald-600/[0.02] flex flex-col justify-between transition-all group min-w-0"
+                className="bg-white rounded-2xl border border-slate-200/70 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between overflow-hidden min-w-0"
               >
-                <div>
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-10 h-10 bg-emerald-50 group-hover:bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
-                      <Tag size={16} className="text-emerald-600 group-hover:text-white transition-colors" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-bold text-slate-900 text-base leading-snug truncate group-hover:text-emerald-700 transition-colors" title={category.name}>
-                        {category.name}
-                      </h3>
-                      <p className="text-slate-400 text-xs font-medium mt-0.5">
-                        {category.count} {itemType.toLowerCase()}{category.count !== 1 ? 's' : ''} total
-                      </p>
+                {/* Card Top Block */}
+                <div className="p-5">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                      {category.count} {itemType.toLowerCase()}{category.count !== 1 ? 's' : ''}
+                    </span>
+                    <div className="w-7 h-7 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
+                      <Tag size={13} />
                     </div>
                   </div>
                   
-                  {/* Decorative Subtle Line */}
-                  <div className="h-px bg-slate-100 my-4" />
+                  <h3 className="font-bold text-slate-900 text-base tracking-tight truncate w-full" title={category.name}>
+                    {category.name}
+                  </h3>
                 </div>
 
-                {/* Sub-item pill ecosystem */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {previewItems.map(item => (
-                    <span
-                      key={item.id}
-                      className="max-w-full truncate text-xs font-medium text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg"
-                      title={item.name}
-                    >
-                      {item.name}
-                    </span>
-                  ))}
-                  {remaining > 0 && (
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50/60 border border-emerald-100/80 px-2.5 py-1 rounded-lg">
-                      +{remaining} more
-                    </span>
-                  )}
+                {/* Sub-item Pill Container Section */}
+                <div className="bg-slate-50/60 border-t border-slate-100 p-4 mt-auto">
+                  <div className="flex flex-wrap gap-1.5">
+                    {previewItems.map(item => (
+                      <span
+                        key={item.id}
+                        className="max-w-[150px] truncate text-[11px] font-semibold text-slate-600 bg-white border border-slate-200/60 px-2.5 py-1 rounded-lg shadow-2xs"
+                        title={item.name}
+                      >
+                        {item.name}
+                      </span>
+                    ))}
+                    {remaining > 0 && (
+                      <span className="text-[11px] font-bold text-slate-500 bg-slate-200/60 border border-slate-300/40 px-2 py-1 rounded-lg">
+                        +{remaining}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -142,27 +149,30 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
         </div>
       )}
 
-      {/* Uncategorised Alerts Workspace */}
+      {/* Uncategorised Fix Warning Wrapper */}
       {data.uncategorised.length > 0 && (
-        <div className="bg-amber-50/40 rounded-2xl border border-amber-200/70 border-l-4 border-l-amber-500 shadow-sm p-4 mt-2">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0">
-              <AlertCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <h4 className="font-bold text-slate-900 text-sm">
-                  {data.uncategorised.length} unassigned {itemType.toLowerCase()}{data.uncategorised.length !== 1 ? 's' : ''} detected
+        <div className="bg-white border-2 border-amber-200 rounded-2xl shadow-sm overflow-hidden mt-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 sm:p-5">
+            <div className="flex items-start gap-3.5 min-w-0">
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-xl flex-shrink-0">
+                <AlertCircle size={20} />
+              </div>
+              <div className="min-w-0 space-y-0.5">
+                <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+                  {data.uncategorised.length} {itemType.toLowerCase()}{data.uncategorised.length !== 1 ? 's' : ''} missing category tags
                 </h4>
-                <p className="text-slate-500 text-xs sm:text-sm mt-0.5 leading-relaxed">
-                  Storefront filters omit these completely. Access your inventory modules to attach proper grouping profiles.
+                <p className="text-slate-500 text-xs sm:text-sm leading-relaxed max-w-2xl">
+                  These items currently operate without direct catalog assignment flags, preventing targeted collection searches on your storefront pages.
                 </p>
               </div>
             </div>
+            
             <button
               onClick={() => navigateTo(manageTab)}
-              className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-amber-50 text-amber-800 border border-amber-200/80 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-[0.99]"
+              className="w-full lg:w-auto shrink-0 inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shadow-amber-600/10"
             >
-              Fix in {manageTab === 'products' ? 'Products' : 'Services'}
-              <ArrowRight size={14} className="text-amber-600" />
+              <span>Fix in {manageTab === 'products' ? 'Products' : 'Services'}</span>
+              <ArrowRight size={14} />
             </button>
           </div>
         </div>
@@ -172,17 +182,15 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-8 w-full block">
-      {/* Primary Module Dashboard Header */}
-      <div className="border-b border-slate-100 pb-5">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Storefront Categories</h1>
-            <p className="text-slate-400 text-sm font-medium">Segment catalogs smoothly to refine your user purchasing journeys.</p>
-          </div>
+      {/* Primary Workspace Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Storefront Directory</h1>
+          <p className="text-slate-500 text-sm font-medium">Structure and manage structural classifications for smooth public catalog navigation.</p>
         </div>
       </div>
 
-      {/* Segment Distribution Routing System */}
+      {/* Segment Routing Framework */}
       {vendorType === 'products' && (
         <CategorySection
           title="Product Categories"
@@ -202,14 +210,18 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
       )}
 
       {vendorType === 'both' && (
-        <div className="space-y-10">
+        <div className="space-y-12">
           <CategorySection
             title="Product Categories"
             data={productData}
             itemType="Product"
             manageTab="products"
           />
-          <div className="h-px bg-slate-200/60" />
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-slate-200/70" />
+            </div>
+          </div>
           <CategorySection
             title="Service Categories"
             data={serviceData}
@@ -219,11 +231,11 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
         </div>
       )}
 
-      {/* Global Context Notice Footer Banner */}
-      <div className="flex items-start gap-3 bg-sky-50/50 border border-sky-100 rounded-2xl p-4 transition-all hover:bg-sky-50">
-        <Info size={16} className="text-sky-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sky-800 text-xs sm:text-sm leading-relaxed font-medium">
-          Category assignments live natively within separate item parameters. To create new category nodes or map existing items elsewhere, visit your designated Product or Service tabs to edit them directly.
+      {/* Global Information Guide Module */}
+      <div className="flex items-start gap-3 bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all hover:bg-slate-100/60 shadow-xs">
+        <Info size={16} className="text-slate-500 flex-shrink-0 mt-0.5" />
+        <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-medium">
+          Category parameters are assigned inside standard product parameters. To create new category filters or update collection properties, select your inventory catalogs, edit your chosen listing, and submit new category flags.
         </p>
       </div>
     </div>

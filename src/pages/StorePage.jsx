@@ -14,7 +14,6 @@ import {
   ChevronDown,
   Loader2,
   CreditCard,
-  Truck,
 } from "lucide-react";
 import { getStoreBySlug, getProducts } from "../firebase/products";
 import { db } from "../firebase/config";
@@ -227,8 +226,6 @@ function StoreCheckoutModal({
   setForm,
   selectedZone,
   setSelectedZone,
-  deliveryRates,
-  loadingRates,
   checkoutError,
   checkoutProcessing,
   completedOrder,
@@ -244,26 +241,9 @@ function StoreCheckoutModal({
   setPromoLoading,
   promoError,
   setPromoError,
-  deliveryType,
-  setDeliveryType,
-  selectedShipbubbleRate,
-  setSelectedShipbubbleRate,
-  shipbubbleDeliveryAddress,
-  setShipbubbleDeliveryAddress,
-  shipbubbleDeliveryState,
-  setShipbubbleDeliveryState,
-  shipbubbleDeliveryCity,
-  setShipbubbleDeliveryCity,
-  loadingShipbubbleRates,
-  shipbubbleRateError,
-  onFetchShipbubbleRates,
 }) {
   const subtotal = calcSubtotal(cart);
-  const deliveryFee = deliveryType === 'shipbubble'
-    ? Number(selectedShipbubbleRate?.total_shipping_fee || 0)
-    : selectedZone
-    ? Number(selectedZone.price)
-    : 0;
+  const deliveryFee = selectedZone ? Number(selectedZone.price) : 0;
   const processingFee = calcProcessingFee(subtotal);
   const discountAmount = calcDiscountAmount(subtotal, appliedDiscount);
   const grandTotal = subtotal + deliveryFee + processingFee - discountAmount;
@@ -299,13 +279,8 @@ function StoreCheckoutModal({
   };
 
   const handleContinueDelivery = () => {
-    if (deliveryType === 'zone') {
-      if (!selectedZone || !form.deliveryAddress.trim()) return;
-    }
-    if (deliveryType === 'shipbubble') {
-      if (!selectedShipbubbleRate || !shipbubbleDeliveryAddress.trim() || !shipbubbleDeliveryState.trim()) return;
-    }
-    setStep("payment");
+    if (!selectedZone || !form.deliveryAddress.trim()) return
+    setStep("payment")
   };
 
   const handleApplyPromo = async () => {
@@ -441,211 +416,66 @@ function StoreCheckoutModal({
 
           {step === "delivery" && (
             <div className="space-y-4">
-              {/* Delivery type selector — only show if both options exist */}
-              {deliveryZones.length > 0 && store?.enableShipbubbleDelivery && store?.pickupAddress?.streetAddress && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryType('zone')}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                      deliveryType === 'zone'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
-                    Vendor Delivery
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryType('shipbubble')}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                      deliveryType === 'shipbubble'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
-                    <Truck size={13} className="inline mr-1" />
-                    Courier Delivery
-                  </button>
-                </div>
-              )}
-
-              {/* Zone delivery tier */}
-              {(deliveryType === 'zone' || !store?.enableShipbubbleDelivery || !store?.pickupAddress?.streetAddress) && (
-                <>
-                  {deliveryZones.length === 0 && !store?.enableShipbubbleDelivery ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-                      <p>
-                        This seller hasn&apos;t set up delivery zones yet — contact
-                        them on WhatsApp to arrange delivery.
-                      </p>
-                      <a
-                        href={buildEnquiryURL(store.whatsappNumber, store.businessName)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 mt-3 text-green-700 font-semibold hover:underline"
-                      >
-                        <MessageCircle size={14} />
-                        Chat on WhatsApp
-                      </a>
-                    </div>
-                  ) : deliveryZones.length === 0 && store?.enableShipbubbleDelivery ? (
-                    <p
-                      className="text-xs text-gray-400 cursor-pointer underline underline-offset-2"
-                      onClick={() => setDeliveryType('shipbubble')}
-                    >
-                      No vendor zones set — switch to Courier Delivery above.
-                    </p>
-                  ) : (
-                    <>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
-                          <Truck size={14} />
-                          Select delivery zone
-                        </p>
-                        <div className="space-y-2">
-                          {deliveryZones.map((zone) => (
-                            <button
-                              key={zone.id}
-                              type="button"
-                              onClick={() => handleSelectZone(zone)}
-                              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                                selectedZone?.id === zone.id
-                                  ? "border-green-500 bg-green-50"
-                                  : "border-gray-100 hover:border-gray-200"
-                              }`}
-                            >
-                              <p className="font-semibold text-gray-900 text-sm">
-                                {zone.name}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-0.5">
-                                {zone.state}
-                                {zone.lga ? ` · ${zone.lga}` : ""}
-                              </p>
-                              <p className="text-sm font-bold text-green-600 mt-1">
-                                ₦{Number(zone.price).toLocaleString()}
-                              </p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
-                          Street address *
-                        </label>
-                        <input
-                          type="text"
-                          value={form.deliveryAddress}
-                          onChange={updateForm("deliveryAddress")}
-                          placeholder="House no., street name, landmark"
-                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
-                          Order notes (optional)
-                        </label>
-                        <textarea
-                          value={form.notes}
-                          onChange={updateForm("notes")}
-                          placeholder="Any special instructions"
-                          rows={2}
-                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none resize-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                        />
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* Shipbubble courier delivery tier */}
-              {deliveryType === 'shipbubble' && store?.enableShipbubbleDelivery && store?.pickupAddress?.streetAddress && (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
-                    <Truck size={14} />
-                    Courier Delivery — Anywhere in Nigeria
+              {deliveryZones.length === 0 ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                  <p>
+                    This seller hasn&apos;t set up delivery zones yet — contact
+                    them on WhatsApp to arrange delivery.
                   </p>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Street Address *</label>
-                      <input
-                        type="text"
-                        value={shipbubbleDeliveryAddress}
-                        onChange={(e) => setShipbubbleDeliveryAddress(e.target.value)}
-                        placeholder="House no., street name, landmark"
-                        className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">City / LGA *</label>
-                        <input
-                          type="text"
-                          value={shipbubbleDeliveryCity}
-                          onChange={(e) => setShipbubbleDeliveryCity(e.target.value)}
-                          placeholder="e.g. Ikeja"
-                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">State *</label>
-                        <input
-                          type="text"
-                          value={shipbubbleDeliveryState}
-                          onChange={(e) => setShipbubbleDeliveryState(e.target.value)}
-                          placeholder="e.g. Lagos"
-                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onFetchShipbubbleRates(shipbubbleDeliveryAddress, shipbubbleDeliveryCity, shipbubbleDeliveryState)}
-                      disabled={loadingShipbubbleRates || !shipbubbleDeliveryAddress.trim() || !shipbubbleDeliveryState.trim()}
-                      className="w-full py-3 rounded-xl border-2 border-green-500 text-green-700 font-bold text-sm transition-all hover:bg-green-50 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {loadingShipbubbleRates ? (
-                        <><Loader2 size={14} className="animate-spin" /> Fetching rates...</>
-                      ) : (
-                        'Get Courier Rates'
-                      )}
-                    </button>
-                  </div>
-
-                  {shipbubbleRateError && (
-                    <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-                      {shipbubbleRateError}
+                  <a
+                    href={buildEnquiryURL(store.whatsappNumber, store.businessName)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-3 text-green-700 font-semibold hover:underline"
+                  >
+                    <MessageCircle size={14} />
+                    Chat on WhatsApp
+                  </a>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-2">
+                      Select delivery zone
                     </p>
-                  )}
-
-                  {deliveryRates.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold text-gray-600">Select a courier</p>
-                      {deliveryRates.map((rate) => (
+                      {deliveryZones.map((zone) => (
                         <button
-                          key={rate.courier_id}
+                          key={zone.id}
                           type="button"
-                          onClick={() => setSelectedShipbubbleRate(rate)}
+                          onClick={() => handleSelectZone(zone)}
                           className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                            selectedShipbubbleRate?.courier_id === rate.courier_id
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-100 hover:border-gray-200'
+                            selectedZone?.id === zone.id
+                              ? "border-green-500 bg-green-50"
+                              : "border-gray-100 hover:border-gray-200"
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold text-gray-900 text-sm">{rate.courier_name}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">ETA: {rate.delivery_eta || '—'}</p>
-                            </div>
-                            <p className="text-sm font-bold text-green-600">
-                              ₦{Number(rate.total_shipping_fee || 0).toLocaleString()}
-                            </p>
-                          </div>
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {zone.name}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {zone.state}
+                            {zone.lga ? ` · ${zone.lga}` : ""}
+                          </p>
+                          <p className="text-sm font-bold text-green-600 mt-1">
+                            ₦{Number(zone.price).toLocaleString()}
+                          </p>
                         </button>
                       ))}
                     </div>
-                  )}
-
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                      Street address *
+                    </label>
+                    <input
+                      type="text"
+                      value={form.deliveryAddress}
+                      onChange={updateForm("deliveryAddress")}
+                      placeholder="House no., street name, landmark"
+                      className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                    />
+                  </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
                       Order notes (optional)
@@ -658,14 +488,7 @@ function StoreCheckoutModal({
                       className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none resize-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                     />
                   </div>
-                </div>
-              )}
-
-              {/* Shipbubble not available fallback */}
-              {deliveryType === 'shipbubble' && (!store?.enableShipbubbleDelivery || !store?.pickupAddress?.streetAddress) && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-                  <p>Courier delivery is not available for this store. Please select a vendor delivery zone or contact the seller on WhatsApp.</p>
-                </div>
+                </>
               )}
 
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-sm">
@@ -696,11 +519,7 @@ function StoreCheckoutModal({
               <button
                 type="button"
                 onClick={handleContinueDelivery}
-                disabled={
-                  deliveryType === 'zone'
-                    ? (deliveryZones.length === 0 || !selectedZone || !form.deliveryAddress.trim())
-                    : (!selectedShipbubbleRate || !shipbubbleDeliveryAddress.trim() || !shipbubbleDeliveryState.trim())
-                }
+                disabled={deliveryZones.length === 0 || !selectedZone || !form.deliveryAddress.trim()}
                 className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all"
               >
                 Continue to Payment
@@ -822,16 +641,6 @@ export default function StorePage() {
   const [checkoutStep, setCheckoutStep] = useState("details");
   const [checkoutForm, setCheckoutForm] = useState(EMPTY_CHECKOUT_FORM);
   const [selectedZone, setSelectedZone] = useState(null);
-  const [deliveryRates, setDeliveryRates] = useState([]);
-  const [loadingRates, setLoadingRates] = useState(false);
-  const [deliveryType, setDeliveryType] = useState('zone');
-  const [selectedShipbubbleRate, setSelectedShipbubbleRate] = useState(null);
-  const [shipbubbleRequestToken, setShipbubbleRequestToken] = useState('');
-  const [shipbubbleDeliveryAddress, setShipbubbleDeliveryAddress] = useState('');
-  const [shipbubbleDeliveryState, setShipbubbleDeliveryState] = useState('');
-  const [shipbubbleDeliveryCity, setShipbubbleDeliveryCity] = useState('');
-  const [loadingShipbubbleRates, setLoadingShipbubbleRates] = useState(false);
-  const [shipbubbleRateError, setShipbubbleRateError] = useState('');
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutProcessing, setCheckoutProcessing] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
@@ -1058,84 +867,23 @@ export default function StorePage() {
     setSearchParams(searchParams, { replace: true });
   }, [store, searchParams, setSearchParams]);
 
-  const fetchShipbubbleCheckoutRates = async (address, city, state) => {
-    if (!address.trim() || !state.trim()) return;
-    if (!store?.pickupAddress?.streetAddress || !store?.pickupAddress?.state) return;
-    setLoadingShipbubbleRates(true);
-    setShipbubbleRateError('');
-    setSelectedShipbubbleRate(null);
-    try {
-      const subtotal = calcSubtotal(cart);
-      const res = await fetch('/api/shipbubble-rates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId: store.id,
-          senderDetails: {
-            name: store.businessName || '',
-            phone: store.whatsappNumber || '',
-            email: store.email || '',
-            address: store.pickupAddress.streetAddress,
-            city: store.pickupAddress.city || '',
-            state: store.pickupAddress.state,
-          },
-          receiverDetails: {
-            name: checkoutForm.customerName || '',
-            phone: checkoutForm.customerPhone || '',
-            email: checkoutForm.customerEmail || '',
-            address: address,
-            city: city,
-            state: state,
-          },
-          weight: 1,
-          packageAmount: subtotal,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.rates) && data.rates.length > 0) {
-        setDeliveryRates(data.rates);
-        setShipbubbleRequestToken(data.request_token || '');
-      } else {
-        setShipbubbleRateError(data.error || 'No courier rates available for this address.');
-        setDeliveryRates([]);
-      }
-    } catch {
-      setShipbubbleRateError('Could not fetch courier rates. Check your connection.');
-      setDeliveryRates([]);
-    } finally {
-      setLoadingShipbubbleRates(false);
-    }
-  };
-
   const handleProceedToCheckout = useCallback(() => {
     setCartOpen(false);
     setCheckoutOpen(true);
     setCheckoutStep("details");
     setCheckoutError("");
     setSelectedZone(null);
-    setDeliveryRates([]);
-    setDeliveryType('zone');
-    setSelectedShipbubbleRate(null);
-    setShipbubbleRequestToken('');
-    setShipbubbleDeliveryAddress('');
-    setShipbubbleDeliveryState('');
-    setShipbubbleDeliveryCity('');
-    setShipbubbleRateError('');
   }, []);
 
   const handleCheckoutPay = async () => {
-    if (!store?.id) return;
-    if (deliveryType === 'zone' && !selectedZone) return;
-    if (deliveryType === 'shipbubble' && !selectedShipbubbleRate) return;
+    if (!store?.id || !selectedZone) return;
 
     setCheckoutProcessing(true);
     setCheckoutError("");
 
     const subtotal = calcSubtotal(cart);
     const processingFee = calcProcessingFee(subtotal);
-    const deliveryFee = deliveryType === 'shipbubble'
-      ? Number(selectedShipbubbleRate?.total_shipping_fee || 0)
-      : Number(selectedZone?.price || 0);
+    const deliveryFee = Number(selectedZone?.price || 0);
     const discountAmount = calcDiscountAmount(subtotal, appliedDiscount);
     const grandTotal = subtotal + deliveryFee + processingFee - discountAmount;
 
@@ -1150,26 +898,11 @@ export default function StorePage() {
           customerPhone: checkoutForm.customerPhone.trim(),
           cartItems: cart,
           deliveryFee,
-          deliveryAddress: deliveryType === 'shipbubble'
-            ? {
-                state: shipbubbleDeliveryState,
-                lga: shipbubbleDeliveryCity,
-                address: shipbubbleDeliveryAddress,
-              }
-            : {
-                state: selectedZone?.state || '',
-                lga: selectedZone?.lga || '',
-                address: checkoutForm.deliveryAddress.trim(),
-              },
-          deliveryType,
-          shipbubbleCourier: deliveryType === 'shipbubble'
-            ? {
-                courierId: selectedShipbubbleRate?.courier_id || '',
-                courierName: selectedShipbubbleRate?.courier_name || '',
-                serviceCode: selectedShipbubbleRate?.service_code || '',
-                requestToken: shipbubbleRequestToken,
-              }
-            : null,
+          deliveryAddress: {
+            state: selectedZone?.state || '',
+            lga: selectedZone?.lga || '',
+            address: checkoutForm.deliveryAddress.trim(),
+          },
           notes: checkoutForm.notes.trim(),
           promoCode: appliedDiscount?.code || "",
           discountAmount: discountAmount || 0,
@@ -1625,8 +1358,6 @@ export default function StorePage() {
           setForm={setCheckoutForm}
           selectedZone={selectedZone}
           setSelectedZone={setSelectedZone}
-          deliveryRates={deliveryRates}
-          loadingRates={loadingRates}
           checkoutError={checkoutError}
           checkoutProcessing={checkoutProcessing}
           completedOrder={completedOrder}
@@ -1642,19 +1373,6 @@ export default function StorePage() {
           onPay={handleCheckoutPay}
           onDownloadReceipt={handleDownloadReceipt}
           receiptDownloading={receiptDownloading}
-          deliveryType={deliveryType}
-          setDeliveryType={setDeliveryType}
-          selectedShipbubbleRate={selectedShipbubbleRate}
-          setSelectedShipbubbleRate={setSelectedShipbubbleRate}
-          shipbubbleDeliveryAddress={shipbubbleDeliveryAddress}
-          setShipbubbleDeliveryAddress={setShipbubbleDeliveryAddress}
-          shipbubbleDeliveryState={shipbubbleDeliveryState}
-          setShipbubbleDeliveryState={setShipbubbleDeliveryState}
-          shipbubbleDeliveryCity={shipbubbleDeliveryCity}
-          setShipbubbleDeliveryCity={setShipbubbleDeliveryCity}
-          loadingShipbubbleRates={loadingShipbubbleRates}
-          shipbubbleRateError={shipbubbleRateError}
-          onFetchShipbubbleRates={fetchShipbubbleCheckoutRates}
         />
       )}
 

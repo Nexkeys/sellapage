@@ -40,11 +40,6 @@ export default function DeliveryTab({
   const [zonesSaving, setZonesSaving] = useState(false)
   const [zonesError, setZonesError] = useState('')
 
-  const [shipbubbleEnabled, setShipbubbleEnabled] = useState(
-    store?.enableShipbubbleDelivery !== false
-  )
-  const [shipbubbleToggleSaving, setShipbubbleToggleSaving] = useState(false)
-
   const [trackingData, setTrackingData] = useState({})
   const [trackingLoading, setTrackingLoading] = useState({})
   const [trackingError, setTrackingError] = useState({})
@@ -61,10 +56,6 @@ export default function DeliveryTab({
 
   useEffect(() => {
     setZones(store?.deliveryZones ?? [])
-  }, [store])
-
-  useEffect(() => {
-    setShipbubbleEnabled(store?.enableShipbubbleDelivery !== false)
   }, [store])
 
   const handleSubmit = (e) => {
@@ -123,20 +114,6 @@ export default function DeliveryTab({
       setZonesError('Failed to delete delivery zone. Please try again.')
     } finally {
       setZonesSaving(false)
-    }
-  }
-
-  const handleShipbubbleToggle = async () => {
-    const newValue = !shipbubbleEnabled
-    setShipbubbleEnabled(newValue)
-    setShipbubbleToggleSaving(true)
-    try {
-      await updateStore(store.id, { enableShipbubbleDelivery: newValue })
-    } catch (err) {
-      console.error('Failed to update Shipbubble setting', err)
-      setShipbubbleEnabled(!newValue)
-    } finally {
-      setShipbubbleToggleSaving(false)
     }
   }
 
@@ -297,48 +274,6 @@ export default function DeliveryTab({
             )}
           </button>
         </form>
-      </div>
-
-      {/* Shipbubble Courier Toggle */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Truck size={16} className="text-blue-600" />
-            </div>
-            <div>
-              <h2 className="font-bold text-gray-900 text-sm">Courier Delivery (Shipbubble)</h2>
-              <p className="text-gray-400 text-[11px] mt-0.5">
-                Let customers choose nationwide courier delivery at checkout.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleShipbubbleToggle}
-            disabled={shipbubbleToggleSaving || !hasPickupAddress}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-              shipbubbleEnabled ? 'bg-green-500' : 'bg-gray-200'
-            }`}
-            aria-label="Toggle Shipbubble delivery"
-          >
-            <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                shipbubbleEnabled ? 'translate-x-5' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </div>
-        {!hasPickupAddress && (
-          <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-            Save a pickup address above to enable courier delivery.
-          </p>
-        )}
-        {shipbubbleEnabled && hasPickupAddress && (
-          <p className="mt-3 text-[11px] text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
-            Customers can select Shipbubble courier delivery at checkout. Live rates are fetched automatically.
-          </p>
-        )}
       </div>
 
       {/* Delivery Zones */}
