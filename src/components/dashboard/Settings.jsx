@@ -150,32 +150,32 @@ export default function SettingsTab({
 
 
   return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
+    <div className="p-4 sm:p-5 max-w-2xl mx-auto space-y-4">
       <div>
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Settings</h1>
-        <p className="text-gray-400 text-sm mt-1">Manage your business page and account preferences.</p>
+        <h1 className="text-xl font-bold text-gray-900 tracking-tight">Settings</h1>
+        <p className="text-gray-400 text-xs mt-0.5">Manage your business page and account preferences.</p>
       </div>
 
 
       {/* ── Store Info ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
-        <h2 className="font-bold text-gray-900 text-base">Business Information</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
+        <h2 className="font-bold text-gray-900 text-sm">Business Information</h2>
 
 
         {/* Logo */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-3">Business Logo</label>
+          <label className="block text-xs font-bold text-gray-700 mb-2">Business Logo</label>
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-green-600 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-gray-100 shadow-sm">
+            <div className="w-14 h-14 rounded-xl bg-green-600 flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-100">
               {store?.logoUrl
-                ? <img src={store.logoUrl} alt="Store logo" className="w-16 h-16 object-cover" />
-                : <span className="text-white text-xl font-bold">{getInitials(store?.businessName)}</span>
+                ? <img src={store.logoUrl} alt="Store logo" className="w-14 h-14 object-cover" />
+                : <span className="text-white text-base font-bold">{getInitials(store?.businessName)}</span>
               }
             </div>
             <div className="flex-1">
               {isGrowthOrPro ? (
                 <>
-                  <label className="flex items-center gap-2 cursor-pointer px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors w-fit">
+                  <label className="flex items-center gap-2 cursor-pointer px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors w-fit">
                     {logoUploading
                       ? <><Loader2 size={14} className="animate-spin text-green-500" /> Uploading...</>
                       : <><UploadCloud size={14} className="text-green-500" /> Change Logo</>
@@ -185,7 +185,7 @@ export default function SettingsTab({
                   <p className="text-gray-400 text-xs mt-1.5">PNG or JPG, max 5MB. Shown on your public commerce page.</p>
                 </>
               ) : (
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-dashed border-gray-200 rounded-xl w-fit">
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-dashed border-gray-200 rounded-xl w-fit">
                   <Lock size={13} className="text-gray-400" />
                   <p className="text-gray-500 text-xs font-medium">Logo upload available on Growth+</p>
                 </div>
@@ -197,7 +197,7 @@ export default function SettingsTab({
 
         {/* Business Type */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">What do you sell/offer?</label>
+          <label className="block text-xs font-bold text-gray-700 mb-2">What do you sell/offer?</label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { id: 'products', label: 'Physical/Digital Products' },
@@ -208,7 +208,7 @@ export default function SettingsTab({
                 key={type.id}
                 type="button"
                 onClick={() => setForm(p => ({ ...p, vendorType: type.id }))}
-                className={`py-3 px-3 rounded-xl border-2 text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1.5 ${form.vendorType === type.id
+                className={`py-2.5 px-2 rounded-xl border-2 text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${form.vendorType === type.id
                     ? 'border-green-500 bg-green-50/50 text-green-700'
                     : 'border-gray-100 hover:border-gray-200 text-gray-600 bg-white'
                   }`}
@@ -222,11 +222,11 @@ export default function SettingsTab({
 
         {/* Business Name */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Name</label>
+          <label className="block text-xs font-bold text-gray-700 mb-1.5">Business Name</label>
           <input
             value={form.businessName}
             onChange={e => setForm(p => ({ ...p, businessName: e.target.value }))}
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
             placeholder="e.g. Bola's Boutique"
           />
         </div>
@@ -234,15 +234,15 @@ export default function SettingsTab({
 
         {/* Store URL slug */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Link</label>
+          <label className="block text-xs font-bold text-gray-700 mb-1.5">Business Link</label>
           <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-400/20 transition-all">
-            <span className="px-3 py-2.5 bg-gray-50 text-gray-400 text-sm border-r border-gray-200 whitespace-nowrap flex-shrink-0">
+            <span className="px-3 py-2.5 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap flex-shrink-0">
               {window.location.origin}/
             </span>
             <input
               value={form.storeName}
               onChange={handleSlugChange}
-              className="flex-1 px-3 py-2.5 text-sm outline-none bg-white"
+              className="flex-1 px-3 py-2.5 text-xs outline-none bg-white"
               placeholder="your-store"
             />
           </div>
@@ -260,11 +260,11 @@ export default function SettingsTab({
 
         {/* WhatsApp */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">WhatsApp Number</label>
+          <label className="block text-xs font-bold text-gray-700 mb-1.5">WhatsApp Number</label>
           <input
             value={form.whatsappNumber}
             onChange={e => setForm(p => ({ ...p, whatsappNumber: e.target.value }))}
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all"
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
             placeholder="+234 801 234 5678"
           />
           <p className="text-gray-400 text-xs mt-1.5">Used for customer order and booking messages from your public page.</p>
@@ -273,12 +273,12 @@ export default function SettingsTab({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Description</label>
+          <label className="block text-xs font-bold text-gray-700 mb-1.5">Business Description</label>
           <textarea
             value={form.description}
             onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
             rows={3}
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all"
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 resize-none transition-all"
             placeholder="Tell customers what your store is about..."
           />
         </div>
@@ -286,11 +286,11 @@ export default function SettingsTab({
 
         {/* Email (read-only) */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+          <label className="block text-xs font-bold text-gray-700 mb-1.5">Email Address</label>
           <input
             value={store?.email || ''}
             readOnly
-            className="w-full px-4 py-2.5 border border-gray-100 rounded-xl text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
+            className="w-full px-4 py-2.5 border border-gray-100 rounded-xl text-xs text-gray-400 bg-gray-50 cursor-not-allowed"
           />
           <p className="text-gray-400 text-xs mt-1.5">To change your email, please contact support.</p>
         </div>
@@ -313,8 +313,8 @@ export default function SettingsTab({
 
 
       {/* ── Plan & Billing ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-        <h2 className="font-bold text-gray-900 text-base">Plan & Billing</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <h2 className="font-bold text-gray-900 text-sm">Plan & Billing</h2>
 
 
         <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -339,7 +339,7 @@ export default function SettingsTab({
             <button
               onClick={() => handleUpgrade('growth')}
               disabled={upgradeLoading === 'growth'}
-              className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 text-white py-2.5 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
               {upgradeLoading === 'growth'
                 ? <Loader2 size={15} className="animate-spin" />
@@ -349,7 +349,7 @@ export default function SettingsTab({
             <button
               onClick={() => handleUpgrade('pro')}
               disabled={upgradeLoading === 'pro'}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-2.5 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
               {upgradeLoading === 'pro'
                 ? <Loader2 size={15} className="animate-spin" />
@@ -359,7 +359,7 @@ export default function SettingsTab({
             <button
               onClick={() => handleUpgrade('premium')}
               disabled={upgradeLoading === 'premium'}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-2.5 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
               {upgradeLoading === 'premium'
                 ? <Loader2 size={15} className="animate-spin" />
@@ -374,7 +374,7 @@ export default function SettingsTab({
             <button
               onClick={() => handleUpgrade('pro')}
               disabled={upgradeLoading === 'pro'}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white py-2.5 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
               {upgradeLoading === 'pro'
                 ? <Loader2 size={15} className="animate-spin" />
@@ -384,7 +384,7 @@ export default function SettingsTab({
             <button
               onClick={() => handleUpgrade('premium')}
               disabled={upgradeLoading === 'premium'}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-2.5 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
             >
               {upgradeLoading === 'premium'
                 ? <Loader2 size={15} className="animate-spin" />
@@ -398,7 +398,7 @@ export default function SettingsTab({
           <button
             onClick={() => handleUpgrade('premium')}
             disabled={upgradeLoading === 'premium'}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-2.5 px-5 rounded-xl text-sm font-bold transition-all disabled:opacity-70"
           >
             {upgradeLoading === 'premium'
               ? <Loader2 size={15} className="animate-spin" />
@@ -408,7 +408,7 @@ export default function SettingsTab({
         )}
 
         {upgradeError && (
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-red-600">
             <AlertCircle size={14} className="shrink-0" />
             {upgradeError}
           </p>
@@ -416,13 +416,13 @@ export default function SettingsTab({
 
 
         {isPro && !isPremium && (
-          <div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 text-sm font-medium">
+          <div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 text-xs font-medium">
             <span>✦</span> You're on the Pro plan - enjoy all features!
           </div>
         )}
 
         {isPremium && (
-          <div className="flex items-center gap-2 text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-sm font-medium">
+          <div className="flex items-center gap-2 text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-xs font-medium">
             <span>👑</span> You're on the Premium plan - enjoy ultimate scale & automation!
           </div>
         )}
@@ -430,17 +430,17 @@ export default function SettingsTab({
 
 
       {/* ── Danger Zone ── */}
-      <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-5 space-y-3">
-        <h2 className="font-bold text-gray-900 text-base">Danger Zone</h2>
-        <p className="text-gray-500 text-sm">Permanently delete your business page and all associated data.</p>
+      <div className="bg-white rounded-2xl border border-red-100 p-4 space-y-3">
+        <h2 className="font-bold text-gray-900 text-sm">Danger Zone</h2>
+        <p className="text-gray-500 text-xs">Permanently delete your business page and all associated data.</p>
         <button
           onClick={handleDeleteClick}
-          className="flex items-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+          className="flex items-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-xl text-xs font-bold transition-all"
         >
           <Trash2 size={14} /> Delete Business Page
         </button>
         {deleteError && (
-          <p className="text-red-500 text-sm flex items-center gap-2"><AlertCircle size={13} />{deleteError}</p>
+          <p className="text-red-500 text-xs flex items-center gap-2"><AlertCircle size={13} />{deleteError}</p>
         )}
       </div>
 

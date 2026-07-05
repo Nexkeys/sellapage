@@ -85,12 +85,12 @@ function StatusPicker({ status, onChange }) {
   const config = getOption(STATUS_OPTIONS, key, 'pending')
 
   return (
-    <div className={`relative inline-flex min-w-[9.75rem] items-center rounded-xl border ${config.color}`}>
+    <div className={`relative inline-flex min-w-[8rem] items-center rounded-xl border ${config.color}`}>
       <select
         value={key}
         onChange={(event) => onChange(event.target.value)}
         aria-label="Fulfillment status"
-        className="w-full appearance-none rounded-xl bg-transparent py-2 pl-3 pr-8 text-xs font-extrabold uppercase tracking-wide outline-none transition-all cursor-pointer focus:ring-2 focus:ring-green-500/25"
+        className="w-full appearance-none rounded-xl bg-transparent py-1.5 pl-3 pr-8 text-xs font-extrabold uppercase tracking-wide outline-none transition-all cursor-pointer focus:ring-2 focus:ring-green-500/25"
       >
         {STATUS_OPTIONS.map(option => (
           <option key={option.value} value={option.value}>
@@ -560,24 +560,24 @@ export default function OrdersTab({
       <div className="mx-auto max-w-4xl p-4 sm:p-5">
         <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
           <div className="px-6 py-14 text-center sm:py-16">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 border border-green-100">
-              <Lock size={28} className="text-green-600" strokeWidth={1.8} />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 border border-green-100">
+              <Lock size={22} className="text-green-600" strokeWidth={1.8} />
             </div>
             <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">
               Pro & Premium Only
             </p>
-            <h1 className="mb-3 text-xl font-bold tracking-tight text-gray-900">
+            <h1 className="mb-2 text-lg font-bold tracking-tight text-gray-900">
               Automated Orders
             </h1>
-            <p className="mx-auto mb-6 max-w-sm text-sm leading-relaxed text-gray-500">
+            <p className="mx-auto mb-5 max-w-sm text-xs leading-relaxed text-gray-500">
               Orders appear here automatically when customers complete checkout via Paystack. Upgrade to Pro to activate in-app checkout and automatic order tracking.
             </p>
             <button
               type="button"
               onClick={() => navigateTo?.('billing')}
-              className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-green-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-700"
             >
-              <CreditCard size={15} />
+              <CreditCard size={13} />
               Upgrade to Pro
             </button>
             <p className="mt-4 text-xs text-gray-400">
@@ -594,25 +594,25 @@ export default function OrdersTab({
       <div className="mx-auto max-w-4xl p-4 sm:p-5">
         <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
           <div className="px-6 py-14 text-center sm:py-16">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100">
-              <Lock size={28} className="text-blue-500" strokeWidth={1.8} />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100">
+              <Lock size={22} className="text-blue-500" strokeWidth={1.8} />
             </div>
             <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-500">
               Pro & Premium Only
             </p>
-            <h1 className="mb-3 text-xl font-bold tracking-tight text-gray-900">
+            <h1 className="mb-2 text-lg font-bold tracking-tight text-gray-900">
               Automated Orders
             </h1>
-            <p className="mx-auto mb-6 max-w-sm text-sm leading-relaxed text-gray-500">
+            <p className="mx-auto mb-5 max-w-sm text-xs leading-relaxed text-gray-500">
               You're on Growth. Orders are automatically created when customers pay via Paystack in-app checkout — a Pro feature. Log offline sales in your Ledger tab instead.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => navigateTo?.('billing')}
-                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-green-700"
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-700"
               >
-                <CreditCard size={15} />
+                <CreditCard size={13} />
                 Upgrade to Pro
               </button>
               <button
@@ -630,86 +630,86 @@ export default function OrdersTab({
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.2em] text-green-600">
+          <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">
             Orders & Bookings
           </p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-gray-950 sm:text-[1.7rem]">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900">
             Order Ledger
           </h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-gray-500">
+          <p className="mt-0.5 text-xs text-gray-400">
             Track product orders and service bookings in one place. WhatsApp orders can be logged manually in the ledger tab.
           </p>
         </div>
       </div>
 
       {/* Operational Filter Strip */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-5 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5 bg-white p-3.5 rounded-2xl border border-gray-100">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={16} className="text-gray-400" />
+            <Search size={14} className="text-gray-400" />
           </div>
           <input
             type="text"
             placeholder="Search name, ID, or address..."
             value={filterSearch}
             onChange={(e) => setFilterSearch(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 py-2.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 py-2 text-xs text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
           />
         </div>
         <div className="relative">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-xs font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
           >
             <option value="all">All Statuses</option>
             {STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <ChevronDown size={13} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
         <div className="relative">
           <select
             value={filterPayment}
             onChange={(e) => setFilterPayment(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-xs font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
           >
             <option value="all">All Payments</option>
             {PAYMENT_STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <ChevronDown size={13} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
         <div className="relative">
           <select
             value={filterOrderType}
             onChange={(e) => setFilterOrderType(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-xs font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
           >
             <option value="all">All Orders</option>
             <option value="products">Products</option>
             <option value="service_bookings">Service Bookings</option>
           </select>
-          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <ChevronDown size={13} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <ArrowDownUp size={16} className="text-gray-400" />
+            <ArrowDownUp size={14} className="text-gray-400" />
           </div>
           <select
             value={filterSort}
             onChange={(e) => setFilterSort(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-10 py-2.5 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-10 py-2 text-xs font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
           </select>
-          <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <ChevronDown size={13} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
       </div>
 
@@ -737,20 +737,20 @@ export default function OrdersTab({
       )}
 
       {ordersLoading && (
-        <div className="flex items-center justify-center rounded-2xl border border-gray-100 bg-white py-24 shadow-sm">
-          <Loader2 size={36} className="animate-spin text-green-600" />
+        <div className="flex items-center justify-center rounded-2xl border border-gray-100 bg-white py-20">
+          <Loader2 size={28} className="animate-spin text-green-600" />
         </div>
       )}
 
       {!ordersLoading && orders.length === 0 && (
-        <section className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white px-6 py-16 text-center sm:py-20">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 ring-4 ring-green-50/80">
-            <ShoppingBag size={28} className="text-green-600" strokeWidth={1.75} />
+        <section className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white px-6 py-14 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50">
+            <ShoppingBag size={24} className="text-green-600" strokeWidth={1.75} />
           </div>
-          <h2 className="mb-2 text-lg font-bold tracking-tight text-gray-900">
+          <h2 className="mb-1.5 text-base font-bold tracking-tight text-gray-900">
             No orders yet
           </h2>
-          <p className="max-w-sm text-sm leading-relaxed text-gray-500">
+          <p className="max-w-sm text-xs leading-relaxed text-gray-500">
             Orders appear here automatically when customers complete checkout on your store. Share your store link to start getting orders.
           </p>
         </section>
@@ -779,15 +779,15 @@ export default function OrdersTab({
 
       {!ordersLoading && filteredOrders.length > 0 && (
         <>
-          <section className="hidden overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm shadow-gray-100/80 md:block">
+          <section className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white md:block">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1180px] border-collapse text-left">
+              <table className="w-full min-w-[900px] border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50/80">
+                  <tr className="border-b border-gray-100 bg-gray-50/60">
                     {['Log Date', 'Customer', 'Items', 'Total', 'Payment', 'Method', 'Fulfillment', 'Notes', 'Actions'].map(label => (
                       <th
                         key={label}
-                        className="border-r border-gray-200 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-gray-500 last:border-r-0"
+                        className="border-r border-gray-100 px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-widest text-gray-500 last:border-r-0"
                       >
                         {label}
                       </th>
@@ -796,16 +796,16 @@ export default function OrdersTab({
                 </thead>
                 <tbody>
                   {filteredOrders.map(order => (
-                    <tr key={order.id} className="group border-b border-gray-100 transition-all duration-200 hover:bg-gray-50/70 last:border-b-0">
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
-                        <div className="flex items-start gap-2 text-xs font-semibold leading-snug text-gray-500">
-                          <Calendar size={13} className="mt-0.5 flex-shrink-0 text-gray-300" />
+                    <tr key={order.id} className="group border-b border-gray-100 transition-colors hover:bg-gray-50/40 last:border-b-0">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
+                        <div className="flex items-start gap-2 text-[11px] font-medium text-gray-500">
+                          <Calendar size={12} className="mt-0.5 flex-shrink-0 text-gray-300" />
                           {formatOrderDate(order.createdAt)}
                         </div>
                       </td>
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <div className="flex flex-col gap-1">
-                          <p className="text-sm font-extrabold leading-tight text-gray-950">
+                          <p className="text-xs font-bold leading-tight text-gray-900">
                             {order.customerName || '-'}
                           </p>
                           {order.orderType && (
@@ -813,7 +813,7 @@ export default function OrdersTab({
                               {order.orderType === 'service' ? 'Booking' : 'Order'}
                             </span>
                           )}
-                          <p className="text-xs font-medium text-gray-400">
+                          <p className="text-[11px] text-gray-400">
                             {order.customerPhone || 'No phone'}
                           </p>
                           {order.shipbubbleTrackingId && (
@@ -828,9 +828,9 @@ export default function OrdersTab({
                           )}
                         </div>
                       </td>
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <div className="flex flex-col gap-1">
-                          <p className="max-w-[260px] whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                          <p className="max-w-[200px] whitespace-pre-line text-xs leading-relaxed text-gray-700">
                             {order.orderType === 'service' ? (order.serviceName || order.items || '-') : (order.items || '-')}
                           </p>
                           {order.orderType === 'service' && order.bookingDate && order.bookingTime && (
@@ -840,31 +840,31 @@ export default function OrdersTab({
                           )}
                         </div>
                       </td>
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
-                        <span className="whitespace-nowrap text-sm font-extrabold text-green-700">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
+                        <span className="whitespace-nowrap text-xs font-bold text-green-700">
                           {formatTotal(order.orderType === 'service' ? (order.servicePrice ?? order.total) : order.total)}
                         </span>
                       </td>
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <PaymentBadge status={order.paymentStatus} />
                       </td>
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
-                        <span className="text-xs font-bold text-gray-600">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
+                        <span className="text-[11px] font-semibold text-gray-600">
                           <PaymentMethodLabel method={order.paymentMethod} />
                         </span>
                       </td>
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <StatusPicker
                           status={order.status}
                           onChange={(value) => handleInlineUpdate(order, { status: value })}
                         />
                       </td>
-                      <td className="border-r border-gray-100 px-4 py-4 align-top">
-                        <p className="max-w-[180px] text-xs italic leading-relaxed text-gray-400">
+                      <td className="border-r border-gray-100 px-3 py-3.5 align-top">
+                        <p className="max-w-[140px] text-[11px] italic leading-relaxed text-gray-400">
                           {order.notes || '-'}
                         </p>
                       </td>
-                      <td className="px-4 py-4 align-top">
+                      <td className="px-3 py-3.5 align-top">
                         <div className="flex justify-end gap-1">
                           {order.orderType === 'checkout' && normalizeStatus(order.status) !== 'delivered' && normalizeStatus(order.status) !== 'cancelled' && (
                             <button
@@ -917,13 +917,13 @@ export default function OrdersTab({
             </div>
           </section>
 
-          <section className="space-y-3 md:hidden">
+          <section className="space-y-2.5 md:hidden">
             {filteredOrders.map(order => (
-              <article key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <article key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-base font-extrabold leading-tight text-gray-950">
+                      <p className="truncate text-sm font-bold leading-tight text-gray-900">
                         {order.customerName || 'Unknown customer'}
                       </p>
                       {order.orderType && (
@@ -932,7 +932,7 @@ export default function OrdersTab({
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 truncate text-xs font-medium text-gray-400">
+                    <p className="mt-0.5 truncate text-[11px] text-gray-400">
                       {order.customerPhone || 'No phone'}
                     </p>
                     {order.shipbubbleTrackingId && (
@@ -945,7 +945,7 @@ export default function OrdersTab({
                         </span>
                       </div>
                     )}
-                    <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-gray-400">
                       <Calendar size={12} className="flex-shrink-0" />
                       {formatOrderDate(order.createdAt)}
                     </div>
@@ -956,12 +956,12 @@ export default function OrdersTab({
                   />
                 </div>
 
-                <div className="mb-3 rounded-xl border border-gray-100/80 bg-gray-50/50 p-3">
+                <div className="mb-3 rounded-xl bg-gray-50 p-3">
                   <p className="mb-1.5 flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
                     <FileText size={11} />
                     {order.orderType === 'service' ? 'Service' : 'Items'}
                   </p>
-                  <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                  <p className="whitespace-pre-line text-xs leading-relaxed text-gray-700">
                     {order.orderType === 'service' ? (order.serviceName || order.items || '-') : (order.items || '-')}
                   </p>
                   {order.orderType === 'service' && order.bookingDate && order.bookingTime && (
@@ -971,46 +971,46 @@ export default function OrdersTab({
                   )}
                 </div>
 
-                <div className="mb-3 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-gray-100/80 bg-gray-50/50 p-3">
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl bg-gray-50 p-3">
                     <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
                       Total
                     </p>
-                    <p className="text-sm font-extrabold text-green-700">
+                    <p className="text-xs font-bold text-green-700">
                       {formatTotal(order.orderType === 'service' ? (order.servicePrice ?? order.total) : order.total)}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-gray-100/80 bg-gray-50/50 p-3">
+                  <div className="rounded-xl bg-gray-50 p-3">
                     <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
                       Payment
                     </p>
                     <PaymentBadge status={order.paymentStatus} />
                   </div>
-                  <div className="col-span-2 rounded-xl border border-gray-100/80 bg-gray-50/50 p-3">
+                  <div className="col-span-2 rounded-xl bg-gray-50 p-3">
                     <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
                       Payment Method
                     </p>
-                    <p className="text-sm font-bold text-gray-700">
+                    <p className="text-xs font-semibold text-gray-700">
                       <PaymentMethodLabel method={order.paymentMethod} />
                     </p>
                   </div>
                 </div>
 
                 {order.notes && (
-                  <p className="mb-3 rounded-xl border border-gray-100/80 bg-gray-50/50 p-3 text-xs italic leading-relaxed text-gray-500">
+                  <p className="mb-3 rounded-xl bg-gray-50 p-3 text-xs italic leading-relaxed text-gray-500">
                     {order.notes}
                   </p>
                 )}
 
-                <div className="flex items-center justify-end gap-2 border-t border-gray-50 pt-3">
+                <div className="flex items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
                   {order.orderType === 'checkout' && normalizeStatus(order.status) !== 'delivered' && normalizeStatus(order.status) !== 'cancelled' && (
                     <button
                       type="button"
                       onClick={() => handleMarkDelivered(order)}
                       disabled={markingDelivered === order.id}
-                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold text-emerald-600 transition-all duration-200 hover:bg-emerald-50"
+                      className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 transition-all hover:bg-emerald-50"
                     >
-                      {markingDelivered === order.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                      {markingDelivered === order.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
                       Delivered
                     </button>
                   )}
@@ -1018,9 +1018,9 @@ export default function OrdersTab({
                     <button
                       type="button"
                       onClick={() => openShipbubbleModal(order)}
-                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold text-green-600 transition-all duration-200 hover:bg-green-50"
+                      className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-green-600 transition-all hover:bg-green-50"
                     >
-                      <Truck size={14} />
+                      <Truck size={13} />
                       Shipment
                     </button>
                   )}
@@ -1028,18 +1028,18 @@ export default function OrdersTab({
                     <button
                       type="button"
                       onClick={() => handleDownloadReceipt(order)}
-                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold text-amber-600 transition-all duration-200 hover:bg-amber-50"
+                      className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-amber-600 transition-all hover:bg-amber-50"
                     >
-                      <Download size={14} />
+                      <Download size={13} />
                       Receipt
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => openDeleteDialog(order)}
-                    className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold text-red-600 transition-all duration-200 hover:bg-red-50"
+                    className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-red-600 transition-all hover:bg-red-50"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
                     Delete
                   </button>
                 </div>

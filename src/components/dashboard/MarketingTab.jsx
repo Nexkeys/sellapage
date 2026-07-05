@@ -114,26 +114,26 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
   const contextualTask = DAILY_TASKS.find(t => t.day === currentDayOfWeek)?.text || DAILY_TASKS[1].text
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 sm:p-5 max-w-4xl mx-auto space-y-4">
       <div>
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Growth Workspace</h1>
-        <p className="text-gray-500 text-sm mt-1">Operational milestones and marketing strategy hub.</p>
+        <h1 className="text-xl font-bold text-gray-900 tracking-tight">Growth Workspace</h1>
+        <p className="text-gray-400 text-xs mt-0.5">Operational milestones and marketing strategy hub.</p>
       </div>
 
       {/* Monthly Success Bar */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="font-bold text-gray-900 text-base">Monthly Success Score</h2>
+            <h2 className="font-bold text-gray-900 text-sm">Monthly Success Score</h2>
             <p className="text-gray-500 text-xs mt-0.5">Complete daily tasks to unlock growth tiers.</p>
           </div>
-          <div className="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg font-black text-sm border border-green-100 flex-shrink-0 text-center">
+          <div className="bg-green-50 text-green-700 px-3 py-1.5 rounded-xl font-black text-xs border border-green-100 flex-shrink-0 text-center">
             {marketingPoints} / 500 pts
           </div>
         </div>
 
         <div className="space-y-2">
-          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-green-500 rounded-full transition-all duration-1000 ease-out"
               style={{ width: `${progressPercent}%` }}
@@ -147,15 +147,15 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
       </div>
 
       {/* Daily Growth Checklist */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="bg-gray-50 border-b border-gray-100 px-6 py-4">
-          <h2 className="font-bold text-gray-900 text-base">Daily Growth Checklist</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-gray-50/60 border-b border-gray-100 px-4 py-3">
+          <h2 className="font-bold text-gray-900 text-sm">Daily Growth Checklist</h2>
           <p className="text-gray-500 text-xs mt-0.5">Check off these operational basics every day to grow your score.</p>
         </div>
 
         <div className="divide-y divide-gray-100">
           {/* Task 1: Share Link */}
-          <div className="p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/50">
+          <div className="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/40">
             <div className="flex items-start gap-4 flex-1">
               <button 
                 onClick={copyToClipboard}
@@ -167,13 +167,13 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
                 {checkedShare && <Check size={14} strokeWidth={3} />}
               </button>
               <div>
-                <p className={`font-bold text-sm ${checkedShare ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Share Your Business Link</p>
+                <p className={`font-bold text-sm ${checkedShare ? 'text-gray-400 line-through' : 'text-gray-800'}`}>Share Your Business Link</p>
                 <p className="text-gray-500 text-xs mt-1 max-w-lg leading-relaxed">Copy your sales text and share it on WhatsApp status or social media.</p>
               </div>
             </div>
             <button
               onClick={copyToClipboard}
-              className="flex-shrink-0 flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-all ml-10 sm:ml-0"
+              className="flex-shrink-0 flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs font-bold transition-all"
             >
               {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
               {copied ? 'Copied' : 'Copy Link'}
@@ -181,7 +181,7 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
           </div>
 
           {/* Task 2: Processing Queue */}
-          <div className="p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/50">
+          <div className="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/40">
             <div className="flex items-start gap-4 flex-1">
               <button 
                 onClick={() => {
@@ -199,7 +199,7 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
                 {checkedQueue && <Check size={14} strokeWidth={3} />}
               </button>
               <div>
-                <p className={`font-bold text-sm ${checkedQueue ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Clear the Processing Queue</p>
+                <p className={`font-bold text-sm ${checkedQueue ? 'text-gray-400 line-through' : 'text-gray-800'}`}>Clear the Processing Queue</p>
                 <p className="text-gray-500 text-xs mt-1 max-w-lg leading-relaxed">Ensure all pending orders and active customer leads are properly attended to.</p>
               </div>
             </div>
@@ -212,14 +212,14 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
                 }
                 navigateTo('orders')
               }}
-              className="flex-shrink-0 flex items-center gap-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl text-xs font-bold transition-all ml-10 sm:ml-0"
+              className="flex-shrink-0 flex items-center gap-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl text-xs font-bold transition-all"
             >
-              Go to Orders <ArrowRight size={14} />
+              Go to Orders <ArrowRight size={13} />
             </button>
           </div>
 
           {/* Task 3: Contextual Daily Task */}
-          <div className="p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/50">
+          <div className="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between transition-colors hover:bg-gray-50/40">
             <div className="flex items-start gap-4 flex-1">
               <button 
                 onClick={() => {
@@ -238,7 +238,7 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className={`font-bold text-sm ${checkedDaily ? 'text-gray-400 line-through' : 'text-gray-900'}`}>Today's Growth Focus</p>
+                  <p className={`font-bold text-sm ${checkedDaily ? 'text-gray-400 line-through' : 'text-gray-800'}`}>Today's Growth Focus</p>
                   <span className="bg-purple-50 text-purple-600 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-purple-100">Dynamic</span>
                 </div>
                 <p className={`text-xs mt-1 max-w-lg leading-relaxed ${checkedDaily ? 'text-gray-400' : 'text-gray-500'}`}>{contextualTask}</p>
@@ -250,27 +250,27 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
       </div>
 
       {/* Growth Campaign Rollout */}
-      <div className="pt-4">
-        <h2 className="font-bold text-gray-900 text-lg mb-4">Growth Campaigns</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="pt-2">
+        <h2 className="font-bold text-gray-900 text-sm mb-3">Growth Campaigns</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           
           {/* WhatsApp Broadcast */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full transition-all hover:border-gray-200 hover:shadow-md">
-            <div className="w-12 h-12 bg-green-50 rounded-xl border border-green-100 flex items-center justify-center mb-4">
-              <MessageCircle size={22} className="text-green-600" />
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col h-full transition-all hover:border-gray-200 hover:shadow-sm">
+            <div className="w-10 h-10 bg-green-50 rounded-xl border border-green-100 flex items-center justify-center mb-3">
+              <MessageCircle size={18} className="text-green-600" />
             </div>
-            <h3 className="font-bold text-gray-900 text-base mb-2">WhatsApp Broadcast</h3>
-            <p className="text-gray-500 text-xs leading-relaxed mb-6 flex-1">
+            <h3 className="font-bold text-gray-900 text-sm mb-1.5">WhatsApp Broadcast</h3>
+            <p className="text-gray-500 text-xs leading-relaxed mb-4 flex-1">
               Send a blast message to all your customers at once. Great for announcing new arrivals or promos natively.
             </p>
             {rolloutStatus.includes('WhatsApp Broadcast') ? (
-              <div className="w-full bg-gray-50 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-default">
-                <Check size={16} /> Added to Priority Rollout
+              <div className="w-full bg-gray-50 border border-gray-100 text-gray-400 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-default">
+                <Check size={13} /> Added to Priority Rollout
               </div>
             ) : (
               <button
                 onClick={() => joinRollout('WhatsApp Broadcast')}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
               >
                 Join Priority Rollout
               </button>
@@ -278,22 +278,22 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
           </div>
 
           {/* Promotions & Discounts */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full transition-all hover:border-gray-200 hover:shadow-md">
-            <div className="w-12 h-12 bg-amber-50 rounded-xl border border-amber-100 flex items-center justify-center mb-4">
-              <Zap size={22} className="text-amber-600" />
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col h-full transition-all hover:border-gray-200 hover:shadow-sm">
+            <div className="w-10 h-10 bg-amber-50 rounded-xl border border-amber-100 flex items-center justify-center mb-3">
+              <Zap size={18} className="text-amber-600" />
             </div>
-            <h3 className="font-bold text-gray-900 text-base mb-2">Promotions & Discounts</h3>
-            <p className="text-gray-500 text-xs leading-relaxed mb-6 flex-1">
+            <h3 className="font-bold text-gray-900 text-sm mb-1.5">Promotions & Discounts</h3>
+            <p className="text-gray-500 text-xs leading-relaxed mb-4 flex-1">
               Create time-limited discount codes to create urgency and drive more sales from your audience.
             </p>
             {rolloutStatus.includes('Promotions & Discounts') ? (
-              <div className="w-full bg-gray-50 border border-gray-200 text-gray-500 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-default">
-                <Check size={16} /> Added to Priority Rollout
+              <div className="w-full bg-gray-50 border border-gray-100 text-gray-400 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-default">
+                <Check size={13} /> Added to Priority Rollout
               </div>
             ) : (
               <button
                 onClick={() => joinRollout('Promotions & Discounts')}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
               >
                 Join Priority Rollout
               </button>
