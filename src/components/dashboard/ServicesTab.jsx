@@ -19,27 +19,27 @@ export default function ServicesTab({
   const pct      = maxServices >= 999999 ? 0 : Math.min(100, Math.round((serviceCount / maxServices) * 100))
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5">
+    <div className="p-4 sm:p-5 max-w-5xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Services</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage bookable services, session durations, location types, and booking instructions.</p>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Services</h1>
+          <p className="text-gray-400 text-xs mt-0.5">Manage bookable services, session durations, location types, and booking instructions.</p>
         </div>
         {!limitReached && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex-shrink-0 shadow-sm hover:shadow-md"
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0"
           >
-            <Plus size={15} /> Add Service
+            <Plus size={14} /> Add Service
           </button>
         )}
       </div>
 
       {/* Service count bar */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 px-5 py-4">
+      <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3.5">
         <div className="flex items-center justify-between gap-3 mb-2">
-          <p className="text-sm font-semibold text-gray-700">
+          <p className="text-xs font-semibold text-gray-700">
             {serviceCount} of {maxLabel} listings used
           </p>
           <span className="text-xs font-bold text-gray-400 capitalize">{plan} plan</span>
@@ -56,10 +56,10 @@ export default function ServicesTab({
 
       {/* Limit warning */}
       {limitReached && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 shadow-sm shadow-amber-100/70">
-          <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+          <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-amber-800 font-semibold text-sm">{plan === 'starter' ? 'Starter' : 'Plan'} limit reached - {maxServices}/{maxServices} listings</p>
+            <p className="text-amber-800 font-semibold text-xs">{plan === 'starter' ? 'Starter' : 'Plan'} limit reached - {maxServices}/{maxServices} listings</p>
             <p className="text-amber-700 text-xs mt-0.5">You've used all {maxServices} listing slots. Upgrade your plan to add more.</p>
           </div>
         </div>
@@ -67,14 +67,14 @@ export default function ServicesTab({
 
       {/* Add / Edit Form */}
       {showForm && !editingService && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-bold text-gray-900 text-base">{editingService ? 'Edit Service' : 'Add New Service'}</h2>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <h2 className="font-bold text-gray-900 text-sm">{editingService ? 'Edit Service' : 'Add New Service'}</h2>
             <button onClick={resetForm} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-              <X size={17} />
+              <X size={15} />
             </button>
           </div>
-          <div className="p-5 space-y-4">
+          <div className="p-4 space-y-4">
             {formError && (
               <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
                 <AlertCircle size={14} /> {formError}
@@ -201,11 +201,11 @@ export default function ServicesTab({
             </div>
 
             <div className="flex gap-3 pt-1">
-              <button onClick={resetForm} className="flex-1 sm:flex-none px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
+              <button onClick={resetForm} className="flex-1 sm:flex-none px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 sm:flex-none px-6 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                className="flex-1 sm:flex-none px-5 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
               >
                 {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : editingService ? 'Update Service' : 'Add Service'}
               </button>
@@ -220,34 +220,34 @@ export default function ServicesTab({
           <Loader2 size={24} className="text-green-500 animate-spin" />
         </div>
       ) : services.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 flex flex-col items-center justify-center py-16 gap-4">
-          <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center">
-            <Calendar size={24} className="text-green-400" />
+        <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-14 gap-3">
+          <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center">
+            <Calendar size={20} className="text-green-400" />
           </div>
           <div className="text-center">
-            <p className="font-bold text-gray-800">No services yet</p>
-            <p className="text-gray-400 text-sm mt-1 max-w-xs">Add your first bookable service to start receiving appointments.</p>
+            <p className="font-bold text-gray-800 text-sm">No services yet</p>
+            <p className="text-gray-400 text-xs mt-0.5 max-w-xs">Add your first bookable service to start receiving appointments.</p>
           </div>
           {!limitReached && (
-            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md">
+            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">
               <Plus size={14} /> Add Service
             </button>
           )}
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {services.map(service => {
             const isInactive = service.isActive === false
             if (editingService?.id === service.id) {
               return (
                 <div key={service.id} className="bg-white rounded-2xl border border-green-200 shadow-lg shadow-green-100/70 overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                    <h2 className="font-bold text-gray-900 text-base">Edit Service</h2>
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <h2 className="font-bold text-gray-900 text-sm">Edit Service</h2>
                     <button onClick={resetForm} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                      <X size={17} />
+                      <X size={15} />
                     </button>
                   </div>
-                  <div className="p-5 space-y-4">
+                  <div className="p-4 space-y-4">
                     {formError && (
                       <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
                         <AlertCircle size={14} /> {formError}
@@ -372,11 +372,11 @@ export default function ServicesTab({
                     </div>
 
                     <div className="flex gap-3 pt-1">
-                      <button onClick={resetForm} className="flex-1 sm:flex-none px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
+                      <button onClick={resetForm} className="flex-1 sm:flex-none px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
                       <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex-1 sm:flex-none px-6 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                        className="flex-1 sm:flex-none px-5 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
                       >
                         {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : 'Update Service'}
                       </button>
@@ -388,7 +388,7 @@ export default function ServicesTab({
             return (
               <div
                 key={service.id}
-                className={`bg-white rounded-2xl border shadow-sm shadow-gray-100/70 overflow-hidden transition-all ${
+                className={`bg-white rounded-2xl border overflow-hidden transition-all ${
                   isInactive ? 'border-gray-100 opacity-70' : 'border-gray-100 hover:border-green-100 hover:shadow-lg hover:shadow-gray-200/80 hover:-translate-y-0.5'
                 }`}
               >
@@ -420,7 +420,7 @@ export default function ServicesTab({
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-100">Service</span>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <p className="text-green-600 font-extrabold text-base">₦{Number(service.price).toLocaleString()}</p>
+                    <p className="text-green-600 font-bold text-sm">₦{Number(service.price).toLocaleString()}</p>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
