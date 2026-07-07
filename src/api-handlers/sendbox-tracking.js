@@ -1,7 +1,8 @@
-//src/api-handlers/shipbubble-tracking.js/
 import { getAdminAuth } from './_lib/firebase-admin.js'
-const SHIPBUBBLE_BASE = 'https://api.shipbubble.com/v1'
-const SHIPBUBBLE_TOKEN = process.env.SHIPBUBBLE_API_KEY
+
+const SENDBOX_BASE = 'https://live.sendbox.co/shipping'
+const SENDBOX_TOKEN = process.env.SENDBOX_ACCESS_TOKEN
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -13,10 +14,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const { storeId, shipbubbleOrderId } = req.body
-  if (!storeId || !shipbubbleOrderId) {
+  const { storeId, trackingCode } = req.body
+
+  if (!storeId || !trackingCode) {
     return res.status(400).json({
-      error: 'Missing required fields: storeId, shipbubbleOrderId',
+      error: 'Missing required fields: storeId, trackingCode',
     })
   }
 
@@ -35,12 +37,12 @@ export default async function handler(req, res) {
     }
 
     const trackRes = await fetch(
-      `${SHIPBUBBLE_BASE}/shipping/tracking/${shipbubbleOrderId}`,
+      `${SENDBOX_BASE}/shipments/${trackingCode}`,
       {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${SHIPBUBBLE_TOKEN}`,
+          Authorization: SENDBOX_TOKEN,
         },
       }
     )
@@ -48,24 +50,23 @@ export default async function handler(req, res) {
     const trackData = await trackRes.json()
 
     if (!trackRes.ok) {
-      console.error('[shipbubble-tracking] error:', trackData)
+      console.error('[sendbox-tracking] error:', trackData)
       return res.status(trackRes.status).json({
-        error: trackData?.message || 'Failed to fetch tracking info',
+        error: trackData?.description || trackData?.message || 'Failed to fetch tracking info',
       })
     }
 
-    const shipment = trackData?.data
-
     return res.status(200).json({
-      status: shipment?.status || 'unknown',
-      courierName: shipment?.courier_name || '',
-      trackingCode: shipment?.tracking_code || shipbubbleOrderId,
-      trackingUrl: shipment?.tracking_url || '',
-      timeline: Array.isArray(shipment?.timeline) ? shipment.timeline : [],
-      estimatedDelivery: shipment?.estimated_delivery_date || '',
+      status: trackData?.status_code || 'unknown',
+      courierName: trackData?.courier?.name || '',
+      trackingCode: trackData?.code || trackingCode,
+      trackingUrl: `https://sendbox.co/tracking/${trackData?.code || trackingCode}`,
+      waybillUrl: trackData?.package_label_image || '',
+      timeline: Array.isArray(trackData?.tracking?.events) ? trackData.tracking.events : [],
+      estimatedDelivery: trackData?.package_delivery_eta || '',
     })
   } catch (err) {
-    console.error('[shipbubble-tracking] Unexpected error:', err)
+    console.error('[sendbox-tracking] Unexpected error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

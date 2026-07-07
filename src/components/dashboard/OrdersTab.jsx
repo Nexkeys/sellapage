@@ -198,7 +198,7 @@ export default function OrdersTab({
     const verifyAndBook = async () => {
       try {
         const token = await user?.getIdToken()
-        const verifyRes = await fetch('/api/shipbubble-payment-verify', {
+        const verifyRes = await fetch('/api/sendbox-payment-verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ reference, storeId: parsed.storeId }),
@@ -208,15 +208,17 @@ export default function OrdersTab({
           setShipmentPaymentResult({ success: false, error: verifyData.error || 'Payment verification failed.' })
           return
         }
-        const bookRes = await fetch('/api/shipbubble-create-shipment', {
+        const bookRes = await fetch('/api/sendbox-create-shipment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             storeId: parsed.storeId,
             orderId: verifyData.orderId,
-            requestToken: verifyData.requestToken,
             courierId: verifyData.courierId,
-            serviceCode: verifyData.serviceCode,
+            senderDetails: parsed.senderDetails,
+            receiverDetails: parsed.receiverDetails,
+            weight: parsed.weight,
+            pickupDate: parsed.pickupDate,
           }),
         })
         const bookData = await bookRes.json()
@@ -226,10 +228,15 @@ export default function OrdersTab({
           window.history.replaceState({}, '', newUrl)
           await onUpdateOrder?.(verifyData.orderId, {
             shipbubbleTrackingId: bookData.trackingId || '',
+            sendboxTrackingId: bookData.trackingId || '',
             shipbubbleOrderId: bookData.orderId || '',
+            sendboxOrderId: bookData.orderId || '',
             shipbubbleStatus: 'created',
+            sendboxStatus: 'created',
             shipbubbleTrackingUrl: bookData.trackingUrl || '',
+            sendboxTrackingUrl: bookData.trackingUrl || '',
             shipbubbleWaybillUrl: bookData.waybillUrl || '',
+            sendboxWaybillUrl: bookData.waybillUrl || '',
             status: 'dispatched',
           })
           setShipmentPaymentResult({ success: true, trackingId: bookData.trackingId || '' })
@@ -421,7 +428,7 @@ export default function OrdersTab({
     setShipbubbleRates([])
     setShipRequestToken('')
     try {
-      const res = await fetch('/api/shipbubble-rates', {
+      const res = await fetch('/api/sendbox-rates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -443,8 +450,6 @@ export default function OrdersTab({
             state: rState,
           },
           weight: Number(weightVal) || 1,
-          categoryId: packageCategory,
-          pickupDate: pickupDate,
           packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 5000),
         }),
       })
@@ -490,7 +495,7 @@ export default function OrdersTab({
     setPaymentError('')
     try {
       const token = await user?.getIdToken()
-      const res = await fetch('/api/shipbubble-payment-initialize', {
+      const res = await fetch('/api/sendbox-payment-initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -498,16 +503,36 @@ export default function OrdersTab({
           orderId: bookingShipmentOrder.id,
           courierName: selectedRate.courier_name,
           shippingFee: Number(selectedRate.total_shipping_fee),
-          requestToken: shipRequestToken,
           courierId: selectedCourierId,
-          serviceCode: selectedServiceCode,
         }),
       })
       const data = await res.json()
       if (res.ok && data.authorization_url) {
         sessionStorage.setItem(
           `sellapage_shipment_${data.reference}`,
-          JSON.stringify({ storeId: store.id, orderId: bookingShipmentOrder.id })
+          JSON.stringify({
+            storeId: store.id,
+            orderId: bookingShipmentOrder.id,
+            senderDetails: {
+              name: senderName || store?.businessName || '',
+              phone: senderPhone || store?.whatsappNumber || '',
+              email: senderEmail || store?.email || '',
+              address: senderStreet,
+              city: senderCity,
+              state: senderState,
+            },
+            receiverDetails: {
+              name: receiverName || '',
+              phone: receiverPhone || '',
+              email: receiverEmail || '',
+              address: receiverStreet,
+              city: receiverCity,
+              state: receiverState,
+              lga: receiverLga || '',
+            },
+            weight: Number(packageWeight) || 1,
+            pickupDate: pickupDate,
+          })
         )
         window.location.href = data.authorization_url
       } else {
@@ -816,13 +841,13 @@ export default function OrdersTab({
                           <p className="text-[11px] text-gray-400">
                             {order.customerPhone || 'No phone'}
                           </p>
-                          {order.shipbubbleTrackingId && (
+                          {(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
                             <div className="mt-1.5 flex flex-col gap-0.5">
                               <span className="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-700 border border-indigo-100 w-fit">
-                                Tracking: {order.shipbubbleTrackingId}
+                                Tracking: {order.shipbubbleTrackingId || order.sendboxTrackingId}
                               </span>
                               <span className="text-[9px] text-indigo-500 italic">
-                                Status: {order.shipbubbleStatus || 'created'}
+                                Status: {order.shipbubbleStatus || order.sendboxStatus || 'created'}
                               </span>
                             </div>
                           )}
@@ -878,7 +903,7 @@ export default function OrdersTab({
                               {markingDelivered === order.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
                             </button>
                           )}
-                          {order.orderType === 'checkout' && !order.shipbubbleTrackingId && (
+                          {order.orderType === 'checkout' && !(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
                             <button
                               type="button"
                               onClick={() => openShipbubbleModal(order)}
@@ -935,13 +960,13 @@ export default function OrdersTab({
                     <p className="mt-0.5 truncate text-[11px] text-gray-400">
                       {order.customerPhone || 'No phone'}
                     </p>
-                    {order.shipbubbleTrackingId && (
+                    {(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
                       <div className="mt-1.5 flex flex-col gap-0.5">
                         <span className="inline-flex items-center rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 border border-indigo-100 w-fit">
-                          Tracking: {order.shipbubbleTrackingId}
+                          Tracking: {order.shipbubbleTrackingId || order.sendboxTrackingId}
                         </span>
                         <span className="text-[10px] text-indigo-500 italic">
-                          Status: {order.shipbubbleStatus || 'created'}
+                          Status: {order.shipbubbleStatus || order.sendboxStatus || 'created'}
                         </span>
                       </div>
                     )}
@@ -1014,7 +1039,7 @@ export default function OrdersTab({
                       Delivered
                     </button>
                   )}
-                  {order.orderType === 'checkout' && !order.shipbubbleTrackingId && (
+                  {order.orderType === 'checkout' && !(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
                     <button
                       type="button"
                       onClick={() => openShipbubbleModal(order)}
@@ -1274,8 +1299,8 @@ export default function OrdersTab({
                         onClick={(e) => {
                           e.preventDefault()
                           const order = orders.find(o => o.id === bookingShipmentOrder?.id)
-                          if (order?.shipbubbleWaybillUrl) {
-                            window.open(order.shipbubbleWaybillUrl, '_blank')
+                          if (order?.shipbubbleWaybillUrl || order?.sendboxWaybillUrl) {
+                            window.open(order.shipbubbleWaybillUrl || order.sendboxWaybillUrl, '_blank')
                           }
                         }}
                         className="ml-2 text-xs font-bold text-green-700 underline underline-offset-2 hover:text-green-800"

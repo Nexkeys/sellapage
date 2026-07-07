@@ -118,13 +118,13 @@ export default function DeliveryTab({
   }
 
   const refreshTracking = async (order) => {
-    const orderId = order.shipbubbleOrderId || order.shipbubbleTrackingId
-    if (!orderId) return
+    const trackingCode = order.sendboxTrackingId || order.sendboxOrderCode || order.shipbubbleTrackingId
+    if (!trackingCode) return
     setTrackingLoading((prev) => ({ ...prev, [order.id]: true }))
     setTrackingError((prev) => ({ ...prev, [order.id]: '' }))
     try {
       const token = await user?.getIdToken()
-      const res = await fetch('/api/shipbubble-tracking', {
+      const res = await fetch('/api/sendbox-tracking', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function DeliveryTab({
         },
         body: JSON.stringify({
           storeId: store.id,
-          shipbubbleOrderId: orderId,
+          trackingCode,
         }),
       })
       const data = await res.json()
@@ -157,7 +157,7 @@ export default function DeliveryTab({
   const hasPickupAddress =
     store?.pickupAddress?.streetAddress && store?.pickupAddress?.state
 
-  const activeShipments = (orders || []).filter((o) => o.shipbubbleTrackingId || o.shipbubbleOrderId)
+  const activeShipments = (orders || []).filter((o) => o.sendboxTrackingId || o.sendboxOrderCode || o.shipbubbleTrackingId || o.shipbubbleOrderId)
 
   const INPUT_CLASS =
     'w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all'
@@ -444,7 +444,7 @@ export default function DeliveryTab({
                         {order.items || 'Order'}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        Tracking: {order.shipbubbleTrackingId || order.shipbubbleOrderId}
+                        Tracking: {order.sendboxTrackingId || order.shipbubbleTrackingId || order.sendboxOrderCode}
                       </p>
                     </div>
                     <div className="flex flex-col gap-1.5 flex-shrink-0">
@@ -461,9 +461,9 @@ export default function DeliveryTab({
                         )}
                         Refresh
                       </button>
-                      {order.shipbubbleTrackingUrl && (
+                      {(order.sendboxTrackingUrl || order.shipbubbleTrackingUrl) && (
                         <a
-                          href={order.shipbubbleTrackingUrl}
+                          href={order.sendboxTrackingUrl || order.shipbubbleTrackingUrl}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-all"
@@ -472,9 +472,9 @@ export default function DeliveryTab({
                           Track
                         </a>
                       )}
-                      {order.shipbubbleWaybillUrl && (
+                      {(order.sendboxWaybillUrl || order.shipbubbleWaybillUrl) && (
                         <a
-                          href={order.shipbubbleWaybillUrl}
+                          href={order.sendboxWaybillUrl || order.shipbubbleWaybillUrl}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-green-600 hover:bg-green-50 transition-all"

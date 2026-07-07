@@ -39,12 +39,12 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/resolve-account.js");
         return await handlerFunc(req, res);
       }
-      case "shipbubble-rates": {
-        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-rates.js");
+      case "sendbox-rates": {
+        const { default: handlerFunc } = await import("../src/api-handlers/sendbox-rates.js");
         return await handlerFunc(req, res);
       }
-      case "shipbubble-create-shipment": {
-        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-create-shipment.js");
+      case "sendbox-create-shipment": {
+        const { default: handlerFunc } = await import("../src/api-handlers/sendbox-create-shipment.js");
         return await handlerFunc(req, res);
       }
       case "shipbubble-webhook": {
@@ -95,22 +95,13 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/reset-password.js");
         return await handlerFunc(req, res);
       }
-      case "shipbubble-categories": {
-        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-categories.js");
+
+      case "sendbox-tracking": {
+        const { default: handlerFunc } = await import("../src/api-handlers/sendbox-tracking.js");
         return await handlerFunc(req, res);
       }
-      case "shipbubble-tracking": {
-        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-tracking.js");
-        return await handlerFunc(req, res);
-      }
-      case "shipbubble-payment-initialize": {
-        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-payment-initialize.js");
-        return await handlerFunc(req, res);
-      }
-      case "shipbubble-payment-verify": {
-        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-payment-verify.js");
-        return await handlerFunc(req, res);
-      }
+
+
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
     }
