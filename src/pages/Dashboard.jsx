@@ -1127,6 +1127,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleStoreSave = async (fields) => {
+    try {
+      await updateStore(store.id, fields);
+      setStore((prev) => ({ ...prev, ...fields }));
+    } catch (err) {
+      console.error("Store save failed", err);
+    }
+  };
+
   const handleSubaccountCreated = async ({
     subaccountCode,
     payoutBankName,
@@ -1752,6 +1761,7 @@ export default function Dashboard() {
           onColorSave={handleColorSave}
           onLayoutSave={handleLayoutSave}
           onThemeSave={handleThemeSave}
+          onStoreSave={handleStoreSave}
           previewProducts={products
             .filter((p) => p.isActive !== false)
             .slice(0, 2)}

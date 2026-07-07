@@ -1,7 +1,7 @@
 // src/pages/ServiceStorePage.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Package, Search, X, Grid, Tag, Calendar, Check, Loader2 } from "lucide-react";
+import { Package, Search, X, Grid, Tag, Calendar, Check, Loader2, MessageCircle } from "lucide-react";
 import { getStoreBySlug } from "../firebase/products";
 import { getServices } from "../firebase/services";
 import { db } from "../firebase/config";
@@ -711,6 +711,17 @@ export default function ServiceStorePage() {
                       >
                         Shop Our Products →
                       </button>
+                    )}
+                    {store?.whatsappCommunityLink && (
+                      <a
+                        href={store.whatsappCommunityLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white px-5 py-2.5 rounded-2xl font-bold text-xs transition-all border border-white/25 backdrop-blur-sm"
+                      >
+                        <MessageCircle size={13} fill="currentColor" />
+                        Join Our WhatsApp Community
+                      </a>
                     )}
                   </div>
 

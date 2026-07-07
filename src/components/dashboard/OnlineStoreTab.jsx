@@ -42,7 +42,7 @@ const LAYOUT_OPTIONS = [
   },
 ]
 
-export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, navigateTo, onLogoUpload, onColorSave, onLayoutSave, onThemeSave, previewProducts = [] }) {
+export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, navigateTo, onLogoUpload, onColorSave, onLayoutSave, onThemeSave, onStoreSave, previewProducts = [] }) {
   const url = storeUrl || `https://sellapage.com/store/${store?.storeName || 'your-store'}`
   const [copied, setCopied]                 = useState(false)
   const [selectedLayout, setSelectedLayout] = useState(store?.storeLayout || 'grid')
@@ -51,6 +51,10 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
   const [qrDataUrl, setQrDataUrl]           = useState(null)
   const [qrGenerating, setQrGenerating]     = useState(false)
   const [qrError, setQrError]               = useState('')
+  const [communityLink, setCommunityLink] = useState(store?.whatsappCommunityLink ?? '')
+  const [communityLinkSaved, setCommunityLinkSaved] = useState(false)
+  const [communityLinkSaving, setCommunityLinkSaving] = useState(false)
+  const [communityLinkError, setCommunityLinkError] = useState('')
 
   // Pro Theme States
   const [previewThemeId, setPreviewThemeId]   = useState(() => getInitialThemeId(store))
@@ -76,6 +80,10 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
     store?.themeMetadata?.heroBannerUrl,
     store?.themeMetadata?.customColors,
   ])
+
+  useEffect(() => {
+    setCommunityLink(store?.whatsappCommunityLink ?? '')
+  }, [store?.whatsappCommunityLink])
 
   const previewDraft = useMemo(
     () => ({
@@ -137,6 +145,25 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
     })
     setThemeSaved(true)
     setTimeout(() => setThemeSaved(false), 2000)
+  }
+
+  const handleCommunitySave = async () => {
+    const trimmed = communityLink.trim()
+    if (trimmed && !trimmed.startsWith('https://chat.whatsapp.com/')) {
+      setCommunityLinkError('Please enter a valid WhatsApp community invite link.')
+      return
+    }
+    setCommunityLinkError('')
+    setCommunityLinkSaving(true)
+    try {
+      await onStoreSave({ whatsappCommunityLink: trimmed })
+      setCommunityLinkSaved(true)
+      setTimeout(() => setCommunityLinkSaved(false), 2000)
+    } catch {
+      setCommunityLinkError('Failed to save. Please try again.')
+    } finally {
+      setCommunityLinkSaving(false)
+    }
   }
 
   const handleThemeChange = (id) => {
@@ -579,6 +606,66 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
             </a>
           </div>
         )}
+      </div>
+
+      {/* ── SECTION 3: WhatsApp Community Hub ─────────────────────────── */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-green-50 border border-green-100">
+            <MessageCircle size={16} className="text-green-600" fill="currentColor" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-900 text-sm tracking-tight">WhatsApp Community</p>
+            <p className="text-gray-400 text-[11px] mt-0.5">Add your WhatsApp community link — customers can join directly from your storefront.</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-bold text-gray-700">Community Invite Link</label>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="url"
+              value={communityLink}
+              onChange={(e) => { setCommunityLink(e.target.value); setCommunityLinkError('') }}
+              placeholder="https://chat.whatsapp.com/your-invite-link"
+              className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
+            />
+            <button
+              type="button"
+              onClick={handleCommunitySave}
+              disabled={communityLinkSaving}
+              className={`flex-shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                communityLinkSaved
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-50'
+              }`}
+            >
+              {communityLinkSaving ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : communityLinkSaved ? (
+                <><Check size={13} /> Saved!</>
+              ) : (
+                'Save Link'
+              )}
+            </button>
+          </div>
+          {communityLinkError && (
+            <p className="text-xs text-red-500 font-semibold">{communityLinkError}</p>
+          )}
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            When saved, a &quot;Join Community&quot; button appears on your storefront so customers can connect with your WhatsApp group.
+          </p>
+          {store?.whatsappCommunityLink && (
+            <a
+              href={store.whatsappCommunityLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[11px] text-green-600 font-semibold hover:underline"
+            >
+              <ExternalLink size={11} /> Preview community link
+            </a>
+          )}
+        </div>
       </div>
 
       {/* ── SECTION 3: QR Code Vector Block ────────────────────────────────── */}

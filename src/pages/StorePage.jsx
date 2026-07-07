@@ -1143,6 +1143,17 @@ export default function StorePage() {
                         View Our Services →
                       </button>
                     )}
+                    {store?.whatsappCommunityLink && (
+                      <a
+                        href={store.whatsappCommunityLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white px-5 py-2.5 rounded-2xl font-bold text-xs transition-all border border-white/25 backdrop-blur-sm"
+                      >
+                        <MessageCircle size={13} fill="currentColor" />
+                        Join Our WhatsApp Community
+                      </a>
+                    )}
                   </div>
 
                   <div className="hidden md:flex flex-shrink-0 items-center justify-center w-[280px] lg:w-[340px] relative">
