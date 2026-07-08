@@ -58,6 +58,7 @@ export default async function handler(req, res) {
         origin_country_code: 'NG',
         origin_state: senderDetails.state,
         origin_state_code: originStateCode,
+        origin_city: senderDetails.city || '',
         origin_phone: senderDetails.phone
           ? senderDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
           : '+2348000000000',
@@ -65,6 +66,7 @@ export default async function handler(req, res) {
         destination_country_code: 'NG',
         destination_state: receiverDetails.state,
         destination_state_code: destinationStateCode,
+        destination_city: receiverDetails.city || '',
         destination_phone: receiverDetails.phone
           ? receiverDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
           : '+2348000000000',

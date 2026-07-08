@@ -247,5 +247,36 @@ Phone normalization logic:
 - Input empty/undefined → `+2348000000000` (fallback default)
 
 
+## 2026-07-08 - Fix Sendbox Rates 409 Error (Missing City Fields)
+
+Commit/push keyword: `sendbox-rates-add-city-fields`
+
+This update fixes a 409 (Conflict) error from the Sendbox API when fetching shipping rates.
+
+Error message from Vercel logs:
+
+```
+_schema: [ 'The city, state, country _fields must not be empty for destination and origin' ]
+```
+
+Root cause:
+
+- The `sendbox-rates.js` handler was sending `origin_state`, `origin_country`, `destination_state`, `destination_country` to the Sendbox `/shipment_delivery_quote` endpoint but was missing `origin_city` and `destination_city`.
+- The Sendbox API requires city fields alongside state and country for both origin and destination.
+- The frontend (`OrdersTab.jsx` `triggerFetchRates` function) was already sending `senderDetails.city` and `receiverDetails.city` to the backend — the backend just wasn't including them in the Sendbox API call.
+
+What changed:
+
+- File: `src/api-handlers/sendbox-rates.js`
+- Added `origin_city: senderDetails.city || ''` to the request body.
+- Added `destination_city: receiverDetails.city || ''` to the request body.
+
+What did NOT change:
+
+- No frontend component changes were made.
+- The phone normalization logic, state code mapping, validation checks, rate response mapping, and error handling are untouched.
+- The `sendbox-webhook.js` handler and all other API handlers remain the same.
+
+
 
 
