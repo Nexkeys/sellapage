@@ -138,9 +138,9 @@ export default function OrdersTab({
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
-  // Shipbubble Shipment Booking States
+  // Sendbox Shipment Booking States
   const [bookingShipmentOrder, setBookingShipmentOrder] = useState(null)
-  const [shipbubbleRates, setShipbubbleRates] = useState([])
+  const [SendboxRates, setSendboxRates] = useState([])
   const [loadingRates, setLoadingRates] = useState(false)
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
   const [bookingError, setBookingError] = useState('')
@@ -224,15 +224,15 @@ export default function OrdersTab({
           const newUrl = window.location.pathname
           window.history.replaceState({}, '', newUrl)
           await onUpdateOrder?.(verifyData.orderId, {
-            shipbubbleTrackingId: bookData.trackingId || '',
+            SendboxTrackingId: bookData.trackingId || '',
             sendboxTrackingId: bookData.trackingId || '',
-            shipbubbleOrderId: bookData.orderId || '',
+            SendboxOrderId: bookData.orderId || '',
             sendboxOrderId: bookData.orderId || '',
-            shipbubbleStatus: 'created',
+            SendboxStatus: 'created',
             sendboxStatus: 'created',
-            shipbubbleTrackingUrl: bookData.trackingUrl || '',
+            SendboxTrackingUrl: bookData.trackingUrl || '',
             sendboxTrackingUrl: bookData.trackingUrl || '',
-            shipbubbleWaybillUrl: bookData.waybillUrl || '',
+            SendboxWaybillUrl: bookData.waybillUrl || '',
             sendboxWaybillUrl: bookData.waybillUrl || '',
             status: 'dispatched',
           })
@@ -340,11 +340,11 @@ export default function OrdersTab({
     }
   }
 
-  const openShipbubbleModal = (order) => {
+  const openSendboxModal = (order) => {
     setBookingShipmentOrder(order)
     setBookingError('')
     setBookingSuccess('')
-    setShipbubbleRates([])
+    setSendboxRates([])
     setSelectedCourierId('')
     setSelectedServiceCode('')
     setShipRequestToken('')
@@ -404,7 +404,7 @@ export default function OrdersTab({
 
     setLoadingRates(true)
     setBookingError('')
-    setShipbubbleRates([])
+    setSendboxRates([])
     setShipRequestToken('')
     try {
       const res = await fetch('/api/sendbox-rates', {
@@ -434,14 +434,14 @@ export default function OrdersTab({
       })
       const data = await res.json()
       if (res.ok && Array.isArray(data.rates)) {
-        setShipbubbleRates(data.rates)
+        setSendboxRates(data.rates)
         setShipRequestToken(data.request_token || '')
         if (data.rates.length > 0) {
           setSelectedCourierId(data.rates[0].courier_id || '')
           setSelectedServiceCode(data.rates[0].service_code || '')
         }
       } else {
-        setBookingError(data.error || 'Failed to fetch rates from Shipbubble.')
+        setBookingError(data.error || 'Failed to fetch rates from Sendbox.')
       }
     } catch (err) {
       console.error(err)
@@ -457,7 +457,7 @@ export default function OrdersTab({
       setBookingError('Please select a courier rate first.')
       return
     }
-    const selectedRate = shipbubbleRates.find(r => r.courier_id === selectedCourierId)
+    const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
     if (!selectedRate) {
       setBookingError('Selected rate not found. Please recalculate rates.')
       return
@@ -468,7 +468,7 @@ export default function OrdersTab({
 
   const proceedToPaystack = async () => {
     if (!bookingShipmentOrder || !store?.id) return
-    const selectedRate = shipbubbleRates.find(r => r.courier_id === selectedCourierId)
+    const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
     if (!selectedRate) return
     setPaymentInitializing(true)
     setPaymentError('')
@@ -820,13 +820,13 @@ export default function OrdersTab({
                           <p className="text-[11px] text-gray-400">
                             {order.customerPhone || 'No phone'}
                           </p>
-                          {(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
+                          {(order.SendboxTrackingId || order.sendboxTrackingId) && (
                             <div className="mt-1.5 flex flex-col gap-0.5">
                               <span className="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-700 border border-indigo-100 w-fit">
-                                Tracking: {order.shipbubbleTrackingId || order.sendboxTrackingId}
+                                Tracking: {order.SendboxTrackingId || order.sendboxTrackingId}
                               </span>
                               <span className="text-[9px] text-indigo-500 italic">
-                                Status: {order.shipbubbleStatus || order.sendboxStatus || 'created'}
+                                Status: {order.SendboxStatus || order.sendboxStatus || 'created'}
                               </span>
                             </div>
                           )}
@@ -882,10 +882,10 @@ export default function OrdersTab({
                               {markingDelivered === order.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
                             </button>
                           )}
-                          {order.orderType === 'checkout' && !(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
+                          {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId) && (
                             <button
                               type="button"
-                              onClick={() => openShipbubbleModal(order)}
+                              onClick={() => openSendboxModal(order)}
                               className="inline-flex items-center justify-center rounded-xl p-2 text-gray-300 opacity-0 transition-all duration-200 hover:bg-green-50 hover:text-green-600 group-hover:opacity-100 focus:opacity-100"
                               title="Book Shipment"
                               aria-label="Book Shipment"
@@ -939,13 +939,13 @@ export default function OrdersTab({
                     <p className="mt-0.5 truncate text-[11px] text-gray-400">
                       {order.customerPhone || 'No phone'}
                     </p>
-                    {(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
+                    {(order.SendboxTrackingId || order.sendboxTrackingId) && (
                       <div className="mt-1.5 flex flex-col gap-0.5">
                         <span className="inline-flex items-center rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 border border-indigo-100 w-fit">
-                          Tracking: {order.shipbubbleTrackingId || order.sendboxTrackingId}
+                          Tracking: {order.SendboxTrackingId || order.sendboxTrackingId}
                         </span>
                         <span className="text-[10px] text-indigo-500 italic">
-                          Status: {order.shipbubbleStatus || order.sendboxStatus || 'created'}
+                          Status: {order.SendboxStatus || order.sendboxStatus || 'created'}
                         </span>
                       </div>
                     )}
@@ -1018,10 +1018,10 @@ export default function OrdersTab({
                       Delivered
                     </button>
                   )}
-                  {order.orderType === 'checkout' && !(order.shipbubbleTrackingId || order.sendboxTrackingId) && (
+                  {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId) && (
                     <button
                       type="button"
-                      onClick={() => openShipbubbleModal(order)}
+                      onClick={() => openSendboxModal(order)}
                       className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-green-600 transition-all hover:bg-green-50"
                     >
                       <Truck size={13} />
@@ -1180,7 +1180,7 @@ export default function OrdersTab({
       )}
 
       {showPaymentModal && (() => {
-        const selectedRate = shipbubbleRates.find(r => r.courier_id === selectedCourierId)
+        const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
         const shippingFee = Number(selectedRate?.total_shipping_fee || 0)
         const serviceCharge = 250
         const total = shippingFee + serviceCharge
@@ -1245,7 +1245,7 @@ export default function OrdersTab({
                   Book Shipment
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Prepare shipment details and calculate rates with Shipbubble
+                  Prepare shipment details and calculate rates with Sendbox
                 </p>
               </div>
               <button
@@ -1272,14 +1272,14 @@ export default function OrdersTab({
                   <Check size={15} className="mt-0.5 flex-shrink-0" />
                   <div>
                     {bookingSuccess}
-                    {shipbubbleRates.length === 0 && bookingSuccess && (
+                    {SendboxRates.length === 0 && bookingSuccess && (
                       <a
                         href="#"
                         onClick={(e) => {
                           e.preventDefault()
                           const order = orders.find(o => o.id === bookingShipmentOrder?.id)
-                          if (order?.shipbubbleWaybillUrl || order?.sendboxWaybillUrl) {
-                            window.open(order.shipbubbleWaybillUrl || order.sendboxWaybillUrl, '_blank')
+                          if (order?.SendboxWaybillUrl || order?.sendboxWaybillUrl) {
+                            window.open(order.SendboxWaybillUrl || order.sendboxWaybillUrl, '_blank')
                           }
                         }}
                         className="ml-2 text-xs font-bold text-green-700 underline underline-offset-2 hover:text-green-800"
@@ -1461,13 +1461,13 @@ export default function OrdersTab({
                       <Loader2 size={24} className="animate-spin text-green-600" />
                       <p className="text-xs text-gray-400 mt-2 font-medium">Fetching courier rates...</p>
                     </div>
-                  ) : shipbubbleRates.length === 0 ? (
+                  ) : SendboxRates.length === 0 ? (
                     <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 font-medium bg-gray-50/20">
                       No rates retrieved. Enter valid sender/receiver details and click Recalculate Rates.
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                      {shipbubbleRates.map((rate) => (
+                      {SendboxRates.map((rate) => (
                         <label
                           key={rate.courier_id}
                           className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition-all ${

@@ -45,7 +45,7 @@ export default function VsShopify() {
             We built Sellapage for everyday Nigerian sellers who want to start now, not next month.
           </p>
           <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
-            Sellapage gives you a live commerce workspace: store pages for products and services, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one Nigerian-built dashboard. No developer required.
+            Sellapage gives you a live commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one Nigerian-built dashboard. No developer required.
           </p>
         </div>
       </section>

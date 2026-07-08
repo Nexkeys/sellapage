@@ -1,4 +1,4 @@
-// sellapage/api/notify.js
+// sellapage/api/notify.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
@@ -158,7 +158,7 @@ export default async function handler(req, res) {
                           <td class="plan-icon-cell">✨</td>
                           <td class="plan-content-cell">
                             <p class="plan-name">Pro</p>
-                            <p class="plan-desc">Unlimited listings and 50 images each. In-app Paystack checkout, Shipbubble delivery automation, discount and promo codes, full customer CRM, 20 premium store themes, custom domain, and 50 daily AI credits.</p>
+                            <p class="plan-desc">Unlimited listings and 50 images each. In-app Paystack checkout, Sendbox delivery automation, discount and promo codes, full customer CRM, 20 premium store themes, custom domain, and 50 daily AI credits.</p>
                           </td>
                         </tr>
                         <tr class="plan-last">

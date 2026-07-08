@@ -54,7 +54,7 @@ export default function VsLinktree() {
             check prices, order, and enter your customer workflow.
           </p>
           <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
-            Sellapage replaces your Linktree with a full commerce workspace: store pages for products and services, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one dashboard.
+            Sellapage replaces your Linktree with a full commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one dashboard.
           </p>
         </div>
       </section>

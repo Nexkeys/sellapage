@@ -51,7 +51,7 @@ export const PLAN_FEATURES = {
     'Customer CRM tab (profiles, WhatsApp links, spend sorting)',
     'Verified reviews tab (aggregate stars, expandable cards)',
     'Discounts & promo codes (percentage, flat, limits, expiry)',
-    'Shipbubble delivery integration (live rates, booking, tracking)',
+    'Sendbox delivery integration (live rates, booking, tracking)',
     'Delivery zones setup for local areas',
     'Top-performing analytics (engagement rate, best sellers)',
     'AI description generation — 50 per day',

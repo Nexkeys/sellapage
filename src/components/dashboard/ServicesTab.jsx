@@ -1,8 +1,12 @@
 //src/components/dashboard/ServicesTab.jsx/
+import { useState } from 'react'
 import {
   Plus, Edit2, Trash2, UploadCloud, X, Loader2,
   AlertCircle, ImageIcon, Calendar, ToggleLeft, ToggleRight, Lock, Sparkles, Clock, MapPin, Video,
+  Search, ChevronLeft, ChevronRight,
 } from 'lucide-react'
+
+const SERVICES_PER_PAGE = 10
 
 export default function ServicesTab({
   plan, serviceCount, maxServices, maxImagesPerProduct, isGrowthOrPro, limitReached,
@@ -17,6 +21,23 @@ export default function ServicesTab({
 }) {
   const maxLabel = maxServices >= 999999 ? 'Unlimited' : maxServices
   const pct      = maxServices >= 999999 ? 0 : Math.min(100, Math.round((serviceCount / maxServices) * 100))
+  const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const filteredServices = services.filter(service =>
+    (service.name || '').toLowerCase().includes(searchTerm.trim().toLowerCase())
+  )
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / SERVICES_PER_PAGE))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedServices = filteredServices.slice(
+    (safeCurrentPage - 1) * SERVICES_PER_PAGE,
+    safeCurrentPage * SERVICES_PER_PAGE
+  )
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value)
+    setCurrentPage(1)
+  }
 
   return (
     <div className="p-4 sm:p-5 max-w-5xl mx-auto space-y-4">
@@ -235,8 +256,35 @@ export default function ServicesTab({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {services.map(service => {
+        <div className="space-y-3">
+          <div className="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4">
+            <label className="sr-only" htmlFor="service-search">Search services</label>
+            <div className="relative">
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                id="service-search"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder="Search by service name"
+                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
+              />
+            </div>
+            <div className="mt-2 flex flex-col gap-1 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
+              <span>{filteredServices.length} of {services.length} services shown</span>
+              {filteredServices.length > SERVICES_PER_PAGE && (
+                <span>Page {safeCurrentPage} of {totalPages}</span>
+              )}
+            </div>
+          </div>
+
+          {filteredServices.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 px-4 py-10 text-center">
+              <p className="font-bold text-gray-800 text-sm">No services found</p>
+              <p className="text-gray-400 text-xs mt-1">Try searching with a different service name.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {paginatedServices.map(service => {
             const isInactive = service.isActive === false
             if (editingService?.id === service.id) {
               return (
@@ -495,6 +543,34 @@ export default function ServicesTab({
               </div>
             )
           })}
+            </div>
+          )}
+
+          {filteredServices.length > SERVICES_PER_PAGE && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-2.5">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                disabled={safeCurrentPage === 1}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft size={13} />
+                Previous
+              </button>
+              <span className="text-xs font-bold text-gray-500">
+                {safeCurrentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                disabled={safeCurrentPage === totalPages}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

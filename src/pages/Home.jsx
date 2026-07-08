@@ -93,7 +93,7 @@ const features = [
   },
   {
     icon: Truck,
-    title: 'Shipbubble Delivery Integration (Pro+)',
+    title: 'Sendbox Delivery Integration (Pro+)',
     description: 'Show live delivery rates at checkout, book shipments, and share tracking links with customers from your dashboard.',
   },
   {
@@ -297,7 +297,7 @@ const storeExamples = [
 const platformFeatures = [
   { icon: Settings, title: 'Structured Checkout', desc: 'Give customers a clear path from browsing to payment confirmation and order follow-up.' },
   { icon: CreditCard, title: 'In-App Paystack Checkout', desc: 'Accept card, bank transfer, and USSD payments directly on your store. Orders create automatically.' },
-  { icon: Truck, title: 'Shipbubble Delivery Integration', desc: 'Show live delivery rates at checkout, book shipments, and share tracking links from your dashboard.' },
+  { icon: Truck, title: 'Sendbox Delivery Integration', desc: 'Show live delivery rates at checkout, book shipments, and share tracking links from your dashboard.' },
   { icon: CreditCard, title: 'Payouts & Bank Settlement', desc: 'Connect your bank via Paystack subaccount. View earnings KPIs, transaction history, and get paid on your schedule.' },
   { icon: Users, title: 'Customer CRM', desc: 'Auto-built from confirmed orders. Expandable profiles, WhatsApp direct links, sort by spend, orders, or recency.' },
   { icon: Star, title: 'Verified Reviews & Ratings', desc: 'Buyers leave star ratings and reviews after delivery. Aggregate scores show on product and service cards.' },
@@ -462,7 +462,7 @@ export default function Home() {
               { icon: Store, title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
               { icon: Package, title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
               { icon: CreditCard, title: 'Accept Payments (Pro+)', desc: 'In-app Paystack checkout for card, transfer, and USSD. Orders create automatically in your dashboard.' },
-              { icon: Truck, title: 'Manage Delivery (Pro+)', desc: 'Shipbubble integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
+              { icon: Truck, title: 'Manage Delivery (Pro+)', desc: 'Sendbox integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
               { icon: Users, title: 'Customer CRM (Pro+)', desc: 'Auto-built from confirmed orders. Profiles, WhatsApp links, sort by spend, orders, or recency.' },
               { icon: Star, title: 'Reviews & Ratings (Pro+)', desc: 'Verified buyer reviews with aggregate stars on product and service cards.' },
               { icon: Tag, title: 'Discounts & Promos (Pro+)', desc: 'Percentage or flat discounts, usage limits, expiry dates. Applied automatically at checkout.' },
@@ -502,7 +502,7 @@ export default function Home() {
                   'Orders come in structured, not buried in chats',
                   'Manage products, services, leads and analytics from one dashboard',
                   'Supports products, services and bookings',
-                  'In-app Paystack checkout and Shipbubble delivery (Pro+)',
+                  'In-app Paystack checkout and Sendbox delivery (Pro+)',
                   'Customer CRM, verified reviews, and discounts (Pro+)',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">

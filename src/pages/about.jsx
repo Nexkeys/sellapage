@@ -20,7 +20,7 @@ export default function About() {
             The Commerce Platform Nigerian Businesses Trust
           </h1>
           <p className="text-gray-500 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-            Sellapage is a live commerce platform built for the way Nigerian businesses actually sell: one store link for products and services, structured ordering, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, and a dashboard that keeps everything organised. Free to start.
+            Sellapage is a live commerce platform built for the way Nigerian businesses actually sell: one store link for products and services, structured ordering, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, and a dashboard that keeps everything organised. Free to start.
           </p>
         </div>
       </section>
@@ -70,7 +70,7 @@ export default function About() {
                 'Category filters and search for easy browsing',
                 'WhatsApp cart for Growth users; in-app Paystack checkout for Pro/Premium',
                 'Lead capture form on every store page',
-                'Shipbubble delivery rates at checkout; booking and tracking from dashboard',
+                'Sendbox delivery rates at checkout; booking and tracking from dashboard',
                 'PDF receipt download after checkout',
                 'Star ratings on products and services; verified buyer reviews (Pro+)',
                 'Custom store footer with business text',

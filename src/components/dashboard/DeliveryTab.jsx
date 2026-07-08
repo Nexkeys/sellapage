@@ -10,6 +10,8 @@ import {
   ExternalLink,
   Download,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   MapPin,
   Package,
@@ -17,6 +19,9 @@ import {
 } from 'lucide-react'
 import { NIGERIAN_STATES } from '../../utils/nigeriaLocations'
 import { updateStore } from '../../firebase/auth'
+
+const DELIVERY_ZONES_PER_PAGE = 5
+const SHIPMENTS_PER_PAGE = 5
 
 export default function DeliveryTab({
   store,
@@ -39,6 +44,8 @@ export default function DeliveryTab({
   const [zoneForm, setZoneForm] = useState({ name: '', state: '', lga: '', price: '' })
   const [zonesSaving, setZonesSaving] = useState(false)
   const [zonesError, setZonesError] = useState('')
+  const [zonesPage, setZonesPage] = useState(1)
+  const [shipmentsPage, setShipmentsPage] = useState(1)
 
   const [trackingData, setTrackingData] = useState({})
   const [trackingLoading, setTrackingLoading] = useState({})
@@ -91,6 +98,7 @@ export default function DeliveryTab({
     try {
       await updateStore(store.id, { deliveryZones: updated })
       setZones(updated)
+      setZonesPage(1)
       setZoneForm({ name: '', state: '', lga: '', price: '' })
       if (onDeliveryZonesUpdate) onDeliveryZonesUpdate(updated)
     } catch (err) {
@@ -108,6 +116,7 @@ export default function DeliveryTab({
     try {
       await updateStore(store.id, { deliveryZones: updated })
       setZones(updated)
+      setZonesPage((page) => Math.min(page, Math.max(1, Math.ceil(updated.length / DELIVERY_ZONES_PER_PAGE))))
       if (onDeliveryZonesUpdate) onDeliveryZonesUpdate(updated)
     } catch (err) {
       console.error('Failed to delete delivery zone', err)
@@ -118,7 +127,7 @@ export default function DeliveryTab({
   }
 
   const refreshTracking = async (order) => {
-    const trackingCode = order.sendboxTrackingId || order.sendboxOrderCode || order.shipbubbleTrackingId
+    const trackingCode = order.sendboxTrackingId || order.sendboxOrderCode || order.SendboxTrackingId
     if (!trackingCode) return
     setTrackingLoading((prev) => ({ ...prev, [order.id]: true }))
     setTrackingError((prev) => ({ ...prev, [order.id]: '' }))
@@ -157,7 +166,19 @@ export default function DeliveryTab({
   const hasPickupAddress =
     store?.pickupAddress?.streetAddress && store?.pickupAddress?.state
 
-  const activeShipments = (orders || []).filter((o) => o.sendboxTrackingId || o.sendboxOrderCode || o.shipbubbleTrackingId || o.shipbubbleOrderId)
+  const activeShipments = (orders || []).filter((o) => o.sendboxTrackingId || o.sendboxOrderCode || o.SendboxTrackingId || o.SendboxOrderId)
+  const zonesTotalPages = Math.max(1, Math.ceil((zones || []).length / DELIVERY_ZONES_PER_PAGE))
+  const safeZonesPage = Math.min(zonesPage, zonesTotalPages)
+  const paginatedZones = (zones || []).slice(
+    (safeZonesPage - 1) * DELIVERY_ZONES_PER_PAGE,
+    safeZonesPage * DELIVERY_ZONES_PER_PAGE
+  )
+  const shipmentsTotalPages = Math.max(1, Math.ceil(activeShipments.length / SHIPMENTS_PER_PAGE))
+  const safeShipmentsPage = Math.min(shipmentsPage, shipmentsTotalPages)
+  const paginatedShipments = activeShipments.slice(
+    (safeShipmentsPage - 1) * SHIPMENTS_PER_PAGE,
+    safeShipmentsPage * SHIPMENTS_PER_PAGE
+  )
 
   const INPUT_CLASS =
     'w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all'
@@ -172,7 +193,7 @@ export default function DeliveryTab({
         </p>
         <h1 className="text-xl font-bold tracking-tight text-gray-900">Delivery</h1>
         <p className="mt-0.5 text-xs text-gray-400">
-          Manage your pickup address, delivery zones, and Shipbubble courier settings.
+          Manage your pickup address, delivery zones, and Sendbox courier settings.
         </p>
       </div>
 
@@ -183,7 +204,7 @@ export default function DeliveryTab({
           <div>
             <p className="text-xs font-bold text-amber-800">Pickup address not set</p>
             <p className="mt-0.5 text-xs text-amber-700 leading-relaxed">
-              You need to save a pickup address before you can use Shipbubble courier delivery or book shipments from the Orders tab.
+              You need to save a pickup address before you can use Sendbox courier delivery or book shipments from the Orders tab.
             </p>
           </div>
         </div>
@@ -198,7 +219,7 @@ export default function DeliveryTab({
           <div>
             <h2 className="font-bold text-gray-900 text-sm">Pickup Address</h2>
             <p className="text-gray-400 text-[11px] mt-0.5">
-              Where your orders will be shipped from via Shipbubble.
+              Where your orders will be shipped from via Sendbox.
             </p>
           </div>
         </div>
@@ -278,16 +299,23 @@ export default function DeliveryTab({
 
       {/* Delivery Zones */}
       <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 relative overflow-hidden">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Globe size={16} className="text-indigo-600" />
+        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Globe size={16} className="text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900 text-sm">Delivery Zones</h2>
+              <p className="text-gray-400 text-[11px] mt-0.5">
+                Add fixed-price zones for your own local deliveries.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-bold text-gray-900 text-sm">Delivery Zones</h2>
-            <p className="text-gray-400 text-[11px] mt-0.5">
-              Add fixed-price zones for your own local deliveries.
-            </p>
-          </div>
+          {zones.length > 0 && (
+            <span className="w-fit rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-bold text-indigo-700">
+              {zones.length} zone{zones.length !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
 
         {!isPro && (
@@ -372,18 +400,19 @@ export default function DeliveryTab({
         )}
 
         {zones.length > 0 && (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {zones.map((z) => (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-2">
+            {paginatedZones.map((z) => (
               <div
                 key={z.id}
-                className="flex items-start justify-between rounded-xl border border-gray-100 p-3 bg-gray-50/50"
+                className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 p-3 bg-gray-50/50"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="font-semibold text-gray-900 text-xs">{z.name}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">
-                    {z.state}{z.lga ? ` · ${z.lga}` : ''}
+                    {z.state}{z.lga ? ` - ${z.lga}` : ''}
                   </p>
-                  <p className="text-xs font-bold text-indigo-600 mt-1">₦{Number(z.price).toLocaleString()}</p>
+                  <p className="text-xs font-bold text-indigo-600 mt-1">NGN {Number(z.price).toLocaleString()}</p>
                 </div>
                 <button
                   onClick={() => deleteZone(z.id)}
@@ -396,6 +425,32 @@ export default function DeliveryTab({
               </div>
             ))}
           </div>
+            {zones.length > DELIVERY_ZONES_PER_PAGE && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setZonesPage(page => Math.max(1, page - 1))}
+                  disabled={safeZonesPage === 1}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={12} />
+                  Previous
+                </button>
+                <span className="text-[11px] font-bold text-gray-500">
+                  {safeZonesPage} / {zonesTotalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZonesPage(page => Math.min(zonesTotalPages, page + 1))}
+                  disabled={safeZonesPage === zonesTotalPages}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={12} />
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {zones.length === 0 && isPro && (
@@ -407,16 +462,23 @@ export default function DeliveryTab({
 
       {/* Active Shipments */}
       <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Package size={16} className="text-amber-600" />
+        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Package size={16} className="text-amber-600" />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900 text-sm">Active Shipments</h2>
+              <p className="text-gray-400 text-[11px] mt-0.5">
+                Track orders shipped via Sendbox. Click Refresh to get live status.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-bold text-gray-900 text-sm">Active Shipments</h2>
-            <p className="text-gray-400 text-[11px] mt-0.5">
-              Track orders shipped via Shipbubble. Click Refresh to get live status.
-            </p>
-          </div>
+          {activeShipments.length > 0 && (
+            <span className="w-fit rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-700">
+              {activeShipments.length} active
+            </span>
+          )}
         </div>
 
         {activeShipments.length === 0 ? (
@@ -426,7 +488,7 @@ export default function DeliveryTab({
           </div>
         ) : (
           <div className="space-y-3">
-            {activeShipments.map((order) => {
+            {paginatedShipments.map((order) => {
               const tracking = trackingData[order.id]
               const isLoading = trackingLoading[order.id]
               const error = trackingError[order.id]
@@ -435,7 +497,7 @@ export default function DeliveryTab({
                   key={order.id}
                   className="rounded-xl border border-gray-100 bg-gray-50/40 p-4"
                 >
-                  <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <p className="font-bold text-gray-900 text-sm truncate">
                         {order.customerName || 'Customer'}
@@ -444,15 +506,15 @@ export default function DeliveryTab({
                         {order.items || 'Order'}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        Tracking: {order.sendboxTrackingId || order.shipbubbleTrackingId || order.sendboxOrderCode}
+                        Tracking: {order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode}
                       </p>
                     </div>
-                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <div className="grid grid-cols-1 gap-1.5 flex-shrink-0 min-[360px]:grid-cols-3 sm:flex sm:flex-col">
                       <button
                         type="button"
                         onClick={() => refreshTracking(order)}
                         disabled={isLoading}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-50"
                       >
                         {isLoading ? (
                           <Loader2 size={11} className="animate-spin" />
@@ -461,23 +523,23 @@ export default function DeliveryTab({
                         )}
                         Refresh
                       </button>
-                      {(order.sendboxTrackingUrl || order.shipbubbleTrackingUrl) && (
+                      {(order.sendboxTrackingUrl || order.SendboxTrackingUrl) && (
                         <a
-                          href={order.sendboxTrackingUrl || order.shipbubbleTrackingUrl}
+                          href={order.sendboxTrackingUrl || order.SendboxTrackingUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-all"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-all"
                         >
                           <ExternalLink size={11} />
                           Track
                         </a>
                       )}
-                      {(order.sendboxWaybillUrl || order.shipbubbleWaybillUrl) && (
+                      {(order.sendboxWaybillUrl || order.SendboxWaybillUrl) && (
                         <a
-                          href={order.sendboxWaybillUrl || order.shipbubbleWaybillUrl}
+                          href={order.sendboxWaybillUrl || order.SendboxWaybillUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-green-600 hover:bg-green-50 transition-all"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-green-600 hover:bg-green-50 transition-all"
                         >
                           <Download size={11} />
                           Waybill
@@ -502,7 +564,7 @@ export default function DeliveryTab({
                           <span className="text-[11px] text-gray-500">via {tracking.courierName}</span>
                         )}
                         {tracking.estimatedDelivery && (
-                          <span className="text-[11px] text-gray-400">· ETA: {tracking.estimatedDelivery}</span>
+                          <span className="text-[11px] text-gray-400">- ETA: {tracking.estimatedDelivery}</span>
                         )}
                       </div>
                       {Array.isArray(tracking.timeline) && tracking.timeline.length > 0 && (
@@ -520,12 +582,37 @@ export default function DeliveryTab({
 
                   {!tracking && !error && (
                     <p className="text-[11px] text-gray-400">
-                      Status: {order.shipbubbleStatus || 'created'} · Click Refresh for live update
+                      Status: {order.SendboxStatus || 'created'} - Click Refresh for live update
                     </p>
                   )}
                 </div>
               )
             })}
+            {activeShipments.length > SHIPMENTS_PER_PAGE && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setShipmentsPage(page => Math.max(1, page - 1))}
+                  disabled={safeShipmentsPage === 1}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={12} />
+                  Previous
+                </button>
+                <span className="text-[11px] font-bold text-gray-500">
+                  {safeShipmentsPage} / {shipmentsTotalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShipmentsPage(page => Math.min(shipmentsTotalPages, page + 1))}
+                  disabled={safeShipmentsPage === shipmentsTotalPages}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={12} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

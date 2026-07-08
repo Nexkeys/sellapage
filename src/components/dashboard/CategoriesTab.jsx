@@ -1,8 +1,22 @@
 // src/components/dashboard/CategoriesTab.jsx/
-import { Tag, ArrowRight, Info, Lock, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useState } from 'react'
+import {
+  Tag,
+  ArrowRight,
+  Info,
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
+
+const CATEGORIES_PER_PAGE = 3
 
 export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = [], services = [], vendorType = 'products' }) {
-  // Helper function to process items (products or services) into category data
+  const [expandedCategory, setExpandedCategory] = useState('')
+  const [sectionPages, setSectionPages] = useState({})
+
   const processItems = (items) => {
     const categorised = items.filter(item => item.category && item.category.trim() !== '')
     const uncategorised = items.filter(item => !item.category || item.category.trim() === '')
@@ -21,182 +35,223 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
   const productData = processItems(products)
   const serviceData = processItems(services)
 
-  // Reusable component for category section
-  const CategorySection = ({ title, data, itemType, manageTab }) => (
-    <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-        <div className="space-y-1">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">{title}</h2>
-          <div className="h-1 w-12 bg-emerald-500 rounded-full" />
-        </div>
-        <button
-          onClick={() => navigateTo(manageTab)}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm shadow-emerald-600/10 group"
-        >
-          <span>+ Manage in {manageTab === 'products' ? 'Products' : 'Services'}</span>
-          <ArrowRight size={14} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-        </button>
-      </div>
+  const getSectionPage = (sectionKey, totalPages) => {
+    const page = sectionPages[sectionKey] || 1
+    return Math.min(page, totalPages)
+  }
 
-      {/* Analytics-Style Metrics Track */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Total Categories */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-2xl border border-slate-200/60 p-5 flex items-center justify-between shadow-sm">
-          <div className="space-y-1">
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Groups</p>
-            <p className="text-3xl font-black text-slate-900 tracking-tight">{data.categoryList.length}</p>
-          </div>
-          <div className="w-10 h-10 bg-slate-100/80 rounded-xl flex items-center justify-center text-slate-600">
-            <Tag size={18} />
-          </div>
-        </div>
-        
-        {/* Categorized Count */}
-        <div className="bg-gradient-to-br from-white to-emerald-50/10 rounded-2xl border border-slate-200/60 p-5 flex items-center justify-between shadow-sm">
-          <div className="space-y-1">
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Categorised {itemType}s</p>
-            <p className="text-3xl font-black text-emerald-600 tracking-tight">{data.categorised.length}</p>
-          </div>
-          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
-            <CheckCircle2 size={18} />
-          </div>
-        </div>
+  const setSectionPage = (sectionKey, page) => {
+    setSectionPages(prev => ({ ...prev, [sectionKey]: page }))
+  }
 
-        {/* Uncategorized Alert Tracker */}
-        <div className={`bg-gradient-to-br from-white ${data.uncategorised.length > 0 ? 'to-amber-50/20 border-amber-200/70' : 'to-slate-50/50 border-slate-200/60'} rounded-2xl border p-5 flex items-center justify-between shadow-sm transition-colors`}>
-          <div className="space-y-1">
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Unassigned</p>
-            <p className={`text-3xl font-black tracking-tight ${data.uncategorised.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
-              {data.uncategorised.length}
-            </p>
-          </div>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${data.uncategorised.length > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
-            <AlertCircle size={18} />
-          </div>
-        </div>
-      </div>
+  const CategorySection = ({ title, data, itemType, manageTab, sectionKey }) => {
+    const totalPages = Math.max(1, Math.ceil(data.categoryList.length / CATEGORIES_PER_PAGE))
+    const currentPage = getSectionPage(sectionKey, totalPages)
+    const visibleCategories = data.categoryList.slice(
+      (currentPage - 1) * CATEGORIES_PER_PAGE,
+      currentPage * CATEGORIES_PER_PAGE
+    )
 
-      {/* Main Grid Content Area */}
-      {data.categoryList.length === 0 ? (
-        /* Empty State */
-        <div className="bg-slate-50/60 rounded-3xl border-2 border-dashed border-slate-200/80 flex flex-col items-center justify-center py-14 px-4 text-center max-w-xl mx-auto">
-          <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center shadow-md shadow-slate-200/50 mb-4 animate-pulse">
-            <Tag size={26} className="text-emerald-600" />
-          </div>
-          <h3 className="font-bold text-slate-900 text-base mb-1">No structural categories yet</h3>
-          <p className="text-slate-500 text-sm max-w-sm leading-relaxed mb-6">
-            Assign a custom category identity to any {itemType.toLowerCase()} inside your inventory management tab to populate this dashboard dynamically.
-          </p>
-          <button
-            onClick={() => navigateTo(manageTab)}
-            className="flex items-center gap-2 bg-white border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] text-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
-          >
-            Go to {manageTab === 'products' ? 'Products' : 'Services'}
-            <ArrowRight size={14} className="text-slate-400" />
-          </button>
-        </div>
-      ) : (
-        /* Populated Category Directory Card Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.categoryList.map(category => {
-            const previewItems = category.items.slice(0, 3)
-            const remaining = category.items.length - previewItems.length
-
-            return (
-              <div
-                key={category.name}
-                className="bg-white rounded-2xl border border-slate-200/70 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between overflow-hidden min-w-0"
-              >
-                {/* Card Top Block */}
-                <div className="p-5">
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                      {category.count} {itemType.toLowerCase()}{category.count !== 1 ? 's' : ''}
-                    </span>
-                    <div className="w-7 h-7 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
-                      <Tag size={13} />
-                    </div>
-                  </div>
-                  
-                  <h3 className="font-bold text-slate-900 text-base tracking-tight truncate w-full" title={category.name}>
-                    {category.name}
-                  </h3>
-                </div>
-
-                {/* Sub-item Pill Container Section */}
-                <div className="bg-slate-50/60 border-t border-slate-100 p-4 mt-auto">
-                  <div className="flex flex-wrap gap-1.5">
-                    {previewItems.map(item => (
-                      <span
-                        key={item.id}
-                        className="max-w-[150px] truncate text-[11px] font-semibold text-slate-600 bg-white border border-slate-200/60 px-2.5 py-1 rounded-lg shadow-2xs"
-                        title={item.name}
-                      >
-                        {item.name}
-                      </span>
-                    ))}
-                    {remaining > 0 && (
-                      <span className="text-[11px] font-bold text-slate-500 bg-slate-200/60 border border-slate-300/40 px-2 py-1 rounded-lg">
-                        +{remaining}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Uncategorised Fix Warning Wrapper */}
-      {data.uncategorised.length > 0 && (
-        <div className="bg-white border-2 border-amber-200 rounded-2xl shadow-sm overflow-hidden mt-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 sm:p-5">
-            <div className="flex items-start gap-3.5 min-w-0">
-              <div className="p-2 bg-amber-50 text-amber-600 rounded-xl flex-shrink-0">
-                <AlertCircle size={20} />
-              </div>
-              <div className="min-w-0 space-y-0.5">
-                <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                  {data.uncategorised.length} {itemType.toLowerCase()}{data.uncategorised.length !== 1 ? 's' : ''} missing category tags
-                </h4>
-                <p className="text-slate-500 text-xs sm:text-sm leading-relaxed max-w-2xl">
-                  These items currently operate without direct catalog assignment flags, preventing targeted collection searches on your storefront pages.
-                </p>
-              </div>
+    return (
+      <section className="space-y-4">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-green-600">
+                Categories
+              </p>
+              <h2 className="mt-1 text-lg font-bold tracking-tight text-gray-900">{title}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                Group your {itemType.toLowerCase()}s so customers can find them faster.
+              </p>
             </div>
-            
             <button
               onClick={() => navigateTo(manageTab)}
-              className="w-full lg:w-auto shrink-0 inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shadow-amber-600/10"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-4 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-600 sm:w-auto"
             >
-              <span>Fix in {manageTab === 'products' ? 'Products' : 'Services'}</span>
+              Manage {manageTab === 'products' ? 'Products' : 'Services'}
               <ArrowRight size={14} />
             </button>
           </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] font-bold text-gray-500">Groups</span>
+                <Tag size={15} className="text-gray-400" />
+              </div>
+              <p className="mt-2 text-2xl font-black text-gray-900">{data.categoryList.length}</p>
+            </div>
+            <div className="rounded-xl border border-green-100 bg-green-50/50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] font-bold text-green-700">Assigned</span>
+                <CheckCircle2 size={15} className="text-green-600" />
+              </div>
+              <p className="mt-2 text-2xl font-black text-green-700">{data.categorised.length}</p>
+            </div>
+            <div className={`rounded-xl border p-3 ${data.uncategorised.length > 0 ? 'border-amber-200 bg-amber-50/60' : 'border-gray-100 bg-gray-50/60'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-[11px] font-bold ${data.uncategorised.length > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+                  Unassigned
+                </span>
+                <AlertCircle size={15} className={data.uncategorised.length > 0 ? 'text-amber-600' : 'text-gray-400'} />
+              </div>
+              <p className={`mt-2 text-2xl font-black ${data.uncategorised.length > 0 ? 'text-amber-700' : 'text-gray-900'}`}>
+                {data.uncategorised.length}
+              </p>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
-  )
+
+        {data.categoryList.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-12 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50">
+              <Tag size={20} className="text-green-500" />
+            </div>
+            <p className="text-sm font-bold text-gray-800">No categories yet</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-gray-400">
+              Add a category while editing a {itemType.toLowerCase()} and it will appear here.
+            </p>
+            <button
+              onClick={() => navigateTo(manageTab)}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-xs font-bold text-gray-700 transition-all hover:bg-gray-50"
+            >
+              Go to {manageTab === 'products' ? 'Products' : 'Services'}
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {visibleCategories.map(category => {
+                const categoryKey = `${sectionKey}:${category.name}`
+                const isExpanded = expandedCategory === categoryKey
+                const previewItems = category.items.slice(0, 3)
+                const remaining = category.items.length - previewItems.length
+                const shownItems = isExpanded ? category.items : previewItems
+
+                return (
+                  <article
+                    key={category.name}
+                    className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:border-green-100"
+                  >
+                    <div className="p-4">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <span className="rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
+                          {category.count} {itemType.toLowerCase()}{category.count !== 1 ? 's' : ''}
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-50 text-gray-400">
+                          <Tag size={14} />
+                        </div>
+                      </div>
+                      <h3 className="break-words text-base font-bold leading-snug text-gray-900">
+                        {category.name}
+                      </h3>
+                    </div>
+
+                    <div className="border-t border-gray-100 bg-gray-50/70 p-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {shownItems.map(item => (
+                          <span
+                            key={item.id}
+                            className="max-w-full truncate rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-600"
+                            title={item.name}
+                          >
+                            {item.name}
+                          </span>
+                        ))}
+                      </div>
+
+                      {remaining > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCategory(isExpanded ? '' : categoryKey)}
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-gray-600 transition-all hover:bg-gray-50"
+                        >
+                          {isExpanded ? 'Show less' : `+${remaining} more`}
+                          <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            {data.categoryList.length > CATEGORIES_PER_PAGE && (
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSectionPage(sectionKey, Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={13} />
+                  Previous
+                </button>
+                <span className="text-xs font-bold text-gray-500">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSectionPage(sectionKey, Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {data.uncategorised.length > 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-white p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                  <AlertCircle size={17} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">
+                    {data.uncategorised.length} {itemType.toLowerCase()}{data.uncategorised.length !== 1 ? 's' : ''} without a category
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                    Add categories so customers can browse this section more easily.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigateTo(manageTab)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-white transition-all hover:bg-amber-600 sm:w-auto"
+              >
+                Fix in {manageTab === 'products' ? 'Products' : 'Services'}
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    )
+  }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-8 w-full block">
-      {/* Primary Workspace Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Storefront Directory</h1>
-          <p className="text-slate-500 text-sm font-medium">Structure and manage structural classifications for smooth public catalog navigation.</p>
-        </div>
+    <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-5 lg:p-6">
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">Category Manager</h1>
+        <p className="mt-1 text-xs leading-relaxed text-gray-400 sm:text-sm">
+          Review how your listings are grouped across your storefront.
+        </p>
       </div>
 
-      {/* Segment Routing Framework */}
       {vendorType === 'products' && (
         <CategorySection
           title="Product Categories"
           data={productData}
           itemType="Product"
           manageTab="products"
+          sectionKey="products"
         />
       )}
 
@@ -206,36 +261,33 @@ export default function CategoriesTab({ isGrowthOrPro, navigateTo, products = []
           data={serviceData}
           itemType="Service"
           manageTab="services"
+          sectionKey="services"
         />
       )}
 
       {vendorType === 'both' && (
-        <div className="space-y-12">
+        <div className="space-y-8">
           <CategorySection
             title="Product Categories"
             data={productData}
             itemType="Product"
             manageTab="products"
+            sectionKey="products"
           />
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-slate-200/70" />
-            </div>
-          </div>
           <CategorySection
             title="Service Categories"
             data={serviceData}
             itemType="Service"
             manageTab="services"
+            sectionKey="services"
           />
         </div>
       )}
 
-      {/* Global Information Guide Module */}
-      <div className="flex items-start gap-3 bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all hover:bg-slate-100/60 shadow-xs">
-        <Info size={16} className="text-slate-500 flex-shrink-0 mt-0.5" />
-        <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-medium">
-          Category parameters are assigned inside standard product parameters. To create new category filters or update collection properties, select your inventory catalogs, edit your chosen listing, and submit new category flags.
+      <div className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-4">
+        <Info size={16} className="mt-0.5 flex-shrink-0 text-gray-400" />
+        <p className="text-xs leading-relaxed text-gray-500">
+          Categories are set from each product or service edit form. Update a listing to move it into a different group.
         </p>
       </div>
     </div>

@@ -69,7 +69,7 @@ const PLANS = [
       'Customer CRM tab (profiles, WhatsApp links, spend/order/recency sorting)',
       'Verified reviews tab (aggregate stars, expandable cards)',
       'Discounts & promo codes tab (percentage/flat, limits, expiry)',
-      'Shipbubble delivery integration (live rates, booking, tracking)',
+      'Sendbox delivery integration (live rates, booking, tracking)',
       'Delivery zones setup for local areas',
       'Top-performing analytics (engagement rate, best sellers)',
       'AI description generation — 50/day',
@@ -126,7 +126,7 @@ const COMPARISON_ROWS = [
   { category: 'Delivery & Fulfillment', items: [
     { label: 'Pickup address setup', starter: false, growth: true, pro: true, premium: true },
     { label: 'Delivery zones', starter: false, growth: false, pro: true, premium: true },
-    { label: 'Shipbubble integration (rates, booking, tracking)', starter: false, growth: false, pro: true, premium: true },
+    { label: 'Sendbox integration (rates, booking, tracking)', starter: false, growth: false, pro: true, premium: true },
   ]},
   { category: 'Customers & Growth', items: [
     { label: 'Customer CRM', starter: false, growth: false, pro: true, premium: true },

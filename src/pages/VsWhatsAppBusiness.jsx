@@ -55,7 +55,7 @@ export default function VsWhatsAppBusiness() {
             products, services, orders, customers, payments, analytics, and a public store link you can share anywhere.
           </p>
           <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
-            Sellapage gives your business a full commerce workspace alongside WhatsApp: store pages for products and services, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, and a public link you can share on Instagram, Twitter, flyers, and DMs.
+            Sellapage gives your business a full commerce workspace alongside WhatsApp: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, and a public link you can share on Instagram, Twitter, flyers, and DMs.
           </p>
         </div>
       </section>

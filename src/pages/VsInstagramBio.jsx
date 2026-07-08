@@ -53,7 +53,7 @@ export default function VsInstagramBio() {
             Sellapage gives you a full commerce page with products, services, prices, direct ordering, customer records, and payments.
           </p>
           <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
-            Sellapage gives your Instagram a real commerce workspace: store pages for products and services, Paystack checkout, Shipbubble delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one dashboard.
+            Sellapage gives your Instagram a real commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one dashboard.
           </p>
         </div>
       </section>
