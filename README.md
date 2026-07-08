@@ -219,6 +219,32 @@ Build output summary:
 - PWA injectManifest generated the service worker and precache entries.
 
 
+## 2026-07-08 - Sendbox Rates Phone Fields
+
+Commit/push keyword: `sendbox-rates-phone-fields`
+
+This update adds `origin_phone` and `destination_phone` fields to the Sendbox rate-quote request body in `src/api-handlers/sendbox-rates.js`.
+
+What changed:
+
+- The `body: JSON.stringify(...)` block in the Sendbox `/shipment_delivery_quote` fetch call now includes `origin_phone` (from `senderDetails.phone`) and `destination_phone` (from `receiverDetails.phone`).
+- Phone numbers are normalized to Sendbox's expected format: leading `0` is replaced with `+234`, and any existing `+234` or `234` prefix is collapsed to `+234`.
+- If no phone number is provided, a fallback of `+2348000000000` is used.
+
+What did NOT change:
+
+- No other fields in the rate-quote body were modified.
+- The `senderDetails` and `receiverDetails` destructuring from `req.body` remains the same.
+- The state code mapping, validation checks, rate response mapping, and error handling are untouched.
+- The `sendbox-webhook.js` handler and all other API handlers remain the same.
+- No frontend component changes were made for this update.
+
+Phone normalization logic:
+
+- Input `08031234567` → `+2348031234567` (leading `0` replaced with `+234`)
+- Input `+2348031234567` → `+2348031234567` (already correct, second replace is no-op)
+- Input `2348031234567` → `2348031234567` (no leading `0` or `+234`, passed through as-is)
+- Input empty/undefined → `+2348000000000` (fallback default)
 
 
 
