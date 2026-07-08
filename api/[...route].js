@@ -47,9 +47,9 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/sendbox-create-shipment.js");
         return await handlerFunc(req, res);
       }
-      case "shipbubble-webhook": {
-        const { default: handlerFunc } = await import("../src/api-handlers/shipbubble-webhook.js");
-        return await handlerFunc(req, res);
+      case "sendbox-webhook": {
+        const { default: handler } = await import("../src/api-handlers/sendbox-webhook.js")
+        return handler(req, res)
       }
       case "ai-describe": {
         const { default: handlerFunc } = await import("../src/api-handlers/ai-describe.js");

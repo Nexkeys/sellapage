@@ -149,10 +149,7 @@ export default function OrdersTab({
   const [shipRequestToken, setShipRequestToken] = useState('')
   const [selectedServiceCode, setSelectedServiceCode] = useState('')
   const [packageWeight, setPackageWeight] = useState(1)
-  const [packageCategory, setPackageCategory] = useState(98246239)
   const [pickupDate, setPickupDate] = useState(new Date().toISOString().split('T')[0])
-  const [shipbubbleCategories, setShipbubbleCategories] = useState([])
-  const [loadingCategories, setLoadingCategories] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentInitializing, setPaymentInitializing] = useState(false)
   const [paymentError, setPaymentError] = useState('')
@@ -343,22 +340,6 @@ export default function OrdersTab({
     }
   }
 
-  const fetchShipbubbleCategories = async () => {
-    if (shipbubbleCategories.length > 0) return
-    setLoadingCategories(true)
-    try {
-      const res = await fetch('/api/shipbubble-categories')
-      const data = await res.json()
-      if (res.ok && Array.isArray(data.categories)) {
-        setShipbubbleCategories(data.categories)
-      }
-    } catch (err) {
-      console.error('Failed to fetch Shipbubble categories:', err)
-    } finally {
-      setLoadingCategories(false)
-    }
-  }
-
   const openShipbubbleModal = (order) => {
     setBookingShipmentOrder(order)
     setBookingError('')
@@ -368,9 +349,7 @@ export default function OrdersTab({
     setSelectedServiceCode('')
     setShipRequestToken('')
     setPackageWeight(1)
-    setPackageCategory(98246239)
     setPickupDate(new Date().toISOString().split('T')[0])
-    fetchShipbubbleCategories()
 
     // Pre-fill sender details
     setSenderName(store?.businessName || '')
@@ -1443,40 +1422,6 @@ export default function OrdersTab({
                     onChange={(e) => setPickupDate(e.target.value)}
                     className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                   />
-                </div>
-                <div className="mb-3">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Package Category
-                    <span className="ml-1 text-gray-400 font-normal">(helps match the right courier)</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={packageCategory}
-                      onChange={(e) => setPackageCategory(Number(e.target.value))}
-                      className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 pr-10 text-sm text-gray-900 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                      disabled={loadingCategories}
-                    >
-                      {loadingCategories ? (
-                        <option>Loading categories...</option>
-                      ) : shipbubbleCategories.length > 0 ? (
-                        shipbubbleCategories.map((cat) => (
-                          <option key={cat.category_id} value={cat.category_id}>
-                            {cat.category}
-                          </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value={98246239}>Fashion Wears</option>
-                          <option value={90097994}>Accessories</option>
-                          <option value={3035980}>Electronics</option>
-                          <option value={70830897}>Electronic Gadgets</option>
-                          <option value={66484941}>Jewelry</option>
-                          <option value={69709726}>Food</option>
-                        </>
-                      )}
-                    </select>
-                    <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  </div>
                 </div>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                   <div className="flex-1">
