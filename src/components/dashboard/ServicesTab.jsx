@@ -181,7 +181,7 @@ export default function ServicesTab({
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5 font-bold">Booking Note / Booking Instructions (Optional)</label>
-              <textarea value={form.bookingNote} onChange={handleFormBookingNote} rows={2} placeholder="e.g. I will reach out to you via WhatsApp within 2 hours to confirm your preferred session time slot." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+              <textarea value={form.bookingNote} onChange={handleFormBookingNote} rows={2} placeholder="e.g. I will reach out to you via WhatsApp Or Text Message within 2 hours to confirm your preferred session time slot." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
               <p className="text-gray-400 text-xs mt-1">Shown to clients during their booking submission form flow.</p>
             </div>
 
