@@ -2,6 +2,17 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 const SENDBOX_BASE = 'https://live.sendbox.co/shipping'
 const SENDBOX_TOKEN = process.env.SENDBOX_ACCESS_TOKEN
+
+function normalizePhone(phone) {
+  if (!phone) return '+2348000000000'
+  return phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
+}
+
+function splitName(fullName) {
+  const parts = (fullName || '').trim().split(/\s+/)
+  return { first: parts[0] || '', last: parts.slice(1).join(' ') || '' }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -53,12 +64,9 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Order not found' })
     }
 
-    const senderPhone = senderDetails.phone
-      ? senderDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
-      : '+2348000000000'
-    const receiverPhone = receiverDetails.phone
-      ? receiverDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
-      : '+2348000000000'
+    const senderName = splitName(senderDetails.name)
+    const receiverName = splitName(receiverDetails.name)
+    const today = pickupDate || new Date().toISOString().split('T')[0]
 
     const shipRes = await fetch(`${SENDBOX_BASE}/shipments`, {
       method: 'POST',
@@ -67,27 +75,45 @@ export default async function handler(req, res) {
         Authorization: SENDBOX_TOKEN,
       },
       body: JSON.stringify({
-        origin_name: senderDetails.name || '',
-        origin_phone: senderPhone,
-        origin_email: senderDetails.email || 'noreply@sellapage.com.ng',
-        origin_address: senderDetails.address || '',
-        origin_city: senderDetails.city || '',
-        origin_state: senderDetails.state || '',
-        origin_country: 'Nigeria',
-        origin_country_code: 'NG',
-        destination_name: receiverDetails.name || '',
-        destination_phone: receiverPhone,
-        destination_email: receiverDetails.email || '',
-        destination_address: receiverDetails.address || '',
-        destination_city: receiverDetails.city || '',
-        destination_state: receiverDetails.state || '',
-        destination_country: 'Nigeria',
-        destination_country_code: 'NG',
+        origin: {
+          first_name: senderName.first,
+          last_name: senderName.last,
+          street: senderDetails.address || '',
+          state: senderDetails.state,
+          city: senderDetails.city || '',
+          country: 'NG',
+          phone: normalizePhone(senderDetails.phone),
+          email: senderDetails.email || '',
+        },
+        destination: {
+          first_name: receiverName.first,
+          last_name: receiverName.last,
+          street: receiverDetails.address || '',
+          state: receiverDetails.state,
+          city: receiverDetails.city || '',
+          country: 'NG',
+          phone: normalizePhone(receiverDetails.phone),
+          email: receiverDetails.email || '',
+        },
         weight: Number(weight) || 1,
         courier_id: courierId,
-        pickup_date: pickupDate || new Date().toISOString().split('T')[0],
-        delivery_type_code: 'last_mile',
-        incoming_option_code: 'pickup',
+        pickup_date: today,
+        incoming_option: 'pickup',
+        region: 'NG',
+        service_type: 'local',
+        package_type: 'general',
+        total_value: orderDoc.data()?.grandTotal || orderDoc.data()?.total || 5000,
+        currency: 'NGN',
+        channel_code: 'api',
+        items: [
+          {
+            name: 'Package',
+            quantity: 1,
+            value: orderDoc.data()?.grandTotal || orderDoc.data()?.total || 5000,
+            weight: Number(weight) || 1,
+          }
+        ],
+        callback_url: `${process.env.APP_URL || 'https://www.sellapage.com.ng'}/api/sendbox-webhook`,
       }),
     })
 

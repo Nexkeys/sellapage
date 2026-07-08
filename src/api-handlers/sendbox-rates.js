@@ -1,24 +1,14 @@
-//src/api-handlers/sendbox-rates.js/
 const SENDBOX_BASE = 'https://live.sendbox.co/shipping'
 const SENDBOX_TOKEN = process.env.SENDBOX_ACCESS_TOKEN
 
-const STATE_CODES = {
-  'Abia': 'ABI', 'Adamawa': 'ADA', 'Akwa Ibom': 'AKW', 'Anambra': 'ANA',
-  'Bauchi': 'BAU', 'Bayelsa': 'BAY', 'Benue': 'BEN', 'Borno': 'BOR',
-  'Cross River': 'CRO', 'Delta': 'DEL', 'Ebonyi': 'EBO', 'Edo': 'EDO',
-  'Ekiti': 'EKI', 'Enugu': 'ENU', 'FCT': 'ABU', 'Abuja': 'ABU',
-  'Gombe': 'GOM', 'Imo': 'IMO', 'Jigawa': 'JIG', 'Kaduna': 'KAD',
-  'Kano': 'KAN', 'Katsina': 'KAT', 'Kebbi': 'KEB', 'Kogi': 'KOG',
-  'Kwara': 'KWA', 'Lagos': 'LOS', 'Nasarawa': 'NAS', 'Niger': 'NIG',
-  'Ogun': 'OGU', 'Ondo': 'OND', 'Osun': 'OSU', 'Oyo': 'OYO',
-  'Plateau': 'PLT', 'Rivers': 'RIV', 'Sokoto': 'SOK', 'Taraba': 'TAR',
-  'Yobe': 'YOB', 'Zamfara': 'ZAM',
+function normalizePhone(phone) {
+  if (!phone) return '+2348000000000'
+  return phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
 }
 
-function getStateCode(stateName) {
-  if (!stateName) return 'LOS'
-  const normalized = stateName.trim()
-  return STATE_CODES[normalized] || normalized.substring(0, 3).toUpperCase()
+function splitName(fullName) {
+  const parts = (fullName || '').trim().split(/\s+/)
+  return { first: parts[0] || '', last: parts.slice(1).join(' ') || '' }
 }
 
 export default async function handler(req, res) {
@@ -31,6 +21,8 @@ export default async function handler(req, res) {
     senderDetails,
     receiverDetails,
     weight = 1,
+    packageAmount = 5000,
+    pickupDate,
   } = req.body
 
   if (!storeId) {
@@ -44,8 +36,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const originStateCode = getStateCode(senderDetails.state)
-    const destinationStateCode = getStateCode(receiverDetails.state)
+    const senderName = splitName(senderDetails.name)
+    const receiverName = splitName(receiverDetails.name)
+    const today = pickupDate || new Date().toISOString().split('T')[0]
 
     const quoteRes = await fetch(`${SENDBOX_BASE}/shipment_delivery_quote`, {
       method: 'POST',
@@ -54,23 +47,43 @@ export default async function handler(req, res) {
         Authorization: SENDBOX_TOKEN,
       },
       body: JSON.stringify({
-        origin_country: 'Nigeria',
-        origin_country_code: 'NG',
-        origin_state: senderDetails.state,
-        origin_state_code: originStateCode,
-        origin_city: senderDetails.city || '',
-        origin_phone: senderDetails.phone
-          ? senderDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
-          : '+2348000000000',
-        destination_country: 'Nigeria',
-        destination_country_code: 'NG',
-        destination_state: receiverDetails.state,
-        destination_state_code: destinationStateCode,
-        destination_city: receiverDetails.city || '',
-        destination_phone: receiverDetails.phone
-          ? receiverDetails.phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
-          : '+2348000000000',
+        origin: {
+          first_name: senderName.first,
+          last_name: senderName.last,
+          street: senderDetails.address || '',
+          state: senderDetails.state,
+          city: senderDetails.city || '',
+          country: 'NG',
+          phone: normalizePhone(senderDetails.phone),
+          email: senderDetails.email || '',
+        },
+        destination: {
+          first_name: receiverName.first,
+          last_name: receiverName.last,
+          street: receiverDetails.address || '',
+          state: receiverDetails.state,
+          city: receiverDetails.city || '',
+          country: 'NG',
+          phone: normalizePhone(receiverDetails.phone),
+          email: receiverDetails.email || '',
+        },
         weight: Number(weight) || 1,
+        incoming_option: 'pickup',
+        region: 'NG',
+        service_type: 'local',
+        package_type: 'general',
+        total_value: Number(packageAmount) || 5000,
+        currency: 'NGN',
+        channel_code: 'api',
+        pickup_date: today,
+        items: [
+          {
+            name: 'Package',
+            quantity: 1,
+            value: Number(packageAmount) || 5000,
+            weight: Number(weight) || 1,
+          }
+        ],
       }),
     })
 
@@ -87,13 +100,13 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       rates: rates.map((r) => ({
-        courier_id: r.courier_id,
-        courier_name: r.name || r.courier?.name || 'Courier',
+        courier_id: r.key || '',
+        courier_name: r.name || r.description || 'Courier',
         fee: Number(r.fee || 0),
         total_shipping_fee: Number(r.fee || 0),
         return_fee: Number(r.return_fee || 0),
-        service_code: String(r.courier_id),
-        delivery_eta: '',
+        service_code: r.service_code || String(r.key || ''),
+        delivery_eta: r.delivery_eta_string || r.sla_description || '',
       })),
     })
   } catch (err) {

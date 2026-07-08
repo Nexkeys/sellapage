@@ -278,5 +278,49 @@ What did NOT change:
 - The `sendbox-webhook.js` handler and all other API handlers remain the same.
 
 
+## 2026-07-08 - Sendbox Full API Migration (Nested Format + Bug Fixes)
+
+Commit/push keyword: `sendbox-nested-format-migration`
+
+This update rewrites both Sendbox API handlers to use the nested `origin`/`destination` payload format as documented in the Sendbox API docs, and fixes two bugs: the radio button selection issue and missing delivery ETA.
+
+Root causes addressed:
+
+1. **Only 2 couriers showing** — The flat-format payload was missing fields Sendbox uses to match couriers (`service_type`, `region`, `package_type`, `channel_code`, `incoming_option`, `total_value`, `items`). Switching to the nested format with all required fields unlocks more courier options.
+
+2. **Radio button bug (both boxes turn green)** — Sendbox rate response uses `key` as the unique identifier, not `courier_id`. Our code mapped `courier_id: r.courier_id` which was `undefined` for all rates. When clicking any rate, `selectedCourierId` became `undefined`, and `undefined === undefined` evaluated to `true` for every rate.
+
+3. **Delivery ETA showing "—"** — The `delivery_eta` field was hardcoded to empty string. Sendbox returns `delivery_eta_string` and `sla_description` which were not being mapped.
+
+What changed:
+
+### File: `src/api-handlers/sendbox-rates.js`
+
+- Replaced the entire flat-format `body: JSON.stringify(...)` block with the nested `origin`/`destination` format per Sendbox API docs.
+- `origin` object includes: `first_name`, `last_name` (split from full name), `street`, `state`, `city`, `country`, `phone`, `email`.
+- `destination` object includes same fields.
+- Added Sendbox-required fields: `incoming_option: 'pickup'`, `region: 'NG'`, `service_type: 'local'`, `package_type: 'general'`, `total_value`, `currency: 'NGN'`, `channel_code: 'api'`, `pickup_date`, `items` array.
+- Fixed rate response mapping: `courier_id` now uses `r.key` (Sendbox's actual ID field) instead of `r.courier_id`.
+- Fixed `delivery_eta` to use `r.delivery_eta_string` or `r.sla_description` instead of empty string.
+- Added `normalizePhone()` and `splitName()` helper functions.
+- Removed the `STATE_CODES` map and `getStateCode()` function (no longer needed with nested format).
+
+### File: `src/api-handlers/sendbox-create-shipment.js`
+
+- Replaced the flat-format payload with nested `origin`/`destination` format (same pattern as rates handler).
+- Added Sendbox-required fields: `incoming_option`, `region`, `service_type`, `package_type`, `total_value`, `currency`, `channel_code`, `items` array.
+- Added `callback_url` pointing to `/api/sendbox-webhook` for tracking updates.
+- Added `normalizePhone()` and `splitName()` helper functions.
+- `total_value` now reads from the order document (`grandTotal` or `total`) instead of hardcoded value.
+
+What did NOT change:
+
+- No frontend component changes were made. The frontend already collects all required data (name, phone, email, street, city, state). The Sendbox-specific fields are backend constants.
+- The `sendbox-webhook.js` handler remains the same.
+- The payment initialization and verification flow remains the same.
+
+### Category / Package Type Compatibility Note
+
+The Sendbox API docs do not document any category system or courier-package compatibility filtering. Unlike Shipbubble which had a categories system to match couriers to package types (e.g., food, fragile, electronics), Sendbox does not expose this through their API. The `package_type` field only documents "general" as a value with no enumeration of other types. This is a Sendbox API limitation — there is currently no way to programmatically prevent a vendor from selecting a courier that doesn't handle their package type.
 
 
