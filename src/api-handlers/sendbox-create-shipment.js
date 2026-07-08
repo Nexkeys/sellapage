@@ -1,17 +1,6 @@
 //src/api-handlers/sendbox-create-shipment.js/
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
-const SENDBOX_BASE = 'https://live.sendbox.co/shipping'
-const SENDBOX_TOKEN = process.env.SENDBOX_ACCESS_TOKEN
-
-function normalizePhone(phone) {
-  if (!phone) return '+2348000000000'
-  return phone.replace(/^0/, '+234').replace(/^\+?234/, '+234')
-}
-
-function splitName(fullName) {
-  const parts = (fullName || '').trim().split(/\s+/)
-  return { first: parts[0] || '', last: parts.slice(1).join(' ') || '' }
-}
+import { createSendboxShipment } from './_lib/sendbox-booking.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -30,6 +19,7 @@ export default async function handler(req, res) {
     receiverDetails,
     weight = 1,
     pickupDate,
+    packageType = 'general',
   } = req.body
   if (!storeId || !orderId || !courierId || !senderDetails || !receiverDetails) {
     return res.status(400).json({
@@ -64,68 +54,25 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Order not found' })
     }
 
-    const senderName = splitName(senderDetails.name)
-    const receiverName = splitName(receiverDetails.name)
-    const today = pickupDate || new Date().toISOString().split('T')[0]
+    const appUrl = process.env.APP_URL || 'https://www.sellapage.com.ng'
+    const callbackUrl = `${appUrl}/api/sendbox-webhook?transactionType=tracking`
 
-    const shipRes = await fetch(`${SENDBOX_BASE}/shipments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: SENDBOX_TOKEN,
-      },
-      body: JSON.stringify({
-        origin: {
-          first_name: senderName.first,
-          last_name: senderName.last,
-          street: senderDetails.address || '',
-          state: senderDetails.state,
-          city: senderDetails.city || '',
-          country: 'NG',
-          phone: normalizePhone(senderDetails.phone),
-          email: senderDetails.email || '',
-        },
-        destination: {
-          first_name: receiverName.first,
-          last_name: receiverName.last,
-          street: receiverDetails.address || '',
-          state: receiverDetails.state,
-          city: receiverDetails.city || '',
-          country: 'NG',
-          phone: normalizePhone(receiverDetails.phone),
-          email: receiverDetails.email || '',
-        },
-        weight: Number(weight) || 1,
-        courier_id: courierId,
-        pickup_date: today,
-        incoming_option: 'pickup',
-        region: 'NG',
-        service_type: 'local',
-        package_type: 'general',
-        total_value: orderDoc.data()?.grandTotal || orderDoc.data()?.total || 5000,
-        currency: 'NGN',
-        channel_code: 'api',
-        items: [
-          {
-            name: 'Package',
-            quantity: 1,
-            value: orderDoc.data()?.grandTotal || orderDoc.data()?.total || 5000,
-            weight: Number(weight) || 1,
-          }
-        ],
-        callback_url: `${process.env.APP_URL || 'https://www.sellapage.com.ng'}/api/sendbox-webhook`,
-      }),
+    const result = await createSendboxShipment({
+      senderDetails,
+      receiverDetails,
+      weight,
+      courierId,
+      pickupDate: pickupDate || new Date().toISOString().split('T')[0],
+      totalValue: orderDoc.data()?.grandTotal || orderDoc.data()?.total || 5000,
+      packageType,
+      callbackUrl,
     })
 
-    const shipData = await shipRes.json()
-
-    if (!shipRes.ok) {
-      console.error('[sendbox-create-shipment] error:', shipData)
-      return res.status(shipRes.status).json({
-        error: shipData?.description || shipData?.message || 'Failed to create shipment',
-      })
+    if (!result.success) {
+      return res.status(502).json({ error: result.error })
     }
 
+    const shipData = result.data
     const trackingId = shipData?.code || shipData?.reference_code || ''
     const waybillUrl = shipData?.package_label_image || shipData?.label_image || ''
     const trackingUrl = `https://sendbox.co/tracking/${trackingId}`

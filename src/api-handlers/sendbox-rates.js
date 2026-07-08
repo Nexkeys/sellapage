@@ -23,6 +23,7 @@ export default async function handler(req, res) {
     weight = 1,
     packageAmount = 5000,
     pickupDate,
+    packageType = 'general',
   } = req.body
 
   if (!storeId) {
@@ -68,10 +69,16 @@ export default async function handler(req, res) {
           email: receiverDetails.email || '',
         },
         weight: Number(weight) || 1,
-        incoming_option: 'pickup',
+        dimension: {
+          length: 0,
+          width: 0,
+          height: 0,
+        },
+        incoming_option: packageType === 'food' ? 'drop_off' : 'pickup',
         region: 'NG',
         service_type: 'local',
-        package_type: 'general',
+        service_code: 'standard',
+        package_type: packageType === 'food' ? 'food' : 'general',
         total_value: Number(packageAmount) || 5000,
         currency: 'NGN',
         channel_code: 'api',
@@ -106,7 +113,7 @@ export default async function handler(req, res) {
         total_shipping_fee: Number(r.fee || 0),
         return_fee: Number(r.return_fee || 0),
         service_code: r.service_code || String(r.key || ''),
-        delivery_eta: r.delivery_eta_string || r.sla_description || '',
+        delivery_eta: r.sla_description || r.delivery_eta_string || '',
       })),
     })
   } catch (err) {

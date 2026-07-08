@@ -400,6 +400,91 @@ export default async function handler(req, res) {
     return res.status(200).send("OK");
   }
 
+  if (transactionType === "shipment") {
+    try {
+      const { createSendboxShipment } = await import("./_lib/sendbox-booking.js")
+      const {
+        storeId,
+        orderId,
+        courierId,
+        courierName,
+        senderDetails: senderDetailsRaw,
+        receiverDetails: receiverDetailsRaw,
+        weight,
+        pickupDate,
+        packageType,
+      } = data.metadata || {}
+
+      if (!storeId || !orderId || !courierId) {
+        return res.status(200).send("Missing shipment metadata, skipped")
+      }
+
+      const storeDoc = await db.collection("stores").doc(storeId).get()
+      if (!storeDoc.exists) {
+        return res.status(200).send("Store not found, skipped")
+      }
+
+      const orderDoc = await db
+        .collection("stores")
+        .doc(storeId)
+        .collection("orders")
+        .doc(orderId)
+        .get()
+      if (!orderDoc.exists) {
+        return res.status(200).send("Order not found, skipped")
+      }
+
+      const senderDetails = typeof senderDetailsRaw === "string" ? JSON.parse(senderDetailsRaw) : senderDetailsRaw
+      const receiverDetails = typeof receiverDetailsRaw === "string" ? JSON.parse(receiverDetailsRaw) : receiverDetailsRaw
+
+      const appUrl = process.env.APP_URL || "https://www.sellapage.com.ng"
+      const callbackUrl = `${appUrl}/api/sendbox-webhook?transactionType=tracking`
+
+      const result = await createSendboxShipment({
+        senderDetails,
+        receiverDetails,
+        weight: Number(weight) || 1,
+        courierId,
+        pickupDate: pickupDate || new Date().toISOString().split("T")[0],
+        totalValue: Number(orderDoc.data()?.total) || 5000,
+        packageType: packageType || "general",
+        callbackUrl,
+      })
+
+      if (!result.success) {
+        console.error("[paystack-webhook] Shipment creation failed:", result.error)
+        return res.status(200).send("Shipment creation failed")
+      }
+
+      const shipmentData = result.data
+      const now = new Date()
+      const trackingUrl =
+        shipmentData.tracking_url ||
+        (shipmentData.code
+          ? `https://track.sendbox.co/shipment/${shipmentData.code}`
+          : "")
+
+      await db
+        .collection("stores")
+        .doc(storeId)
+        .collection("orders")
+        .doc(orderId)
+        .update({
+          status: "confirmed",
+          courierName: courierName || "Sendbox",
+          courierTrackingCode: shipmentData.code || "",
+          courierTrackingUrl: trackingUrl,
+          bookingTimestamp: now.toISOString(),
+          shipmentBooked: true,
+        })
+
+      return res.status(200).send("OK")
+    } catch (err) {
+      console.error("[paystack-webhook] Shipment safety net error:", err)
+      return res.status(200).send("Shipment processing error")
+    }
+  }
+
   // Subscription handling (existing logic)
   const { storeId, plan, billingPeriod = 'monthly' } = data.metadata || {};
 

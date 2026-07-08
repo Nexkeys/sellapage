@@ -323,4 +323,122 @@ What did NOT change:
 
 The Sendbox API docs do not document any category system or courier-package compatibility filtering. Unlike Shipbubble which had a categories system to match couriers to package types (e.g., food, fragile, electronics), Sendbox does not expose this through their API. The `package_type` field only documents "general" as a value with no enumeration of other types. This is a Sendbox API limitation — there is currently no way to programmatically prevent a vendor from selecting a courier that doesn't handle their package type.
 
+---
+
+## 2026-07-08 - Sendbox Complete Payment Flow + Shared Helper + Safety Net
+
+Commit/push keyword: `sendbox-complete-payment-flow`
+
+This update implements the full shipment payment flow, creates a shared Sendbox booking helper, adds a Paystack webhook safety net for shipments, fixes the booking button blocking issue, and adds package type selection matching the Sendbox dashboard.
+
+Root causes addressed:
+
+1. **Booking button not clickable** — `OrdersTab.jsx` checked `!shipRequestToken` which was always undefined. Sendbox doesn't use `request_token` (that was a Shipbubble concept). The check blocked the button from ever working.
+
+2. **Payment handler missing** — `sendbox-payment-initialize.js` didn't exist but the frontend referenced `/api/sendbox-payment-initialize`. The entire payment flow was broken from the start.
+
+3. **No safety net for abandoned payments** — If vendor closed browser after Paystack payment but before redirect, the shipment was never booked. Now Paystack webhook catches `transactionType === "shipment"` and auto-books server-side.
+
+4. **ETA display order was wrong** — `delivery_eta_string` ("Before 6PM Wednesday") was prioritized over `sla_description` ("2-3 working days"). Sendbox dashboard shows the latter format, matching user expectations.
+
+5. **Missing Sendbox API fields** — `service_code`, `dimension` object, and `package_type` (dynamic) were not being sent to Sendbox API endpoints.
+
+6. **Code duplication** — `sendbox-create-shipment.js` and the webhook safety net both needed the same Sendbox shipment creation logic. Extracted into shared helper.
+
+What changed:
+
+### File: `src/api-handlers/_lib/sendbox-booking.js` (NEW)
+
+- Shared helper for creating Sendbox shipments.
+- `createSendboxShipment()` accepts senderDetails, receiverDetails, weight, courierId, pickupDate, totalValue, packageType, callbackUrl.
+- Includes `normalizePhone()` and `splitName()` helpers (single source of truth).
+- Handles all Sendbox API body construction: nested origin/destination, dimension, service_code, package_type, items array.
+- When `packageType === 'food'`, sets `incoming_option: 'drop_off'` (food items can't be picked up per Sendbox dashboard).
+- Returns `{ success, data, error }`.
+- Used by both `sendbox-create-shipment.js` and `paystack-webhook.js`.
+
+### File: `src/api-handlers/sendbox-payment-initialize.js` (NEW)
+
+- Accepts POST with: storeId, orderId, courierName, shippingFee, courierId, senderDetails, receiverDetails, weight, pickupDate, packageType.
+- Verifies Firebase auth token, checks store ownership, looks up order doc.
+- Calculates total: `shippingFee + 250` (service charge).
+- Calls Paystack `/transaction/initialize` with:
+  - `callback_url`: `${APP_URL}/dashboard?shipment=pending` (redirect back to Orders tab)
+  - `metadata.transactionType`: `"shipment"` (triggers safety net branch in webhook)
+  - Full shipment details in metadata: storeId, orderId, courierId, courierName, senderDetails, receiverDetails, weight, pickupDate, packageType.
+- Returns `{ authorization_url, reference }`.
+
+### File: `api/[...route].js`
+
+- Added route case: `sendbox-payment-initialize` → imports `src/api-handlers/sendbox-payment-initialize.js`.
+
+### File: `src/api-handlers/paystack-webhook.js`
+
+- Added `transactionType === "shipment"` branch after the checkout handling block.
+- On successful Paystack charge with shipment metadata:
+  - Looks up store and order documents from Firestore.
+  - Calls `createSendboxShipment()` from shared helper.
+  - Updates order doc with tracking code, courier name, tracking URL, `shipmentBooked: true`.
+- This is the safety net — fires if vendor closes browser before redirect completes.
+
+### File: `src/api-handlers/sendbox-rates.js`
+
+- Added `packageType` parameter (defaults to `'general'`).
+- Added `dimension: { length: 0, width: 0, height: 0 }` to API body.
+- Added `service_code: 'standard'` to API body.
+- Changed `incoming_option` to respect `packageType`: food → `'drop_off'`, general → `'pickup'`.
+- Changed `package_type` to use dynamic value from frontend instead of hardcoded `'general'`.
+- Fixed `delivery_eta` priority: `r.sla_description || r.delivery_eta_string` (matches Sendbox dashboard display).
+
+### File: `src/api-handlers/sendbox-create-shipment.js`
+
+- Replaced inline Sendbox API call with `createSendboxShipment()` from shared helper.
+- Accepts `packageType` parameter from frontend.
+- Removed duplicate `normalizePhone()` and `splitName()` functions.
+- Passes `callbackUrl` to shared helper for tracking webhook.
+
+### File: `src/components/dashboard/OrdersTab.jsx`
+
+- Removed `shipRequestToken` state variable entirely.
+- Removed `!shipRequestToken` check from booking button condition (line 455).
+- Removed `setShipRequestToken('')` calls from `openSendboxModal` and `triggerFetchRates`.
+- Removed `setShipRequestToken(data.request_token || '')` from rate response handler.
+- Added `packageType` state variable (defaults to `'general'`).
+- Added package type dropdown in Sendbox modal: "General items" / "Food items".
+- Added amber notice when "Food items" selected: "Food items can only be dropped off — pickup is not available."
+- Package type triggers rate recalculation when changed.
+- Passes `packageType` to `/api/sendbox-rates` in request body.
+- Passes `packageType` to `/api/sendbox-payment-initialize` in request body.
+- Passes `packageType` to sessionStorage data for redirect flow.
+- Passes `packageType` to `/api/sendbox-create-shipment` in redirect useEffect.
+
+What did NOT change:
+
+- `shipbubble-webhook.js` was not touched (different handler).
+- Service charge remains ₦250 per shipment.
+- Paystack subaccount split logic unchanged.
+- Green border cosmetic issue deprioritized (not blocking functionality).
+
+### Payment Flow (Confirmed Working)
+
+```
+Vendor clicks "Confirm & Book Shipment"
+  → Payment modal opens (shipping fee + ₦250 service charge)
+  → Vendor clicks "Pay Now"
+  → Redirected to Paystack → pays
+  → Paystack callback: /dashboard?shipment=pending&reference=xxx
+  → TWO paths fire:
+    1. Redirect: frontend useEffect reads params, calls /api/sendbox-payment-verify
+       → If success: calls /api/sendbox-create-shipment → shows success modal
+       → If fail: shows "Payment Failed" modal with Try Again / Go Back
+    2. Webhook (safety net): paystack-webhook.js fires with transactionType === "shipment"
+       → Auto-creates shipment server-side even if vendor closes browser
+  → Sendbox wallet is debited by Nex (the platform owner)
+  → Vendor sees shipment tracking in Delivery tab
+```
+
+### Build Status
+
+`npm run build` passed with zero errors. Only pre-existing chunk size warning (2,872 kB).
+
 

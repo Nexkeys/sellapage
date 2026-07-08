@@ -146,8 +146,8 @@ export default function OrdersTab({
   const [bookingError, setBookingError] = useState('')
   const [bookingSuccess, setBookingSuccess] = useState('')
   const [selectedCourierId, setSelectedCourierId] = useState('')
-  const [shipRequestToken, setShipRequestToken] = useState('')
   const [selectedServiceCode, setSelectedServiceCode] = useState('')
+  const [packageType, setPackageType] = useState('general')
   const [packageWeight, setPackageWeight] = useState(1)
   const [pickupDate, setPickupDate] = useState(new Date().toISOString().split('T')[0])
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -216,6 +216,7 @@ export default function OrdersTab({
             receiverDetails: parsed.receiverDetails,
             weight: parsed.weight,
             pickupDate: parsed.pickupDate,
+            packageType: parsed.packageType || 'general',
           }),
         })
         const bookData = await bookRes.json()
@@ -347,7 +348,7 @@ export default function OrdersTab({
     setSendboxRates([])
     setSelectedCourierId('')
     setSelectedServiceCode('')
-    setShipRequestToken('')
+    setPackageType('general')
     setPackageWeight(1)
     setPickupDate(new Date().toISOString().split('T')[0])
 
@@ -405,7 +406,6 @@ export default function OrdersTab({
     setLoadingRates(true)
     setBookingError('')
     setSendboxRates([])
-    setShipRequestToken('')
     try {
       const res = await fetch('/api/sendbox-rates', {
         method: 'POST',
@@ -430,12 +430,12 @@ export default function OrdersTab({
           },
           weight: Number(weightVal) || 1,
           packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 5000),
+          packageType: packageType,
         }),
       })
       const data = await res.json()
       if (res.ok && Array.isArray(data.rates)) {
         setSendboxRates(data.rates)
-        setShipRequestToken(data.request_token || '')
         if (data.rates.length > 0) {
           setSelectedCourierId(data.rates[0].courier_id || '')
           setSelectedServiceCode(data.rates[0].service_code || '')
@@ -453,7 +453,7 @@ export default function OrdersTab({
 
   const initializeShipmentPayment = async () => {
     if (!bookingShipmentOrder || !store?.id) return
-    if (!selectedCourierId || !shipRequestToken) {
+    if (!selectedCourierId) {
       setBookingError('Please select a courier rate first.')
       return
     }
@@ -483,6 +483,26 @@ export default function OrdersTab({
           courierName: selectedRate.courier_name,
           shippingFee: Number(selectedRate.total_shipping_fee),
           courierId: selectedCourierId,
+          senderDetails: {
+            name: senderName || store?.businessName || '',
+            phone: senderPhone || store?.whatsappNumber || '',
+            email: senderEmail || store?.email || '',
+            address: senderStreet,
+            city: senderCity,
+            state: senderState,
+          },
+          receiverDetails: {
+            name: receiverName || '',
+            phone: receiverPhone || '',
+            email: receiverEmail || '',
+            address: receiverStreet,
+            city: receiverCity,
+            state: receiverState,
+            lga: receiverLga || '',
+          },
+          weight: Number(packageWeight) || 1,
+          pickupDate: pickupDate,
+          packageType: packageType,
         }),
       })
       const data = await res.json()
@@ -511,6 +531,7 @@ export default function OrdersTab({
             },
             weight: Number(packageWeight) || 1,
             pickupDate: pickupDate,
+            packageType: packageType,
           })
         )
         window.location.href = data.authorization_url
@@ -1424,6 +1445,25 @@ export default function OrdersTab({
                   />
                 </div>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Package Type</label>
+                    <select
+                      value={packageType}
+                      onChange={(e) => {
+                        setPackageType(e.target.value)
+                        if (packageWeight > 0) {
+                          triggerFetchRates(packageWeight)
+                        }
+                      }}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="general">General items</option>
+                      <option value="food">Food items</option>
+                    </select>
+                    {packageType === 'food' && (
+                      <p className="text-xs text-amber-600 mt-1">Food items can only be dropped off — pickup is not available.</p>
+                    )}
+                  </div>
                   <div className="flex-1">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Package Weight (kg)</label>
                     <input

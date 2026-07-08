@@ -51,6 +51,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/sendbox-webhook.js")
         return handler(req, res)
       }
+      case "sendbox-payment-initialize": {
+        const { default: handlerFunc } = await import("../src/api-handlers/sendbox-payment-initialize.js");
+        return await handlerFunc(req, res);
+      }
       case "ai-describe": {
         const { default: handlerFunc } = await import("../src/api-handlers/ai-describe.js");
         return await handlerFunc(req, res);
