@@ -464,18 +464,75 @@ function StoreCheckoutModal({
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
-                      Street address *
-                    </label>
-                    <input
-                      type="text"
-                      value={form.deliveryAddress}
-                      onChange={updateForm("deliveryAddress")}
-                      placeholder="House no., street name, landmark"
-                      className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                    />
+
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                      Delivery Details
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                          Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={form.customerName}
+                          onChange={updateForm("customerName")}
+                          placeholder="Recipient name"
+                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                          Phone *
+                        </label>
+                        <input
+                          type="tel"
+                          value={form.customerPhone}
+                          onChange={updateForm("customerPhone")}
+                          placeholder="08012345678"
+                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                          Street Address *
+                        </label>
+                        <input
+                          type="text"
+                          value={form.deliveryAddress}
+                          onChange={updateForm("deliveryAddress")}
+                          placeholder="House no., street name, landmark"
+                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                          City / LGA
+                        </label>
+                        <input
+                          type="text"
+                          value={form.deliveryLga}
+                          onChange={updateForm("deliveryLga")}
+                          placeholder="Local government area"
+                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                          State
+                        </label>
+                        <input
+                          type="text"
+                          value={form.deliveryState}
+                          onChange={updateForm("deliveryState")}
+                          placeholder="State"
+                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                        />
+                      </div>
+                    </div>
                   </div>
+
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
                       Order notes (optional)
@@ -530,6 +587,46 @@ function StoreCheckoutModal({
           {step === "payment" && (
             <div className="space-y-4">
               <CartSummary cart={cart} subtotal={subtotal} />
+
+              {!appliedDiscount ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase().slice(0, 20))}
+                    placeholder="Promo code"
+                    onKeyDown={(e) => e.key === "Enter" && handleApplyPromo()}
+                    className="flex-1 px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    disabled={!promoCode.trim() || promoLoading}
+                    className="px-5 py-3 text-sm font-bold text-green-600 border border-green-500 rounded-xl hover:bg-green-50 disabled:opacity-50 transition-all"
+                  >
+                    {promoLoading ? <Loader2 size={14} className="animate-spin" /> : "Apply"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm text-green-700 font-semibold">
+                    <Tag size={14} />
+                    {appliedDiscount.code}
+                    <span className="text-green-600 font-normal">−₦{discountAmount.toLocaleString()}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setAppliedDiscount(null); setPromoCode(""); }}
+                    className="p-1 rounded-lg hover:bg-green-100 text-green-600"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+              {promoError && (
+                <p className="text-red-500 text-xs">{promoError}</p>
+              )}
+
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Subtotal</span>

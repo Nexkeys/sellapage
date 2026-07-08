@@ -470,4 +470,68 @@ What did NOT change:
 
 `npm run build` passed with zero errors.
 
+---
+
+## 2026-07-08 — Checkout Delivery Fields Restructured + Promo Code Input Restored
+
+Commit keyword: `checkout-delivery-fields-promo-code`
+
+This update restructures the customer-facing checkout delivery form to match the shipment booking receiver layout, ensuring all fields needed for delivery are collected upfront. It also restores the missing promo code input in the checkout payment step.
+
+### What changed
+
+#### `src/pages/StorePage.jsx` — `StoreCheckoutModal`
+
+**Delivery step (step 2) — new field layout:**
+
+Previously the delivery step had: zone cards → street address → order notes. Now it matches the shipment booking receiver section:
+
+```
+Delivery Details
+┌─────────────────────────────────┐
+│ Name              │ Phone       │
+│ [pre-filled from  │ [pre-filled │
+│  step 1, editable] │  from step1]│
+├─────────────────────────────────┤
+│ Street Address (full width)     │
+├─────────────────────────────────┤
+│ City / LGA        │ State      │
+│ [auto from zone]  │ [auto from │
+│                    │  zone]     │
+├─────────────────────────────────┤
+│ Order notes (optional)         │
+└─────────────────────────────────┘
+```
+
+- Name and Phone are pre-filled from step 1 (customer's details) but remain editable so the customer can correct if needed.
+- Street Address stays as the main delivery address input.
+- City/LGA and State are auto-populated from the selected delivery zone but remain editable.
+- Order notes stays optional.
+- Zone selector cards remain unchanged above the new fields.
+
+**Payment step (step 3) — promo code input added:**
+
+A promo code input field is now shown in the payment step, between the cart summary and the price breakdown:
+
+- Text input with "Apply" button.
+- Enter key triggers validation.
+- While loading: spinner on the button.
+- If error: shows `promoError` below the input.
+- If discount applied: shows a green badge with the code, discount amount, and an "X" remove button.
+- Mobile-first styling matching existing patterns.
+
+The promo code logic (`handleApplyPromo`, `/api/validate-discount` validation, discount calculation, price breakdown display) already existed — only the input field was missing from the JSX.
+
+### What did NOT change
+
+- No backend changes. The `/api/validate-discount` endpoint and discount calculation logic were already working.
+- No changes to `OrdersTab.jsx`. The shipment booking modal already pre-fills receiver details from the order document.
+- Zone selection logic unchanged.
+- CartSummary component unchanged.
+- ServiceStorePage.jsx not affected (separate flow, no discount system).
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
 
