@@ -106,8 +106,8 @@ export default async function handler(req, res) {
     const rates = Array.isArray(quoteData?.rates) ? quoteData.rates : []
 
     return res.status(200).json({
-      rates: rates.map((r) => ({
-        courier_id: r.key || '',
+      rates: rates.map((r, index) => ({
+        courier_id: r.key || r.rate_card_id || String(r.courier_id || '') || `rate_${index}`,
         courier_name: r.name || r.description || 'Courier',
         fee: Number(r.fee || 0),
         total_shipping_fee: Number(r.fee || 0),

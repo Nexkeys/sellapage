@@ -441,4 +441,33 @@ Vendor clicks "Confirm & Book Shipment"
 
 `npm run build` passed with zero errors. Only pre-existing chunk size warning (2,872 kB).
 
+---
+
+## 2026-07-08 - Fix DHL Express Button Not Clickable
+
+Commit/push keyword: `sendbox-dhl-express-button-fix`
+
+This update fixes a bug where selecting a non-Standard courier (e.g. DHL Express) caused the "Confirm & Book Shipment" button to appear clickable but do nothing when clicked.
+
+Root cause:
+
+The button's `disabled` prop checks `!selectedCourierId`. The `courier_id` field was mapped as `r.key || ''` in the rate response. If a courier (like DHL Express) had an empty/null `key` field in the Sendbox API response, `courier_id` became `''` (falsy), keeping the button permanently disabled for that rate. The disabled button CSS (`disabled:bg-green-400`) is still green, so it looked clickable but wasn't.
+
+What changed:
+
+### File: `src/api-handlers/sendbox-rates.js`
+
+- Changed `courier_id` mapping from `r.key || ''` to `r.key || r.rate_card_id || String(r.courier_id || '') || \`rate_${index}\``.
+- Added array index parameter to the `.map()` callback for the fallback.
+- This ensures every rate always gets a unique, truthy `courier_id` regardless of which fields Sendbox populates for different courier types.
+
+What did NOT change:
+
+- No frontend changes. The button logic and disabled condition were already correct — the issue was purely in the backend rate mapping.
+- The `sendbox-create-shipment.js` and `sendbox-payment-initialize.js` handlers still receive the `courier_id` as before; it just always has a valid value now.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
 
