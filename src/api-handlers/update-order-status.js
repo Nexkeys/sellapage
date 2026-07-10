@@ -1,4 +1,4 @@
-import { getAdminDb } from './_lib/firebase-admin.js'
+import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
 
 const STATUS_LABELS = {
@@ -48,7 +48,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { getAdminAuth } = await import('./_lib/firebase-admin.js')
     const auth = getAdminAuth()
     const db = getAdminDb()
 

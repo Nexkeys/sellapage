@@ -2,6 +2,10 @@
 
 ##any changes or edits made to this codebase no matter how minimal be it logically , structurally , UI , Backend , Folder Structure must be updated in this README.md below so as to keep better and full organizing and understading of each changes and uses of each files and the current state also ⬇️⬇️⬇️
 
+### MUST READ BEFORE ANY CHANGES TO THIS README.md 
+### IF YOU'RE READING THIS README.md EITHER BY PROMPT OR ORDER ANY CHANGES THAT'S PENDING AND THAT'S BEEN APPLIED OR IMPLEMENTED MAKE SURE TO UPDATE IT IN THIS DOCUMENT 
+### FOR EXAMPLE IF WHEN READING THIS DOC A FEATURE OR BUG OR ISSUE IS MARKED AS PENDING AND IT'S BEEN WORKED DON'T REMOVE IT JUST MARK IT AS DONE AS THIS DOC IS THE CHANGELOG OF THIS ENTIRE CODEBASE SO NOTHING'S TO BE REMOVED ONLY ADDED 
+
 
 1. Who This Is For & The People Involved
 
@@ -643,7 +647,7 @@ https://sellapage.com.ng — hosted on Vercel, GitHub CI/CD, auto-deploy on push
 ### 1. Status Change Emails (URGENT — affects live users)
 Send email to customer when vendor changes order status to: confirmed, dispatched, delivered, cancelled.
 Handler: new addition to `paystack-webhook.js` or a new `update-order-status.js` handler.
-Template: match existing email style. Include order summary, new status, and (for delivered) review link.
+Template: match existing email style. Include order summary, new status, and (for delivered) review link. - DONE ALREADY
 
 ### 2. Custom Domain Engine
 Vendors connect their own domain (yourbrand.com) to their Sellapage store.
@@ -656,6 +660,68 @@ API: Prembly (`POST /identitypass/verification/cac/basic`).
 Keys needed: PREMBLY_SECRET_KEY, PREMBLY_APP_ID (already in Prembly dashboard — Live Mode).
 New dashboard tab: separate CAC tab in sidebar (Pro and Premium only).
 Plan gate: Pro and Premium.
+Api keys already added to .env and vercel environmnet variables as
+PREMBLY_SECRET_KEY=
+PREMBLY_PUBLIC_KEY=
+[x]Already ran - npm install --save prembly-react-kyc
+
+1
+Installation
+npm install --save prembly-react-kyc
+
+Copy
+2
+Configuration
+const config = {
+    first_name: 'John',
+    last_name: 'Doe',
+    email: 'john@example.com',
+    phone: '+2348012345678',
+    widget_key: 'your_widget_key_here',
+    widget_id: 'your_widget_id_here',
+    metadata: {
+      transaction_id: 'txn_123',
+    },
+    callback: (response: any) => {
+      console.log('Verification result:', response)
+    },
+  };
+
+Copy
+3
+Implementation
+import React from 'react';
+import useIdentityPayKYC from 'prembly-react-kyc';
+
+const App = () => {
+  const config = { ... }; // Use configuration from above
+  const verifyWithIdentity = useIdentityPayKYC(config);
+
+  return (
+    <button onClick={verifyWithIdentity}>
+      Verify Now
+    </button>
+  );
+};
+
+export default App;
+
+Copy
+4
+Response Handling
+// Success Response (Code: 00)
+{ 
+  code: "00", 
+  status: "success", 
+  message: "Verification Successful", 
+  data: { ... }, 
+  channel: "BVN/NIN/etc" 
+}
+
+// Failed/Cancelled Response
+{ code: "E01", message: "Failed", status: "failed" }
+{ code: "E02", message: "Verification Canceled", status: "failed" }
+
 
 ### 4. Live Stores Page
 Public page on sellapage.com.ng/stores — shows a moving grid/carousel of all active vendor stores.
