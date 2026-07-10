@@ -104,7 +104,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/sendbox-tracking.js");
         return await handlerFunc(req, res);
       }
-
+      case "update-order-status": {
+        const { default: handler } = await import("../src/api-handlers/update-order-status.js")
+        return handler(req, res)
+      }
 
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });

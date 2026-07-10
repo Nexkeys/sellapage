@@ -257,6 +257,32 @@ export default function OrdersTab({
     }
   }
 
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      const token = await user?.getIdToken()
+      const res = await fetch('/api/update-order-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storeId: store.id,
+          orderId,
+          newStatus,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        await onUpdateOrder?.(orderId, { status: newStatus })
+      } else {
+        console.error('[StatusChange] Failed:', data.error)
+      }
+    } catch (err) {
+      console.error('[StatusChange] Error:', err)
+    }
+  }
+
   const openDeleteDialog = (order) => {
     setConfirmingDelete(order)
     setDeleteError('')
@@ -881,7 +907,7 @@ export default function OrdersTab({
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <StatusPicker
                           status={order.status}
-                          onChange={(value) => handleInlineUpdate(order, { status: value })}
+                          onChange={(value) => handleStatusChange(order.id, value)}
                         />
                       </td>
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
@@ -977,7 +1003,7 @@ export default function OrdersTab({
                   </div>
                   <StatusPicker
                     status={order.status}
-                    onChange={(value) => handleInlineUpdate(order, { status: value })}
+                    onChange={(value) => handleStatusChange(order.id, value)}
                   />
                 </div>
 

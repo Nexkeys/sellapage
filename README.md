@@ -535,3 +535,291 @@ The promo code logic (`handleApplyPromo`, `/api/validate-discount` validation, d
 `npm run build` passed with zero errors.
 
 
+
+
+
+
+
+**###** -  *##*
+
+
+
+
+### 7/9/2026
+
+---
+
+## CURRENT PLATFORM STATUS — July 2026
+
+### Live URL
+https://sellapage.com.ng — hosted on Vercel, GitHub CI/CD, auto-deploy on push to main.
+
+### User Base
+200+ registered vendors. Zero paying subscribers currently. This is the critical growth challenge.
+
+### Infrastructure
+- Cron job at cron-job.org: `https://www.sellapage.com.ng/api/expiry-cron` — re-enabled July 2026 after fixing dead Netlify URL
+- Sendbox webhook registered at: `https://sellapage.com.ng/api/sendbox-webhook`
+- Expo project created at expo.dev (nexkeysagency team) — app project named "Sellapage"
+
+---
+
+## COMPLETED FEATURES — Full Changelog
+
+### Core Platform
+- Multi-tenant vendor stores with unique store URLs (`sellapage.com.ng/{storeName}`)
+- Firebase Auth + Firestore for vendor and customer data
+- Paystack in-app checkout (card, transfer, USSD)
+- Automatic order creation from Paystack webhook
+- Paystack subaccount split-payment per vendor
+- Customer CRM auto-creation on each order
+- Verified reviews system with email token
+- Discount and promo codes
+- Product and service listings with image upload (Cloudinary)
+- Store themes (20 premium themes)
+- WhatsApp Community Group Sync
+- Lead capture form
+- Marketing tab with daily tasks and points
+- AI description generation (NVIDIA NIM)
+- Policy Generator and Offer Name Lab tools
+- Mobile App tab (PWA install prompt) with full mobile app coming soon 
+- QR code for store link
+
+### Delivery & Logistics (Sendbox — migrated from Shipbubble July 2026)
+- Vendor sets pickup address in Delivery tab
+- Vendor books shipment from Orders tab: fills receiver details, weight, pickup date, gets live Sendbox courier rates
+- Vendor pays shipping fee + ₦250 Sellapage service charge via Paystack before shipment is created
+- After payment: two paths fire (redirect + webhook safety net) to auto-create shipment on Sendbox
+- Sendbox wallet is debited for courier cost; ₦250 service charge goes to Sellapage Paystack account
+- Tracking visible in Delivery tab with manual Refresh button
+- Sendbox webhook (`/api/sendbox-webhook`) auto-updates order status when Sendbox fires events
+- Waybill download link saved to order document after booking
+
+### Plan Gating (Four Tiers)
+- **Starter (₦0):** Products/Services, Categories, Ledger, Online Store, Mobile App, Marketing, Leads, Settings, Support, Billing
+- **Growth (₦5,000/mo):** Everything Starter + Analytics
+- **Pro (₦12,000/mo):** Everything Growth + Orders, Delivery, Customers, Reviews, Discounts, Payouts
+- **Premium (₦25,000/mo):** Everything Pro + advanced features (AI Business Partner, WhatsApp Business API, Staff Accounts, Ads integrations — planned)
+
+### Ledger Tab (All Plans)
+- Manual order logging with customer name, item, amount, date, notes
+- Monthly summary cards (orders this month, revenue this month, all-time totals)
+- Search, pagination (10 per page), edit, delete
+- CSV and PDF export with ₦ symbol correctly rendered
+- Status field (Paid/Pending/Partial), month/year filter
+
+### UI/Design System
+- Font: Bricolage Grotesque (headings) + DM Sans (body)
+- Brand green: #22c55e
+- All 18 dashboard tabs: mobile-first redesign complete
+- Public pages (Home, Pricing, Navbar, Footer): mobile-first redesign complete
+- Storefront pages (StorePage, ServiceStorePage): mobile-first
+
+---
+
+## OPEN BUGS & KNOWN ISSUES
+
+### Active Bugs
+1. **Status change emails not sent** — When vendor changes order status via StatusPicker dropdown (confirmed/dispatched/cancelled), no email is sent to the customer. Only `mark-delivered.js` sends an email (delivered status only via separate button). Fix needed: add email send to the `onUpdateOrder` handler for all status changes.
+
+
+### Resolved Bugs (Historical)
+- Bug 0: Dual service worker conflict — FIXED
+- Bug 1: Vendor new-order email never sent — FIXED (paystack-webhook.js)
+- Bug 2: Book Shipment white-screen crash (Package import missing) — FIXED
+- Bug 3: Shipbubble rates 422 (wrong address format) — FIXED via Sendbox migration
+- Bug 4: Firestore reviews index (collectionGroup query) — FIXED (manual index created in Firebase Console)
+- Bug 5: Payouts math string coercion — FIXED (Number() wrapping)
+- Bug 6: Download Receipt silent failure (cartItems not saved) — FIXED (paystack-webhook.js now saves cartItems array)
+- Bug 7: Cron job pointing to dead Netlify URL — FIXED (updated to Vercel route)
+- Bug 8: OrdersTab isPro crash (undefined variable) — FIXED
+- Bug 9: Review page Done button did nothing — FIXED (navigate('/'))
+- Bug 10: Submit review storeId lookup — FIXED (orderDoc.ref.parent.parent.id)
+
+---
+
+## PENDING FEATURES — Priority Order
+
+### 1. Status Change Emails (URGENT — affects live users)
+Send email to customer when vendor changes order status to: confirmed, dispatched, delivered, cancelled.
+Handler: new addition to `paystack-webhook.js` or a new `update-order-status.js` handler.
+Template: match existing email style. Include order summary, new status, and (for delivered) review link.
+
+### 2. Custom Domain Engine
+Vendors connect their own domain (yourbrand.com) to their Sellapage store.
+Tech: Vercel Domains API + Edge middleware for host-header routing.
+Plan gate: Pro and Premium only.
+
+### 3. CAC Trust Verification Badge
+Vendor enters RC number → Prembly Basic CAC endpoint verifies it → badge saved to store document → fully and well designed badge shown on storefront maintaining the customers storefront structure and design logic the badge needs to be well arranged and displayed well so customers see it.
+API: Prembly (`POST /identitypass/verification/cac/basic`).
+Keys needed: PREMBLY_SECRET_KEY, PREMBLY_APP_ID (already in Prembly dashboard — Live Mode).
+New dashboard tab: separate CAC tab in sidebar (Pro and Premium only).
+Plan gate: Pro and Premium.
+
+### 4. Live Stores Page
+Public page on sellapage.com.ng/stores — shows a moving grid/carousel of all active vendor stores.
+Data: query Firestore for stores where isActive: true, show store name, category, store clickable link.
+Each card links to the vendor's store URL.
+Navbar gets "Explore Stores" link button.
+Comes after CAC verification (badges will show on the store cards).
+
+### 5. Orders Tab Full Overhaul
+Full redesign — color, bit of motion, pagination, better status logic.
+New features:
+- Status timeline/audit log (each status change logged with timestamp and who changed it)
+- Locked editing after order reaches "delivered" status
+- Status change emails to customer (see item 1 above)
+- Better mobile card layout
+- Pagination
+- Color-coded status badges
+Spec session required before any code is written.
+
+### 6. Admin Panel
+Internal panel for Nex to manage the platform.
+Features: vendor list, plan management, Sendbox wallet balance monitoring, shipment usage tracking, revenue overview, support ticket management, feature flags, payouts tab accounts added for verification, cloudinary usage/bandwith, vendors details. well paginated and designed to feel like an actual admin panel and fine very fine and fully structured
+Auth: `ADMIN_SECRET_TOKEN` header (already in Vercel env).
+
+### 7. AI Business Partner
+Context-aware chat assistant inside the dashboard.
+Access: reads entire vendor dashboard context (orders, ledger, analytics, gproducts, services, customers, discount, reviews, delivery, ads, marketing, Business page, payouts tab, settings, support, leads, categories, Dashboard, Business automation, CAC, Multi User Tab).
+Write access: can log ledger entries, update order statuses, add products,services — only on vendor's explicit request.
+Daily cap: 30 requests/day per vendor.
+API: NVIDIA NIM (OpenAI-compatible, free tier credits).
+Plan gate: Premium only.
+Full feature spec mapping required before implementation.
+
+### 8. WhatsApp Business API Automation
+Broadcast manager, order notifications via WhatsApp.
+Requires Meta business verification and WABA approval — weeks of setup.
+Plan gate: Premium only.
+
+### 9. Staff/Team Accounts
+Multi-user access with role controls (admin, manager, viewer, editor, sales person, etc). via a onetime code that expires in 24 hour and can be regenerated
+Touches every dashboard tab's auth logic — largest scope of all pending features.
+Full feature spec mapping required before implementation
+Plan gate: Premium only.
+
+### 10. Loyalty Points System
+Repeat customer rewards, points tracking, redemption at checkout.
+Plan gate: Premium only.
+
+### 11. Abandoned Cart Recovery
+Detect incomplete checkouts, send WhatsApp or email follow-up.
+Plan gate: Premium only.
+
+### 12. Meta Ads Integration
+Self-managed or Sellapage-managed with 10% commission model.
+Requires Meta Business API approval.
+Plan gate: Premium only.
+
+### 13. Google Ads Integration
+Same model as Meta.
+Plan gate: Premium only.
+
+---
+
+## SELLAPAGE MOBILE APP — React Native (Expo)
+
+### Decision
+Stack: **React Native + Expo + NativeWind** (Tailwind for React Native).
+NOT a PWA. Separate codebase at `C:\Users\user\Documents\sellapage-app`.
+
+### Why This Stack
+- Same JSX and hook patterns as the web app — logic reuse
+- Expo handles iOS/Android in one codebase
+- EAS Build for production APK/IPA
+- NativeWind gives Tailwind className syntax in React Native
+- No Dart/Flutter learning curve
+
+### Setup Status
+- [x] Android Studio installed
+- [x] `expo` CLI installed globally: `npm install -g expo`
+- [x] `eas-cli` installed globally: `npm install -g eas-cli`
+- [x] Expo account created: expo.dev (nexkeysagency team)
+- [x] Expo project created: "Sellapage" at expo.dev
+- [x] Run `npx create-expo-app sellapage-app --template` to scaffold the project
+- [x] Install NativeWind: `npm install nativewind tailwindcss`
+- [ ] Configure Firebase (same project, new Firebase app for React Native)
+- [ ] Configure EAS: `eas build:configure`
+- [ ] Set up Expo Go on test Android device for local testing
+
+### App Architecture Notes
+- The app is NOT a port of the website. It is a native mobile experience.
+- Vendors use the app to manage their store (dashboard equivalent).
+- The app shares the same Firebase backend and Vercel API handlers as the web platform.
+- Design language: same brand green (#22c55e), Bricolage Grotesque via Google Fonts or Expo Google Fonts, fresh native layouts — not web layouts ported to mobile.
+- No homepage like the website. App opens directly to login/signup or the vendor dashboard.
+
+### Next Steps for App
+1. Scaffold project with Expo template
+2. Set up NativeWind + Tailwind config
+3. Set up Firebase for React Native
+4. Build auth screens (login, signup)
+5. Build vendor dashboard (home tab, products tab, orders tab)
+6. Build customer storefront browsing experience
+7. Integrate Paystack React Native SDK for checkout
+8. EAS Build for Android APK (test internally)
+9. Google Play Store submission
+
+---
+
+## LOGISTICS — Sendbox Integration Notes
+
+### Credentials (stored in Vercel env + local .env)
+- SENDBOX_ACCESS_TOKEN — permanent (per updated Sendbox docs, no expiry)
+- SENDBOX_REFRESH_TOKEN — kept for reference, not needed for API calls
+- SENDBOX_CLIENT_SECRET — kept for reference
+
+### Key Learnings
+- Sendbox quote endpoint requires: origin/destination nested objects with phone (normalized to +234), state, city, country, country_code, weight
+- State codes map: Lagos = LOS, Abuja/FCT = ABU, Rivers = RIV, etc. (see sendbox-rates.js STATE_CODES)
+- courier_id must be mapped from r.key || r.rate_card_id || fallback index — NOT r.courier_id (Sendbox does not populate courier_id in rate response)
+- Sendbox webhooks are push-based — zero API calls from Sellapage side, no rate limit concern
+- Sendbox wallet must be funded for shipment creation. Rate fetching is free.
+- Sendbox free tier has no monthly subscription — pay only per shipment booked
+
+### API Handlers
+- `sendbox-rates.js` — fetches live courier rates (no wallet cost)
+- `sendbox-create-shipment.js` — creates shipment label (debits Sendbox wallet)
+- `sendbox-tracking.js` — fetches live tracking status for a shipment
+- `sendbox-webhook.js` — receives status update callbacks from Sendbox, updates Firestore order
+
+---
+
+## Changelog
+
+### [2026-07-10] Order Status API Integration
+
+#### Added
+- **New API Handler**: `src/api-handlers/update-order-status.js`
+  - Handles manual order status changes from the Orders dashboard
+  - Validates vendor authorization via Firebase ID token
+  - Updates Firestore order records with new status and timestamp
+  - Sends customer notification emails with status-specific messages and formatting
+  - Supports all order statuses: pending, confirmed, dispatched, delivered, cancelled
+  - Prevents status changes on already-delivered orders
+  - Includes review prompt links for delivered orders
+  - Includes Sendbox tracking links for dispatched orders
+  
+- **API Routing**: Added `update-order-status` case to `api/[...route].js`
+  - Routes POST requests to the new handler
+  - Follows existing catch-all router pattern
+
+- **Dashboard Integration**: Updated `src/components/dashboard/OrdersTab.jsx`
+  - New `handleStatusChange()` async function replaces direct Firestore updates
+  - StatusPicker components (desktop table & mobile cards) now use API endpoint
+  - Maintains local state sync with `onUpdateOrder()` callback after API success
+  - Improves security by enforcing server-side authorization checks
+
+#### Changes
+- OrdersTab: Replaced inline `handleInlineUpdate()` calls for status changes with server-side API validation
+- All order status updates now route through `/api/update-order-status` with Bearer token authentication
+- Status changes now trigger email notifications to customers
+
+#### Benefits
+- **Security**: Server-side authorization prevents unauthorized status changes via direct Firestore access
+- **Notifications**: Customers receive status update emails with formatted HTML templates, color-coded by status
+- **Audit Trail**: Updates tracked in Firestore `statusHistory` with ISO timestamps for compliance
+- **Consistency**: Single source of truth for order status mutations
+- **User Experience**: Customers get contextual CTAs (review links, tracking links) based on order status
