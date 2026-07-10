@@ -137,6 +137,7 @@ export default function OrdersTab({
   const [confirmingDelete, setConfirmingDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [statusError, setStatusError] = useState('')
 
   // Sendbox Shipment Booking States
   const [bookingShipmentOrder, setBookingShipmentOrder] = useState(null)
@@ -259,6 +260,13 @@ export default function OrdersTab({
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
+      const currentOrder = orders.find(o => o.id === orderId)
+      if (currentOrder?.status === 'delivered') {
+        setBookingError('This order has already been delivered and cannot be changed.')
+        setTimeout(() => setBookingError(''), 4000)
+        return
+      }
+
       const token = await user?.getIdToken()
       const res = await fetch('/api/update-order-status', {
         method: 'POST',
@@ -764,6 +772,13 @@ export default function OrdersTab({
         </div>
       </div>
 
+      {(bookingError || statusError) && (
+        <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs font-semibold text-amber-700">
+          <AlertCircle size={13} className="flex-shrink-0" />
+          {bookingError || statusError}
+        </div>
+      )}
+
       {ledgerError && (
         <div className="flex items-start gap-2.5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
@@ -1100,6 +1115,12 @@ export default function OrdersTab({
         </>
       )}
 
+      <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+        <Info size={13} className="flex-shrink-0 text-gray-400 mt-0.5" />
+        <p className="text-[11px] text-gray-400 leading-relaxed">
+          <span className="font-semibold text-gray-600">Order status guide:</span> Only update the status when it reflects the actual state of the order. Once an order is marked as <span className="font-semibold">Delivered</span>, the status is locked and cannot be changed.
+        </p>
+      </div>
 
       {confirmingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm">

@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
 
@@ -79,11 +80,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Cannot change status of a delivered order' })
     }
 
-    await orderRef.update({
+    const updatePayload = {
       status: newStatus,
       updatedAt: new Date().toISOString(),
       [`statusHistory.${newStatus}`]: new Date().toISOString(),
-    })
+    }
+
+    let reviewToken = orderData.reviewToken || null
+
+    if (newStatus === 'delivered') {
+      reviewToken = crypto.randomUUID()
+      updatePayload.reviewToken = reviewToken
+      updatePayload.reviewTokenUsed = false
+      updatePayload.reviewSubmitted = false
+      updatePayload.deliveredAt = new Date().toISOString()
+    }
+
+    await orderRef.update(updatePayload)
 
     const storeSnap = await db.collection('stores').doc(storeId).get()
     const storeData = storeSnap.data() || {}
@@ -114,10 +127,16 @@ export default async function handler(req, res) {
                   <p style="color: #374151; font-size: 14px; margin: 0 0 8px 0;">${itemsText}</p>
                   <p style="color: #16a34a; font-weight: bold; font-size: 16px; margin: 0;">Total: ₦${grandTotal.toLocaleString('en-NG')}</p>
                 </div>
-                ${newStatus === 'delivered' && orderData.reviewToken && !orderData.reviewSubmitted ? `
-                  <div style="text-align: center; margin-top: 24px; padding: 20px; background-color: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
-                    <p style="color: #15803d; font-size: 14px; margin: 0 0 12px 0;">Enjoyed your order? Leave a quick review!</p>
-                    <a href="https://sellapage.com.ng/review?token=${orderData.reviewToken}" style="background-color: #16a34a; color: white; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Leave a Review</a>
+                ${newStatus === 'delivered' && reviewToken ? `
+                  <div style="border: 2px solid #16a34a; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: center;">
+                    <h4 style="color: #111827; font-size: 16px; font-weight: bold; margin: 0 0 8px 0;">Enjoyed your order?</h4>
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 16px 0;">Leave a quick review and help other shoppers.</p>
+                    <a 
+                      href="https://sellapage.com.ng/review?token=${reviewToken}"
+                      style="background-color: #16a34a; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;"
+                    >
+                      Leave a Review
+                    </a>
                   </div>
                 ` : ''}
                 ${newStatus === 'dispatched' && orderData.sendboxTrackingUrl ? `

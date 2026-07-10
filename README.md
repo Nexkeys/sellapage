@@ -889,3 +889,348 @@ NOT a PWA. Separate codebase at `C:\Users\user\Documents\sellapage-app`.
 - **Audit Trail**: Updates tracked in Firestore `statusHistory` with ISO timestamps for compliance
 - **Consistency**: Single source of truth for order status mutations
 - **User Experience**: Customers get contextual CTAs (review links, tracking links) based on order status
+
+
+
+
+
+
+
+
+###
+# TOPSHIP API INTEGRATION PLAN 
+Now I have everything confirmed. Here's the final comprehensive plan:
+
+---
+
+## Topship + Sendbox Dual Integration — Final Plan
+
+### Confirmed Decisions
+
+| Decision | Answer |
+|----------|--------|
+| Provider selector UI | **Option A** — separate modal with two cards, clicking one opens the shipment form |
+| Insurance fees | Visible to vendor — passed as `insuranceType` + `insuranceCharge` in booking payload |
+| Wallet funding | Nex funds Topship wallet manually (same as Sendbox) |
+| Tracking polling | Cron job or page-load poll (Topship has no webhooks) |
+| KOBO conversion | All Topship charges in KOBO — convert to Naira for display |
+| Address splitting | Smart splitting for 45-char limit on addressLine1/2/3 |
+| Insurance calculation | API is silent on how to calculate — pass `insuranceType` + `insuranceCharge: 0`, let API respond with actual charge in `save-shipment` response. If it can't, default to `"None"` |
+
+### Topship API Endpoints We'll Use
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/get-shipment-rate` | GET | Rate quotes (Budget/Express/Premium/etc.) |
+| `/save-shipment` | POST | Book shipment as draft |
+| `/pay-from-wallet` | POST | Pay for draft shipment from Topship wallet |
+| `/track-shipment` | GET | Track shipment by trackingId |
+| `/get-shipments` | GET | List booked shipments (for delivery tab) |
+| `/cancel-shipment` | POST | Cancel draft/confirmed shipment |
+| `/get-countries` | GET | List countries (for future international) |
+| `/get-states` | GET | List states by country |
+| `/get-cities` | GET | List cities by country |
+
+### Key API Rules (from docs)
+
+- All charges in **KOBO** (multiply Naira by 100)
+- `addressLine1/2/3` max **45 characters** each — smart splitting needed
+- `shipmentCharge` must come from `/get-shipment-rate` response
+- `valueAddedTaxCharge` = **7.5% of totalCharge**
+- `insuranceCharge` is passed as input — API may calculate or accept
+- `shipmentRoute`: `"Domestic"` / `"Export"` / `"Import"`
+- `itemCollectionMode`: `"PickUp"` / `"DropOff"`
+- Auth: `Authorization: Bearer ${TOPSHIP_API_KEY}`
+
+### Flow Diagram
+
+```
+Vendor clicks delivery icon on order
+  → Provider selector modal opens:
+    ┌──────────────────────┐  ┌──────────────────────┐
+    │      Sendbox         │  │      Topship          │
+    │   Local delivery     │  │  Local + International│
+    └──────────────────────┘  └──────────────────────┘
+  → Vendor clicks one
+  → Full shipment booking modal opens:
+    - Fetches rates from THAT provider
+    - Shows rates with prices
+    - Vendor fills: weight, pickup date
+    - If Topship: vendor also selects item category + insurance tier
+    - If Sendbox: vendor selects package type (General/Food)
+  → Clicks "Confirm & Book Shipment"
+  → Payment modal opens:
+    Shipping fee:        ₦X,XXX
+    Insurance:           ₦XXX (if Topship)
+    Service charge:      ₦250
+    Total:               ₦X,XXX
+  → Paystack checkout
+  → Paystack metadata: { provider, ... }
+  → On success:
+    - Redirect: frontend reads provider → /api/{provider}-create-shipment
+    - Webhook safety net: reads metadata.provider → correct handler
+  → Shipment booked
+  → Order doc: provider name, tracking ID, tracking URL
+  → Delivery tab: tracking per provider (separate logic)
+```
+
+### Files to Create/Modify
+
+| # | File | Change | Type |
+|---|------|--------|------|
+| 1 | `src/components/dashboard/OrdersTab.jsx` | Provider selector modal, `selectedProvider` state, route rate fetch to correct API, Topship-specific fields (category, insurance), pass provider to payment/sessionStorage | Modify |
+| 2 | `src/api-handlers/topship-rates.js` | GET `/get-shipment-rate`, map response to unified rate format | **New** |
+| 3 | `src/api-handlers/topship-create-shipment.js` | POST `/save-shipment` + POST `/pay-from-wallet`, handle 2-step booking, KOBO conversion, VAT calculation | **New** |
+| 4 | `src/api-handlers/_lib/topship-booking.js` | Shared helper for Topship API calls (rate quote, booking, tracking) | **New** |
+| 5 | `src/api-handlers/sendbox-payment-initialize.js` | Add `provider` to Paystack metadata, include Topship-specific fields (pricingTier, itemCategory, insuranceType) | Modify |
+| 6 | `src/api-handlers/paystack-webhook.js` | Read `metadata.provider` in shipment branch, route to correct handler | Modify |
+| 7 | `api/[...route].js` | Add `topship-rates` and `topship-create-shipment` route cases | Modify |
+| 8 | `README.md` | Changelog entry | Modify |
+
+### Detailed File Changes
+
+#### 1. `src/components/dashboard/OrdersTab.jsx`
+
+**New state:**
+```js
+const [selectedProvider, setSelectedProvider] = useState('')
+const [showProviderModal, setShowProviderModal] = useState(false)
+const [itemCategory, setItemCategory] = useState('Fashion')
+const [insuranceType, setInsuranceType] = useState('None')
+```
+
+**Provider selector modal:**
+- Triggered by `openShipmentModal(order)` (replaces `openSendboxModal`)
+- Shows two cards:
+  - **Sendbox** — "Local delivery across Nigeria"
+  - **Topship** — "Local + International shipping, 150+ countries"
+- Clicking a card: sets `selectedProvider`, closes provider modal, opens shipment form
+
+**Rate fetching:**
+```js
+const triggerFetchRates = async (weightVal, detailsObj = {}) => {
+  // ... existing address validation ...
+  
+  if (selectedProvider === 'sendbox') {
+    // POST /api/sendbox-rates (existing)
+  } else if (selectedProvider === 'topship') {
+    // GET /api/topship-rates?shipmentDetail=...
+  }
+}
+```
+
+**Topship-specific fields (shown when selectedProvider === 'topship'):**
+- Item Category dropdown (38 categories)
+- Insurance Type dropdown (None / Premium / Extended)
+- No package type selector
+
+**Sendbox-specific fields (shown when selectedProvider === 'sendbox'):**
+- Package Type dropdown (General / Food)
+- No category or insurance fields
+
+**Payment init:**
+- Pass `provider: selectedProvider` to `/api/sendbox-payment-initialize`
+- Pass Topship-specific fields: `pricingTier`, `itemCategory`, `insuranceType`
+
+**SessionStorage:**
+- Add `provider: selectedProvider` to sessionStorage data for redirect flow
+
+#### 2. `src/api-handlers/topship-rates.js` (NEW)
+
+```
+GET /api/topship-rates?storeId=xxx&senderCity=xxx&receiverCity=xxx&weight=xxx
+```
+
+- Builds Topship query params from request body
+- Calls `https://api-topship.com/api/get-shipment-rate?shipmentDetail={...}`
+- Auth: `Bearer ${TOPSHIP_API_KEY}`
+- Maps response to unified format:
+  ```js
+  {
+    courier_id: rate.mode,        // "Budget", "Express", "Premium", etc.
+    courier_name: rate.mode,
+    fee: rate.cost / 100,         // KOBO → Naira
+    total_shipping_fee: rate.cost / 100,
+    delivery_eta: rate.duration,
+    provider: 'topship',
+    pricing_tier: rate.pricingTier,
+  }
+  ```
+
+#### 3. `src/api-handlers/topship-create-shipment.js` (NEW)
+
+**2-step booking flow:**
+
+Step 1 — POST `/save-shipment`:
+```js
+{
+  "shipment": [{
+    "items": [{ category, description, weight, quantity, value }],
+    "itemCollectionMode": "PickUp" | "DropOff",
+    "pricingTier": "Budget" | "Express" | "Premium",
+    "insuranceType": "None" | "Premium" | "Extended",
+    "insuranceCharge": 0,  // Let API calculate
+    "shipmentRoute": "Domestic",
+    "shipmentCharge": rateFromQuote,  // From /get-shipment-rate
+    "pickupCharge": 0,
+    "valueAddedTaxCharge": totalCharge * 0.075,
+    "senderDetail": { name, email, phoneNumber, addressLine1, addressLine2, addressLine3, country, state, city, countryCode, postalCode },
+    "receiverDetail": { name, email, phoneNumber, addressLine1, addressLine2, addressLine3, country, state, city, countryCode, postalCode }
+  }]
+}
+```
+
+Response includes `id` (shipment ID) and full charge breakdown.
+
+Step 2 — POST `/pay-from-wallet`:
+```js
+{ "detail": { "shipmentId": "..." } }
+```
+
+Response confirms payment and returns tracking info.
+
+**Address smart splitting:**
+```js
+function splitAddress(address, maxLen = 45) {
+  if (address.length <= maxLen) return { line1: address, line2: '', line3: '' }
+  // Split at spaces near the limit
+  const words = address.split(' ')
+  let line1 = '', line2 = '', line3 = ''
+  for (const word of words) {
+    if ((line1 + ' ' + word).trim().length <= maxLen) {
+      line1 = (line1 + ' ' + word).trim()
+    } else if ((line2 + ' ' + word).trim().length <= maxLen) {
+      line2 = (line2 + ' ' + word).trim()
+    } else {
+      line3 = (line3 + ' ' + word).trim()
+    }
+  }
+  return { line1, line2, line3 }
+}
+```
+
+**KOBO conversion:**
+- All monetary values from frontend (Naira) → multiply by 100 for Topship API
+- All monetary values from Topship API (KOBO) → divide by 100 for display
+
+#### 4. `src/api-handlers/_lib/topship-booking.js` (NEW)
+
+Shared helper with:
+- `getTopshipRates({ senderCity, receiverCity, weight })` — rate quote
+- `bookTopshipShipment({ ... })` — save-shipment + pay-from-wallet
+- `trackTopshipShipment(trackingId)` — tracking
+- `cancelTopshipShipment(shipmentId)` — cancellation
+- Address splitting utility
+
+#### 5. `src/api-handlers/sendbox-payment-initialize.js`
+
+- Add `provider` to Paystack metadata
+- Add Topship-specific fields: `pricingTier`, `itemCategory`, `insuranceType`
+
+#### 6. `src/api-handlers/paystack-webhook.js`
+
+In `transactionType === "shipment"` branch:
+```js
+const provider = data.metadata?.provider
+
+if (provider === 'sendbox') {
+  // Existing Sendbox logic
+  const { createSendboxShipment } = await import('./_lib/sendbox-booking.js')
+  // ... book shipment
+} else if (provider === 'topship') {
+  // New Topship logic
+  const { bookTopshipShipment } = await import('./_lib/topship-booking.js')
+  // ... book shipment (2-step: save + pay from wallet)
+}
+```
+
+#### 7. `api/[...route].js`
+
+Add cases:
+```js
+case "topship-rates": {
+  const { default: handlerFunc } = await import("../src/api-handlers/topship-rates.js");
+  return await handlerFunc(req, res);
+}
+case "topship-create-shipment": {
+  const { default: handlerFunc } = await import("../src/api-handlers/topship-create-shipment.js");
+  return await handlerFunc(req, res);
+}
+```
+
+### Tracking in Delivery Tab — Separate Logic
+
+Order doc stores `provider` field. Delivery tab checks:
+
+**If provider === 'sendbox':**
+- Existing fields: `sendboxTrackingId`, `sendboxTrackingUrl`, `sendboxStatus`
+- Webhook or polling for updates
+
+**If provider === 'topship':**
+- New fields: `topshipTrackingId`, `topshipTrackingUrl`, `topshipStatus`
+- Poll `/get-shipments` or `/track-shipment` for updates
+- Could set up a cron job that polls every 30 minutes for active Topship shipments
+- Or poll on page load when vendor opens delivery tab
+
+The two tracking systems stay completely separate — never mix.
+
+### Item Categories (Topship)
+
+Full list for the dropdown:
+```
+Appliance, BeautyProducts, ComputerSupplies, HomeDecor, BabySupplies,
+TelevisionAndEntertainment, KitchenAccessories, Furniture, Gadgets,
+SolarPanelsAndInverter, VehicleParts, ClothingAndTextile, SportAccessories,
+GymEquipment, Fashion, Education, Drones, Document, OriginalArtwork,
+ArtPrints, FoodItems, Medication, Fish, Herbs, BatteryLiquidElectrical,
+Crayfish, Driedfish, Prawns, Otherfish, GoatMeat, CowSkin, Beef, Snail,
+OtherMeats, PaintingsAndDrawings, ArtifactsAndHistoricalMonuments,
+LaptopsAndTablets, Phones, HeadphonesOrEarphonesOrAirPods, Wristwatches,
+VideoGames, OtherElectronicsOrGadgets, GoldSilverAndFineJewelry,
+PreciousStonesAndJewels, CostumeJewelry, HerbsAndPlants,
+FoodstuffAndFoodProducts, Drinks, Others
+```
+
+For Sellapage vendors (fashion sellers, food vendors, freelancers), common categories would be:
+- **Fashion** — clothing, accessories
+- **FoodItems** — food vendors
+- **LaptopsAndTablets** / **Phones** — electronics
+- **Document** — freelancers sending documents
+- **Others** — fallback
+
+### Implementation Phases
+
+| Phase | What | Effort | Dependencies |
+|-------|------|--------|-------------|
+| **1** | Provider selector modal (two cards) | Small | None |
+| **2** | `topship-rates.js` + route | Small | Staging API key |
+| **3** | Wire rate fetch to correct API | Small | Phase 1+2 |
+| **4** | `topship-create-shipment.js` + route (2-step booking) | Medium | Phase 2 |
+| **5** | Payment init + webhook routing by provider | Small | Phase 4 |
+| **6** | Topship form fields (category, insurance) | Small | Phase 1 |
+| **7** | Address smart splitting | Small | None |
+| **8** | Separate tracking in delivery tab | Small | Phase 4 |
+| **9** | Testing on staging | Medium | All above |
+
+### Risks & Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Insurance charge calculation (API silent) | Pass `insuranceCharge: 0`, let API respond. If it returns actual charge, use it. If not, default to `"None"`. Test on staging. |
+| Address 45-char limit | Smart splitting at word boundaries. Test with long Nigerian addresses. |
+| Wallet funding | Nex funds manually (same as Sendbox). No API dependency. |
+| No webhooks | Cron job polling every 30 min for active Topship shipments. Or page-load poll in delivery tab. |
+| KOBO conversion | Consistent multiply/divide at API boundary. Display always in Naira. |
+| Topship production key | Only after staging integration + due diligence. Sendbox stays live during this period. |
+| Cross-African routing | Topship is Nigeria-centric now. Evaluate when expansion happens. May need separate Topship accounts per country. |
+
+## HERE'S WHY INTEGRATING BOTH IS SMART - Sendbox handles domestic deliveries (Lagos to Lagos, Lagos to Abuja, etc.)
+Topship handles international deliveries (Nigeria to UK, USA, etc.) and also domestic via their aggregated couriers (DHL, FedEx, GIG, etc.)
+
+
+### Build Status After Implementation
+
+`npm run build` must pass with zero errors after each phase.
+
+## N.B - NO LOGIC IS CURRENTLY GOING TO BE CHANGED IN THE CURRENT SENDBOX LOGIC AT ALL BECAUSE IT'S WROKING AS IS JUST RESTRUCTURING WE'RE ADDING BECAUSE OF THE TOPSHIP INTEGRATION ACCORDING TO THE PLAN YOU CAN ALSO READ THE Topship-Docs.txt for any question you need answering 
+

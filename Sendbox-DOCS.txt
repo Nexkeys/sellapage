@@ -1,0 +1,2771 @@
+#//sellapage/Sendbox-DOCS.txt/
+# Introduction 
+Sendbox API gives you an all access pass to all Sendbox features.. that 
+you can use on our dashboard and any third-party app you might 
+want to integrate sendbox with. 
+This API docs walks you through the process of using Sendbox API.; 
+### About Sendbox; 
+Sendbox is a robust software technology that aggregates logistics 
+services on demand. It is truly the all-in-one solution for all your 
+shipping needs, from request to delivery and payments for shipped 
+goods. 
+With the APIs in this documentation you can integrate Sendbox with 
+your existing infrastructure for seamless service delivery and escrow 
+payment. 
+# Basics 
+Sendbox API are HTTP based 
+[RESTful](https://en.wikipedia.org/wiki/Representational_state_transf
+er) APIs. API request and response format are in JSON. &#x20; 
+* All request should be issued using HTTP protocol 
+* All request requires authentication&#x20; 
+* Content type for responses will always be `application/json`&#x20; 
+## API Request&#x20; 
+To construct an API request the following components are 
+required.&#x20; 
+| Component                          
+| 
+| Description                                                                    
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | 
+| The HTTP method                    
+| <p><code>GET</code>. Request  data 
+from resource</p><p><code>POST</code> . Submit data to a resource 
+to process </p><p><code>PUT</code> . Update a resource 
+</p><p><code>DELETE</code> . Deletes a resource  </p> | 
+| The URL to the staging API service | 
+<https://sandbox.staging.sendbox.co/shipping>                                                          
+| 
+| The URL to the live API service    | 
+[https://live.sendbox.co/shipping/](https://api.sendbox.co/shipping/)                     
+| 
+| HTTP request header                
+| Includes the `Content-type` header 
+with the value `application/json`                                                                                 
+| 
+| required for making a request                                
+| A JSON request body                
+| 
+{% hint style="info" %} 
+**You are advised to make all test request on the staging API and 
+ensure there are no errors before you deploy to users using the live 
+API**&#x20; 
+{% endhint %} 
+## API response&#x20; 
+This describes the response format for Sendbox API&#x20; 
+Sendbox API calls return HTTP status codes in the response headers. 
+API calls also return JSON response bodies that include information 
+about the resource. 
+Each REST API request returns a success or error HTTP status code.we 
+will talk about errors latter in the docs but for now, we will focus on 
+success.&#x20; 
+| status code | Description                                                                  
+| ----------- | 
+| ---------------------------------------------------------------------------- | 
+| 200         
+| A successful `GET` request                                                   
+| 201         
+| A successful `POST`, `PUT` request means your request is 
+created or updated. | 
+## Fetching Data 
+Fetching data means you will like to retrieve data from a resource. 
+Most times, you are required to set header parameters usually the 
+content-type and the authorization key and make a get request to an 
+endpoint. For example, let say we want to get all shipments, we can 
+| 
+simply make a get request and a successful request will come back 
+with a 200 status code and return all the shipments in JSON format. 
+## Fetch Data 
+<https://sandbox.staging.sendbox.co/shipping> 
+[`https://live.sendbox.co/shipping/shipments`<br>](<https://api.sendb
+ox.co/shipping/shipments&#xA;>) 
+In this example, we are making a get request to shipment endpoint to 
+fetch all shipments&#x20; 
+{% tabs %} 
+{% tab title="Request" %} 
+## Headers&#x20; 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-key | 
+| Content-type  | String | application/json  | 
+| {% endtab %}  |        
+|                   
+{% tab title="Response" %} 
+200: OK&#x20; 
+| 
+The response body is always in `JSON` format. It contains all 
+shipments details&#x20; 
+``` 
+{ 
+"next_page": "?page=2", 
+"prev": null, 
+    "page_by": { 
+        "total": 79, 
+        "pages": 4, 
+        "next": 2, 
+        "per_page": 20, 
+        "prev": null, 
+        "page": 1 
+    }, 
+     
+     "print_string": 
+"U0VMRUNUIHNoaXBtZW50LmlkIEFTIHNoaXBtZW50X2lkLCBzaGlwb
+WVudC5jb2RlIEFTIHNoaXBtZW50X2NvZGUsIHNoaXBtZW50LnJlZmVy
+ZW5jZV9jb2RlIEFTIHNoaXBtZW50X3JlZmVyZW5jZV9jb2RlLCBzaGlwb
+WVudC5ub3RlcyBBUyBzaGlwbWVudF9ub3Rlcywgc2hpcG1lbnQuYmFyY
+29kZSBBUyBzaGlwbWVudF9iYXJjb2RlLCBzaGlwbWVudC5hd2Jfbm8gQ
+VMgc2hpcG1lbnRfYXdiX25vLCBzaGlwbWVudC5hd2JfZW5kcG9pbnQgQ
+VMgc2hpcG1lbnRfYXdiX2VuZHBvaW50LCBzaGlwbWVudC5wYWNrYWdl
+X3R5cGVfY29kZSBBUyBzaGlwbWVudF9wYWNrYWdlX3R5cGVfY29kZSw
+gc2hpcG1lbnQub3JpZ2luX21lcmNoYW50X2lkIEFTIHNoaXBtZW50X29y
+aWdpbl9tZXJjaGFudF9pZCwgc2hpcG1lbnQub3JpZ2luX25hbWUgQVMgc
+2hpcG1lbnRfb3JpZ2luX25hbWUsIHNoaXBtZW50Lm9yaWdpbl9waG9uZ
+SBBUyBzaGlwbWVudF9vcmlnaW5fcGhvbmUsIHNoaXBtZW50Lm9yaWd
+pbl9lbWFpbCBBUyBzaGlwbWVudF9vcmlnaW5fZW1haWwsIHNoaXBtZ
+W50Lm9yaWdpbl9zdHJlZXQgQVMgc2hpcG1lbnRfb3JpZ2luX3N0cmVld
+Cwgc2hpcG1lbnQub3JpZ2luX2NpdHkgQVMgc2hpcG1lbnRfb3JpZ2luX2N
+pdHksIHNoaXBtZW50Lm9yaWdpbl9jaXR5X2lkIEFTIHNoaXBtZW50X29
+yaWdpbl9jaXR5X2lkLCBzaGlwbWVudC5vcmlnaW5fbGF0IEFTIHNoaXBt
+ZW50X29yaWdpbl9sYXQsIHNoaXBtZW50Lm9yaWdpbl9sbmcgQVMgc2
+hpcG1lbnRfb3JpZ2luX2xuZywgc2hpcG1lbnQub3JpZ2luX3Bvc3RfY29kZS
+BBUyBzaGlwbWVudF9vcmlnaW5fcG9zdF9jb2RlLCBzaGlwbWVudC5vcml
+naW5fc3RhdGVfY29kZSBBUyBzaGlwbWVudF9vcmlnaW5fc3RhdGVfY29
+kZSwgc2hpcG1lbnQub3JpZ2luX2NvdW50cnlfY29kZSBBUyBzaGlwbWVu
+dF9vcmlnaW5fY291bnRyeV9jb2RlLCBzaGlwbWVudC5kZXN0aW5hdGlvb
+l9tZXJjaGFudF9pZCBBUyBzaGlwbWVudF9kZXN0aW5hdGlvbl9tZXJjaG
+FudF9pZCwgc2hpcG1lbnQuZGVzdGluYXRpb25fbmFtZSBBUyBzaGlwbW
+VudF9kZXN0aW5hdGlvbl9uYW1lLCBzaGlwbWVudC5kZXN0aW5hdGlvbl
+9waG9uZSBBUyBzaGlwbWVudF9kZXN0aW5hdGlvbl9waG9uZSwgc2hpc
+G1lbnQuZGVzdGluYXRpb25fZW1haWwgQVMgc2hpcG1lbnRfZGVzdGluY
+XRpb25fZW1haWwsIHNoaXBtZW50LmRlc3RpbmF0aW9uX3N0cmVldC
+BBUyBzaGlwbWVudF9kZXN0aW5hdGlvbl9zdHJlZXQsIHNoaXBtZW50L
+mRlc3RpbmF0aW9uX2NpdHkgQVMgc2hpcG1lbnRfZGVzdGluYXRpb25fY
+2l0eSwgc2hpcG1lbnQuZGVzdGluYXRpb25fbGF0IEFTIHNoaXBtZW50X2
+Rlc3RpbmF0aW9uX2xhdCwgc2hpcG1lbnQuZGVzdGluYXRpb25fbG5nIEF
+TIHNoaXBtZW50X2Rlc3RpbmF0aW9uX2xuZywgc2hpcG1lbnQuZGVzdGl
+uYXRpb25fcG9zdF9jb2RlIEFTIHNoaXBtZW50X2Rlc3RpbmF0aW9uX3Bv
+c3RfY29kZSwgc2hpcG1lbnQuZGVzdGluYXRpb25fc3RhdGVfY29kZSBBUy
+BzaGlwbWVudF9kZXN0aW5hdGlvbl9zdGF0ZV9jb2RlLCBzaGlwbWVudC
+5kZXN0aW5hdGlvbl9jb3VudHJ5X2NvZGUgQVMgc2hpcG1lbnRfZGVzdGl
+uYXRpb25fY291bnRyeV9jb2RlLCBzaGlwbWVudC50aW1lX3NjaGVkdWxl
+X2NvZGUgQVMgc2hpcG1lbnRfdGltZV9zY2hlZHVsZV9jb2RlLCBzaGlwbW
+VudC5hY2NlcHRfdmFsdWVfb25fZGVsaXZlcnkgQVMgc2hpcG1lbnRfYWN
+jZXB0X3ZhbHVlX29uX2RlbGl2ZXJ5LCBzaGlwbWVudC50b3RhbF92YWx1
+ZSBBUyBzaGlwbWVudF90b3RhbF92YWx1ZSwgc2hpcG1lbnQuYW1vdW5
+0X3RvX3JlY2VpdmUgQVMgc2hpcG1lbnRfYW1vdW50X3RvX3JlY2Vpdm
+UsIHNoaXBtZW50LnBpY2t1cF9ldGEgQVMgc2hpcG1lbnRfcGlja3VwX2V0
+YSwgc2hpcG1lbnQubGFzdF9kaXNwYXRjaF90aW1lIEFTIHNoaXBtZW50
+X2xhc3RfZGlzcGF0Y2hfdGltZSwgc2hpcG1lbnQuYWNjZXB0X2N1c3RvbV
+9mZWUgQVMgc2hpcG1lbnRfYWNjZXB0X2N1c3RvbV9mZWUsIHNoaXBt
+ZW50LnJhdGVfZmVlIEFTIHNoaXBtZW50X3JhdGVfZmVlLCBzaGlwbW
+VudC5jdXN0b21fZmVlIEFTIHNoaXBtZW50X2N1c3RvbV9mZWUsIHNoa
+XBtZW50LmRpc2NvdW50X2ZlZSBBUyBzaGlwbWVudF9kaXNjb3VudF9
+mZWUsIHNoaXBtZW50LmZlZSBBUyBzaGlwbWVudF9mZWUsIHNoaXB
+tZW50LmZlZV9iYWxhbmNlIEFTIHNoaXBtZW50X2ZlZV9iYWxhbmNlLC
+BzaGlwbWVudC5wYWlkIEFTIHNoaXBtZW50X3BhaWQsIHNoaXBtZW5
+0LnByaW9yaXR5X3BpY2t1cF9mZWUgQVMgc2hpcG1lbnRfcHJpb3JpdHl
+fcGlja3VwX2ZlZSwgc2hpcG1lbnQuZGlzY291bnQgQVMgc2hpcG1lbnRfZG
+lzY291bnQsIHNoaXBtZW50LnZhdCBBUyBzaGlwbWVudF92YXQsIHNoa
+XBtZW50LmZlZV9wYXltZW50X3N0YXR1c19jb2RlIEFTIHNoaXBtZW50X
+2ZlZV9wYXltZW50X3N0YXR1c19jb2RlLCBzaGlwbWVudC5mZWVfcGF5b
+WVudF9jaGFubmVsX2NvZGUgQVMgc2hpcG1lbnRfZmVlX3BheW1lbnRfY
+2hhbm5lbF9jb2RlLCBzaGlwbWVudC5wYXlfb25fZGVsaXZlcnlfbWV0aG9k
+X2NvZGUgQVMgc2hpcG1lbnRfcGF5X29uX2RlbGl2ZXJ5X21ldGhvZF9jb2
+RlLCBzaGlwbWVudC50cmFuc2FjdGlvbl9jb2RlIEFTIHNoaXBtZW50X3Ry
+YW5zYWN0aW9uX2NvZGUsIHNoaXBtZW50LnRyYW5zYWN0aW9uX2lk
+IEFTIHNoaXBtZW50X3RyYW5zYWN0aW9uX2lkLCBzaGlwbWVudC5pbn
+N0cnVjdGlvbl9jb2RlIEFTIHNoaXBtZW50X2luc3RydWN0aW9uX2NvZGU
+sIHNoaXBtZW50Lmxlbmd0aCBBUyBzaGlwbWVudF9sZW5ndGgsIHNoa
+XBtZW50LndpZHRoIEFTIHNoaXBtZW50X3dpZHRoLCBzaGlwbWVudC5
+oZWlnaHQgQVMgc2hpcG1lbnRfaGVpZ2h0LCBzaGlwbWVudC53ZWlnaH
+QgQVMgc2hpcG1lbnRfd2VpZ2h0LCBzaGlwbWVudC51c2VyX3dlaWdodC
+BBUyBzaGlwbWVudF91c2VyX3dlaWdodCwgc2hpcG1lbnQucXVhbnRpdH
+kgQVMgc2hpcG1lbnRfcXVhbnRpdHksIHNoaXBtZW50LmlzX2ZyYWdpb
+GUgQVMgc2hpcG1lbnRfaXNfZnJhZ2lsZSwgc2hpcG1lbnQuaXNfc3BpbG
+xhYmxlIEFTIHNoaXBtZW50X2lzX3NwaWxsYWJsZSwgc2hpcG1lbnQuaX
+NfY29uZmlkZW50aWFsIEFTIHNoaXBtZW50X2lzX2NvbmZpZGVudGlhb
+Cwgc2hpcG1lbnQuY291cmllcl9pZCBBUyBzaGlwbWVudF9jb3VyaWVyX2l
+kLCBzaGlwbWVudC5hZ2VudF9pZCBBUyBzaGlwbWVudF9hZ2VudF9pZC
+wgc2hpcG1lbnQuY2xpZW50X2lkIEFTIHNoaXBtZW50X2NsaWVudF9pZC
+wgc2hpcG1lbnQubWVyY2hhbnRfaWQgQVMgc2hpcG1lbnRfbWVyY2hhb
+nRfaWQsIHNoaXBtZW50LmNoYW5uZWxfY29kZSBBUyBzaGlwbWVudF
+9jaGFubmVsX2NvZGUsIHNoaXBtZW50LnBpY2t1cF9kYXRlIEFTIHNoaX
+BtZW50X3BpY2t1cF9kYXRlLCBzaGlwbWVudC5pbmNvbWluZ19vcHRpb2
+5fY29kZSBBUyBzaGlwbWVudF9pbmNvbWluZ19vcHRpb25fY29kZSwgc2
+hpcG1lbnQuZGVsaXZlcnlfdHlwZV9jb2RlIEFTIHNoaXBtZW50X2RlbGl2Z
+XJ5X3R5cGVfY29kZSwgc2hpcG1lbnQuZGVsaXZlcnlfcHJpb3JpdHlfY29k
+ZSBBUyBzaGlwbWVudF9kZWxpdmVyeV9wcmlvcml0eV9jb2RlLCBzaGlw
+bWVudC5wYXltZW50X29wdGlvbl9jb2RlIEFTIHNoaXBtZW50X3BheW1lb
+nRfb3B0aW9uX2NvZGUsIHNoaXBtZW50Lm1pbl9xdW90ZWRfZmVlIEF
+TIHNoaXBtZW50X21pbl9xdW90ZWRfZmVlLCBzaGlwbWVudC5tYXhfcX
+VvdGVkX2ZlZSBBUyBzaGlwbWVudF9tYXhfcXVvdGVkX2ZlZSwgc2hpcG
+1lbnQuZGlzY291bnRfbWluX3F1b3RlZF9mZWUgQVMgc2hpcG1lbnRfZGlz
+Y291bnRfbWluX3F1b3RlZF9mZWUsIHNoaXBtZW50LmRpc2NvdW50X21
+heF9xdW90ZWRfZmVlIEFTIHNoaXBtZW50X2Rpc2NvdW50X21heF9xd
+W90ZWRfZmVlLCBzaGlwbWVudC5zdGF0dXNfY29kZSBBUyBzaGlwbWV
+udF9zdGF0dXNfY29kZSwgc2hpcG1lbnQuZGVsaXZlcnlfY2FsbGJhY2sgQ
+VMgc2hpcG1lbnRfZGVsaXZlcnlfY2FsbGJhY2ssIHNoaXBtZW50LmZpbm
+FuY2VfY2FsbGJhY2sgQVMgc2hpcG1lbnRfZmluYW5jZV9jYWxsYmFjayw
+gc2hpcG1lbnQuc2VsZWN0ZWRfY291cmllcl9pZCBBUyBzaGlwbWVudF9z
+ZWxlY3RlZF9jb3VyaWVyX2lkLCBzaGlwbWVudC5jb3VyaWVyX2lkcyBBU
+yBzaGlwbWVudF9jb3VyaWVyX2lkcywgc2hpcG1lbnQuY2FuY2VsX3JlYXN
+vbiBBUyBzaGlwbWVudF9jYW5jZWxfcmVhc29uLCBzaGlwbWVudC5iaWx
+saW5nX2NvZGUgQVMgc2hpcG1lbnRfYmlsbGluZ19jb2RlLCBzaGlwbWVu
+dC5wbGF0Zm9ybV9pZCBBUyBzaGlwbWVudF9wbGF0Zm9ybV9pZCwgc
+2hpcG1lbnQuY3VycmVudF9jb25uZWN0b3JfY29kZSBBUyBzaGlwbWVud
+F9jdXJyZW50X2Nvbm5lY3Rvcl9jb2RlLCBzaGlwbWVudC5jdXJyZW50X2F
+3YiBBUyBzaGlwbWVudF9jdXJyZW50X2F3Yiwgc2hpcG1lbnQubGFiZWxf
+aW1hZ2UgQVMgc2hpcG1lbnRfbGFiZWxfaW1hZ2UsIHNoaXBtZW50Lml
+udm9pY2VfaW1hZ2UgQVMgc2hpcG1lbnRfaW52b2ljZV9pbWFnZSwgc2h
+pcG1lbnQudHJhbnNmZXJfbGFiZWxfaW1hZ2UgQVMgc2hpcG1lbnRfdHJ
+hbnNmZXJfbGFiZWxfaW1hZ2UsIHNoaXBtZW50LnRyYW5zZmVyX2lud
+m9pY2VfaW1hZ2UgQVMgc2hpcG1lbnRfdHJhbnNmZXJfaW52b2ljZV9pb
+WFnZSwgc2hpcG1lbnQuZGVsaXZlcnlfbGFiZWxfaW1hZ2UgQVMgc2hpc
+G1lbnRfZGVsaXZlcnlfbGFiZWxfaW1hZ2UsIHNoaXBtZW50LnBpY2t1cF9
+udW1iZXIgQVMgc2hpcG1lbnRfcGlja3VwX251bWJlciwgc2hpcG1lbnQuY2
+9ubmVjdG9yX3BpY2t1cF9zY2hlZHVsZV9pZCBBUyBzaGlwbWVudF9jb25
+uZWN0b3JfcGlja3VwX3NjaGVkdWxlX2lkLCBzaGlwbWVudC5hY2NvdW5
+0X3R5cGUgQVMgc2hpcG1lbnRfYWNjb3VudF90eXBlLCBzaGlwbWVudC5
+0ZXN0IEFTIHNoaXBtZW50X3Rlc3QsIHNoaXBtZW50LmlzX2ZpcnN0X3
+NoaXBtZW50IEFTIHNoaXBtZW50X2lzX2ZpcnN0X3NoaXBtZW50LCBza
+GlwbWVudC52ZWhpY2xlX3R5cGVfY29kZSBBUyBzaGlwbWVudF92ZWhp
+Y2xlX3R5cGVfY29kZSwgc2hpcG1lbnQucGlja3VwX2NvZGUgQVMgc2hpc
+G1lbnRfcGlja3VwX2NvZGUsIHNoaXBtZW50Lmhhc193YXliaWxsX2Vycm
+9yIEFTIHNoaXBtZW50X2hhc193YXliaWxsX2Vycm9yLCBzaGlwbWVudC
+53YXliaWxsX2Vycm9yIEFTIHNoaXBtZW50X3dheWJpbGxfZXJyb3IsIH
+NoaXBtZW50LmVzY2FsYXRpb25fb3BlbmVkIEFTIHNoaXBtZW50X2VzY
+2FsYXRpb25fb3BlbmVkLCBzaGlwbWVudC5kaXNwdXRlX29wZW5lZCBB
+UyBzaGlwbWVudF9kaXNwdXRlX29wZW5lZCwgc2hpcG1lbnQuc2FtZV9k
+YXkgQVMgc2hpcG1lbnRfc2FtZV9kYXksIHNoaXBtZW50LmZlZV9iZWZvc
+mVfY291cG9uIEFTIHNoaXBtZW50X2ZlZV9iZWZvcmVfY291cG9uLCBza
+GlwbWVudC5jb3Vwb25fY29kZSBBUyBzaGlwbWVudF9jb3Vwb25fY29kZS
+wgc2hpcG1lbnQuY291cG9uX2lkIEFTIHNoaXBtZW50X2NvdXBvbl9pZCw
+gc2hpcG1lbnQucmVsZWFzZWRfYnlfbmFtZSBBUyBzaGlwbWVudF9yZW
+xlYXNlZF9ieV9uYW1lLCBzaGlwbWVudC5yZWxlYXNlZF9ieV9waG9uZSBB
+UyBzaGlwbWVudF9yZWxlYXNlZF9ieV9waG9uZSwgc2hpcG1lbnQucmVs
+ZWFzZWRfYnlfc2lnbmF0dXJlIEFTIHNoaXBtZW50X3JlbGVhc2VkX2J5X
+3NpZ25hdHVyZSwgc2hpcG1lbnQucmVxdWlyZXNfZXNjcm93IEFTIHNoa
+XBtZW50X3JlcXVpcmVzX2VzY3Jvdywgc2hpcG1lbnQudGFyZ2V0IEFTIH
+NoaXBtZW50X3RhcmdldCwgc2hpcG1lbnQuYW1vdW50IEFTIHNoaXBtZ
+W50X2Ftb3VudCwgc2hpcG1lbnQuY3VycmVuY3lfY29kZSBBUyBzaGlwb
+WVudF9jdXJyZW5jeV9jb2RlLCBzaGlwbWVudC5lc2Nyb3dfcmVmZXJlbm
+NlIEFTIHNoaXBtZW50X2VzY3Jvd19yZWZlcmVuY2UsIHNoaXBtZW50L
+mFwcGxpZWRfY3JlZGl0cyBBUyBzaGlwbWVudF9hcHBsaWVkX2NyZWR
+pdHMsIHNoaXBtZW50LmFwcGxpZWRfcmV3YXJkIEFTIHNoaXBtZW50
+X2FwcGxpZWRfcmV3YXJkLCBzaGlwbWVudC5yZXdhcmRfdmFsdWUgQ
+VMgc2hpcG1lbnRfcmV3YXJkX3ZhbHVlLCBzaGlwbWVudC5wYWNrYWdl
+X2NvdXJpZXJfaWQgQVMgc2hpcG1lbnRfcGFja2FnZV9jb3VyaWVyX2lkL
+CBzaGlwbWVudC5wYWNrYWdlX2FnZW50X2lkIEFTIHNoaXBtZW50X3B
+hY2thZ2VfYWdlbnRfaWQsIHNoaXBtZW50LnBhY2thZ2VfcmVjZWl2ZWRf
+YnkgQVMgc2hpcG1lbnRfcGFja2FnZV9yZWNlaXZlZF9ieSwgc2hpcG1lbn
+QucGFja2FnZV9yZWNlaXZlZF9ieV9waG9uZSBBUyBzaGlwbWVudF9wY
+WNrYWdlX3JlY2VpdmVkX2J5X3Bob25lLCBzaGlwbWVudC5wYWNrYWdl
+X3JlY2VpdmVkX2J5X3NpZ25hdHVyZSBBUyBzaGlwbWVudF9wYWNrYW
+dlX3JlY2VpdmVkX2J5X3NpZ25hdHVyZSwgc2hpcG1lbnQucGFja2FnZV9
+kYXRlX2NyZWF0ZWQgQVMgc2hpcG1lbnRfcGFja2FnZV9kYXRlX2NyZW
+F0ZWQsIHNoaXBtZW50LnBhY2thZ2VfbGFzdF91cGRhdGVkIEFTIHNoa
+XBtZW50X3BhY2thZ2VfbGFzdF91cGRhdGVkLCBzaGlwbWVudC5wYWNr
+YWdlX2RhdGVfcmVjZWl2ZWQgQVMgc2hpcG1lbnRfcGFja2FnZV9kYXRlX
+3JlY2VpdmVkLCBzaGlwbWVudC5wYWNrYWdlX3JlamVjdGlvbl9yZWFzb
+24gQVMgc2hpcG1lbnRfcGFja2FnZV9yZWplY3Rpb25fcmVhc29uLCBzaGl
+wbWVudC5wYWNrYWdlX2RlbGl2ZXJ5X2ZlZSBBUyBzaGlwbWVudF9wY
+WNrYWdlX2RlbGl2ZXJ5X2ZlZSwgc2hpcG1lbnQucGFja2FnZV9kZWxpdm
+VyeV9zdGF0dXNfY29kZSBBUyBzaGlwbWVudF9wYWNrYWdlX2RlbGl2Z
+XJ5X3N0YXR1c19jb2RlLCBzaGlwbWVudC5wYWNrYWdlX2Z1bGZpbG1lb
+nRfc3RhdHVzX2NvZGUgQVMgc2hpcG1lbnRfcGFja2FnZV9mdWxmaWxt
+ZW50X3N0YXR1c19jb2RlLCBzaGlwbWVudC5wYWNrYWdlX2RlbGl2ZXJ5
+X2RhdGUgQVMgc2hpcG1lbnRfcGFja2FnZV9kZWxpdmVyeV9kYXRlLCBz
+aGlwbWVudC5wYWNrYWdlX2RlbGl2ZXJ5X2V0YSBBUyBzaGlwbWVudF9
+wYWNrYWdlX2RlbGl2ZXJ5X2V0YSwgc2hpcG1lbnQucGFja2FnZV9kZWx
+pdmVyeV9hdHRlbXB0IEFTIHNoaXBtZW50X3BhY2thZ2VfZGVsaXZlcnlf
+YXR0ZW1wdCwgc2hpcG1lbnQucGFja2FnZV9sYWJlbF9pbWFnZSBBUyBz
+aGlwbWVudF9wYWNrYWdlX2xhYmVsX2ltYWdlLCBzaGlwbWVudC5wYW
+NrYWdlX2ludm9pY2VfaW1hZ2UgQVMgc2hpcG1lbnRfcGFja2FnZV9pbnZ
+vaWNlX2ltYWdlLCBzaGlwbWVudC5tZXJjaGFudF9kaXJlY3Rpb24gQVMg
+c2hpcG1lbnRfbWVyY2hhbnRfZGlyZWN0aW9uLCBzaGlwbWVudC5kcm9
+wX29mZl9sb2NhdGlvbl9pZCBBUyBzaGlwbWVudF9kcm9wX29mZl9sb2N
+hdGlvbl9pZCwgc2hpcG1lbnQuc2VsZWN0ZWRfZHJvcF9vZmZfbG9jYXRp
+b25faWQgQVMgc2hpcG1lbnRfc2VsZWN0ZWRfZHJvcF9vZmZfbG9jYXRp
+b25faWQsIHNoaXBtZW50LmN1c3RvbWVyX2Ryb3Bfb2ZmIEFTIHNoaX
+BtZW50X2N1c3RvbWVyX2Ryb3Bfb2ZmLCBzaGlwbWVudC5jcmVkaXRzX
+3RyYW5zYWN0aW9uX2lkIEFTIHNoaXBtZW50X2NyZWRpdHNfdHJhbn
+NhY3Rpb25faWQsIHNoaXBtZW50Lmluc3VyYW5jZV9vcHRpb25fY29kZS
+BBUyBzaGlwbWVudF9pbnN1cmFuY2Vfb3B0aW9uX2NvZGUsIHNoaXBt
+ZW50Lmluc3VyYW5jZV9mZWUgQVMgc2hpcG1lbnRfaW5zdXJhbmNlX2
+ZlZSwgc2hpcG1lbnQuaW5zdXJhbmNlX3ZhbHVlIEFTIHNoaXBtZW50X2
+luc3VyYW5jZV92YWx1ZSwgc2hpcG1lbnQuZnJhbmNoaXNlX2lkIEFTIHN
+oaXBtZW50X2ZyYW5jaGlzZV9pZCwgc2hpcG1lbnQucGFja2FnZV9jb25uZ
+WN0b3JfdGFycmlmIEFTIHNoaXBtZW50X3BhY2thZ2VfY29ubmVjdG9yX
+3RhcnJpZiwgc2hpcG1lbnQucGFja2FnZV9jb25uZWN0b3JfZGlzY291bnQ
+gQVMgc2hpcG1lbnRfcGFja2FnZV9jb25uZWN0b3JfZGlzY291bnQsIHNoa
+XBtZW50LnBhY2thZ2VfY29ubmVjdG9yX3ZhdCBBUyBzaGlwbWVudF9w
+YWNrYWdlX2Nvbm5lY3Rvcl92YXQsIHNoaXBtZW50LnBhY2thZ2VfY29ub
+mVjdG9yX2ZvcndhcmluZ19jaGFyZ2UgQVMgc2hpcG1lbnRfcGFja2FnZV9j
+b25uZWN0b3JfZm9yd2FyaW5nX2NoYXJnZSwgc2hpcG1lbnQucGFja2Fn
+ZV9jb25uZWN0b3JfYW1vdW50X2R1ZSBBUyBzaGlwbWVudF9wYWNrY
+WdlX2Nvbm5lY3Rvcl9hbW91bnRfZHVlLCBzaGlwbWVudC5wYWNrYWdlX
+2Nvbm5lY3Rvcl93ZWlnaHQgQVMgc2hpcG1lbnRfcGFja2FnZV9jb25uZW
+N0b3Jfd2VpZ2h0LCBzaGlwbWVudC5wYWNrYWdlX2Nvbm5lY3Rvcl9ka
+W1lbnNpb25fd2VpZ2h0IEFTIHNoaXBtZW50X3BhY2thZ2VfY29ubmVjdG
+9yX2RpbWVuc2lvbl93ZWlnaHQsIHNoaXBtZW50LnBhY2thZ2VfY29ubmV
+jdG9yX2JpbGxhYmxlX3dlaWdodCBBUyBzaGlwbWVudF9wYWNrYWdlX2
+Nvbm5lY3Rvcl9iaWxsYWJsZV93ZWlnaHQsIHNoaXBtZW50LnBhY2thZ2
+VfY29ubmVjdG9yX290aGVyX2NoYXJnZSBBUyBzaGlwbWVudF9wYWNr
+YWdlX2Nvbm5lY3Rvcl9vdGhlcl9jaGFyZ2UsIHNoaXBtZW50LnBhY2thZ2
+VfY29ubmVjdG9yX290aGVyX2NoYXJnZV9yZWFzb24gQVMgc2hpcG1lbn
+RfcGFja2FnZV9jb25uZWN0b3Jfb3RoZXJfY2hhcmdlX3JlYXNvbiwgc2hpc
+G1lbnQubGFzdF91cGRhdGVkIEFTIHNoaXBtZW50X2xhc3RfdXBkYXRlZ
+Cwgc2hpcG1lbnQuZGF0ZV9jcmVhdGVkIEFTIHNoaXBtZW50X2RhdGVf
+Y3JlYXRlZCAKRlJPTSBzaGlwbWVudCAKV0hFUkUgc2hpcG1lbnQudGVz
+dCAhPSB0cnVlIEFORCBzaGlwbWVudC5zdGF0dXNfY29kZSBJTiAoJShz
+dGF0dXNfY29kZV8xKXMsICUoc3RhdHVzX2NvZGVfMilzLCAlKHN0YXR1
+c19jb2RlXzMpcykgQU5EIHNoaXBtZW50Lm1lcmNoYW50X2lkID0gJSht
+ZXJjaGFudF9pZF8xKXMgT1JERVIgQlkgc2hpcG1lbnQuZGF0ZV9jcmVhd
+GVkIERFU0M=", 
+       "results": [ 
+        { 
+            "destination_contact_phone": "08012345678", 
+            "code": "0006320484", 
+            "status_code": "drafted", 
+            "height": 0, 
+            "time_schedule": { 
+                "code": "anytime", 
+                "name": "Anytime" 
+            }, 
+            "amount": null, 
+            "is_spillable": false, 
+            "narration": null, 
+            "owner": "Sendbox", 
+            "destination_address": "20 Oregun Ikeja Ikeja Lagos Nigeria", 
+            "destination_name": "Johnny English", 
+            "incoming_option": { 
+                "code": "pickup", 
+                "name": "Pickup" 
+            }, 
+            "payment_options": null, 
+            "origin_city": "Lagos", 
+            "width": 0, 
+            "package_delivery_attempt": 0, 
+            "short_origin_address": "Lagos Lagos Nigeria", 
+            "origin_phone": "0801234567890", 
+            "package_received_by": null, 
+            "destination_city": "Ikeja", 
+            "package_delivery_status_code": null, 
+            "recurrent_cards": [], 
+            "package_label_image": null, 
+            "origin_state": { 
+                "code": "LOS", 
+                "name": "Lagos" 
+            }, 
+            "has_waybill_error": false, 
+            "insurance_option_code": null, 
+            "pk": "894688", 
+            "package_invoice_image": null, 
+            "transaction_id": null, 
+            "merchant": { 
+                "username": null, 
+                "email": "Johndoe@gmail.com", 
+                "id": 10383, 
+                "phone": "081234567890", 
+                "name": "John" 
+            }, 
+            "delivery_priority": { 
+                "code": "next_day", 
+                "name": "Next Day" 
+            }, 
+            "payment_option": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "courier": { 
+                "name": "Sixth Gear Logistics" 
+            }, 
+            "total_value": 90, 
+            "package_fulfilment_status_code": null, 
+            "origin_address": "20 Old Yaba Road Lagos Lagos Lagos 
+Nigeria", 
+            "package_agent": { 
+                "username": null, 
+                "email": null, 
+                "id": 0, 
+                "phone": null, 
+                "name": null 
+            }, 
+            "min_quoted_fee": 1015, 
+            "pickup_attempts": [], 
+            "origin_state_code": "LOS", 
+            "package_type_code": null, 
+            "max_quoted_fee": 1015, 
+            "tracking": { 
+                "destination_country": null, 
+                "status": null, 
+                "origin_city": null, 
+                "destination_city": null, 
+                "origin_name": null, 
+                "destination_name": null, 
+                "current_awb": null, 
+                "origin_country": null 
+            }, 
+            "client_id": 0, 
+            "destination_email": "janedoe@gmail.com", 
+            "origin_contact_phone": "080123456789", 
+            "package_delivery_fee": 0, 
+            "origin_post_code": null, 
+            "coupon_description": null, 
+            "possible_actions": [ 
+                { 
+                    "code": "pay", 
+                    "name": "Pay" 
+                }, 
+                { 
+                    "code": "cancel", 
+                    "name": "Cancel" 
+                } 
+            ], 
+            "notes": null, 
+            "current_status": { 
+                "code": "drafted", 
+                "name": "On Hold" 
+            }, 
+            "use_selected_rate": null, 
+            "destination_street": "20 Oregun Ikeja", 
+            "package_delivery_date": null, 
+            "reference_code": "74", 
+            "selected_rate_id": null, 
+            "pod": "Prepaid", 
+            "destination_state": { 
+                "code": "LOS", 
+                "name": "Lagos" 
+            }, 
+            "shipment_id": null, 
+            "origin_city_id": 1175, 
+            "domain": null, 
+            "package_type": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "last_updated": "2019-11-15T14:41:06.185519", 
+            "weight": 0, 
+            "amount_to_receive": 1263.72, 
+            "destination_state_code": "LOS", 
+            "sensitivity": "", 
+            "package_fulfilment_status": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "package_delivery_eta": null, 
+            "origin_country": { 
+                "code": "NG", 
+                "name": "Nigeria" 
+            }, 
+            "package_courier_id": null, 
+            "delivery_priority_code": "next_day", 
+            "origin_country_code": "NG", 
+            "package_agent_id": 0, 
+            "package_date_received": null, 
+            "package_delivery_status": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "has_waybill": null, 
+            "delivery_type_code": "last_mile", 
+            "short_destination_address": "Ikeja Lagos Nigeria", 
+            "pickup_courier": { 
+                "status": null, 
+                "courier_name": null 
+},HP 
+``` 
+{% endtab %} 
+{% endtabs %} 
+## Posting Data 
+Posting data is a little different from fetching data. here you are 
+required to make a post request to the endpoint and pass in a body of 
+JSON data you would like to post. For example, let's say you want to 
+get delivery quotes for a shipment. You simply make a post request to 
+the delivery quotes endpoint this returns a status code 201 and quotes 
+of that shipments in JSON format.&#x20; 
+JSON body sample to make a post request 
+``` 
+{ 
+"origin_country":"Nigeria", 
+"origin_country_code":"NG",  
+"origin_state" : "Lagos", 
+"destination_country":"Nigeria", 
+"destination_country_code":" ", 
+"destination_state": "Abuja", 
+"weight" : 3, 
+"destination_state_code":"ABV", 
+"origin_state_code": "LOS" 
+} 
+``` 
+## Post Data 
+<https://sandbox.staging.sendbox.co/shipping>/shipment\_delivery\_
+quote 
+`https://live.sendbox.co/shipping/shipment_delivery_quote` 
+In this example, we are making a post request to the 
+shipment\_delivery\_quote endpoint. 
+{% tabs %} 
+{% tab title="Request" %} 
+### Headers 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-key | 
+| Content-type  | String | application/json  | 
+### Body Parameters&#x20; 
+| Name                       
+| Type   | Description            
+| 
+| -------------------------- | ------ | ---------------------- | 
+| origin\_country            
+| String | senders country        
+| origin\_country\_code      
+| 
+| String | senders country code   | 
+| origin\_state              
+| origin\_state\_code        
+| destination\_country       
+| String | senders state          
+| 
+| String | senders state code     | 
+| String | recipient country      
+| 
+| destination\_country\_code | String | recipient country code | 
+| destination\_state         
+| String | recipient state        
+| 
+| destination\_state\_code   | String | recipient state code   | 
+| weight                     
+| float  | weight of package      | 
+| {% endtab %}               
+|        
+{% tab title="Response" %} 
+|                        
+| 
+201: Created&#x20; 
+ 
+``` 
+{ 
+  "credit_amount": null, 
+  "payment_option": { 
+    "code": null, 
+    "name": null 
+  }, 
+  "weight": 8.1, 
+  "total_value": 0, 
+  "destination_state_code": "LOS", 
+  "min_quoted_fee": 1000, 
+  "origin_state_code": "LOS", 
+  "time_schedule_code": "anytime", 
+  "incoming_option_code": "pickup", 
+  "max_quoted_fee": 8783.775, 
+  "delivery_priority_code": "next_day", 
+  "accept_value_on_delivery": null, 
+  "selected_rate": { 
+    "discount": null, 
+    "courier_id": 0, 
+    "fee": null, 
+    "name": null, 
+    "courier": { 
+      "name": null 
+    }, 
+    "return_fee": null, 
+    "actual_fee": null, 
+    "fee_with_return": null, 
+    "id": null 
+  }, 
+  "origin_country_code": "NG", 
+  "payment_options": [ 
+    { 
+      "pk": "book_on_hold", 
+      "brand": "wallet", 
+      "code": "book_on_hold", 
+      "mask": "Book on hold", 
+      "friendly_brand": "You will be debited from your wallet" 
+    } 
+  ], 
+  "origin_city": "Ketu", 
+  "total_quantity": 0, 
+  "delivery_type_code": "last_mile", 
+  "payment_option_code": null, 
+  "destination_city": "zone 5", 
+  "destination_country_code": "NG", 
+  "recurrent_cards": [ 
+    { 
+      "pk": "book_on_hold", 
+      "brand": "wallet", 
+      "mask": "Book on hold", 
+      "id": null, 
+      "friendly_brand": "You will be debited from your wallet" 
+    } 
+  ], 
+  "rates": [ 
+    { 
+      "discount": null, 
+      "courier_id": 3, 
+      "fee": 1000, 
+      "name": "Sixth Gear Logistics", 
+      "courier": { 
+        "name": "Sixth Gear Logistics" 
+      }, 
+      "return_fee": 50, 
+      "actual_fee": null, 
+      "fee_with_return": 1050, 
+      "id": "3_1000.0" 
+    }, 
+    { 
+      "discount": null, 
+      "courier_id": 19, 
+      "fee": 2200, 
+      "name": "Parcel Line Logistics", 
+      "courier": { 
+        "name": "Parcel Line Logistics" 
+      }, 
+      "return_fee": 50, 
+      "actual_fee": null, 
+      "fee_with_return": 2250, 
+      "id": "19_2200.0" 
+    }, 
+    { 
+      "discount": null, 
+      "courier_id": 20, 
+      "fee": 1800, 
+      "name": "CRS Logistics", 
+      "courier": { 
+        "name": "CRS Logistics" 
+      }, 
+      "return_fee": 50, 
+      "actual_fee": null, 
+      "fee_with_return": 1850, 
+      "id": "20_1800.0" 
+    }, 
+    { 
+      "discount": null, 
+      "courier_id": 22, 
+      "fee": 8783.775, 
+      "name": "DHL", 
+      "courier": { 
+        "name": "DHL" 
+      }, 
+      "return_fee": 0, 
+      "actual_fee": null, 
+      "fee_with_return": null, 
+      "id": "22" 
+    } 
+  ], 
+  "selected_rate_id": null, 
+  "use_selected_rate": null, 
+  "vat": null 
+} 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+# Errors 
+## Validation Errors&#x20; 
+Validation errors occurs when one or more validation rules are not met. 
+For example, not passing a required field in the body of a request this 
+causes a 409 error&#x20; 
+`Status code : 409 - Conflict error` &#x20; 
+``` 
+{ 
+"required field": [ 
+"error message" 
+] 
+} 
+``` 
+## Authentication Errors &#x20; 
+Authentication errors occur when you fail to authenticate a request or 
+pass the correct authentication key or when you pass in an invalid key. 
+For example making a request without an authorization key.&#x20; 
+`Status code : 401 - unauthorized`&#x20; 
+``` 
+{ 
+"description": "Please provide an auth token as part of the request.", 
+"title": "Auth token required" 
+} 
+``` 
+Another instance of authentication error is making a request with a key 
+that doesn't have permission to perform that request. 
+`Status code : 403 forbidden` &#x20; 
+``` 
+{ 
+"message" :"error message" 
+} 
+``` 
+## Other Errors 
+| Status Code | Description                                                                                             
+| 
+| ----------- | --------------------------------------------------------------------------------------------------------------------------- | 
+| 400         
+| The request could not be fulfilled because it already exists 
+or is a bad request                                            
+| 404         
+| 
+| The request could not be fulfilled as the request resources 
+does not exist.                                                 
+| 
+| 500, 501    | This request could not be completed quickly contact 
+Sendbox if you encounter any of these response. it almost never 
+happens | 
+# Authentication 
+### **Introduction** 
+This document provides guidelines on how to authenticate your 
+application with the Sendbox API. This updated version includes 
+streamlined authentication processes and reflects recent changes to 
+the API. 
+### Getting Started 
+To integrate with the Sendbox API, you'll need to create an application 
+and obtain an access token, which will be used for all subsequent API 
+requests. Here's how to get started:&#x20; 
+{% hint style="info" %} 
+It is important to note that all development and testing are done on 
+staging. Once completed, remember to update the production URL and 
+follow all the same steps.&#x20; 
+[https://developers.sendbox.co/](https://developers.staging.sendbox.c
+o/) 
+{% endhint %} 
+<table data-header-hidden><thead><tr><th width="155"></th><th 
+width="303"></th><th></th></tr></thead><tbody><tr><td><strong>Envir
+onment</strong></td><td><strong>Developer Dashboard 
+URL</strong></td><td><strong>Base 
+URL</strong></td></tr><tr><td><strong>Staging</strong></td><td><a 
+href="https://developers.staging.sendbox.co/">https://developers.stagi
+ng.sendbox.co/</a></td><td><br><a 
+href="https://sandbox.staging.sendbox.co/">https://sandbox.staging.s
+endbox.co/</a></td></tr><tr><td><strong>Production</strong></td><td
+><a 
+href="https://developers.sendbox.co/">https://developers.sendbox.co/<
+/a></td><td><a 
+href="https://live.sendbox.co/payments/">https://live.sendbox.co/</a> 
+</td></tr></tbody></table> 
+### &#x20;**Create a New Application** 
+1. **Sign Up:** Visit [Sendbox for 
+Developers](https://developers.staging.sendbox.co/) and sign up for an 
+account if you haven’t already. 
+2. **Dashboard:** After signing in, navigate to your dashboard and 
+create a new application. You will need to provide the following details: 
+* **Name:** The name of your application. 
+* **Description:** A brief description of what your application does. 
+* **Webhook URL:** The URL where Sendbox will send event 
+notifications for your application. 
+After submitting this information, your application will be created 
+successfully. Keep your application keys in a safe place as they will be 
+required for making API requests. 
+### &#x20;**Authorization** 
+Once your application is created, you'll be issued an access token. This 
+token is crucial for authorizing API requests. 
+* **Access Token:** The access token is used to authenticate your 
+application. It should be included in the header of every API request. 
+### &#x20;**Making API Requests** 
+To interact with the Sendbox API, include your access token in the 
+header of your HTTP requests as shown below: 
+```bash 
+GET /your/api/endpoint 
+Host: live.sendbox.co 
+Authorization: {your-access-token} 
+``` 
+* **Authorization Header:**\ 
+The header must include the `Authorization` key, followed by  your 
+access token. 
+### **Permanent Tokens** 
+Please note that access tokens are now permanent and do not expire. 
+There is no need to handle token refresh mechanisms. 
+# Introduction 
+Sendbox shipping helps you ship your products from Nigeria to 
+anywhere in the world.This service can seamlessly be integrated into 
+your  infrastructure for seamless shipping and delivery services. 
+# Get Shipments 
+ 
+## Get Shipments 
+ 
+[`https://live.sendbox.co/shipping/shipments`](https://api.sendbox.co
+/shipping/shipments)   &#x20; 
+ 
+This gets all the shipments 
+ 
+{% tabs %} 
+{% tab title="Request" %} 
+ 
+## Headers 
+ 
+| Name          | Type   | Description       | 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-key | 
+| Content-type  | String | application/json  | 
+| {% endtab %}  |        |                   | 
+ 
+{% tab title="Response" %} 
+200:OK 
+ 
+``` 
+{ 
+    "next_page": "?page=2", 
+    "prev": null, 
+    "page_by": { 
+        "total": 79, 
+        "pages": 4, 
+        "next": 2, 
+        "per_page": 20, 
+        "prev": null, 
+        "page": 1 
+}, 
+"print_string": 
+"U0VMRUNUIHNoaXBtZW50LmlkIEFTIHNoaXBtZW50X2lkLCBzaGlwb
+WVudC5jb2RlIEFTIHNoaXBtZW50X2NvZGUsIHNoaXBtZW50LnJlZmVy
+ZW5jZV9jb2RlIEFTIHNoaXBtZW50X3JlZmVyZW5jZV9jb2RlLCBzaGlwb
+WVudC5ub3RlcyBBUyBzaGlwbWVudF9ub3Rlcywgc2hpcG1lbnQuYmFyY
+29kZSBBUyBzaGlwbWVudF9iYXJjb2RlLCBzaGlwbWVudC5hd2Jfbm8gQ
+VMgc2hpcG1lbnRfYXdiX25vLCBzaGlwbWVudC5hd2JfZW5kcG9pbnQgQ
+VMgc2hpcG1lbnRfYXdiX2VuZHBvaW50LCBzaGlwbWVudC5wYWNrYWdl
+X3R5cGVfY29kZSBBUyBzaGlwbWVudF9wYWNrYWdlX3R5cGVfY29kZSw
+gc2hpcG1lbnQub3JpZ2luX21lcmNoYW50X2lkIEFTIHNoaXBtZW50X29y
+aWdpbl9tZXJjaGFudF9pZCwgc2hpcG1lbnQub3JpZ2luX25hbWUgQVMgc
+2hpcG1lbnRfb3JpZ2luX25hbWUsIHNoaXBtZW50Lm9yaWdpbl9waG9uZ
+SBBUyBzaGlwbWVudF9vcmlnaW5fcGhvbmUsIHNoaXBtZW50Lm9yaWd
+pbl9lbWFpbCBBUyBzaGlwbWVudF9vcmlnaW5fZW1haWwsIHNoaXBtZ
+W50Lm9yaWdpbl9zdHJlZXQgQVMgc2hpcG1lbnRfb3JpZ2luX3N0cmVld
+Cwgc2hpcG1lbnQub3JpZ2luX2NpdHkgQVMgc2hpcG1lbnRfb3JpZ2luX2N
+pdHksIHNoaXBtZW50Lm9yaWdpbl9jaXR5X2lkIEFTIHNoaXBtZW50X29
+yaWdpbl9jaXR5X2lkLCBzaGlwbWVudC5vcmlnaW5fbGF0IEFTIHNoaXBt
+ZW50X29yaWdpbl9sYXQsIHNoaXBtZW50Lm9yaWdpbl9sbmcgQVMgc2
+hpcG1lbnRfb3JpZ2luX2xuZywgc2hpcG1lbnQub3JpZ2luX3Bvc3RfY29kZS
+BBUyBzaGlwbWVudF9vcmlnaW5fcG9zdF9jb2RlLCBzaGlwbWVudC5vcml
+naW5fc3RhdGVfY29kZSBBUyBzaGlwbWVudF9vcmlnaW5fc3RhdGVfY29
+kZSwgc2hpcG1lbnQub3JpZ2luX2NvdW50cnlfY29kZSBBUyBzaGlwbWVu
+dF9vcmlnaW5fY291bnRyeV9jb2RlLCBzaGlwbWVudC5kZXN0aW5hdGlvb
+l9tZXJjaGFudF9pZCBBUyBzaGlwbWVudF9kZXN0aW5hdGlvbl9tZXJjaG
+FudF9pZCwgc2hpcG1lbnQuZGVzdGluYXRpb25fbmFtZSBBUyBzaGlwbW
+VudF9kZXN0aW5hdGlvbl9uYW1lLCBzaGlwbWVudC5kZXN0aW5hdGlvbl
+9waG9uZSBBUyBzaGlwbWVudF9kZXN0aW5hdGlvbl9waG9uZSwgc2hpc
+G1lbnQuZGVzdGluYXRpb25fZW1haWwgQVMgc2hpcG1lbnRfZGVzdGluY
+XRpb25fZW1haWwsIHNoaXBtZW50LmRlc3RpbmF0aW9uX3N0cmVldC
+BBUyBzaGlwbWVudF9kZXN0aW5hdGlvbl9zdHJlZXQsIHNoaXBtZW50L
+mRlc3RpbmF0aW9uX2NpdHkgQVMgc2hpcG1lbnRfZGVzdGluYXRpb25fY
+2l0eSwgc2hpcG1lbnQuZGVzdGluYXRpb25fbGF0IEFTIHNoaXBtZW50X2
+Rlc3RpbmF0aW9uX2xhdCwgc2hpcG1lbnQuZGVzdGluYXRpb25fbG5nIEF
+TIHNoaXBtZW50X2Rlc3RpbmF0aW9uX2xuZywgc2hpcG1lbnQuZGVzdGl
+uYXRpb25fcG9zdF9jb2RlIEFTIHNoaXBtZW50X2Rlc3RpbmF0aW9uX3Bv
+c3RfY29kZSwgc2hpcG1lbnQuZGVzdGluYXRpb25fc3RhdGVfY29kZSBBUy
+BzaGlwbWVudF9kZXN0aW5hdGlvbl9zdGF0ZV9jb2RlLCBzaGlwbWVudC
+5kZXN0aW5hdGlvbl9jb3VudHJ5X2NvZGUgQVMgc2hpcG1lbnRfZGVzdGl
+uYXRpb25fY291bnRyeV9jb2RlLCBzaGlwbWVudC50aW1lX3NjaGVkdWxl
+X2NvZGUgQVMgc2hpcG1lbnRfdGltZV9zY2hlZHVsZV9jb2RlLCBzaGlwbW
+VudC5hY2NlcHRfdmFsdWVfb25fZGVsaXZlcnkgQVMgc2hpcG1lbnRfYWN
+jZXB0X3ZhbHVlX29uX2RlbGl2ZXJ5LCBzaGlwbWVudC50b3RhbF92YWx1
+ZSBBUyBzaGlwbWVudF90b3RhbF92YWx1ZSwgc2hpcG1lbnQuYW1vdW5
+0X3RvX3JlY2VpdmUgQVMgc2hpcG1lbnRfYW1vdW50X3RvX3JlY2Vpdm
+UsIHNoaXBtZW50LnBpY2t1cF9ldGEgQVMgc2hpcG1lbnRfcGlja3VwX2V0
+YSwgc2hpcG1lbnQubGFzdF9kaXNwYXRjaF90aW1lIEFTIHNoaXBtZW50
+X2xhc3RfZGlzcGF0Y2hfdGltZSwgc2hpcG1lbnQuYWNjZXB0X2N1c3RvbV
+9mZWUgQVMgc2hpcG1lbnRfYWNjZXB0X2N1c3RvbV9mZWUsIHNoaXBt
+ZW50LnJhdGVfZmVlIEFTIHNoaXBtZW50X3JhdGVfZmVlLCBzaGlwbW
+VudC5jdXN0b21fZmVlIEFTIHNoaXBtZW50X2N1c3RvbV9mZWUsIHNoa
+XBtZW50LmRpc2NvdW50X2ZlZSBBUyBzaGlwbWVudF9kaXNjb3VudF9
+mZWUsIHNoaXBtZW50LmZlZSBBUyBzaGlwbWVudF9mZWUsIHNoaXB
+tZW50LmZlZV9iYWxhbmNlIEFTIHNoaXBtZW50X2ZlZV9iYWxhbmNlLC
+BzaGlwbWVudC5wYWlkIEFTIHNoaXBtZW50X3BhaWQsIHNoaXBtZW5
+0LnByaW9yaXR5X3BpY2t1cF9mZWUgQVMgc2hpcG1lbnRfcHJpb3JpdHl
+fcGlja3VwX2ZlZSwgc2hpcG1lbnQuZGlzY291bnQgQVMgc2hpcG1lbnRfZG
+lzY291bnQsIHNoaXBtZW50LnZhdCBBUyBzaGlwbWVudF92YXQsIHNoa
+XBtZW50LmZlZV9wYXltZW50X3N0YXR1c19jb2RlIEFTIHNoaXBtZW50X
+2ZlZV9wYXltZW50X3N0YXR1c19jb2RlLCBzaGlwbWVudC5mZWVfcGF5b
+WVudF9jaGFubmVsX2NvZGUgQVMgc2hpcG1lbnRfZmVlX3BheW1lbnRfY
+2hhbm5lbF9jb2RlLCBzaGlwbWVudC5wYXlfb25fZGVsaXZlcnlfbWV0aG9k
+X2NvZGUgQVMgc2hpcG1lbnRfcGF5X29uX2RlbGl2ZXJ5X21ldGhvZF9jb2
+RlLCBzaGlwbWVudC50cmFuc2FjdGlvbl9jb2RlIEFTIHNoaXBtZW50X3Ry
+YW5zYWN0aW9uX2NvZGUsIHNoaXBtZW50LnRyYW5zYWN0aW9uX2lk
+IEFTIHNoaXBtZW50X3RyYW5zYWN0aW9uX2lkLCBzaGlwbWVudC5pbn
+N0cnVjdGlvbl9jb2RlIEFTIHNoaXBtZW50X2luc3RydWN0aW9uX2NvZGU
+sIHNoaXBtZW50Lmxlbmd0aCBBUyBzaGlwbWVudF9sZW5ndGgsIHNoa
+XBtZW50LndpZHRoIEFTIHNoaXBtZW50X3dpZHRoLCBzaGlwbWVudC5
+oZWlnaHQgQVMgc2hpcG1lbnRfaGVpZ2h0LCBzaGlwbWVudC53ZWlnaH
+QgQVMgc2hpcG1lbnRfd2VpZ2h0LCBzaGlwbWVudC51c2VyX3dlaWdodC
+BBUyBzaGlwbWVudF91c2VyX3dlaWdodCwgc2hpcG1lbnQucXVhbnRpdH
+kgQVMgc2hpcG1lbnRfcXVhbnRpdHksIHNoaXBtZW50LmlzX2ZyYWdpb
+GUgQVMgc2hpcG1lbnRfaXNfZnJhZ2lsZSwgc2hpcG1lbnQuaXNfc3BpbG
+xhYmxlIEFTIHNoaXBtZW50X2lzX3NwaWxsYWJsZSwgc2hpcG1lbnQuaX
+NfY29uZmlkZW50aWFsIEFTIHNoaXBtZW50X2lzX2NvbmZpZGVudGlhb
+Cwgc2hpcG1lbnQuY291cmllcl9pZCBBUyBzaGlwbWVudF9jb3VyaWVyX2l
+kLCBzaGlwbWVudC5hZ2VudF9pZCBBUyBzaGlwbWVudF9hZ2VudF9pZC
+wgc2hpcG1lbnQuY2xpZW50X2lkIEFTIHNoaXBtZW50X2NsaWVudF9pZC
+wgc2hpcG1lbnQubWVyY2hhbnRfaWQgQVMgc2hpcG1lbnRfbWVyY2hhb
+nRfaWQsIHNoaXBtZW50LmNoYW5uZWxfY29kZSBBUyBzaGlwbWVudF
+9jaGFubmVsX2NvZGUsIHNoaXBtZW50LnBpY2t1cF9kYXRlIEFTIHNoaX
+BtZW50X3BpY2t1cF9kYXRlLCBzaGlwbWVudC5pbmNvbWluZ19vcHRpb2
+5fY29kZSBBUyBzaGlwbWVudF9pbmNvbWluZ19vcHRpb25fY29kZSwgc2
+hpcG1lbnQuZGVsaXZlcnlfdHlwZV9jb2RlIEFTIHNoaXBtZW50X2RlbGl2Z
+XJ5X3R5cGVfY29kZSwgc2hpcG1lbnQuZGVsaXZlcnlfcHJpb3JpdHlfY29k
+ZSBBUyBzaGlwbWVudF9kZWxpdmVyeV9wcmlvcml0eV9jb2RlLCBzaGlw
+bWVudC5wYXltZW50X29wdGlvbl9jb2RlIEFTIHNoaXBtZW50X3BheW1lb
+nRfb3B0aW9uX2NvZGUsIHNoaXBtZW50Lm1pbl9xdW90ZWRfZmVlIEF
+TIHNoaXBtZW50X21pbl9xdW90ZWRfZmVlLCBzaGlwbWVudC5tYXhfcX
+VvdGVkX2ZlZSBBUyBzaGlwbWVudF9tYXhfcXVvdGVkX2ZlZSwgc2hpcG
+1lbnQuZGlzY291bnRfbWluX3F1b3RlZF9mZWUgQVMgc2hpcG1lbnRfZGlz
+Y291bnRfbWluX3F1b3RlZF9mZWUsIHNoaXBtZW50LmRpc2NvdW50X21
+heF9xdW90ZWRfZmVlIEFTIHNoaXBtZW50X2Rpc2NvdW50X21heF9xd
+W90ZWRfZmVlLCBzaGlwbWVudC5zdGF0dXNfY29kZSBBUyBzaGlwbWV
+udF9zdGF0dXNfY29kZSwgc2hpcG1lbnQuZGVsaXZlcnlfY2FsbGJhY2sgQ
+VMgc2hpcG1lbnRfZGVsaXZlcnlfY2FsbGJhY2ssIHNoaXBtZW50LmZpbm
+FuY2VfY2FsbGJhY2sgQVMgc2hpcG1lbnRfZmluYW5jZV9jYWxsYmFjayw
+gc2hpcG1lbnQuc2VsZWN0ZWRfY291cmllcl9pZCBBUyBzaGlwbWVudF9z
+ZWxlY3RlZF9jb3VyaWVyX2lkLCBzaGlwbWVudC5jb3VyaWVyX2lkcyBBU
+yBzaGlwbWVudF9jb3VyaWVyX2lkcywgc2hpcG1lbnQuY2FuY2VsX3JlYXN
+vbiBBUyBzaGlwbWVudF9jYW5jZWxfcmVhc29uLCBzaGlwbWVudC5iaWx
+saW5nX2NvZGUgQVMgc2hpcG1lbnRfYmlsbGluZ19jb2RlLCBzaGlwbWVu
+dC5wbGF0Zm9ybV9pZCBBUyBzaGlwbWVudF9wbGF0Zm9ybV9pZCwgc
+2hpcG1lbnQuY3VycmVudF9jb25uZWN0b3JfY29kZSBBUyBzaGlwbWVud
+F9jdXJyZW50X2Nvbm5lY3Rvcl9jb2RlLCBzaGlwbWVudC5jdXJyZW50X2F
+3YiBBUyBzaGlwbWVudF9jdXJyZW50X2F3Yiwgc2hpcG1lbnQubGFiZWxf
+aW1hZ2UgQVMgc2hpcG1lbnRfbGFiZWxfaW1hZ2UsIHNoaXBtZW50Lml
+udm9pY2VfaW1hZ2UgQVMgc2hpcG1lbnRfaW52b2ljZV9pbWFnZSwgc2h
+pcG1lbnQudHJhbnNmZXJfbGFiZWxfaW1hZ2UgQVMgc2hpcG1lbnRfdHJ
+hbnNmZXJfbGFiZWxfaW1hZ2UsIHNoaXBtZW50LnRyYW5zZmVyX2lud
+m9pY2VfaW1hZ2UgQVMgc2hpcG1lbnRfdHJhbnNmZXJfaW52b2ljZV9pb
+WFnZSwgc2hpcG1lbnQuZGVsaXZlcnlfbGFiZWxfaW1hZ2UgQVMgc2hpc
+G1lbnRfZGVsaXZlcnlfbGFiZWxfaW1hZ2UsIHNoaXBtZW50LnBpY2t1cF9
+udW1iZXIgQVMgc2hpcG1lbnRfcGlja3VwX251bWJlciwgc2hpcG1lbnQuY2
+9ubmVjdG9yX3BpY2t1cF9zY2hlZHVsZV9pZCBBUyBzaGlwbWVudF9jb25
+uZWN0b3JfcGlja3VwX3NjaGVkdWxlX2lkLCBzaGlwbWVudC5hY2NvdW5
+0X3R5cGUgQVMgc2hpcG1lbnRfYWNjb3VudF90eXBlLCBzaGlwbWVudC5
+0ZXN0IEFTIHNoaXBtZW50X3Rlc3QsIHNoaXBtZW50LmlzX2ZpcnN0X3
+NoaXBtZW50IEFTIHNoaXBtZW50X2lzX2ZpcnN0X3NoaXBtZW50LCBza
+GlwbWVudC52ZWhpY2xlX3R5cGVfY29kZSBBUyBzaGlwbWVudF92ZWhp
+Y2xlX3R5cGVfY29kZSwgc2hpcG1lbnQucGlja3VwX2NvZGUgQVMgc2hpc
+G1lbnRfcGlja3VwX2NvZGUsIHNoaXBtZW50Lmhhc193YXliaWxsX2Vycm
+9yIEFTIHNoaXBtZW50X2hhc193YXliaWxsX2Vycm9yLCBzaGlwbWVudC
+53YXliaWxsX2Vycm9yIEFTIHNoaXBtZW50X3dheWJpbGxfZXJyb3IsIH
+NoaXBtZW50LmVzY2FsYXRpb25fb3BlbmVkIEFTIHNoaXBtZW50X2VzY
+2FsYXRpb25fb3BlbmVkLCBzaGlwbWVudC5kaXNwdXRlX29wZW5lZCBB
+UyBzaGlwbWVudF9kaXNwdXRlX29wZW5lZCwgc2hpcG1lbnQuc2FtZV9k
+YXkgQVMgc2hpcG1lbnRfc2FtZV9kYXksIHNoaXBtZW50LmZlZV9iZWZvc
+mVfY291cG9uIEFTIHNoaXBtZW50X2ZlZV9iZWZvcmVfY291cG9uLCBza
+GlwbWVudC5jb3Vwb25fY29kZSBBUyBzaGlwbWVudF9jb3Vwb25fY29kZS
+wgc2hpcG1lbnQuY291cG9uX2lkIEFTIHNoaXBtZW50X2NvdXBvbl9pZCw
+gc2hpcG1lbnQucmVsZWFzZWRfYnlfbmFtZSBBUyBzaGlwbWVudF9yZW
+xlYXNlZF9ieV9uYW1lLCBzaGlwbWVudC5yZWxlYXNlZF9ieV9waG9uZSBB
+UyBzaGlwbWVudF9yZWxlYXNlZF9ieV9waG9uZSwgc2hpcG1lbnQucmVs
+ZWFzZWRfYnlfc2lnbmF0dXJlIEFTIHNoaXBtZW50X3JlbGVhc2VkX2J5X
+3NpZ25hdHVyZSwgc2hpcG1lbnQucmVxdWlyZXNfZXNjcm93IEFTIHNoa
+XBtZW50X3JlcXVpcmVzX2VzY3Jvdywgc2hpcG1lbnQudGFyZ2V0IEFTIH
+NoaXBtZW50X3RhcmdldCwgc2hpcG1lbnQuYW1vdW50IEFTIHNoaXBtZ
+W50X2Ftb3VudCwgc2hpcG1lbnQuY3VycmVuY3lfY29kZSBBUyBzaGlwb
+WVudF9jdXJyZW5jeV9jb2RlLCBzaGlwbWVudC5lc2Nyb3dfcmVmZXJlbm
+NlIEFTIHNoaXBtZW50X2VzY3Jvd19yZWZlcmVuY2UsIHNoaXBtZW50L
+mFwcGxpZWRfY3JlZGl0cyBBUyBzaGlwbWVudF9hcHBsaWVkX2NyZWR
+pdHMsIHNoaXBtZW50LmFwcGxpZWRfcmV3YXJkIEFTIHNoaXBtZW50
+X2FwcGxpZWRfcmV3YXJkLCBzaGlwbWVudC5yZXdhcmRfdmFsdWUgQ
+VMgc2hpcG1lbnRfcmV3YXJkX3ZhbHVlLCBzaGlwbWVudC5wYWNrYWdl
+X2NvdXJpZXJfaWQgQVMgc2hpcG1lbnRfcGFja2FnZV9jb3VyaWVyX2lkL
+CBzaGlwbWVudC5wYWNrYWdlX2FnZW50X2lkIEFTIHNoaXBtZW50X3B
+hY2thZ2VfYWdlbnRfaWQsIHNoaXBtZW50LnBhY2thZ2VfcmVjZWl2ZWRf
+YnkgQVMgc2hpcG1lbnRfcGFja2FnZV9yZWNlaXZlZF9ieSwgc2hpcG1lbn
+QucGFja2FnZV9yZWNlaXZlZF9ieV9waG9uZSBBUyBzaGlwbWVudF9wY
+WNrYWdlX3JlY2VpdmVkX2J5X3Bob25lLCBzaGlwbWVudC5wYWNrYWdl
+X3JlY2VpdmVkX2J5X3NpZ25hdHVyZSBBUyBzaGlwbWVudF9wYWNrYW
+dlX3JlY2VpdmVkX2J5X3NpZ25hdHVyZSwgc2hpcG1lbnQucGFja2FnZV9
+kYXRlX2NyZWF0ZWQgQVMgc2hpcG1lbnRfcGFja2FnZV9kYXRlX2NyZW
+F0ZWQsIHNoaXBtZW50LnBhY2thZ2VfbGFzdF91cGRhdGVkIEFTIHNoa
+XBtZW50X3BhY2thZ2VfbGFzdF91cGRhdGVkLCBzaGlwbWVudC5wYWNr
+YWdlX2RhdGVfcmVjZWl2ZWQgQVMgc2hpcG1lbnRfcGFja2FnZV9kYXRlX
+3JlY2VpdmVkLCBzaGlwbWVudC5wYWNrYWdlX3JlamVjdGlvbl9yZWFzb
+24gQVMgc2hpcG1lbnRfcGFja2FnZV9yZWplY3Rpb25fcmVhc29uLCBzaGl
+wbWVudC5wYWNrYWdlX2RlbGl2ZXJ5X2ZlZSBBUyBzaGlwbWVudF9wY
+WNrYWdlX2RlbGl2ZXJ5X2ZlZSwgc2hpcG1lbnQucGFja2FnZV9kZWxpdm
+VyeV9zdGF0dXNfY29kZSBBUyBzaGlwbWVudF9wYWNrYWdlX2RlbGl2Z
+XJ5X3N0YXR1c19jb2RlLCBzaGlwbWVudC5wYWNrYWdlX2Z1bGZpbG1lb
+nRfc3RhdHVzX2NvZGUgQVMgc2hpcG1lbnRfcGFja2FnZV9mdWxmaWxt
+ZW50X3N0YXR1c19jb2RlLCBzaGlwbWVudC5wYWNrYWdlX2RlbGl2ZXJ5
+X2RhdGUgQVMgc2hpcG1lbnRfcGFja2FnZV9kZWxpdmVyeV9kYXRlLCBz
+aGlwbWVudC5wYWNrYWdlX2RlbGl2ZXJ5X2V0YSBBUyBzaGlwbWVudF9
+wYWNrYWdlX2RlbGl2ZXJ5X2V0YSwgc2hpcG1lbnQucGFja2FnZV9kZWx
+pdmVyeV9hdHRlbXB0IEFTIHNoaXBtZW50X3BhY2thZ2VfZGVsaXZlcnlf
+YXR0ZW1wdCwgc2hpcG1lbnQucGFja2FnZV9sYWJlbF9pbWFnZSBBUyBz
+aGlwbWVudF9wYWNrYWdlX2xhYmVsX2ltYWdlLCBzaGlwbWVudC5wYW
+NrYWdlX2ludm9pY2VfaW1hZ2UgQVMgc2hpcG1lbnRfcGFja2FnZV9pbnZ
+vaWNlX2ltYWdlLCBzaGlwbWVudC5tZXJjaGFudF9kaXJlY3Rpb24gQVMg
+c2hpcG1lbnRfbWVyY2hhbnRfZGlyZWN0aW9uLCBzaGlwbWVudC5kcm9
+wX29mZl9sb2NhdGlvbl9pZCBBUyBzaGlwbWVudF9kcm9wX29mZl9sb2N
+hdGlvbl9pZCwgc2hpcG1lbnQuc2VsZWN0ZWRfZHJvcF9vZmZfbG9jYXRp
+b25faWQgQVMgc2hpcG1lbnRfc2VsZWN0ZWRfZHJvcF9vZmZfbG9jYXRp
+b25faWQsIHNoaXBtZW50LmN1c3RvbWVyX2Ryb3Bfb2ZmIEFTIHNoaX
+BtZW50X2N1c3RvbWVyX2Ryb3Bfb2ZmLCBzaGlwbWVudC5jcmVkaXRzX
+3RyYW5zYWN0aW9uX2lkIEFTIHNoaXBtZW50X2NyZWRpdHNfdHJhbn
+NhY3Rpb25faWQsIHNoaXBtZW50Lmluc3VyYW5jZV9vcHRpb25fY29kZS
+BBUyBzaGlwbWVudF9pbnN1cmFuY2Vfb3B0aW9uX2NvZGUsIHNoaXBt
+ZW50Lmluc3VyYW5jZV9mZWUgQVMgc2hpcG1lbnRfaW5zdXJhbmNlX2
+ZlZSwgc2hpcG1lbnQuaW5zdXJhbmNlX3ZhbHVlIEFTIHNoaXBtZW50X2
+luc3VyYW5jZV92YWx1ZSwgc2hpcG1lbnQuZnJhbmNoaXNlX2lkIEFTIHN
+oaXBtZW50X2ZyYW5jaGlzZV9pZCwgc2hpcG1lbnQucGFja2FnZV9jb25uZ
+WN0b3JfdGFycmlmIEFTIHNoaXBtZW50X3BhY2thZ2VfY29ubmVjdG9yX
+3RhcnJpZiwgc2hpcG1lbnQucGFja2FnZV9jb25uZWN0b3JfZGlzY291bnQ
+gQVMgc2hpcG1lbnRfcGFja2FnZV9jb25uZWN0b3JfZGlzY291bnQsIHNoa
+XBtZW50LnBhY2thZ2VfY29ubmVjdG9yX3ZhdCBBUyBzaGlwbWVudF9w
+YWNrYWdlX2Nvbm5lY3Rvcl92YXQsIHNoaXBtZW50LnBhY2thZ2VfY29ub
+mVjdG9yX2ZvcndhcmluZ19jaGFyZ2UgQVMgc2hpcG1lbnRfcGFja2FnZV9j
+b25uZWN0b3JfZm9yd2FyaW5nX2NoYXJnZSwgc2hpcG1lbnQucGFja2Fn
+ZV9jb25uZWN0b3JfYW1vdW50X2R1ZSBBUyBzaGlwbWVudF9wYWNrY
+WdlX2Nvbm5lY3Rvcl9hbW91bnRfZHVlLCBzaGlwbWVudC5wYWNrYWdlX
+2Nvbm5lY3Rvcl93ZWlnaHQgQVMgc2hpcG1lbnRfcGFja2FnZV9jb25uZW
+N0b3Jfd2VpZ2h0LCBzaGlwbWVudC5wYWNrYWdlX2Nvbm5lY3Rvcl9ka
+W1lbnNpb25fd2VpZ2h0IEFTIHNoaXBtZW50X3BhY2thZ2VfY29ubmVjdG
+9yX2RpbWVuc2lvbl93ZWlnaHQsIHNoaXBtZW50LnBhY2thZ2VfY29ubmV
+jdG9yX2JpbGxhYmxlX3dlaWdodCBBUyBzaGlwbWVudF9wYWNrYWdlX2
+Nvbm5lY3Rvcl9iaWxsYWJsZV93ZWlnaHQsIHNoaXBtZW50LnBhY2thZ2
+VfY29ubmVjdG9yX290aGVyX2NoYXJnZSBBUyBzaGlwbWVudF9wYWNr
+YWdlX2Nvbm5lY3Rvcl9vdGhlcl9jaGFyZ2UsIHNoaXBtZW50LnBhY2thZ2
+VfY29ubmVjdG9yX290aGVyX2NoYXJnZV9yZWFzb24gQVMgc2hpcG1lbn
+RfcGFja2FnZV9jb25uZWN0b3Jfb3RoZXJfY2hhcmdlX3JlYXNvbiwgc2hpc
+G1lbnQubGFzdF91cGRhdGVkIEFTIHNoaXBtZW50X2xhc3RfdXBkYXRlZ
+Cwgc2hpcG1lbnQuZGF0ZV9jcmVhdGVkIEFTIHNoaXBtZW50X2RhdGVf
+Y3JlYXRlZCAKRlJPTSBzaGlwbWVudCAKV0hFUkUgc2hpcG1lbnQudGVz
+dCAhPSB0cnVlIEFORCBzaGlwbWVudC5zdGF0dXNfY29kZSBJTiAoJShz
+dGF0dXNfY29kZV8xKXMsICUoc3RhdHVzX2NvZGVfMilzLCAlKHN0YXR1
+c19jb2RlXzMpcykgQU5EIHNoaXBtZW50Lm1lcmNoYW50X2lkID0gJSht
+ZXJjaGFudF9pZF8xKXMgT1JERVIgQlkgc2hpcG1lbnQuZGF0ZV9jcmVhd
+GVkIERFU0M=", 
+       "results": [ 
+        { 
+            "destination_contact_phone": "08012345678", 
+            "code": "0006320484", 
+            "status_code": "drafted", 
+            "height": 0, 
+            "time_schedule": { 
+                "code": "anytime", 
+                "name": "Anytime" 
+            }, 
+            "amount": null, 
+            "is_spillable": false, 
+            "narration": null, 
+            "owner": "Sendbox", 
+            "destination_address": "20 Oregun Ikeja Ikeja Lagos Nigeria", 
+            "destination_name": "Johnny English", 
+            "incoming_option": { 
+                "code": "pickup", 
+                "name": "Pickup" 
+            }, 
+            "payment_options": null, 
+            "origin_city": "Lagos", 
+            "width": 0, 
+            "package_delivery_attempt": 0, 
+            "short_origin_address": "Lagos Lagos Nigeria", 
+            "origin_phone": "0801234567890", 
+            "package_received_by": null, 
+            "destination_city": "Ikeja", 
+            "package_delivery_status_code": null, 
+            "recurrent_cards": [], 
+            "package_label_image": null, 
+            "origin_state": { 
+                "code": "LOS", 
+                "name": "Lagos" 
+            }, 
+            "has_waybill_error": false, 
+            "insurance_option_code": null, 
+            "pk": "894688", 
+            "package_invoice_image": null, 
+            "transaction_id": null, 
+            "merchant": { 
+                "username": null, 
+                "email": "Johndoe@gmail.com", 
+                "id": 10383, 
+                "phone": "081234567890", 
+                "name": "John" 
+            }, 
+            "delivery_priority": { 
+                "code": "next_day", 
+                "name": "Next Day" 
+            }, 
+            "payment_option": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "courier": { 
+                "name": "Sixth Gear Logistics" 
+            }, 
+            "total_value": 90, 
+            "package_fulfilment_status_code": null, 
+            "origin_address": "20 Old Yaba Road Lagos Lagos Lagos 
+Nigeria", 
+            "package_agent": { 
+                "username": null, 
+                "email": null, 
+                "id": 0, 
+                "phone": null, 
+                "name": null 
+            }, 
+            "min_quoted_fee": 1015, 
+            "pickup_attempts": [], 
+            "origin_state_code": "LOS", 
+            "package_type_code": null, 
+            "max_quoted_fee": 1015, 
+            "tracking": { 
+                "destination_country": null, 
+                "status": null, 
+                "origin_city": null, 
+                "destination_city": null, 
+                "origin_name": null, 
+                "destination_name": null, 
+                "current_awb": null, 
+                "origin_country": null 
+            }, 
+            "client_id": 0, 
+            "destination_email": "janedoe@gmail.com", 
+            "origin_contact_phone": "080123456789", 
+            "package_delivery_fee": 0, 
+            "origin_post_code": null, 
+            "coupon_description": null, 
+            "possible_actions": [ 
+                { 
+                    "code": "pay", 
+                    "name": "Pay" 
+                }, 
+                { 
+                    "code": "cancel", 
+                    "name": "Cancel" 
+                } 
+            ], 
+            "notes": null, 
+            "current_status": { 
+                "code": "drafted", 
+                "name": "On Hold" 
+            }, 
+            "use_selected_rate": null, 
+            "destination_street": "20 Oregun Ikeja", 
+            "package_delivery_date": null, 
+            "reference_code": "74", 
+            "selected_rate_id": null, 
+            "pod": "Prepaid", 
+            "destination_state": { 
+                "code": "LOS", 
+                "name": "Lagos" 
+            }, 
+            "shipment_id": null, 
+            "origin_city_id": 1175, 
+            "domain": null, 
+            "package_type": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "last_updated": "2019-11-15T14:41:06.185519", 
+            "weight": 0, 
+            "amount_to_receive": 1263.72, 
+            "destination_state_code": "LOS", 
+            "sensitivity": "", 
+            "package_fulfilment_status": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "package_delivery_eta": null, 
+            "origin_country": { 
+                "code": "NG", 
+                "name": "Nigeria" 
+            }, 
+            "package_courier_id": null, 
+            "delivery_priority_code": "next_day", 
+            "origin_country_code": "NG", 
+            "package_agent_id": 0, 
+            "package_date_received": null, 
+            "package_delivery_status": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "has_waybill": null, 
+            "delivery_type_code": "last_mile", 
+            "short_destination_address": "Ikeja Lagos Nigeria", 
+            "pickup_courier": { 
+                "status": null, 
+                "courier_name": null 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+``` 
+Staging URL: https://sandbox.staging.sendbox.co/shipping/shipments 
+# Get Shipment 
+## Get Shipment 
+[`https://live.sendbox.co/shipping/shipments/:id`](https://api.sendbox
+.co/shipping/shipments/:id)   &#x20; 
+This gets a particular shipment by id&#x20; 
+{% tabs %} 
+{% tab title="Request" %} 
+## Path Parameters 
+| Name | Type   | Description     | 
+| ---- | ------ | --------------- | 
+| id   | number | the shipment id | 
+## Headers 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-key | 
+| Content-type  | String | application/json  | 
+| {% endtab %}  |        
+|                   
+{% tab title="Response" %} 
+200:OK 
+``` 
+{ 
+| 
+"destination_contact_phone": "070787354687", 
+"code": "0005111734", 
+"status_code": "drafted", 
+  "height": 0.0, 
+  "time_schedule": { 
+    "code": "anytime", 
+    "name": "Anytime" 
+  }, 
+  "amount": null, 
+  "is_spillable": false, 
+  "narration": null, 
+  "owner": "Sendbox", 
+  "destination_address": "22 ekilezicuvuj Ikangba Plateau Nigeria", 
+  "destination_name": "Gary Estrada", 
+  "incoming_option": { 
+    "code": "drop_off", 
+    "name": "Drop Off" 
+  }, 
+  "payment_options": null, 
+  "origin_city": "Ikeja", 
+  "width": 0.0, 
+  "package_delivery_attempt": 0, 
+  "short_origin_address": "Ikeja Lagos Nigeria", 
+  "origin_phone": "070679992262", 
+  "package_received_by": null, 
+  "destination_city": "Ikangba", 
+  "package_delivery_status_code": null, 
+  "recurrent_cards": [], 
+  "package_label_image": null, 
+  "origin_state": { 
+    "code": "LOS", 
+    "name": "Lagos" 
+  }, 
+  "has_waybill_error": false, 
+  "insurance_option_code": "standard", 
+  "pk": "896205", 
+  "package_invoice_image": null, 
+  "transaction_id": null, 
+  "merchant": { 
+    "username": null, 
+    "email": "jason@sendbox.ng", 
+    "id": 11499, 
+    "phone": "+2348087612345", 
+    "name": "kiko jayson" 
+  }, 
+  "delivery_priority": { 
+    "code": "next_day", 
+    "name": "Next Day" 
+  }, 
+  "payment_option": { 
+    "code": null, 
+    "name": null 
+  }, 
+  "courier": { 
+    "name": null 
+  }, 
+  "total_value": 1.0, 
+  "package_fulfilment_status_code": null, 
+  "origin_address": "11 sokdubzubohg Ikeja Lagos Nigeria", 
+  "package_agent": { 
+    "username": null, 
+    "email": null, 
+    "id": 0, 
+    "phone": null, 
+    "name": null 
+  }, 
+  "min_quoted_fee": 3074.0, 
+  "pickup_attempts": [], 
+  "origin_state_code": "LOS", 
+  "package_type_code": null, 
+  "max_quoted_fee": 3074.0, 
+  "tracking": { 
+    "destination_country": null, 
+    "status": null, 
+    "origin_city": null, 
+    "destination_city": null, 
+    "origin_name": null, 
+    "destination_name": null, 
+    "current_awb": null, 
+    "origin_country": null 
+  }, 
+  "client_id": 0, 
+  "destination_email": "fufieku@host.test", 
+  "origin_contact_phone": "070679992262", 
+  "package_delivery_fee": 0.0, 
+  "origin_post_code": null, 
+  "coupon_description": null, 
+  "possible_actions": [ 
+    { 
+      "code": "pay", 
+      "name": "Pay" 
+    }, 
+    { 
+      "code": "cancel", 
+      "name": "Cancel" 
+    } 
+  ], 
+  "notes": null, 
+  "current_status": { 
+    "code": "drafted", 
+    "name": "On Hold" 
+  }, 
+  "use_selected_rate": null, 
+  "destination_street": "22 ekilezicuvuj", 
+  "package_delivery_date": null, 
+  "reference_code": null, 
+  "selected_rate_id": null, 
+  "pod": "Prepaid", 
+  "destination_state": { 
+    "code": "PLT", 
+    "name": "Plateau" 
+  }, 
+  "shipment_id": null, 
+  "origin_city_id": 1154, 
+  "domain": null, 
+  "package_type": { 
+    "code": null, 
+    "name": null 
+  }, 
+  "last_updated": "2019-11-27T09:22:28.161606", 
+  "weight": 0.5, 
+  "amount_to_receive": 1.0, 
+  "destination_state_code": "PLT", 
+  "sensitivity": "", 
+  "package_fulfilment_status": { 
+    "code": null, 
+    "name": null 
+  }, 
+  "package_delivery_eta": null, 
+  "origin_country": { 
+    "code": "NG", 
+    "name": "Nigeria" 
+  }, 
+  "package_courier_id": null, 
+  "delivery_priority_code": "next_day", 
+  "origin_country_code": "NG", 
+  "package_agent_id": 0, 
+  "package_date_received": null, 
+  "package_delivery_status": { 
+    "code": null, 
+    "name": null 
+  }, 
+  "has_waybill": null, 
+  "delivery_type_code": "last_mile", 
+  "short_destination_address": "Ikangba Plateau Nigeria", 
+  "pickup_courier": { 
+    "status": null, 
+    "courier_name": null 
+  }, 
+  "origin_name": "Sarah Malone", 
+  "waybill_error": "false", 
+  "package_received_by_signature": null, 
+  "payment_option_code": null, 
+  "id": 896205, 
+  "package_last_updated": null, 
+  "payment_source_code": null, 
+  "origin_email": "cuc@host.local", 
+  "pickup_date": null, 
+  "destination_country_code": "NG", 
+  "status": { 
+    "code": "drafted", 
+    "name": "On Hold" 
+  }, 
+  "priority_pickup_fee": 0.0, 
+  "package_rejection_reason": null, 
+  "package_received_by_phone": null, 
+  "destination_phone": "070787354687", 
+  "time_schedule_code": "anytime", 
+  "paid": 0.0, 
+  "incoming_option_code": "drop_off", 
+  "fee": 2766.0, 
+  "courier_id": 0, 
+  "merchant_id": 11499, 
+  "destination_post_code": null, 
+  "destination_country": { 
+    "code": "NG", 
+    "name": "Nigeria" 
+  }, 
+  "is_confidential": false, 
+  "package_courier": { 
+    "name": null 
+  }, 
+  "origin_street": "11 sokdubzubohg", 
+  "current_awb": null, 
+  "items": [ 
+    { 
+      "description": null, 
+      "weight": 0.5, 
+      "amount_to_receive": 1.0, 
+      "package_size_code": null, 
+      "item_type_code": "letter_or_document", 
+      "id": 917030, 
+      "name": "Test", 
+      "accept_value_on_delivery": false, 
+      "value": 1.0, 
+      "item_type": { 
+        "code": "letter_or_document", 
+        "name": "Letters or Documents" 
+      }, 
+      "reference_code": null, 
+      "quantity": 1 
+    } 
+  ], 
+  "is_fragile": false, 
+  "accept_value_on_delivery": false, 
+  "package_date_created": null, 
+  "coupon_code": "marketrush", 
+"length": 0.0, 
+"selected_courier": { 
+"name": "DHL" 
+}, 
+"selected_courier_id": 22, 
+"action": null, 
+"date_created": "2019-11-27T09:22:28.102707", 
+"fee_balance": 0.0, 
+"delivery_type": { 
+"code": "last_mile", 
+"name": "Door to Door Delivery" 
+}, 
+"quantity": 1, 
+"api_endpoint": "shipments" 
+} 
+``` 
+{% endtab %} 
+{% endtabs %} 
+``` 
+Staging URL: Staging URL: 
+https://sandbox.staging.sendbox.co/shipping/shipments/:id 
+``` 
+# Request Shipping Quotes 
+ 
+A sample payload to request shipment quotes 
+ 
+```json 
+{ 
+        "origin" : { 
+            "first_name" : "Will", 
+            "last_name" : "Smith", 
+            "street" : "10 Olasheun Crescent", 
+            "street_line_2" : "HQ", 
+            "state" : "Lagos", 
+            "email" : null, 
+            "city" : "Obanikoro", 
+            "country" : "NG", 
+            "post_code" : "102216", 
+            "phone" : "+234 800 666 0419", 
+            "lng" : 3.37, 
+            "lat" : 6.56, 
+            "name" : null 
+        }, 
+    "destination": { 
+        "first_name": "Joe", 
+        "last_name": "Goldberg", 
+        "post_code": "94612", 
+        "phone": "+1 267 000 0", 
+        "lng": -122.27, 
+        "lat": 37.81, 
+        "name": null, 
+        "street": "31 Hall Crescent", 
+        "street_line_2": "", 
+        "state": "paris", 
+        "email": "", 
+        "city": "paris", 
+        "country": "FR" 
+    }, 
+    "weight" : 2, 
+        "dimension" : { 
+            "length" : 1, 
+            "width" : 1, 
+            "height" : 1 
+        }, 
+        "incoming_option" : "pickup", 
+        "region" : "NG", 
+        "service_type" : "international", 
+        "package_type" : "general", 
+        "total_value" : 15000, 
+        "currency" : "NGN", 
+        "channel_code" : "api", 
+        "pickup_date" : "2023-07-20", 
+        "items" : [ 
+            { 
+                "item_type" : "snail", 
+                "hts_code": "9001.21", 
+                "quantity" : 2, 
+                "name" : "African Wax Fabrics - Orange Lace Fabric that is 
+Not Woven", 
+                "value" : 1500 
+            } 
+        ], 
+        "service_code": "standard", 
+        "customs_option": "recipient" 
+} 
+``` 
+ 
+{% hint style="info" %} 
+Adding currency to the shipping quotes payload will return quotes in 
+whatever currency that was passed. 
+{% endhint %} 
+{% hint style="info" %} 
+Service code value can be either one of the following: standard, 
+premium or expedient. You can default it in your request.&#x20; 
+{% endhint %} 
+``` 
+Staging URL: Staging URL: 
+https://sandbox.staging.sendbox.co/shipping/shipment_delivery_quot
+e 
+``` 
+## Get Shipping Quotes 
+`https://live.sendbox.co/shipping/shipment_delivery_quote` 
+This gets shipping quotes&#x20; 
+{% tabs %} 
+{% tab title="Request" %} 
+## Headers 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-key | 
+| Content-type  | String | application/json  | 
+## Body Parameters 
+<table data-header-hidden><thead><tr><th width="210">Name</th><th 
+width="172.66666666666666">Type</th><th>Description</th></tr></the
+ad><tbody><tr><td>Name</td><td>Type</td><td>Description</td></tr>
+<tr><td>origin</td><td>object</td><td>senders 
+details</td></tr><tr><td>destination</td><td>object</td><td>recipient 
+details</td></tr><tr><td>currency</td><td>String</td><td>shop 
+currency</td></tr><tr><td>weight</td><td>float</td><td>weight of 
+package 
+</td></tr><tr><td>dimension</td><td>object</td><td>dimension 
+details</td></tr><tr><td>incoming_option</td><td>string</td><td>inco
+ming option can be pick up or drop 
+off</td></tr><tr><td>region</td><td>string</td><td>what region is the 
+package is shipped 
+from</td></tr><tr><td>service_type</td><td>string</td><td>set to 
+either international or 
+local</td></tr><tr><td>package_type</td><td>string</td><td>package 
+type</td></tr><tr><td>total_value</td><td>float</td><td>value of 
+shipment</td></tr><tr><td>channel_code</td><td>string</td><td>chan
+nel the request is being made from in this case set it to 
+api</td></tr><tr><td>pickup_date</td><td>string</td><td>date 
+package is picked 
+up</td></tr><tr><td>items</td><td>array</td><td><p>An array of 
+objects that contain: </p><p> - name [String]</p><p> - weight 
+[Float]</p><p> - item_type_code [String <em>optional</em>]</p><p> - 
+hts_code [String <em>optional</em>]</p><p> - description 
+[String]</p><p> - quantity  [Integer]</p><p> - value 
+[Float]</p></td></tr><tr><td>service_code</td><td>string</td><td>can 
+be set to international, local or 
+nation-wide</td></tr><tr><td>customs_option</td><td>string</td><td>
+custom options</td></tr></tbody></table> 
+{% endtab %} 
+{% tab title="Response" %} 
+201: Created&#x20; 
+Shipping quotes returns the different available couriers and their price 
+rated for this particular shipment. 
+ 
+```json 
+{ 
+    "items": [ 
+        { 
+            "value": 1500.0, 
+            "quantity": 2, 
+            "item_type": "zips", 
+            "name": "African Wax Fabrics - Orange Lace Fabric that is Not 
+Woven", 
+            "hts_code": null, 
+            "disclaim": false 
+        } 
+    ], 
+    "rates": [ 
+        { 
+            "fee": 30617.0, 
+            "key": "65901e2c2291eb2af1f23b4f", 
+            "insurance_option": "standard", 
+            "applied_credits": 0.0, 
+            "insurance_fee": 300.0, 
+            "breakdown": [ 
+                { 
+                    "value": 28180.93, 
+                    "code": "base_fee", 
+                    "name": "Base Fee", 
+                    "description": "Base Fee" 
+                }, 
+                { 
+                    "value": 2136.07, 
+                    "code": "vat", 
+                    "name": "Vat", 
+                    "description": "Vat" 
+                }, 
+                { 
+                    "value": 300.0, 
+                    "code": "insurance_fee", 
+                    "name": "Insurance Fee", 
+                    "description": "Insurance Fee" 
+                }, 
+                { 
+                    "value": 0, 
+                    "code": "applied_credits", 
+                    "name": "Credits", 
+                    "description": "Credits" 
+                }, 
+                { 
+                    "value": 0, 
+                    "code": "discount_fee", 
+                    "name": "Discount", 
+                    "description": "Discount" 
+                } 
+            ], 
+            "delivery_window": "Before 6PM Wednesday", 
+            "is_enabled": true, 
+            "caption": "", 
+            "currency": "NGN", 
+            "additional_fee": 0.0, 
+            "insurance_cap": 300.0, 
+            "delivery_date": "2024-08-21 16:59:03.560544", 
+            "discount_fee": 0.0, 
+            "pickup_eta_string": "11AM - 2PM Wednesday", 
+            "rate_card_id": "65901e2c2291eb2af1f23b4f", 
+            "sla_description": "Up to 8 working days", 
+            "base_fee": 28180.93, 
+            "description": "Standard", 
+            "vat": 2136.07, 
+            "pickup_date": "2024-08-14 14:00:03.560544", 
+            "pickup_window": "11AM - 2PM Wednesday", 
+            "name": "Standard", 
+            "rate_type": "standard", 
+            "volumetric_weight": 0.5, 
+            "code": "standard", 
+            "customs_options": [ 
+                "recipient" 
+            ], 
+            "billable_weight": 2.0, 
+            "service_code": "standard", 
+            "delivery_eta_string": "Before 6PM Wednesday" 
+        }, 
+        { 
+            "fee": 34894.0, 
+            "insurance_option": "standard", 
+            "applied_credits": 0.0, 
+            "insurance_fee": 300.0, 
+            "breakdown": [ 
+                { 
+                    "value": 32159.53, 
+                    "code": "base_fee", 
+                    "name": "Base Fee", 
+                    "description": "Base Fee" 
+                }, 
+                { 
+                    "value": 2434.47, 
+                    "code": "vat", 
+                    "name": "Vat", 
+                    "description": "Vat" 
+                }, 
+                { 
+                    "value": 300.0, 
+                    "code": "insurance_fee", 
+                    "name": "Insurance Fee", 
+                    "description": "Insurance Fee" 
+                }, 
+                { 
+                    "value": 0, 
+                    "code": "applied_credits", 
+                    "name": "Credits", 
+                    "description": "Credits" 
+                }, 
+                { 
+                    "value": 0, 
+                    "code": "discount_fee", 
+                    "name": "Discount", 
+                    "description": "Discount" 
+                } 
+            ], 
+            "delivery_window": "Before 6PM Wednesday", 
+            "is_enabled": true, 
+            "caption": "faster delivery", 
+            "currency": "NGN", 
+            "additional_fee": 0.0, 
+            "insurance_cap": 300.0, 
+            "delivery_date": "2024-08-21 16:59:03.647071", 
+            "discount_fee": 0.0, 
+            "pickup_eta_string": "11AM - 2PM Wednesday", 
+            "rate_card_id": "6594a8914c03ff6e6170ac73", 
+            "sla_description": "5 to 7 working days, Recommended", 
+            "base_fee": 32159.53, 
+            "description": "Premium", 
+            "vat": 2434.47, 
+            "pickup_date": "2024-08-14 14:00:03.647071", 
+            "pickup_window": "11AM - 2PM Wednesday", 
+            "name": "Premium", 
+            "rate_type": "premium", 
+            "volumetric_weight": 0.5, 
+            "code": "premium", 
+            "customs_options": [ 
+                "recipient" 
+            ], 
+            "billable_weight": 2.0, 
+            "service_code": "premium", 
+            "delivery_eta_string": "Before 6PM Wednesday" 
+        }, 
+        { 
+            "fee": 44061.0, 
+            "insurance_option": "standard", 
+            "applied_credits": 0.0, 
+            "insurance_fee": 300.0, 
+            "breakdown": [ 
+                { 
+                    "value": 40686.97, 
+                    "code": "base_fee", 
+                    "name": "Base Fee", 
+                    "description": "Base Fee" 
+                }, 
+                { 
+                    "value": 3074.03, 
+                    "code": "vat", 
+                    "name": "Vat", 
+                    "description": "Vat" 
+                }, 
+                { 
+                    "value": 300.0, 
+                    "code": "insurance_fee", 
+                    "name": "Insurance Fee", 
+                    "description": "Insurance Fee" 
+                }, 
+                { 
+                    "value": 0, 
+                    "code": "applied_credits", 
+                    "name": "Credits", 
+                    "description": "Credits" 
+                }, 
+                { 
+                    "value": 0, 
+                    "code": "discount_fee", 
+                    "name": "Discount", 
+                    "description": "Discount" 
+                } 
+            ], 
+            "delivery_window": "Before 6PM Wednesday", 
+            "is_enabled": true, 
+            "caption": "faster delivery", 
+            "currency": "NGN", 
+            "additional_fee": 0.0, 
+            "insurance_cap": 300.0, 
+            "delivery_date": "2024-08-21 16:59:03.681974", 
+            "discount_fee": 0.0, 
+            "pickup_eta_string": "11AM - 2PM Wednesday", 
+            "rate_card_id": "6594a91f4c03ff6e6170ac83", 
+            "sla_description": "Up to 5 working days, Fastest", 
+            "base_fee": 40686.97, 
+            "description": "Expedited", 
+            "vat": 3074.03, 
+            "pickup_date": "2024-08-14 14:00:03.681974", 
+            "pickup_window": "11AM - 2PM Wednesday", 
+            "name": "Expedited", 
+            "rate_type": "expedited", 
+            "volumetric_weight": 0.5, 
+            "code": "expedited", 
+            "customs_options": [ 
+                "recipient" 
+            ], 
+            "billable_weight": 2.0, 
+            "service_code": "expedited", 
+            "delivery_eta_string": "Before 6PM Wednesday" 
+        } 
+    ], 
+    "destination": { 
+        "country": "FR", 
+        "city": "paris", 
+        "post_code": "94612", 
+        "state": "paris", 
+        "lng": -122.27, 
+        "lat": 37.81 
+    }, 
+    "rate_type": "standard", 
+    "status": "successful", 
+    "currency": "NGN", 
+    "service_type": "international", 
+    "rate": { 
+        "fee": 30617.0, 
+        "key": "65901e2c2291eb2af1f23b4f", 
+        "insurance_option": "standard", 
+        "applied_credits": 0.0, 
+        "insurance_fee": 300.0, 
+        "breakdown": [ 
+            { 
+                "value": 28180.93, 
+                "code": "base_fee", 
+                "name": "Base Fee", 
+                "description": "Base Fee" 
+            }, 
+            { 
+                "value": 2136.07, 
+                "code": "vat", 
+                "name": "Vat", 
+                "description": "Vat" 
+            }, 
+            { 
+                "value": 300.0, 
+                "code": "insurance_fee", 
+                "name": "Insurance Fee", 
+                "description": "Insurance Fee" 
+            }, 
+            { 
+                "value": 0, 
+                "code": "applied_credits", 
+                "name": "Credits", 
+                "description": "Credits" 
+            }, 
+            { 
+                "value": 0, 
+                "code": "discount_fee", 
+                "name": "Discount", 
+                "description": "Discount" 
+            } 
+        ], 
+        "delivery_window": "Before 6PM Wednesday", 
+        "is_enabled": true, 
+        "caption": "", 
+        "currency": "NGN", 
+        "additional_fee": 0.0, 
+        "insurance_cap": 300.0, 
+        "delivery_date": "2024-08-21 16:59:03.560544", 
+        "discount_fee": 0.0, 
+        "pickup_eta_string": "11AM - 2PM Wednesday", 
+        "rate_card_id": "65901e2c2291eb2af1f23b4f", 
+        "sla_description": "Up to 8 working days", 
+        "base_fee": 28180.93, 
+        "description": "Standard", 
+        "vat": 2136.07, 
+        "pickup_date": "2024-08-14 14:00:03.560544", 
+        "pickup_window": "11AM - 2PM Wednesday", 
+        "name": "Standard", 
+        "rate_type": "standard", 
+        "volumetric_weight": 0.5, 
+        "code": "standard", 
+        "customs_options": [ 
+            "recipient" 
+        ], 
+        "billable_weight": 2.0, 
+        "service_code": "standard", 
+        "delivery_eta_string": "Before 6PM Wednesday" 
+    }, 
+    "origin": { 
+        "country": "NG", 
+        "city": "obanikoro", 
+        "post_code": "102216", 
+        "state": "lagos", 
+        "lng": 3.37, 
+        "lat": 6.56 
+    }, 
+    "region": "NG", 
+    "service_code": "standard", 
+    "weight": 2.0, 
+    "connector_rates": [], 
+    "package_type": "general" 
+} 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+ 
+# Create New Shipment 
+ 
+## Sample Payload to request shipment&#x20; 
+ 
+```json 
+{ 
+        "origin" : { 
+            "first_name" : "Will", 
+            "last_name" : "Smith", 
+            "street" : "10 Olasheun Crescent", 
+            "street_line_2" : "HQ", 
+            "state" : "Lagos", 
+            "email" : null, 
+            "city" : "Obanikoro", 
+            "country" : "NG", 
+            "post_code" : "102216", 
+            "phone" : "+234 800 666 0419", 
+            "lng" : 3.37, 
+            "lat" : 6.56, 
+            "name" : null 
+        }, 
+    "destination": { 
+        "first_name": "Joe", 
+        "last_name": "Goldberg", 
+        "post_code": "94612", 
+        "phone": "+1 267 000 0", 
+        "lng": -122.27, 
+        "lat": 37.81, 
+        "name": null, 
+        "street": "31 Hall Crescent", 
+        "street_line_2": "", 
+        "state": "paris", 
+        "email": "", 
+        "city": "paris", 
+        "country": "FR" 
+    }, 
+    "weight" : 2, 
+        "dimension" : { 
+            "length" : 1, 
+            "width" : 1, 
+            "height" : 1 
+        }, 
+        "incoming_option" : "pickup", 
+        "region" : "NG", 
+        "service_type" : "international", 
+        "package_type" : "general", 
+        "total_value" : 15000, 
+        "currency" : "NGN", 
+        "channel_code" : "api", 
+        "pickup_date" : "2023-07-20", 
+        "items" : [ 
+            { 
+                "item_type" : "snail", 
+                "hts_code":"9000.10", 
+                "quantity" : 2, 
+                "name" : "African Wax Fabrics - Orange Lace Fabric that is 
+Not Woven", 
+                "value" : 1500 
+            } 
+        ], 
+        "service_code": "standard", 
+        "customs_option": "recipient", 
+        "callback_url":"https://your_callback_url/" 
+         
+} 
+``` 
+ 
+## &#x20; 
+``` 
+Staging URL: https://sandbox.staging.sendbox.co/shipping/shipments 
+``` 
+## Create New Shipment 
+[`https://live.sendbox.co/shipping/shipments`](https://api.sendbox.co
+/shipping/shipments) 
+This creates a new shipment 
+{% tabs %} 
+{% tab title="Request" %} 
+## Headers 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-key | 
+| Content-type  | String | application/json  | 
+## Body Parameters&#x20; 
+<table data-header-hidden><thead><tr><th width="200">Name</th><th 
+width="118">Type</th><th>Description</th></tr></thead><tbody><tr><t
+d>Name</td><td>Type</td><td>Description</td></tr><tr><td>origin</t
+d><td>Object</td><td>senders 
+details</td></tr><tr><td>destination</td><td>Object</td><td>recipient 
+details</td></tr><tr><td>weight</td><td>Float</td><td>weight of 
+package </td></tr><tr><td>items</td><td>Array</td><td><p>An array 
+of objects that contain: </p><p> - name [String]</p><p> - weight 
+[Float]</p><p> - item_type_code [String <em>optional</em>]</p><p> - 
+hts_code [String <em>optional</em>]</p><p> - description 
+[String]</p><p> - quantity  [Integer]</p><p> - value 
+[Float]</p></td></tr><tr><td></td><td></td><td> 
+</td></tr><tr><td>incoming_option</td><td>String</td><td>set to 
+either pickup or 
+dropoff</td></tr><tr><td>pickup_date</td><td>Date</td><td>date in 
+ISO format </td></tr><tr><td>total_value</td><td>Float</td><td>value 
+of 
+shipment</td></tr><tr><td>package_type</td><td>String</td><td>pack
+age type</td></tr><tr><td>channel_code 
+</td><td>String</td><td>channel the request is being made from; in 
+this case set it to 
+api</td></tr><tr><td>service_code</td><td>String</td><td>can be set 
+to either international, nation-wide, and 
+local.</td></tr><tr><td>region</td><td>String</td><td>region the 
+shipment is being shipped 
+from.</td></tr><tr><td>custom_options</td><td>String</td><td>custom 
+options</td></tr><tr><td>callback_url</td><td>String</td><td>a 
+webhook url to get the tracking 
+update.</td></tr><tr><td>hts_code</td><td>String</td><td>pass in the 
+item code to match it's description.</td></tr></tbody></table> 
+{% endtab %} 
+{% tab title="Response" %} 
+201: Created&#x20; 
+Create shipment response returns details of the new shipment created. 
+The status code is dependent on available balance in your Sendbox 
+wallet if there is enough money at the time of creating shipment, the 
+wallet is charged and status code is pending but without sufficient 
+balance or empty wallet, status code comes back as drafted.&#x20; 
+```json 
+{ 
+"pickup_date": "2024-08-14 14:00:54.767000", 
+    "has_waybill_error": true, 
+    "selected_courier_id": "65901e2c2291eb2af1f23b4f", 
+    "origin_city": "obanikoro", 
+    "pickup_courier": {}, 
+    "code": "0002159289", 
+    "recurrent_cards": [], 
+    "origin_name": "Emotu Balogun", 
+    "delivery_priority": {}, 
+    "origin_state": { 
+        "name": "lagos", 
+        "code": "lagos" 
+    }, 
+    "package_invoice_image": null, 
+    "destination_state_name": "paris", 
+    "current_status": { 
+        "name": "Book On Hold", 
+        "code": "drafted" 
+    }, 
+    "user_id": "66952257b84051001f2a2ace", 
+    "destination_country": { 
+        "name": "FR", 
+        "code": "FR" 
+    }, 
+    "date_created": "2024-08-12T17:07:00.072000", 
+    "weight": 2.0, 
+    "paid": 0.0, 
+    "pod": "prepaid", 
+    "destination_state_code": "paris", 
+    "payment_data": { 
+        "checkout_id": "b32b6dbc7e3cf0a44083d252c5948705", 
+        "status": "pending", 
+        "entity_id": null, 
+        "currency": "NGN", 
+        "reference_code": "0002159289", 
+        "payment_source_code": null, 
+        "amount": 33117.0 
+    }, 
+    "destination_state": { 
+        "name": "paris", 
+        "code": "paris" 
+    }, 
+    "destination_email": "", 
+    "origin_country": { 
+        "name": "NG", 
+        "code": "NG" 
+    }, 
+    "origin_state_code": "lagos", 
+    "destination_country_name": "FR", 
+    "items": [ 
+        { 
+            "name": "African Wax Fabrics - Orange Lace Fabric that is Not 
+Woven", 
+            "weight": 2.0, 
+            "quantity": 2, 
+            "piece_id": "0002159289-01", 
+            "description": "African Wax Fabrics - Orange Lace Fabric that is 
+Not Woven", 
+            "item_type": { 
+                "name": "snail", 
+                "code": "snail" 
+            }, 
+            "value": 1500.0 
+        } 
+    ], 
+    "region": "NG", 
+    "status_code": "drafted", 
+    "fee": 33117.0, 
+    "status": { 
+        "name": "Book On Hold", 
+        "code": "drafted" 
+    }, 
+    "package_type": { 
+        "weight": 10.0, 
+        "name": "General items", 
+        "description": "Everyday products for various uses." 
+    }, 
+    "origin_country_name": "NG", 
+    "possible_actions": [ 
+        { 
+            "name": "Pay", 
+            "code": "pay" 
+        }, 
+        { 
+            "name": "Cancel", 
+            "code": "cancel" 
+        } 
+    ], 
+    "tracking_code": "0002159289", 
+    "amount": 33117.0, 
+    "package_delivery_attempt": 0, 
+    "_id": "66ba41348f1bd40039f8f38a", 
+    "origin_email": null, 
+    "insurance_option_code": "standard", 
+    "origin_state_name": "lagos", 
+    "origin_street": "10 Olasheun Crescent", 
+    "last_updated": "2024-08-12T17:07:07.214271", 
+    "incoming_option": { 
+        "name": null, 
+        "code": null 
+    }, 
+    "id": "66ba41348f1bd40039f8f38a", 
+    "merchant": { 
+        "name": "Love Quinn", 
+        "email": "sales@quinn.com", 
+        "phone": "+19400080111" 
+    }, 
+    "pk": "66ba41348f1bd40039f8f38a", 
+    "package_connector_other_charge": 0.0, 
+    "destination_city": "paris", 
+    "date_booked": "2024-08-12T17:07:00.072000", 
+    "origin_phone": "+2348006660419", 
+    "destination_name": "Forty Quinn", 
+    "current_awb": null, 
+    "courier": { 
+        "name": "" 
+    }, 
+    "origin_country_code": "NG", 
+    "destination_phone": "+12672306531", 
+    "destination_street": "31 Hall Crescent", 
+    "max_quoted_fee": 33117.0, 
+    "selected_courier": "65901e2c2291eb2af1f23b4f", 
+    "min_quoted_fee": 33117.0, 
+    "waybill_error": "Insufficient item description. Please update to 
+continue", 
+    "courier_id": "64f020fcf040ba4b3c1697e9", 
+    "destination_country_code": "FR", 
+    "quantity": 1.0, 
+    "total_value": 1500.0 
+} 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+### Payload Explained&#x20; 
+ 
+While some of the payloads are self explained, lets go over some of 
+them that seem a bit confusing.&#x20; 
+#### channel\_code&#x20; 
+This tells us where the request came from this case it's form the 
+api.&#x20; 
+#### Items 
+This is an array of objects. It includes the name of what you are 
+shipping, weight, item\_type\_code, package\_size\_code, a value 
+which is the total price of the item(s) you are shipping, and quantity of 
+your shipment. An example of an items payload will look like 
+this&#x20; 
+``` 
+"items": [ 
+] 
+``` 
+{ 
+} 
+"name": "Laptop", 
+"item_type_code": "other", 
+"hts_code": "9001.10", 
+"package_size_code": "medium", 
+"quantity": 2, 
+"weight": 3, 
+"value":120000 
+#### Callback\_url&#x20; 
+This should be a webhook url which you will pass with your other 
+request shipment payloads. Sendbox will post tracking updates to this 
+url from pending, processing and completed. 
+### Fund your staging account 
+To stimulate a successful request on your staging account you have to 
+fund your staging account by making a post to add\_money endpoint 
+{% embed 
+url="<https://sandbox.staging.sendbox.co/payments/add_money>" %} 
+{% tabs %} 
+{% tab title="Request" %} 
+```json 
+{ 
+"amount": 10000 
+} 
+``` 
+{% endtab %} 
+{% tab title="Response" %} 
+```json 
+{ 
+"status": "successful" 
+} 
+``` 
+{% endtab %} 
+{% endtabs %} 
+### Check your staging account balance&#x20; 
+You can simply do this by doing a get to the staging payment profile 
+<https://sandbox.staging.sendbox.co/payments/profile>&#x20; 
+### Stimulate webhooks events&#x20; 
+You can stimulate webhook events for tracking status on staging by 
+sending tracking code to move\_tracking endpoint 
+<https://sandbox.staging.sendbox.co/shipping/move_tracking> 
+``` 
+{ 
+code: <tracking_code> 
+} 
+``` 
+&#x20; 
+# Calculate Landed Cost 
+This endpoint calculates the total landed cost of a shipment. To retrieve 
+the landed cost, send a POST request to the landed cost endpoint using 
+the same payload as required for the [create shipment 
+request.](/shipping/create-new-shipment.md) This will return the full 
+breakdown of costs, including taxes, duties, and shipping fees, 
+providing an accurate total cost for the shipment. 
+## API Reference 
+<mark style="color:green;">`POST`</mark>   
+<https://sandbox.staging.sendbox.co/shipping/landed\\_cost\\_estim
+ate> 
+**Headers** 
+| Name          
+| Value               
+| 
+| ------------- | ------------------- | 
+| Content-Type  | `application/json`  | 
+| Authorization | authorization-token | 
+**Body** 
+| Name             
+| 
+| Type   | Description                                                                              
+| ---------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | 
+| origin           
+| 
+| object | Senders details                                                                         
+| object | Recipient details                                                                   
+| destination      
+| 
+| weight           
+| 
+| items            
+| float  | Weight of package                                                                   
+| array  | <p>An array of objects that contain: </p><p> - 
+name \[String]</p><p> - weight \[Float]</p><p> - item\_type\_code 
+\[String <em>optional</em>]</p><p> - hts\_code \[String 
+<em>optional</em>]</p><p> - description \[String]</p><p> - quantity  
+\[Integer]</p><p> - value \[Float]</p> | 
+| incoming\_option | string | set to either pickup or dropoff                                       
+| 
+| pickup\_date     | date   | date in ISO format                                                             
+| 
+| total\_value     | float  | value of shipment                                                                  
+| 
+| service\_code    | string | can be set to either international, 
+nation-wide, or local.                                                                                                     
+| 
+| package\_type    | string | package type                                                                    
+| 
+| channel\_code    | string | channel the request is being made from; in 
+this case set it to api                                                                                                      
+| 
+| region           
+| string | region the shipment is being shipped from.                            
+| 
+| callback\_url    | string | a webhook url to get the tracking update.                         
+| 
+| hts\_code        
+description.                                                                                                                     
+| 
+**Response** 
+{% tabs %} 
+| string | pass in the item code to match it's 
+{% tab title="200" %} 
+ 
+```json 
+{ 
+    "customs_option": "sender", 
+    "dimension": { 
+        "length": 1.0, 
+        "width": 1.0, 
+        "height": 1.0 
+    }, 
+    "incoming_option": "pickup", 
+    "estimate": { 
+        "code": "duties_and_taxes", 
+        "name": "Duties and taxes", 
+        "description": "import duties and taxes", 
+        "value": 18.93, 
+        "breakdown": [ 
+            { 
+                "code": "duties", 
+                "name": "Duties", 
+                "description": "", 
+                "value": 0.0 
+            }, 
+            { 
+                "code": "taxes", 
+                "name": "Taxes", 
+                "description": "", 
+                "value": 12.22 
+            }, 
+            { 
+                "code": "fees", 
+                "name": "Fees", 
+                "description": "", 
+                "value": 6.71 
+            } 
+        ], 
+        "exchange_rate": 1669.025 
+    }, 
+    "weight": 0.2, 
+    "currency": "NGN", 
+    "service_code": "standard", 
+    "origin": { 
+        "country": "NG", 
+        "lat": 6.56, 
+        "post_code": "102216", 
+        "first_name": "Emotu", 
+        "state": "abuja", 
+        "city": "maitama", 
+        "lng": 3.37 
+    }, 
+    "destination": { 
+        "country": "GB", 
+        "lat": 37.81, 
+        "post_code": "94612", 
+        "first_name": "Ubani", 
+        "state": "london", 
+        "city": "london", 
+        "last_name": "Balogun", 
+        "lng": -122.27 
+    }, 
+    "items": [ 
+        { 
+            "name": "African Wax Fabrics - Orange Lace Fabric that is Not 
+Woven", 
+            "item_type": "herbal_tea", 
+            "value": 100000.0, 
+            "quantity": 4, 
+            "weight": 0.5, 
+            "hts_code": "1211.90.8980", 
+            "disclaim": true 
+        } 
+    ], 
+    "service_type": "international", 
+    "total_value": 100000.0, 
+    "pickup_date": "2023-07-20T07:17:10.582Z", 
+    "package_type": "general", 
+    "region": "NG", 
+    "instance_id": "6136dfa6a1ab9d318bcfcb94", 
+    "user_id": "61f3f297f0bb8f001a8a34e0", 
+    "entity_id": null 
+} 
+ 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+# Tracking Shipment 
+## Track Shipment&#x20; 
+[`https://live.sendbox.co/shipping/tracking`](https://api.sendbox.co/s
+hipping/tracking) 
+This tracks a shipment&#x20; 
+{% tabs %} 
+{% tab title="Request" %} 
+## Headers 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-key | 
+| Content-type  | String | application/json  | 
+## Body Parameters&#x20; 
+| Name         
+| Type   | Description            
+| ------------ | ------ | ---------------------- | 
+| code         
+| 
+| String | shipment tracking code | 
+| {% endtab %} |        
+|                        
+{% tab title="Response" %} 
+201: Created 
+| 
+This returns the details of a shipment and tracking events. 
+``` 
+{ 
+"status": { 
+        "code": "delivered", 
+        "name": "Delivered" 
+    }, 
+    "code": "0008927630", 
+    "last_updated": "2019-11-13T21:07:59.605566", 
+    "courier": { 
+        "name": "DHL" 
+    }, 
+    "amount_to_receive": 5000, 
+    "status_code": "delivered", 
+    "sensitivity": null, 
+    "reference_code": null, 
+    "origin_state_code": "LOS", 
+    "agent": { 
+        "name": "DHL BOT" 
+    }, 
+    "delivery_eta": "2019-11-09T23:59:59.976552", 
+    "is_spillable": false, 
+    "destination_name": "Paul Chukelu", 
+    "destination_address": "512 Cobblestone Creek, Mableton, Georgia, 
+Mableton Georgia United States Of America", 
+    "origin_country_code": "NG", 
+    "id": 51196, 
+    "origin_country": { 
+        "code": "NG", 
+        "name": "Nigeria" 
+    }, 
+    "is_confidential": false, 
+    "short_destination_address": "Mableton Georgia United States Of 
+America", 
+    "origin_name": "Looks Like A Good Man", 
+    "short_origin_address": "Anthony Lagos Nigeria", 
+    "total_value": 5000, 
+    "accept_value_on_delivery": false, 
+    "origin_state": { 
+        "code": "LOS", 
+        "name": "Lagos" 
+    }, 
+    "notes": null, 
+    "origin_address": "71 Adebayo Mokuolu Street, New Castle Anthony 
+Lagos Nigeria", 
+    "date_created": "2019-11-08T16:50:17.044031", 
+    "is_fragile": false, 
+    "pickup_date": "2019-11-08T16:50:15.026374", 
+     "events": [ 
+        { 
+            "status": { 
+                "code": "delivered", 
+                "name": "Delivered" 
+            }, 
+            "last_updated": "2019-11-13T21:08:00.685932", 
+            "description": "package was delivered succesfully", 
+            "courier": { 
+                "name": "DHL" 
+            }, 
+            "status_code": "delivered", 
+            "previous_status": { 
+                "code": "in_delivery", 
+                "name": "In Delivery" 
+            }, 
+            "tracking_code": "0008927630", 
+            "delivery_eta": null, 
+            "delivery_status": { 
+                "code": null, 
+                "name": null 
+            }, 
+            "previous_status_code": "in_delivery", 
+            "current_courier": { 
+                "name": "DHL" 
+            }, 
+            "location_description": "GA-US", 
+            "delivery_status_code": null, 
+            "date_created": "2019-11-13T21:08:00.685940" 
+        }Staging URL: 
+https://sandbox.staging.sendbox.co/shipping/tracking 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+``` 
+Staging URL: https://sandbox.staging.sendbox.co/shipping/tracking 
+``` 
+ 
+### Tracking Response&#x20; 
+ 
+At different times, there are different tracking status in the payload. 
+Sendbox allows you track your shipment in real-time.&#x20; 
+ 
+{% hint style="danger" %} 
+ 
+### Book on hold 
+ 
+This means the shipment hasn't been paid for. User might need to fund 
+their account to complete their shipment request. it comes back with 
+`code:"drafted"` as the status code in the response. 
+{% endhint %} 
+ 
+{% hint style="info" %} 
+ 
+### Pending 
+ 
+This means the shipment request was successful and is waiting to be 
+picked up.  comes back with code:"pending" as the status code in the 
+response. 
+{% endhint %} 
+{% hint style="info" %} 
+### Pick up started 
+This means shipment has been picked up. comes back with 
+`code:"pickup_started"` as the status code in the response. 
+{% endhint %} 
+{% hint style="info" %} 
+### Pick up completed&#x20; 
+This means the pick up process has been completed. comes back with 
+`code:"pickup_completed`" in the status code response. 
+{% endhint %} 
+{% hint style="info" %} 
+### Delivery Started&#x20; 
+This means the delivery process has started. comes back with 
+`code:in_delivery` in the status code response. 
+{% endhint %} 
+{% hint style="info" %} 
+### In Transit&#x20; 
+This means delivery is in transit and it's updated in real-time. Comes 
+back with `code:"in_transit"` as the status code in the response. 
+{% endhint %} 
+{% hint style="success" %} 
+### Delivered&#x20; 
+This means the entire process has been completed and the shipment 
+has been delivered. Comes back with `code:"deliverd"` as the status 
+code in the response.&#x20; 
+{% endhint %} 
+Payment 
+Introduction 
+You can seamlessly integrate Sendbox payment into your infrastructure. Your 
+customers can have virtual accounts, fund their wallet and check their wallet 
+balance. 
+# Payment Profile 
+### Get Payment Profile 
+To get payment profile, you make a get request to the payment profile 
+endpoint and pass the required header parameters to get the appropriate 
+response.  
+[`https://live.sendbox.co/payments/profile`](https://api.sendbox.co/p
+ayments/profile) 
+{% tabs %} 
+{% tab title="Request" %} 
+### Headers&#x20; 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-Key | 
+| Content-Type  | String | application/json  | 
+| {% endtab %}  |        
+|                   
+{% tab title="Response" %} 
+200:OK 
+``` 
+{ 
+| 
+"username": "jason@sendbox.ng", 
+"user_id": "5d373bdb9ec77c00347719a0", 
+"last_updated": "2020-03-20T15:15:17.408000+00:00", 
+"name": "Testing Roundabout Name Change", 
+"phone": "+2348087612345", 
+"credits_account": { 
+"balance": 0.0, 
+"currency": "NGN", 
+    "key": "C0008157332", 
+    "pk": "5d373bdbe4b32c00014eae48", 
+    "_id": "5d373bdbe4b32c00014eae48", 
+    "type": { 
+      "pk": "credits", 
+      "code": "credits", 
+      "name": "Credits" 
+    } 
+  }, 
+  "bvn": null, 
+  "funds": 38.0, 
+  "escrow": 75.0, 
+  "credits": 0.0, 
+  "email": "jason@sendbox.ng", 
+  "accounts": [ 
+    { 
+      "balance": 75.0, 
+      "currency": "NGN", 
+      "key": "E0016700165", 
+      "pk": "5d373bdbe4b32c00014eae47", 
+      "_id": "5d373bdbe4b32c00014eae47", 
+      "type": { 
+        "pk": "escrow", 
+        "code": "escrow", 
+        "name": "Escrow" 
+      } 
+    }, 
+    { 
+      "balance": 0.0, 
+      "currency": "NGN", 
+      "key": "C0008157332", 
+      "pk": "5d373bdbe4b32c00014eae48", 
+      "_id": "5d373bdbe4b32c00014eae48", 
+      "type": { 
+        "pk": "credits", 
+        "code": "credits", 
+        "name": "Credits" 
+      } 
+    }, 
+    { 
+      "balance": 38.0, 
+      "currency": "NGN", 
+      "key": "F0006107729", 
+      "pk": "5d373bdbe4b32c00014eae49", 
+      "_id": "5d373bdbe4b32c00014eae49", 
+      "type": { 
+        "pk": "funds", 
+        "code": "funds", 
+        "name": "Funds" 
+      } 
+    } 
+  ], 
+  "date_created": "2019-07-23T16:54:51.718000+00:00", 
+  "virtual_bank_accounts": [ 
+    { 
+      "bank_name": "Providus Bank", 
+      "last_updated": "2019-11-27T16:42:37.305000+00:00", 
+      "account_number": "9907710812", 
+      "date_created": "2019-11-27T16:42:37.305000+00:00", 
+      "pk": "vba_3gMbhPJLJVc", 
+      "account_name": " KIKO JAYSON" 
+    } 
+  ], 
+  "_id": "5d373bdbe4b32c00014eae46", 
+  "funds_account": { 
+    "balance": 38.0, 
+    "currency": "NGN", 
+    "key": "F0006107729", 
+    "pk": "5d373bdbe4b32c00014eae49", 
+    "_id": "5d373bdbe4b32c00014eae49", 
+    "type": { 
+      "pk": "funds", 
+      "code": "funds", 
+      "name": "Funds" 
+    } 
+  }, 
+  "escrow_account": { 
+    "balance": 75.0, 
+    "currency": "NGN", 
+    "key": "E0016700165", 
+    "pk": "5d373bdbe4b32c00014eae47", 
+    "_id": "5d373bdbe4b32c00014eae47", 
+    "type": { 
+      "pk": "escrow", 
+      "code": "escrow", 
+      "name": "Escrow" 
+    } 
+  } 
+} 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+# Virtual Account 
+To get virtual account, you need to make a request to virtual account endpoint 
+ensure to pass the required header parameters to get the right response.  
+### Get Virtual Account&#x20; 
+[`https://live.sendbox.co/payments/virtual_accounts`](https://api.sen
+dbox.co/payments/virtual_accounts) 
+{% tabs %} 
+{% tab title="Request" %} 
+### Headers&#x20; 
+| Name          
+| Type   | Description       
+| 
+| ------------- | ------ | ----------------- | 
+| Authorization | String | Authorization-Key | 
+| Content-Type  | String | application/json  | 
+| {% endtab %}  |        
+|                   
+{% tab title="Response" %} 
+200:OK 
+``` 
+{ 
+"count": 1, 
+"page_by": { 
+"next_page": null, 
+"prev_page": null, 
+"per_page": 20, 
+"total": 1, 
+"page": 1, 
+"pages": 0 
+}, 
+| 
+  "filter_by": {}, 
+  "query": null, 
+  "view": null, 
+  "results": [ 
+    { 
+      "bank_name": "Providus Bank", 
+      "last_updated": "2019-11-27T16:42:37.305000+00:00", 
+      "account_number": "9907710812", 
+      "date_created": "2019-11-27T16:42:37.305000+00:00", 
+      "pk": "vba_3gMbhPJLJVc", 
+      "account_name": " KIKO JAYSON" 
+    } 
+  ], 
+  "sort_by": [ 
+    { 
+      "asc_desc": "descending", 
+      "order_by": "date_created" 
+    } 
+  ] 
+} 
+``` 
+ 
+{% endtab %} 
+{% endtabs %} 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+third party intergations 
+Opencart Extension 
+Easily integrate sendbox shipping with your opencart ecommerce site. 
+Requirements 
+Sendbox opencart extension requires a current version of opencart from 3.0 upwards it 
+uses override engine which will be installed with your extension. 
+Installation Process 
+To install, download the extension from opencart extension directory and unzip you will 
+find an admin, catalog and system folder copy these folders and paste in your store root 
+directory. 
+Settings Page 
+Once you have successfully installed, go to extensions on your admin dashboard, click 
+on shipping and then select sendbox shipping. 
+Sendbox Settings 
+This part is very important so ensure you follow the instructions carefully so your 
+extension can work. On this page, you will find a webhook url. Go to sendbox and 
+register this url and then you will be given an app Id and a client secret on your sendbox 
+dashboard. 
+Copy this app_id and client secret and paste it in their respective fields then click on 
+save once this is done, a connect to sendbox button is displayed. 
+Click on this button and you will be redirected to sendbox here you will be prompted to 
+login once this is done, you will be redirected back to your store dashboard. 
+Now the settings page will be fully loaded. Fill the remaining fields like state, city, set the 
+status to enabled and sort order to 1 and finally save. now your customer can ship with 
+sendbox. 
+Ship with Sendbox 
+Back on your admin dashboard, you will see a ship with sendbox. to ship, select a 
+courier service and then click on the request shipment button and you will receive a 
+message that your shipment is successful. 
