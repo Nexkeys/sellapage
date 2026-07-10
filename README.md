@@ -663,7 +663,7 @@ Plan gate: Pro and Premium.
 Api keys already added to .env and vercel environmnet variables as
 PREMBLY_SECRET_KEY=
 PREMBLY_PUBLIC_KEY=
-[x]Already ran - npm install --save prembly-react-kyc
+[x]Already successfully ran - npm install --save prembly-react-kyc
 
 1
 Installation
