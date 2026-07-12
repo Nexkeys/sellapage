@@ -18,16 +18,18 @@ export default async function handler(req, res) {
   if (!storeId || !rcNumber) {
     return res.status(400).json({
       error: 'missing_fields',
-      message: 'Please enter your RC number.',
+      message: 'Please enter your RC or BN number.',
     })
   }
 
-  const cleanRC = rcNumber.trim().replace(/^RC/i, '')
+  const prefixMatch = rcNumber.trim().match(/^(RC|BN|IT|LP|LLP)/i)
+  const companyType = prefixMatch ? prefixMatch[1].toUpperCase() : 'RC'
+  const cleanRC = rcNumber.trim().replace(/^(RC|BN|IT|LP|LLP)/i, '')
 
   if (!cleanRC || !/^\d+$/.test(cleanRC)) {
     return res.status(400).json({
       error: 'invalid_rc',
-      message: 'Please enter a valid RC number — numbers only, e.g. RC1234567.',
+      message: 'Please enter a valid RC or BN number — numbers only, e.g. RC1234567 or BN9537181.',
     })
   }
 
@@ -52,15 +54,17 @@ export default async function handler(req, res) {
     }
 
     const premblyRes = await fetch(
-      'https://api.prembly.com/identitypass/verification/cac/basic',
+      'https://api.prembly.com/verification/cac',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': PREMBLY_SECRET_KEY,
-          'app-id': process.env.PREMBLY_PUBLIC_KEY || '',
         },
-        body: JSON.stringify({ rc_number: cleanRC }),
+        body: JSON.stringify({
+          rc_number: cleanRC,
+          company_type: companyType,
+        }),
       }
     )
 
@@ -87,20 +91,16 @@ export default async function handler(req, res) {
     const cacData = premblyData?.data || {}
     const cacBusinessName = (
       cacData?.company_name ||
-      cacData?.businessName ||
-      cacData?.name ||
       ''
     ).trim()
 
     const cacStatus = (
       cacData?.company_status ||
-      cacData?.status ||
       ''
     ).toLowerCase()
 
     const registrationDate = (
-      cacData?.registration_date ||
-      cacData?.date_of_registration ||
+      cacData?.registrationDate ||
       ''
     )
 

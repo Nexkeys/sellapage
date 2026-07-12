@@ -174,7 +174,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
                 type="text"
                 value={rcNumber}
                 onChange={(e) => { setRcNumber(e.target.value); setError('') }}
-                placeholder="e.g. RC1234567 or 1234567"
+                placeholder="e.g. RC1234567, BN9537181, or 1234567"
                 className={INPUT_CLASS}
                 onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
               />
@@ -192,7 +192,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
               </button>
             </div>
             <p className="text-[11px] text-gray-400">
-              You can enter with or without the RC prefix — both RC1234567 and 1234567 work.
+              You can enter with or without the prefix — RC1234567, BN9537181, and 1234567 all work.
             </p>
           </div>
 

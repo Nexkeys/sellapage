@@ -1821,6 +1821,45 @@ Vendor opens CAC Verification tab (Pro/Premium only)
 
 `npm run build` passed with zero errors.
 
+---
+
+## 2026-07-12 — Prembly CAC API Fix (3 bugs)
+
+Commit/push keyword: `cac-prembly-api-fix`
+
+This update fixes 3 bugs in the `verify-cac.js` handler that caused Prembly to return "Invalid request data" (response_code: "05").
+
+### Bugs Fixed
+
+**Bug 1: Wrong endpoint URL**
+- Was: `https://api.prembly.com/identitypass/verification/cac/basic`
+- Fixed: `https://api.prembly.com/verification/cac`
+
+**Bug 2: Invalid `app-id` header**
+- Was: sent `app-id` header (hyphen) which Prembly doesn't accept
+- Fixed: removed `app-id` header entirely — only `x-api-key` is required per Prembly docs
+
+**Bug 3: Missing `company_type` parameter**
+- Was: stripped "RC"/"BN" prefix from input, sent only `rc_number` with no `company_type`
+- Fixed: detects prefix (RC/BN/IT/LP/LLP) from input, sends `company_type` to Prembly. No prefix defaults to "RC". This allows BN numbers (Business Names) to be verified correctly.
+
+### What Changed
+
+- **`src/api-handlers/verify-cac.js`**
+  - Endpoint: `identitypass/verification/cac/basic` → `verification/cac`
+  - Headers: removed `app-id`, kept only `x-api-key`
+  - Body: now sends `rc_number` + `company_type` (detected from prefix)
+  - Input validation: accepts RC, BN, IT, LP, LLP prefixes
+  - Response mapping: simplified to match Prembly's exact field names (`company_name`, `company_status`, `registrationDate`)
+
+- **`src/components/dashboard/CACVerificationTab.jsx`**
+  - Placeholder updated: "e.g. RC1234567, BN9537181, or 1234567"
+  - Hint text updated: mentions BN numbers alongside RC
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
 
 
 
