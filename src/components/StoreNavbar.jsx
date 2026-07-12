@@ -7,6 +7,7 @@ import {
   Home,
   Grid,
   ShoppingCart,
+  ShieldCheck,
 } from "lucide-react";
 import { buildEnquiryURL } from "../utils/whatsapp";
 
@@ -121,6 +122,12 @@ export default function StoreNavbar({
             >
               {store?.businessName}
             </span>
+            {store?.cacVerified && (
+              <div className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 flex-shrink-0">
+                <ShieldCheck size={10} className="text-green-600 flex-shrink-0" />
+                <span className="text-[10px] font-bold text-green-700 whitespace-nowrap">CAC Verified</span>
+              </div>
+            )}
           </div>
 
           {/* Desktop Section Tabs */}

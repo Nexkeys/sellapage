@@ -329,7 +329,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
                 type="text"
                 value={domain}
                 onChange={(e) => { setDomain(e.target.value); setAddError('') }}
-                placeholder="shop.yourbrand.com"
+                placeholder="e.g. mybusiness.com or shop.mybrand.ng"
                 className={INPUT_CLASS}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddDomain()}
               />
@@ -343,7 +343,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
               </button>
             </div>
             <p className="text-[11px] text-gray-400">
-              Enter without http:// — e.g. <span className="font-mono">shop.yourbrand.com</span>
+              Enter without http:// — works with any domain or subdomain you own, e.g. <span className="font-mono">mybusiness.com</span> or <span className="font-mono">shop.brand.ng</span>
             </p>
           </div>
         </div>

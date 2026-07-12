@@ -19,6 +19,7 @@ import {
   Megaphone,
   Percent,
   Globe,
+  ShieldCheck,
   Smartphone,
   Wallet,
   CreditCard,
@@ -51,6 +52,7 @@ const NAV_ITEMS = [
   { type: "group", label: "Account" },
   { id: "billing", label: "Billing", icon: CreditCard },
   { id: "custom-domain", label: "Custom Domain", icon: Globe },
+  { id: "cac-verification", label: "CAC Verification", icon: ShieldCheck },
   { id: "settings", label: "Settings", icon: Settings },
   { id: "support", label: "Support", icon: HelpCircle },
 ];
@@ -211,6 +213,7 @@ export default function DashboardLayout({
           if (id === 'reviews' && !effectiveIsPro) return null;
           if (id === 'discounts' && !effectiveIsPro) return null;
           if (id === 'custom-domain' && !effectiveIsPro) return null;
+          if (id === 'cac-verification' && !effectiveIsPro) return null;
           if (id === 'analytics' && !isGrowthOrAbove) return null;
           if (id === 'products' && vendorType === 'services') return null;
           if (id === 'services' && vendorType === 'products') return null;

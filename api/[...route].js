@@ -124,6 +124,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/resolve-domain.js")
         return handler(req, res)
       }
+      case "verify-cac": {
+        const { default: handler } = await import("../src/api-handlers/verify-cac.js")
+        return handler(req, res)
+      }
 
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });

@@ -655,7 +655,7 @@ Tech: Vercel Domains API + Edge middleware for host-header routing.
 Plan gate: Pro and Premium only.
 Implementation: See "2026-07-12 — Custom Domain Engine Implementation" section above.
 
-### 3. CAC Trust Verification Badge
+### 3. CAC Trust Verification Badge — DONE ✅
 Vendor enters RC number → Prembly Basic CAC endpoint verifies it → badge saved to store document → fully and well designed badge shown on storefront maintaining the customers storefront structure and design logic the badge needs to be well arranged and displayed well so customers see it.
 API: Prembly (`POST /identitypass/verification/cac/basic`).
 Keys needed: PREMBLY_SECRET_KEY, PREMBLY_APP_ID (already in Prembly dashboard — Live Mode).
@@ -665,6 +665,7 @@ Api keys already added to .env and vercel environmnet variables as
 PREMBLY_SECRET_KEY=
 PREMBLY_PUBLIC_KEY=
 [x]Already successfully ran - npm install --save prembly-react-kyc
+Implementation: See "2026-07-12 — CAC Trust Verification Badge Implementation" section below.
 
 1
 Installation
@@ -722,6 +723,49 @@ Response Handling
 // Failed/Cancelled Response
 { code: "E01", message: "Failed", status: "failed" }
 { code: "E02", message: "Verification Canceled", status: "failed" }
+
+
+Here's the actual CAC flow we're implementing:
+
+Vendor opens CAC Verification tab (Pro/Premium only)
+They enter their RC number (e.g. RC1234567) and their registered business name
+They click "Verify My Business"
+Our backend calls POST https://api.prembly.com/identitypass/verification/cac/basic with the RC number
+Prembly returns the registered business name, status (active/inactive), and registration date
+Then sellapage checks it with the one inputed by the user from the cac verification tab whether small or lower case if it matches then
+If verified and status is active → save cacVerified: true, cacBusinessName, cacVerifiedAt to Firestore store document
+Dashboard shows a green "CAC Verified" badge on the tab
+Storefront(Both Products & Services) shows a "Verified Business" badge on both pages
+
+One important check: Prembly's Basic CAC endpoint only needs the RC number — it doesn't need the business name as input. The business name comes back in the response. We can show it to the vendor to confirm it matches their store before saving.
+
+The badge on the storefront:
+Needs to be tasteful and trust-building. Think a small green shield icon with "CAC Verified" text and green tick — similar to verified badges on Twitter/Instagram but Sellapage-branded. Placed near the store name in the StoreNavbar component so it's visible on every page of both products and services and also mobile responsive and adapted to all screens starting from small and mostly look beautiful on them also too 
+
+Confirmed plan:
+
+New API handler: src/api-handlers/verify-cac.js — calls Prembly Basic CAC endpoint
+Register route in api/[...route].js
+New dashboard tab: src/components/dashboard/CACVerificationTab.jsx — Pro/Premium gated, beautiful UI
+Wire tab into DashboardLayout.jsx and Dashboard.jsx
+Add CAC badge to StorePage.jsx and ServiceStorePage.jsx StoreNavbar sections
+
+Keys we're using:
+
+PREMBLY_SECRET_KEY — for the Authorization header on server-side API calls
+PREMBLY_PUBLIC_KEY — NOT needed for this (that's for client-side SDK)
+
+
+This prevents a vendor from verifying someone else's RC number.
+One thing to confirm before writing prompts — what should happen if the names are close but not exact? For example CAC has "Denver Mall Limited" but vendor typed "Denver Mall". Do we:
+Option A — Require exact match (case-insensitive) — stricter, fewer false positives
+Option B — Show the CAC-returned name to the vendor and ask them to confirm "Is this your business?" before saving — more flexible, better UX
+We go with option B
+
+
+
+
+
 
 
 ### 4. Live Stores Page
@@ -1380,9 +1424,9 @@ Topship handles international deliveries (Nigeria to UK, USA, etc.) and also dom
 
 Google Ads:
 - `GOOGLE_ADS_DEVELOPER_TOKEN` — from API centre (already have)
-- `GOOGLE_ADS_CLIENT_ID` — from Google Cloud Console
-- `GOOGLE_ADS_CLIENT_SECRET` — from Google Cloud Console
-- `GOOGLE_ADS_REDIRECT_URI` — callback URL
+- `GOOGLE_ADS_CLIENT_ID` — from Google Cloud Console Already Added
+- `GOOGLE_ADS_CLIENT_SECRET` — from Google Cloud Console Already Added to environment variables
+- `GOOGLE_ADS_REDIRECT_URI` — callback URL Already Added to google
 - `GOOGLE_ADS_MCC_ID` — 5897875835 (no dashes)
 
 Meta Marketing API:
@@ -1688,3 +1732,810 @@ we had an error during deploynment and applied this fix - Fix: Remove "middlewar
 
 **Why client-side works:**
 When customer visits `shop.brand.com`, Vercel serves `index.html` (catch-all rewrite). SPA loads. React Router matches root `/`. DomainResolver detects hostname is not `sellapage.com.ng`, calls API to resolve domain, gets store name, navigates to `/{storeName}`. StorePage loads normally. All existing functionality works unchanged.
+
+---
+
+## 2026-07-12 — CAC Trust Verification Badge Implementation
+
+Commit/push keyword: `cac-trust-verification`
+
+This update implements the full CAC Trust Verification Badge feature, allowing Pro and Premium vendors to verify their business registration with the Corporate Affairs Commission and display a verified badge on their storefront.
+
+### What was done
+
+#### New Files Created
+
+- **`src/api-handlers/verify-cac.js`** — NEW
+  - POST endpoint that calls Prembly `POST /identitypass/verification/cac/basic`
+  - Validates RC number input (strips "RC" prefix, checks numeric)
+  - Verifies vendor owns the store (uid === storeId check)
+  - Calls Prembly API with `x-api-key` header using `PREMBLY_SECRET_KEY`
+  - Returns business name, status (active/approved), registration date
+  - Handles Prembly errors: rc_not_found, verification_failed, inactive_business, no_business_name
+  - Returns clean error messages for each failure case
+
+- **`src/components/dashboard/CACVerificationTab.jsx`** — NEW
+  - Full dashboard tab with Pro/Premium gating (shows upgrade prompt for Starter/Growth)
+  - RC number input with Enter key support
+  - Verify button calls `/api/verify-cac`
+  - Confirm step: shows returned business name, status, registration date
+  - "Yes, This Is My Business" button saves verification to Firestore
+  - "Not My Business" button resets form
+  - "Already verified" state shows green card with business name, RC number, verification date
+  - "What your customers will see" badge preview section
+  - "Why verify your business?" info card with 4 benefits
+  - Error handling for network, invalid RC, inactive business
+
+#### Updated Files
+
+- **`api/[...route].js`** — Added `verify-cac` route case
+
+- **`src/components/dashboard/DashboardLayout.jsx`**
+  - Added `ShieldCheck` to lucide-react imports
+  - Added `{ id: 'cac-verification', label: 'CAC Verification', icon: ShieldCheck }` to NAV_ITEMS under Account group
+  - Added Pro-only gating: `if (id === 'cac-verification' && !effectiveIsPro) return null;`
+
+- **`src/pages/Dashboard.jsx`**
+  - Imported `CACVerificationTab` component
+  - Wired tab rendering for `activeTab === 'cac-verification'`
+  - Passes `store`, `user`, `isPro`, `navigateTo={setActiveTab}` props
+
+- **`src/components/StoreNavbar.jsx`** — Shared by both StorePage and ServiceStorePage
+  - Added `ShieldCheck` to lucide-react imports
+  - Added CAC Verified badge after business name (conditional on `store?.cacVerified`)
+  - Badge shows on both product and service storefronts
+
+### Firestore Fields Saved
+
+When vendor confirms verification, these fields are saved to the store document:
+- `cacVerified: true`
+- `cacBusinessName` — from Prembly response
+- `cacRcNumber` — cleaned RC number (no "RC" prefix)
+- `cacStatus` — from Prembly response (active/approved)
+- `cacRegistrationDate` — from Prembly response
+- `cacVerifiedAt` — ISO timestamp
+
+### Flow
+
+```
+Vendor opens CAC Verification tab (Pro/Premium only)
+  → Enters RC number (e.g. RC1234567 or 1234567)
+  → Clicks Verify
+  → Handler strips "RC" prefix, validates numeric
+  → Calls Prembly API with RC number
+  → Returns business name, status, registration date
+  → Vendor sees "Business Found — Please Confirm" card
+  → Vendor clicks "Yes, This Is My Business"
+  → Saved to Firestore store document
+  → Green "Business Verified ✓" card shown
+  → StoreNavbar badge appears on storefront (both product & service pages)
+```
+
+### Design Decisions
+
+- **Option B for name matching**: Instead of requiring exact match, we show the CAC-returned name to the vendor and ask them to confirm. More flexible, better UX.
+- **Single badge in StoreNavbar**: Added badge once in `StoreNavbar.jsx` (shared component) instead of duplicating in both `StorePage.jsx` and `ServiceStorePage.jsx`.
+- **Pro/Premium gating**: Tab hidden from sidebar for Starter/Growth users. Shows upgrade prompt if somehow accessed.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### REFERRAL SYSTEM IMPLEMENTATION FLOW 
+
+> **The referral system should be a business acquisition engine, not just a feature.**
+
+That means every decision should encourage bringing in **quality merchants who actually subscribe**, not people creating fake accounts.
+
+Sellapage is evolving and this referral system deserves to be treated as a major platform module, on the same level as Orders, Customers, Delivery, Marketing, Billing and co not as a tiny add-on. It will touch authentication, Paystack webhooks, Firestore, the vendor dashboard and the admin panel, so it's worth designing properly from day one rather than patching it later.
+
+## 1. Referral Flow
+
+```
+Merchant A (Referrer)
+
+        │
+        │ Shares referral link
+        ▼
+
+Merchant B
+Signs up through the link
+
+        │
+        ▼
+
+Creates store
+
+        │
+        ▼
+
+Buys any paid plan
+
+        │
+Paystack webhook confirms payment
+
+        │
+        ▼
+Referred User plan changes 
+        
+        │
+        ▼
+
+Referral Reward Created
+
+Status:
+Pending
+
+        │
+14 days
+
+        ▼
+
+Available
+
+        │
+Merchant requests withdrawal
+
+        ▼
+
+Admin approves
+
+        ▼
+
+Paid
+```
+
+Simple.
+
+Exactly like Opay, PalmPay, Moniepoint, etc.
+
+---
+
+# 2. Referral Link
+
+Every merchant gets one.
+
+Example
+
+```
+sellapage.com.ng/signup?ref=ABX82KD
+```
+
+Not their UID.
+
+Generate something like
+
+```
+SP-9X2KA7
+
+SP-H72PQ1
+
+SP-RT19XA
+```
+
+Looks professional.
+
+Never changes.
+
+And they have a button to post to their whatsapp groups & status & IG status and X also too a message like this - If you sell online, Sellapage makes it easier.
+Create your own store, collect payments, and manage orders like a pro.
+
+Use my referral link/code to join: *[their referral code is passed through from firestore or the dashboard to display here]*
+
+
+
+
+
+---
+
+# 3. Tracking
+
+This is actually the MOST IMPORTANT part.
+
+Tracking has to survive situations like:
+
+User opens referral link today
+
+Leaves
+
+Returns tomorrow
+
+Signs up
+
+Still counted.
+
+So I'd use:
+
+```
+Cookie
+
++
+
+localStorage
+
++
+
+Firestore field
+```
+
+Flow
+
+```
+Open referral link
+
+↓
+
+Save referralCode
+
+↓
+
+User signs up
+
+↓
+
+Firestore
+
+referredBy
+
+↓
+
+Locked forever
+```
+
+Nobody can change it afterwards.
+
+---
+
+# 4. When should commission be created?
+
+ONLY
+
+```
+Payment Success
+
+AND
+
+First paid plan active
+```
+
+Never
+
+```
+Signup
+
+Store creation
+
+Email verification
+
+```
+
+Only payment/when the plan status changes from free to whatever the referred user changed their plan to 
+
+---
+
+# 5. Commission
+
+| Plan    |   Price | Reward |
+| ------- | ------: | -----: |
+| Growth  |  ₦5,000 |   ₦500 |
+| Pro     | ₦12,000 | ₦1,000 |
+| Premium | ₦25,000 | ₦2,000 |
+
+Easy.
+
+Users don't need calculators.
+
+---
+
+# 6. Wallet
+
+Three balances.
+
+```
+Pending
+
+Available
+
+Withdrawn
+```
+
+Exactly like finance apps.
+
+Clickable Dashboard cards
+
+```
+E.G - 
+
+Pending Earnings
+
+₦3,000
+
+------------
+
+Available
+
+₦5,500
+
+------------
+
+Withdrawn
+
+₦10,000
+```
+
+---
+
+# 7. Withdrawal Rules
+
+Minimum
+
+```
+₦5,000
+```
+
+If available balance
+
+```
+< ₦5,000
+
+```
+
+Button says
+
+```
+Withdraw (Locked)
+
+Minimum ₦5,000 required
+```
+
+Once
+
+```
+>= ₦5,000
+```
+
+Button becomes green.
+
+---
+
+# 8. Bank Account
+
+This deserves its own section.
+
+Fields
+
+```
+Bank
+
+Account Number
+
+Account Name
+
+```
+
+Immediately
+
+```
+Resolve Account
+
+↓
+
+OPAY
+
+↓
+
+Prince Chidera
+```
+
+Exactly like Paystack.
+
+So users CAN'T type
+
+```
+John Doe
+```
+
+when the account belongs to
+
+```
+Prince
+```
+
+It reduces payout mistakes.
+
+---
+
+# 9. Withdrawal Request
+
+Click
+
+```
+Withdraw
+```
+
+Modal
+
+```
+Amount
+
+Available Balance
+
+Bank
+
+Confirm
+```
+
+Submit
+
+↓
+
+Status
+
+```
+Pending Approval
+```
+
+---
+
+# 10. Admin Panel
+
+This is where it gets beautiful.
+
+For Example Imagine
+
+## Referral Dashboard
+
+Cards
+
+```
+Total Referrals
+
+Successful Referrals
+
+Pending Rewards
+
+Available Rewards
+
+Paid Rewards
+
+Withdrawal Requests
+
+Total Referral Payouts
+```
+
+Then table
+
+| Referrer | Referred Store | Plan | Reward | Status |
+| -------- | -------------- | ---- | ------ | ------ |
+
+Beautiful.
+
+---
+
+# 11. Withdrawal Queue
+
+Separate page.
+
+```
+Withdrawal Requests
+```
+
+Table
+
+Merchant
+
+Bank
+
+Account Name
+
+Account Number
+
+Amount
+
+Requested
+
+Status
+
+Action
+
+```
+Approve
+
+Reject
+
+```
+
+Approve
+
+↓
+
+Transfer manually
+
+↓
+
+Click
+
+```
+Mark Paid
+```
+
+↓
+
+Money moves
+
+```
+Available
+
+↓
+
+Withdrawn
+```
+
+---
+
+# 12. Referral Analytics
+
+Merchant sees
+
+```
+15
+
+Clicks
+```
+
+↓
+
+```
+8
+
+Signups
+```
+
+↓
+
+```
+5
+
+Paid Merchants
+```
+
+↓
+
+```
+₦5,000 earned
+```
+
+This motivates them to keep sharing.
+
+---
+
+# 13. Referral Page
+
+I'd design it like this:
+
+```
+---------------------------------
+
+Invite Merchants
+
+Earn Cash
+
+---------------------------------
+
+Referral Link
+
+[ Copy ]
+
+---------------------------------
+
+Referral Code
+
+SP-82JKA
+
+---------------------------------
+
+Pending
+
+Available
+
+Withdrawn
+
+---------------------------------
+
+Clicks
+
+Signups
+
+Successful
+
+---------------------------------
+
+Recent Referrals
+
+(Store list)
+
+---------------------------------
+
+Withdrawal History
+
+---------------------------------
+
+Bank Details
+
+Edit
+
+---------------------------------
+```
+
+Mobile-first.
+
+---
+
+## One improvement I'd make
+
+There's one thing I would add that finance apps usually don't have.
+
+### Reward Progress
+
+Instead of just showing:
+
+> Available: ₦2,500
+
+show this:
+
+```
+Withdraw Progress
+
+████████░░░░░░░░
+
+₦2,500 / ₦5,000
+```
+
+The psychology behind that is powerful. People naturally want to "fill the bar," so they're more likely to keep referring merchants until they reach the withdrawal threshold.
+
+---
+
+The entire design is going to be fully mobile responsive firstly and then well paginated and structured and also beautifully well designed
+
+And also when the mark paid button is been clicked and confirmed from the admin panel it'd also send a mail to that user/vendor that so , so amount has been paid to them through the referral using our current resend setup also but only when a referral reward user withdraw requests has been marked as paid from the admin panel only then the mail message sends with the amount withdrawn by the user 
+
+
+
+That email should include:
+
+amount paid
+withdrawal reference or payout ID
+plan/status context if needed
+date paid
+maybe the remaining available balance
+
+That way, the email is a real payment confirmation, not just a “your request is pending” notice.
+
+
+One more thing I would add: keep a payout log in Firestore that'd display on the super admin account dashboard, so every “Mark Paid” action saves:
+
+who approved it
+when it was approved
+amount
+account name
+reference
+email sent status
+
+That will make the  super admin side auditable and save you later when someone says, “I did not receive my payout.”
+
+Since Sellapage is going to have multiple admins eventually, you don't want a situation where you ask:
+
+"Who approved this ₦20,000 payout?"
+
+...and nobody knows.
+
+Let's store something like:
+
+withdrawal_requests
+
+- id
+- userId
+- amount
+- status
+- requestedAt
+
+- approvedBy
+- approvedAt
+
+- paidAt
+- paymentReference
+
+- emailSent
+
+Where approvedBy stores the admin's UID, not their name.
+
+Then in the super Admin Panel, we resolve that UID to display:
+
+Approved by
+
+Peace Okoro
+
+or
+
+Approved by
+
+John Doe
+
+depending on who actually approved it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### ADMIN PANEL FEATURES PLAN - 
+
+Internal panel for Nex and whoever he assigns from the super admin panel dashboard to manage the platform and roles.
+Features: vendor list, plan management, Sendbox wallet balance monitoring, shipment usage tracking, revenue overview, support ticket management, feature flags, payouts tab accounts added for verification, cloudinary usage/bandwith, vendors details, referral details, CAC verified Users, Analytics of Sellapage Like The Total Orders, deliveries - Created Daily, Monthly , Weekly , A Very Good and detailed analysis report concerning all going on with the page , AI descriptions USED , TOTAL NO OF ADS RUNNING AND CREATED THROUGH SELLAPAGE AND WITHOUT SELLAPAGE ALSO TOO . and well paginated and designed to feel like an actual admin panel and fine very fine and fully structured
+Auth: `ADMIN_SECRET_TOKEN` header (already in Vercel env).
+
+
+Example:
+
+Role	Permissions
+Super Admin	Everything
+Finance Admin	Referral payouts, vendor payouts, billing
+Support Admin	Support tickets only
+Operations Admin	Stores, verification, moderation
+Marketing Admin	Ads, campaigns, analytics and many more also too
+
+Then imagine this:
+
+Support Admin tries to click Mark Paid
+
+❌
+
+You don't have permission
+
+Only Finance Admin or Super Admin can approve referral withdrawals.
+
+This is also good for security.
+
+
+the Features listed here are not all what the admin panel would engrave more still remains also as time goes by any feature added should be engulved as part of the things to include in the admin panel also too
+

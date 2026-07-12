@@ -64,6 +64,7 @@ import BillingTab from "../components/dashboard/BillingTab";
 import DeliveryTab from "../components/dashboard/DeliveryTab";
 import LedgerTab from "../components/dashboard/LedgerTab";
 import CustomDomainTab from "../components/dashboard/CustomDomainTab";
+import CACVerificationTab from "../components/dashboard/CACVerificationTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -1782,6 +1783,14 @@ export default function Dashboard() {
       )}
       {activeTab === 'custom-domain' && (
         <CustomDomainTab
+          store={store}
+          user={user}
+          isPro={isPro}
+          navigateTo={setActiveTab}
+        />
+      )}
+      {activeTab === 'cac-verification' && (
+        <CACVerificationTab
           store={store}
           user={user}
           isPro={isPro}
