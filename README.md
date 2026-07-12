@@ -982,10 +982,14 @@ Vendor opens Custom Domain tab (Pro/Premium only)
   → If cname_error: vendor sees red message with DNS setup instructions
 
 Customer visits shop.brand.com
-  → Vercel receives request, middleware intercepts
-  → Middleware reads host header: shop.brand.com
-  → Queries Firestore: stores.where('customDomain', '==', 'shop.brand.com')
-  → If match found: rewrites request to /{storeName}
+  → Vercel receives request, catch-all rewrite serves index.html
+  → SPA loads, React Router matches "/" root route
+  → DomainResolver checks hostname: shop.brand.com (not sellapage.com.ng)
+  → Calls POST /api/resolve-domain { domain: "shop.brand.com" }
+  → API queries Firestore, finds store "my-store"
+  → Returns { storeName: "my-store" }
+  → DomainResolver navigates to /my-store
+  → StorePage loads normally via getStoreBySlug("my-store")
   → Customer sees vendor's full store at shop.brand.com
   → All checkout, payment, reviews work exactly the same
 ```
@@ -999,7 +1003,8 @@ All three API handlers return clean, user-friendly error messages:
 - **Domain taken by another store**: "This domain is already connected to another Sellapage store."
 - **Vercel API error**: "We couldn't add your domain. Please check the domain is correct and try again."
 - **Network error**: "Network error. Please check your connection and try again."
-- **Custom domain not found (middleware)**: Clean HTML page with "Domain Not Configured" message and link to sellapage.com.ng
+- **Custom domain not found (resolve-domain)**: Returns 404 with `{ error: 'not_found', message: 'No store is connected to this domain.' }`
+- **Client-side resolution failure**: DomainResolver shows "Domain Not Configured" page with link to sellapage.com.ng
 
 ### Build Status
 
@@ -1600,11 +1605,11 @@ Clears `customDomain` field from Firestore store document.
 Calls Vercel API `GET /v10/projects/{projectId}/domains/{domain}` to check verification status.
 Returns whether DNS is configured correctly and SSL is provisioned.
 
-**4. `middleware.js`** — NEW (at project root) ✅ VERIFIED/IMPLEMENTED
-Intercepts all incoming requests. Reads host header. If host matches a known custom domain in Firestore, rewrites the request URL to the correct store path. If host is `sellapage.com.ng`, passes through normally.
+**4. `middleware.js`** — DELETED ❌ REMOVED (2026-07-12)
+Originally created as Edge Middleware for custom domain routing. Imported `NextResponse` from `next/server` which does not exist in this Vite + React project. Vercel Edge Middleware with `next/server` is only compatible with Next.js projects. Two deployment failures occurred: (1) vercel.json schema validation error from `"middleware": "middleware.js"` custom property, (2) Edge Function runtime error `next/server module not found`. Fix: deleted middleware.js entirely, removed middleware config from vercel.json. Custom domain resolution now handled client-side via `DomainResolver.jsx` + `/api/resolve-domain` endpoint.
 
 **5. `api/[...route].js`** — UPDATE ✅ VERIFIED/IMPLEMENTED
-Register three new routes: `add-custom-domain`, `remove-custom-domain`, `verify-custom-domain`.
+Register four routes: `add-custom-domain`, `remove-custom-domain`, `verify-custom-domain`, `resolve-domain`.
 
 **6. `src/components/dashboard/CustomDomainTab.jsx`** — NEW ✅ VERIFIED/IMPLEMENTED
 Complete UI for the custom domain management tab. Shows:
@@ -1621,7 +1626,13 @@ Add `CustomDomain` tab to NAV_ITEMS with Globe icon, gated behind `isPro`.
 **8. `src/pages/Dashboard.jsx`** — UPDATE ✅ VERIFIED/IMPLEMENTED
 Import and wire `CustomDomainTab`. Update `storeUrl` computation to check `store.customDomain` first before falling back to `sellapage.com.ng/${store.storeName}`.
 
-**9. `vercel.json`** — UPDATE ✅ VERIFIED/IMPLEMENTED
+**9. `src/api-handlers/resolve-domain.js`** — NEW ✅ VERIFIED/IMPLEMENTED (2026-07-12)
+POST endpoint that accepts `{ domain }` body. Queries Firestore `stores` collection where `customDomain == domain`. Returns `{ success, storeName, storeId }` or 404. Used by client-side DomainResolver to resolve custom domains to store names. Auth required (Bearer token).
+
+**10. `src/components/DomainResolver.jsx`** — NEW ✅ VERIFIED/IMPLEMENTED (2026-07-12)
+Client-side custom domain resolution component. Wraps the root route `/` in App.jsx. On mount, checks `window.location.hostname`. If hostname is not `sellapage.com.ng` or `localhost`, calls `/api/resolve-domain` to find the matching store, then navigates to `/{storeName}`. Shows loading spinner during resolution. Shows "Domain Not Configured" error page if no store matches.
+
+**11. `vercel.json`** — UPDATE ✅ VERIFIED/IMPLEMENTED
 Add middleware configuration so Vercel runs our middleware on all requests.
 
 ---
@@ -1651,3 +1662,29 @@ Add middleware configuration so Vercel runs our middleware on all requests.
 - Middleware works for all vendors who have `customDomain` set in Firestore
 
 **Commit/push keyword:** `custom-domain-engine`
+
+we had an error during deploynment and applied this fix - Fix: Remove "middleware": "middleware.js" from vercel.json. Vercel will pick up middleware.js automatically since it exists at the project root.
+
+### Deployment Error Log — Custom Domain Engine (2026-07-12)
+
+**Error 1: vercel.json schema validation**
+- Message: `"middleware" is not allowed in "vercel.json"`
+- Cause: Added `"middleware": "middleware.js"` to vercel.json. Vercel auto-detects middleware.js at project root; custom middleware property is not in the schema.
+- Fix: Removed the middleware line from vercel.json.
+
+**Error 2: Edge Function runtime error**
+- Message: `Module not found: Can't resolve 'next/server'`
+- Cause: `middleware.js` imported `NextResponse` from `next/server`. Sellapage is a Vite + React project, not Next.js. `next/server` does not exist in Vite projects. Vercel Edge Middleware requires Next.js.
+- Fix: Deleted `middleware.js` entirely. Replaced with client-side resolution approach: `DomainResolver.jsx` wraps root route, detects custom domain hostname, calls `/api/resolve-domain` endpoint, navigates to `/{storeName}`.
+
+**Resolution approach:**
+- Deleted `middleware.js` from project root
+- Removed `"middleware": "middleware.js"` from vercel.json (already done)
+- Created `src/api-handlers/resolve-domain.js` — POST endpoint that queries Firestore for matching custom domain
+- Created `src/components/DomainResolver.jsx` — Client-side component that detects hostname and resolves custom domains
+- Added `DomainResolver` wrapper to root route `/` in `src/App.jsx`
+- Added `resolve-domain` route case to `api/[...route].js`
+- Existing catch-all rewrite in vercel.json (`"/((?!api/|assets/|.*\\..*).*)" → "/index.html"`) serves SPA for all custom domain requests
+
+**Why client-side works:**
+When customer visits `shop.brand.com`, Vercel serves `index.html` (catch-all rewrite). SPA loads. React Router matches root `/`. DomainResolver detects hostname is not `sellapage.com.ng`, calls API to resolve domain, gets store name, navigates to `/{storeName}`. StorePage loads normally. All existing functionality works unchanged.

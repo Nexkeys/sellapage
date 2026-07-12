@@ -3,6 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import ScrollToTop from './components/ScrollToTop';
+import DomainResolver from './components/DomainResolver';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
@@ -35,7 +36,7 @@ export default function App() {
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<DomainResolver><Home /></DomainResolver>} />
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route
