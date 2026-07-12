@@ -50,6 +50,7 @@ const NAV_ITEMS = [
   { id: "mobile-app", label: "Mobile App", icon: Smartphone },
   { type: "group", label: "Account" },
   { id: "billing", label: "Billing", icon: CreditCard },
+  { id: "custom-domain", label: "Custom Domain", icon: Globe },
   { id: "settings", label: "Settings", icon: Settings },
   { id: "support", label: "Support", icon: HelpCircle },
 ];
@@ -209,6 +210,7 @@ export default function DashboardLayout({
           if (id === 'customers' && !effectiveIsPro) return null;
           if (id === 'reviews' && !effectiveIsPro) return null;
           if (id === 'discounts' && !effectiveIsPro) return null;
+          if (id === 'custom-domain' && !effectiveIsPro) return null;
           if (id === 'analytics' && !isGrowthOrAbove) return null;
           if (id === 'products' && vendorType === 'services') return null;
           if (id === 'services' && vendorType === 'products') return null;

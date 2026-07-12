@@ -108,6 +108,18 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/update-order-status.js")
         return handler(req, res)
       }
+      case "add-custom-domain": {
+        const { default: handler } = await import("../src/api-handlers/add-custom-domain.js")
+        return handler(req, res)
+      }
+      case "remove-custom-domain": {
+        const { default: handler } = await import("../src/api-handlers/remove-custom-domain.js")
+        return handler(req, res)
+      }
+      case "verify-custom-domain": {
+        const { default: handler } = await import("../src/api-handlers/verify-custom-domain.js")
+        return handler(req, res)
+      }
 
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });

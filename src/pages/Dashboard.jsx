@@ -63,6 +63,7 @@ import PayoutsTab from "../components/dashboard/PayoutsTab";
 import BillingTab from "../components/dashboard/BillingTab";
 import DeliveryTab from "../components/dashboard/DeliveryTab";
 import LedgerTab from "../components/dashboard/LedgerTab";
+import CustomDomainTab from "../components/dashboard/CustomDomainTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -184,7 +185,9 @@ export default function Dashboard() {
   });
 
   const limitReached = productCount >= maxProducts;
-  const storeUrl = store ? `${window.location.origin}/${store.storeName}` : "";
+  const storeUrl = store?.customDomain
+    ? `https://${store.customDomain}`
+    : store ? `${window.location.origin}/${store.storeName}` : "";
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1775,6 +1778,14 @@ export default function Dashboard() {
           ordersLoading={ordersLoading}
           user={user}
           onSubaccountCreated={handleSubaccountCreated}
+        />
+      )}
+      {activeTab === 'custom-domain' && (
+        <CustomDomainTab
+          store={store}
+          user={user}
+          isPro={isPro}
+          navigateTo={setActiveTab}
         />
       )}
       {activeTab === "payouts" && !isPro && (

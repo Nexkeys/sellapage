@@ -649,10 +649,11 @@ Send email to customer when vendor changes order status to: confirmed, dispatche
 Handler: new addition to `paystack-webhook.js` or a new `update-order-status.js` handler.
 Template: match existing email style. Include order summary, new status, and (for delivered) review link. - DONE ALREADY
 
-### 2. Custom Domain Engine
+### 2. Custom Domain Engine — DONE ✅
 Vendors connect their own domain (yourbrand.com) to their Sellapage store.
 Tech: Vercel Domains API + Edge middleware for host-header routing.
 Plan gate: Pro and Premium only.
+Implementation: See "2026-07-12 — Custom Domain Engine Implementation" section above.
 
 ### 3. CAC Trust Verification Badge
 Vendor enters RC number → Prembly Basic CAC endpoint verifies it → badge saved to store document → fully and well designed badge shown on storefront maintaining the customers storefront structure and design logic the badge needs to be well arranged and displayed well so customers see it.
@@ -889,6 +890,120 @@ NOT a PWA. Separate codebase at `C:\Users\user\Documents\sellapage-app`.
 - **Audit Trail**: Updates tracked in Firestore `statusHistory` with ISO timestamps for compliance
 - **Consistency**: Single source of truth for order status mutations
 - **User Experience**: Customers get contextual CTAs (review links, tracking links) based on order status
+
+---
+
+## 2026-07-12 — Custom Domain Engine Implementation
+
+Commit/push keyword: `custom-domain-engine`
+
+This update implements the full Custom Domain Engine, allowing Pro and Premium vendors to connect their own domain (e.g. `shop.brand.com`) to their Sellapage store.
+
+### Files Created
+
+- **`src/api-handlers/add-custom-domain.js`** (NEW)
+  - Handles POST requests to add a custom domain
+  - Validates domain format (no http://, no trailing slashes, not sellapage.com.ng)
+  - Checks domain uniqueness across all stores
+  - Calls Vercel API `POST /v10/projects/{projectId}/domains` to add domain
+  - Saves `customDomain`, `customDomainStatus: 'pending'`, `customDomainAddedAt` to Firestore
+  - Returns success with CNAME target: `cname.vercel-dns.com`
+
+- **`src/api-handlers/remove-custom-domain.js`** (NEW)
+  - Handles POST requests to remove a custom domain
+  - Calls Vercel API `DELETE /v10/projects/{projectId}/domains/{domain}` to remove
+  - Clears `customDomain`, `customDomainStatus`, `customDomainAddedAt` from Firestore
+  - Gracefully handles 404 (domain already removed from Vercel)
+
+- **`src/api-handlers/verify-custom-domain.js`** (NEW)
+  - Handles POST requests to verify DNS configuration
+  - Calls Vercel API `GET /v10/projects/{projectId}/domains/{domain}` to check status
+  - Returns one of three statuses: `active`, `propagating`, `cname_error`
+  - Auto-updates Firestore `customDomainStatus` to `'active'` when verified
+  - Provides clear user messages for each status (DNS setup required, propagating, active)
+
+- **`middleware.js`** (NEW — project root)
+  - Edge middleware for custom domain routing
+  - Intercepts all incoming requests (excludes /api/, /assets/, static files)
+  - Reads host header to detect custom domains
+  - Queries Firestore via Firebase REST API for matching `customDomain` field
+  - Caches domain lookups for 60 seconds to avoid hammering Firestore
+  - Rewrites request to `/{storeName}` internally when custom domain matches
+  - Returns clean HTML 404 error page for unmatched domains with helpful message
+  - Skips processing for main domain (`sellapage.com.ng`) and localhost
+
+### Files Updated
+
+- **`api/[...route].js`** — Added three new route cases:
+  - `add-custom-domain` → `src/api-handlers/add-custom-domain.js`
+  - `remove-custom-domain` → `src/api-handlers/remove-custom-domain.js`
+  - `verify-custom-domain` → `src/api-handlers/verify-custom-domain.js`
+
+- **`src/components/dashboard/DashboardLayout.jsx`**
+  - Added `custom-domain` to `NAV_ITEMS` array under "Account" group (before Settings)
+  - Added Pro-only gating: `if (id === 'custom-domain' && !effectiveIsPro) return null;`
+
+- **`src/components/dashboard/CustomDomainTab.jsx`** (NEW)
+  - Complete UI for custom domain management tab
+  - Shows current domain status (none/pending/active)
+  - Input to add a new domain with validation
+  - DNS setup instructions with CNAME table and copy button
+  - Verify DNS button with status feedback (active/propagating/cname_error)
+  - Remove domain button with confirmation dialog
+  - Plan gate: Pro and Premium only (shows upgrade prompt for Starter/Growth)
+  - "How it works" section explaining the 3-step process
+
+- **`src/pages/Dashboard.jsx`**
+  - Imported `CustomDomainTab` component
+  - Wired tab rendering for `activeTab === 'custom-domain'`
+  - Updated `storeUrl` computation to check `store.customDomain` first:
+    ```js
+    const storeUrl = store?.customDomain
+      ? `https://${store.customDomain}`
+      : store ? `${window.location.origin}/${store.storeName}` : "";
+    ```
+
+- **`vercel.json`**
+  - Added `"middleware": "middleware.js"` to enable Edge middleware
+
+### Custom Domain Flow (Confirmed Working)
+
+```
+Vendor opens Custom Domain tab (Pro/Premium only)
+  → Enters domain: shop.yourbrand.com
+  → Clicks "Add Domain"
+  → Handler validates domain, calls Vercel API, saves to Firestore
+  → Dashboard shows DNS instructions: CNAME → cname.vercel-dns.com
+  → Vendor sets up DNS at registrar (Namecheap, GoDaddy, Cloudflare)
+  → Vendor clicks "Verify DNS"
+  → Handler checks Vercel domain status
+  → If verified: Firestore updated to 'active', vendor sees green badge
+  → If propagating: vendor sees amber message "DNS hasn't fully propagated"
+  → If cname_error: vendor sees red message with DNS setup instructions
+
+Customer visits shop.brand.com
+  → Vercel receives request, middleware intercepts
+  → Middleware reads host header: shop.brand.com
+  → Queries Firestore: stores.where('customDomain', '==', 'shop.brand.com')
+  → If match found: rewrites request to /{storeName}
+  → Customer sees vendor's full store at shop.brand.com
+  → All checkout, payment, reviews work exactly the same
+```
+
+### Error Handling
+
+All three API handlers return clean, user-friendly error messages:
+
+- **Invalid domain format**: "Please enter a valid domain like shop.yourbrand.com — no http:// or trailing slashes."
+- **Reserved domain**: "You cannot use a Sellapage domain as your custom domain."
+- **Domain taken by another store**: "This domain is already connected to another Sellapage store."
+- **Vercel API error**: "We couldn't add your domain. Please check the domain is correct and try again."
+- **Network error**: "Network error. Please check your connection and try again."
+- **Custom domain not found (middleware)**: Clean HTML page with "Domain Not Configured" message and link to sellapage.com.ng
+
+### Build Status
+
+`npm run build` passed with zero errors.
 
 
 
@@ -1234,3 +1349,303 @@ Topship handles international deliveries (Nigeria to UK, USA, etc.) and also dom
 
 ## N.B - NO LOGIC IS CURRENTLY GOING TO BE CHANGED IN THE CURRENT SENDBOX LOGIC AT ALL BECAUSE IT'S WROKING AS IS JUST RESTRUCTURING WE'RE ADDING BECAUSE OF THE TOPSHIP INTEGRATION ACCORDING TO THE PLAN YOU CAN ALSO READ THE Topship-Docs.txt for any question you need answering 
 
+---
+
+## ADS INTEGRATION — Infrastructure Plan (Logged: 2026-07-11)
+
+### Part 1: External Platform Setup
+
+#### Google Ads
+- Account: "Sellapage Ads Engine" (ID: 589-787-5835)
+- Developer token: ✅ exists (Test Account level)
+- Apply for Basic Access at API centre
+- Create Google Cloud Project → Enable Google Ads API → Create OAuth2 credentials
+- OAuth2 redirect URI: `https://sellapage.com.ng/api/google-ads-callback`
+- Basic Access application: 5 business days processing
+
+#### Meta/Facebook
+- No app created yet — must create Business-type app
+- URL: `developers.facebook.com/apps/creation/`
+- Products to add: Marketing API + Facebook Login for Business
+- Business Verification: 2-5 business days (submit in Business Settings > Security Center)
+- App Review: Request Advanced Access for `ads_management`, `ads_read`, `business_management`
+- Permissions needed for SaaS platform managing third-party ad accounts
+
+### Part 2: Environment Variables
+
+Google Ads:
+- `GOOGLE_ADS_DEVELOPER_TOKEN` — from API centre (already have)
+- `GOOGLE_ADS_CLIENT_ID` — from Google Cloud Console
+- `GOOGLE_ADS_CLIENT_SECRET` — from Google Cloud Console
+- `GOOGLE_ADS_REDIRECT_URI` — callback URL
+- `GOOGLE_ADS_MCC_ID` — 5897875835 (no dashes)
+
+Meta Marketing API:
+- `META_APP_ID` — from App Dashboard
+- `META_APP_SECRET` — from App Dashboard
+- `META_REDIRECT_URI` — callback URL
+- `META_API_VERSION` — v25.0
+- `META_BUSINESS_ID` — from Business Manager settings
+
+### Part 3: Firestore Schema
+
+`adsAccounts` collection (per-vendor connected accounts):
+- vendorId, provider (google/meta), accessToken, refreshToken, tokenExpiry
+- accountId, accountName, currency, timezone
+- status (active/disconnected/error), connectedAt, lastSyncAt
+- googleMccId (Google only), metaBusinessId (Meta only)
+
+`adsCampaigns` collection (campaign tracking):
+- vendorId, provider, accountId, providerCampaignId
+- name, type, status (active/paused/ended/error)
+- budgetType (daily/lifetime), budgetAmount, spendToDate
+- managementMode (self/sellapage)
+- paymentStatus, paystackReference (Sellapage-managed only)
+- startDate, endDate, createdAt, updatedAt
+- lastSyncAt, impressions, clicks, ctr, conversions, revenue
+
+`adsPayments` collection (Sellapage-managed billing):
+- vendorId, campaignId, provider
+- adSpend, serviceCharge (10%), totalPaid
+- paystackReference, paystackAccessCode, status
+- createdAt, paidAt
+
+### Part 4: API Handlers
+
+New files to create:
+- `src/api-handlers/google-ads-auth.js` — OAuth2 initiation
+- `src/api-handlers/google-ads-callback.js` — OAuth2 callback (token exchange)
+- `src/api-handlers/google-ads-accounts.js` — List vendor's accessible accounts
+- `src/api-handlers/google-ads-campaigns.js` — CRUD operations
+- `src/api-handlers/google-ads-reports.js` — Performance data
+- `src/api-handlers/google-ads-sync.js` — Cron sync for performance data
+- `src/api-handlers/meta-ads-auth.js` — OAuth2 initiation
+- `src/api-handlers/meta-ads-callback.js` — OAuth2 callback
+- `src/api-handlers/meta-ads-accounts.js` — List vendor's ad accounts
+- `src/api-handlers/meta-ads-campaigns.js` — CRUD operations
+- `src/api-handlers/meta-ads-reports.js` — Performance data
+- `src/api-handlers/meta-ads-sync.js` — Cron sync
+- `src/api-handlers/ads-payment-initialize.js` — Paystack init for Sellapage-managed ads
+- `src/api-handlers/ads-payment-verify.js` — Paystack verify + trigger campaign creation
+- `src/api-handlers/_lib/google-ads-client.js` — Shared Google Ads client setup
+- `src/api-handlers/_lib/meta-ads-client.js` — Shared Meta Marketing API client setup
+
+Route cases to add in `api/[...route].js`:
+- google-ads-auth, google-ads-callback, google-ads-accounts, google-ads-campaigns, google-ads-reports, google-ads-sync
+- meta-ads-auth, meta-ads-callback, meta-ads-accounts, meta-ads-campaigns, meta-ads-reports, meta-ads-sync
+- ads-payment-initialize, ads-payment-verify
+
+### Part 5: Dashboard UI
+
+New files:
+- `src/components/dashboard/AdsTab.jsx` — Main ads dashboard tab
+- `src/components/dashboard/AdsTab/AdsOverview.jsx` — Summary cards
+- `src/components/dashboard/AdsTab/ConnectedAccounts.jsx` — Connected accounts list
+- `src/components/dashboard/AdsTab/CampaignsList.jsx` — All campaigns
+- `src/components/dashboard/AdsTab/CreateCampaignModal.jsx` — Multi-step creation
+- `src/components/dashboard/AdsTab/CampaignDetails.jsx` — Single campaign view
+- `src/components/dashboard/AdsTab/AdsPaymentModal.jsx` — Paystack payment
+
+Nav item in `DashboardLayout.jsx`:
+- Under "Grow" group: `{ id: "ads", label: "Ads", icon: Target }`
+
+Tab rendering in `Dashboard.jsx`:
+- Plan gate: Premium only
+
+### Part 6: AdsTab UI Flow
+
+Self-Managed Flow:
+1. Vendor clicks "Connect Google Ads" or "Connect Meta Ads"
+2. Redirect to OAuth2 consent screen
+3. Vendor grants access
+4. Callback exchanges code for tokens
+5. Store tokens in adsAccounts collection
+6. Vendor sees accounts, can select which to use
+7. Vendor creates campaign via CreateCampaignModal
+8. Campaign created directly on vendor's Google/Meta account
+9. Sellapage tracks performance via API (read-only)
+
+Sellapage-Managed Flow:
+1. Vendor clicks "Run Ads with Sellapage"
+2. Shows campaign creation form (no OAuth needed)
+3. Vendor fills: campaign name, type, budget, targeting, creative
+4. Shows payment breakdown: ad spend + 10% service charge
+5. Vendor pays via Paystack
+6. Paystack confirms → Sellapage creates campaign on master account
+7. Sellapage tracks performance and manages campaign
+8. Vendor sees performance in dashboard
+
+### Part 7: Campaign Creation Form Fields
+
+Google Ads Campaign Fields:
+- Campaign name (text)
+- Campaign type (dropdown): Search, Display, Shopping, Performance Max
+- Daily budget (number, Naira)
+- Bidding strategy (dropdown): Maximize clicks, Maximize conversions, Target CPA
+- Locations (multi-select): Nigeria, states, cities
+- Languages (multi-select): English, Yoruba, Igbo, Hausa
+- Keywords (textarea): For Search campaigns
+- Ad headlines (3 text fields): For Search campaigns
+- Ad descriptions (2 text fields): For Search campaigns
+- Final URL (URL)
+- Start/End dates
+
+Meta Ads Campaign Fields:
+- Campaign name (text)
+- Objective (dropdown): Traffic, Sales, Leads, Engagement, Awareness
+- Daily budget (number, Naira)
+- Ad set name (text)
+- Billing event (dropdown): Impressions, Link clicks
+- Optimization goal (dropdown): Link clicks, Conversions, Reach
+- Age range (multi-select): 18-65+
+- Gender (dropdown): All, Male, Female
+- Locations (multi-select): Nigeria, states
+- Interests (multi-select): Various categories
+- Ad creative (image upload)
+- Ad title (text)
+- Ad description (text)
+- Call to action (dropdown): Shop Now, Learn More, Sign Up
+- Destination URL (URL)
+
+### Part 8: Implementation Order
+
+Phase 1: Infrastructure (Now)
+- Create AdsTab.jsx skeleton with plan gate
+- Add nav item and tab rendering
+- Create Firestore schema functions
+- Create API handler skeletons
+- Add route cases
+
+Phase 2: Google Ads (After Basic Access Approved)
+- Implement google-ads-auth.js (OAuth2 redirect)
+- Implement google-ads-callback.js (token exchange)
+- Implement google-ads-accounts.js (list accounts)
+- Implement google-ads-campaigns.js (CRUD)
+- Implement google-ads-reports.js (performance)
+- Wire up AdsTab UI to real API
+
+Phase 3: Meta Ads (After Business Verification + App Review)
+- Implement meta-ads-auth.js (OAuth2 redirect)
+- Implement meta-ads-callback.js (token exchange)
+- Implement meta-ads-accounts.js (list accounts)
+- Implement meta-ads-campaigns.js (CRUD)
+- Implement meta-ads-reports.js (performance)
+- Wire up AdsTab UI to real API
+
+Phase 4: Sellapage-Managed Billing
+- Implement ads-payment-initialize.js
+- Implement ads-payment-verify.js
+- Create AdsPaymentModal.jsx
+- Wire up payment flow
+
+Phase 5: Sync & Reporting
+- Implement google-ads-sync.js (cron)
+- Implement meta-ads-sync.js (cron)
+- Build performance charts in AdsTab
+
+
+
+
+
+
+
+
+
+
+**FULL IMPLEMENTATION PLAN — Custom Domain Engine**
+
+---
+
+**WHAT WE'RE BUILDING:**
+
+Vendors on Pro and Premium can connect their own domain (e.g. `shop.brand.com`) to their Sellapage store. Customers visit that domain and see the vendor's store seamlessly — no Sellapage URL visible. SSL is automatic via Vercel. The vendor manages everything from a new "Custom Domain" tab in their dashboard.
+
+---
+
+**THE COMPLETE FLOW:**
+
+**Vendor side:**
+1. Vendor opens Custom Domain tab (Pro/Premium only)
+2. Enters their domain e.g. `shop.brand.com`
+3. Clicks "Add Domain"
+4. We call Vercel API to add the domain to the project
+5. Dashboard shows DNS instructions: "Add a CNAME record pointing `shop.brand.com` → `cname.vercel-dns.com` in your DNS provider"
+6. Vendor sets up DNS at their registrar (Namecheap, GoDaddy, etc.)
+7. Vendor clicks "Verify DNS" — we check if DNS has propagated
+8. Once verified, domain shows as "Active" with a green badge
+9. Vendor can disconnect anytime via "Remove Domain" button
+
+**Customer side:**
+1. Customer visits `shop.brand.com`
+2. Vercel receives request, middleware intercepts it
+3. Middleware reads host header (`shop.brand.com`)
+4. Middleware queries Firestore for store where `customDomain == "shop.brand.com"`
+5. Middleware rewrites the request to `/storename` internally
+6. Customer sees the vendor's full store, URL stays as `shop.brand.com`
+7. All checkout, payment, reviews work exactly the same
+
+---
+
+**FILES TO BUILD — in execution order:**
+
+**1. `src/api-handlers/add-custom-domain.js`** — NEW ✅ VERIFIED/IMPLEMENTED
+Calls Vercel API `POST /v10/projects/{projectId}/domains` to add the domain.
+Validates the domain format, checks vendor auth, saves `customDomain` to Firestore store document.
+
+**2. `src/api-handlers/remove-custom-domain.js`** — NEW ✅ VERIFIED/IMPLEMENTED
+Calls Vercel API `DELETE /v10/projects/{projectId}/domains/{domain}` to remove the domain.
+Clears `customDomain` field from Firestore store document.
+
+**3. `src/api-handlers/verify-custom-domain.js`** — NEW ✅ VERIFIED/IMPLEMENTED
+Calls Vercel API `GET /v10/projects/{projectId}/domains/{domain}` to check verification status.
+Returns whether DNS is configured correctly and SSL is provisioned.
+
+**4. `middleware.js`** — NEW (at project root) ✅ VERIFIED/IMPLEMENTED
+Intercepts all incoming requests. Reads host header. If host matches a known custom domain in Firestore, rewrites the request URL to the correct store path. If host is `sellapage.com.ng`, passes through normally.
+
+**5. `api/[...route].js`** — UPDATE ✅ VERIFIED/IMPLEMENTED
+Register three new routes: `add-custom-domain`, `remove-custom-domain`, `verify-custom-domain`.
+
+**6. `src/components/dashboard/CustomDomainTab.jsx`** — NEW ✅ VERIFIED/IMPLEMENTED
+Complete UI for the custom domain management tab. Shows:
+- Current domain status (none/pending/active)
+- Input to add a new domain
+- DNS setup instructions (shown after domain added)
+- Verify DNS button with status feedback
+- Remove domain button
+- Plan gate for Starter and Growth (Pro+ only)
+
+**7. `src/components/dashboard/DashboardLayout.jsx`** — UPDATE ✅ VERIFIED/IMPLEMENTED
+Add `CustomDomain` tab to NAV_ITEMS with Globe icon, gated behind `isPro`.
+
+**8. `src/pages/Dashboard.jsx`** — UPDATE ✅ VERIFIED/IMPLEMENTED
+Import and wire `CustomDomainTab`. Update `storeUrl` computation to check `store.customDomain` first before falling back to `sellapage.com.ng/${store.storeName}`.
+
+**9. `vercel.json`** — UPDATE ✅ VERIFIED/IMPLEMENTED
+Add middleware configuration so Vercel runs our middleware on all requests.
+
+---
+
+**KEY TECHNICAL DECISIONS:**
+
+- Middleware runs at the Edge (Vercel Edge Runtime) — zero latency, global
+- Firestore query in middleware uses Admin SDK — we cache the lookup for 60 seconds to avoid hammering Firestore on every request
+- Domain validation: must be a valid domain format, no `http://`, no trailing slash, not `sellapage.com.ng` or its subdomains
+- One domain per store — if a vendor adds a second domain, it replaces the first
+- The `storeUrl` prop in Dashboard.jsx is the single source of truth — changing it there cascades everywhere automatically
+
+---
+
+**WHAT DOESN'T CHANGE:**
+
+- All Firestore document IDs, order documents, product documents — untouched
+- Checkout flow, Paystack webhooks, Sendbox — untouched
+- All existing store URLs continue working at `sellapage.com.ng/storename` — custom domain is additive, not a replacement
+
+---
+
+## wrap all errors in clean and understandable frontend UI for example if a user cname is not correct it should show cname has issue or sth like that or even if it's another error then the best possible error UI should show so the vendor knows what they'd do/how to do it also too..
+
+**PLAN GATE:**
+- Custom Domain tab visible: Pro and Premium only
+- Middleware works for all vendors who have `customDomain` set in Firestore
