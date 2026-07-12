@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "middleware": "middleware.js",
   "rewrites": [
     {
       "source": "/api/:path*",

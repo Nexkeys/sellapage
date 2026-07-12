@@ -1649,3 +1649,5 @@ Add middleware configuration so Vercel runs our middleware on all requests.
 **PLAN GATE:**
 - Custom Domain tab visible: Pro and Premium only
 - Middleware works for all vendors who have `customDomain` set in Firestore
+
+**Commit/push keyword:** `custom-domain-engine`
