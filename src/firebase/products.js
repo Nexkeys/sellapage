@@ -10,6 +10,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   getCountFromServer,
   writeBatch,
   increment,
@@ -118,10 +119,14 @@ export const addProduct = async (storeId, productData, imageFiles = []) => {
 }
 
 
-export const getProducts = async (storeId) => {
+export const getProducts = async (storeId, maxProducts = null) => {
+  const constraints = [orderBy('createdAt', 'desc')]
+  if (maxProducts && maxProducts < 999999) {
+    constraints.push(limit(maxProducts))
+  }
   const q = query(
     collection(db, 'stores', storeId, 'products'),
-    orderBy('createdAt', 'desc')
+    ...constraints
   )
   const snap = await getDocs(q)
   return snap.docs.map(d => {

@@ -228,7 +228,7 @@ export default function ServiceStorePage() {
           return;
         }
 
-        const serviceDocs = await getServices(storeData.id);
+        const serviceDocs = await getServices(storeData.id, storeData.maxProducts);
         setStore(storeData);
         setServices(serviceDocs);
 

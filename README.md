@@ -2016,9 +2016,36 @@ Public marketplace page at `/live-stores` showing active vendor stores with infi
 
 `npm run build` passed with zero errors.
 
+---
 
+## 2026-07-13 — Plan Enforcement Fix: Public Store Page Limits
 
+Commit/push keyword: `plan-enforcement-fix`
 
+Fixes a critical bug where downgraded/expired stores still showed all products on their public pages.
+
+### Problem
+When a vendor's plan expired and downgraded from Growth (50 products) to Starter (15), all 40+ products remained visible on their public store page (`StorePage.jsx`, `ServiceStorePage.jsx`). The `getProducts()` and `getServices()` functions queried ALL documents from the subcollection with no plan-based limit. The expiry cron job (`expiry-cron.js`) only reset the store's `maxProducts` field to 15 but never hid excess products — and the public pages never checked `maxProducts` at query time.
+
+### What Changed
+
+- **`src/firebase/products.js`**
+  - Added `limit` to Firestore imports
+  - Updated `getProducts(storeId, maxProducts)` — accepts optional `maxProducts` parameter, applies `.limit(maxProducts)` to the Firestore query when value is < 999999 (skips limit for premium/unlimited plans)
+
+- **`src/firebase/services.js`**
+  - Added `limit` to Firestore imports
+  - Updated `getServices(storeId, maxProducts)` — same pattern as `getProducts()`
+
+- **`src/pages/StorePage.jsx`**
+  - Now passes `storeData.maxProducts` to `getProducts(storeData.id, storeData.maxProducts)`
+
+- **`src/pages/ServiceStorePage.jsx`**
+  - Now passes `storeData.maxProducts` to `getServices(storeData.id, storeData.maxProducts)`
+
+### Build Status
+
+`npm run build` passed with zero errors.
 
 
 

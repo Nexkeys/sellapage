@@ -777,7 +777,7 @@ export default function StorePage() {
         }
 
         setStore(storeData);
-        const prods = await getProducts(storeData.id);
+        const prods = await getProducts(storeData.id, storeData.maxProducts);
         setProducts(prods);
 
         if (!viewCountedRef.current) {
