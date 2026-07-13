@@ -1991,14 +1991,14 @@ Public marketplace page at `/live-stores` showing active vendor stores with infi
 ### What Changed
 
 - **`src/firebase/products.js`**
-  - Added `limit` and `startAfter` to Firestore imports
-  - Added `getActiveStores(lastDoc)` — queries `stores` where `isActive == true`, ordered by `createdAt` desc, limit 20. Returns `{ stores, lastVisible, hasMore }`
+  - Added `getActiveStores()` — queries `stores` where `isActive == true`, sorts by `createdAt` desc client-side. Returns all active stores array.
+  - Note: Uses client-side sorting instead of Firestore `orderBy` to avoid requiring a composite index.
 
 - **`src/pages/LiveStoresPage.jsx`** (NEW)
   - Hero section with brand gradient, marketplace title, and subtitle
   - Search bar with real-time client-side filtering (by businessName, storeName, description)
   - Responsive grid: 1 col mobile, 2 sm, 3 md, 4 lg
-  - Infinite scroll via Intersection Observer on sentinel div (200px root margin)
+  - Client-side pagination: loads 20 stores initially, IntersectionObserver loads more on scroll
   - Store cards: logo/business name, description snippet, CAC badge, vendor type badge (Products/Services/Both), link to store
   - Loading state (spinner), empty state (no results), "all stores loaded" message
   - Navbar + Footer

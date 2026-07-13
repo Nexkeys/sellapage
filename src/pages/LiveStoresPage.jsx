@@ -14,6 +14,8 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { getActiveStores } from '../firebase/products'
 
+const PAGE_SIZE = 20
+
 const VENDOR_TYPE_LABEL = {
   products: { label: 'Products', icon: ShoppingBag, color: 'text-blue-600 bg-blue-50 border-blue-100' },
   services: { label: 'Services', icon: Briefcase, color: 'text-purple-600 bg-purple-50 border-purple-100' },
@@ -21,81 +23,66 @@ const VENDOR_TYPE_LABEL = {
 }
 
 export default function LiveStoresPage() {
-  const [stores, setStores] = useState([])
-  const [filtered, setFiltered] = useState([])
+  const [allStores, setAllStores] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [allLoaded, setAllLoaded] = useState(false)
-  const lastDocRef = useRef(null)
   const sentinelRef = useRef(null)
 
-  const loadStores = useCallback(async (isInitial = false) => {
-    if (loadingMore && !isInitial) return
-    if (!hasMore && !isInitial) return
-
-    if (isInitial) {
-      setLoading(true)
-    } else {
-      setLoadingMore(true)
-    }
-
-    try {
-      const { stores: batch, lastVisible, hasMore: more } = await getActiveStores(
-        isInitial ? null : lastDocRef.current
-      )
-      lastDocRef.current = lastVisible
-      setHasMore(more)
-      if (!more) setAllLoaded(true)
-
-      if (isInitial) {
-        setStores(batch)
-        setFiltered(batch)
-      } else {
-        setStores(prev => [...prev, ...batch])
-        setFiltered(prev => [...prev, ...batch])
-      }
-    } catch (err) {
-      console.error('[LiveStoresPage] load error:', err)
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
-    }
-  }, [loadingMore, hasMore])
-
   useEffect(() => {
-    loadStores(true)
+    let cancelled = false
+    ;(async () => {
+      try {
+        const data = await getActiveStores()
+        if (!cancelled) setAllStores(data)
+      } catch (err) {
+        console.error('[LiveStoresPage] load error:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
+
+  const filtered = search.trim()
+    ? allStores.filter(s => {
+        const q = search.toLowerCase()
+        return (
+          (s.businessName || '').toLowerCase().includes(q) ||
+          (s.storeName || '').toLowerCase().includes(q) ||
+          (s.description || '').toLowerCase().includes(q)
+        )
+      })
+    : allStores
+
+  const visible = filtered.slice(0, visibleCount)
+  const hasMore = visibleCount < filtered.length
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || loadingMore) return
+    setLoadingMore(true)
+    setTimeout(() => {
+      setVisibleCount(prev => prev + PAGE_SIZE)
+      setLoadingMore(false)
+    }, 400)
+  }, [hasMore, loadingMore])
 
   useEffect(() => {
     if (!sentinelRef.current || !hasMore) return
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
-          loadStores(false)
-        }
+        if (entries[0].isIntersecting && hasMore && !loadingMore) loadMore()
       },
       { rootMargin: '200px' }
     )
     observer.observe(sentinelRef.current)
     return () => observer.disconnect()
-  }, [hasMore, loadingMore, loading, loadStores])
+  }, [hasMore, loadingMore, loadMore])
 
   useEffect(() => {
-    if (!search.trim()) {
-      setFiltered(stores)
-      return
-    }
-    const q = search.toLowerCase()
-    setFiltered(
-      stores.filter(s =>
-        (s.businessName || '').toLowerCase().includes(q) ||
-        (s.storeName || '').toLowerCase().includes(q) ||
-        (s.description || '').toLowerCase().includes(q)
-      )
-    )
-  }, [search, stores])
+    setVisibleCount(PAGE_SIZE)
+  }, [search])
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -167,9 +154,9 @@ export default function LiveStoresPage() {
         )}
 
         {/* Store Grid */}
-        {!loading && filtered.length > 0 && (
+        {!loading && visible.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filtered.map(store => (
+            {visible.map(store => (
               <StoreCard key={store.id} store={store} />
             ))}
           </div>
@@ -188,7 +175,7 @@ export default function LiveStoresPage() {
         )}
 
         {/* All loaded */}
-        {allLoaded && !loading && filtered.length > 0 && (
+        {!hasMore && !loading && filtered.length > 0 && (
           <p className="text-center text-xs text-gray-400 py-8">
             You've seen all stores
           </p>
