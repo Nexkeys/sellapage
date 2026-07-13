@@ -22,8 +22,15 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
   const [verifyResult, setVerifyResult] = useState(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const [retriesLeft, setRetriesLeft] = useState(3)
 
   const isVerified = store?.cacVerified === true
+
+  useEffect(() => {
+    if (store?.cacRetryCount != null) {
+      setRetriesLeft(Math.max(0, 3 - store.cacRetryCount))
+    }
+  }, [store?.cacRetryCount])
 
   const handleVerify = async () => {
     const trimmed = rcNumber.trim()
@@ -49,9 +56,11 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
       const data = await res.json()
       if (res.ok && data.success) {
         setVerifyResult(data)
+        if (data.retriesLeft != null) setRetriesLeft(data.retriesLeft)
       } else {
         setErrorType(data.error || '')
         setError(data.message || 'Verification failed. Please try again.')
+        if (data.retriesLeft != null) setRetriesLeft(data.retriesLeft)
       }
     } catch {
       setErrorType('network_error')
@@ -151,8 +160,25 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
         </div>
       )}
 
-      {/* Verification form — only show if not verified */}
-      {!isVerified && !confirmed && (
+      {/* Verification form — only show if not verified and retries remain */}
+      {!isVerified && !confirmed && retriesLeft <= 0 && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5 text-center space-y-2">
+          <AlertCircle size={18} className="mx-auto text-red-500" />
+          <p className="text-xs font-bold text-red-700">All verification attempts used</p>
+          <p className="text-[11px] text-red-600 leading-relaxed">
+            You've used all 3 free verification attempts. Please contact our support team to verify your business manually.
+          </p>
+          <a
+            href="mailto:support@sellapage.com.ng"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-[11px] font-bold text-white hover:bg-red-700 transition-all"
+          >
+            Contact Support
+          </a>
+        </div>
+      )}
+
+      {/* Verification form — only show if not verified and retries remain */}
+      {!isVerified && !confirmed && retriesLeft > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
@@ -190,6 +216,15 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
                   <p className="text-[11px] text-amber-600 mt-0.5">This usually resolves automatically. You can also try again in a few minutes.</p>
                 )}
               </div>
+            </div>
+          )}
+
+          {retriesLeft > 0 && retriesLeft <= 2 && !isVerified && !confirmed && (
+            <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <AlertCircle size={12} className="flex-shrink-0 text-amber-500" />
+              <p className="text-[11px] text-amber-700">
+                You have <span className="font-bold">{retriesLeft}</span> verification {retriesLeft === 1 ? 'attempt' : 'attempts'} remaining. Each attempt costs ₦150.
+              </p>
             </div>
           )}
 
@@ -281,7 +316,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
       )}
 
       {/* What the badge looks like */}
-      {!isVerified && !confirmed && (
+      {!isVerified && !confirmed && retriesLeft > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
           <h3 className="font-bold text-gray-900 text-sm mb-3">What your customers will see</h3>
           <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl w-fit">

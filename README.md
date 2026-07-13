@@ -644,7 +644,7 @@ https://sellapage.com.ng — hosted on Vercel, GitHub CI/CD, auto-deploy on push
 
 ## PENDING FEATURES — Priority Order
 
-### 1. Status Change Emails (URGENT — affects live users)
+### 1. Status Change Emails (URGENT — affects live users) ✅
 Send email to customer when vendor changes order status to: confirmed, dispatched, delivered, cancelled.
 Handler: new addition to `paystack-webhook.js` or a new `update-order-status.js` handler.
 Template: match existing email style. Include order summary, new status, and (for delivered) review link. - DONE ALREADY
@@ -768,12 +768,42 @@ We go with option B
 
 
 
-### 4. Live Stores Page
-Public page on sellapage.com.ng/stores — shows a moving grid/carousel of all active vendor stores.
-Data: query Firestore for stores where isActive: true, show store name, category, store clickable link.
+### 4. Live Stores Page — DONE ✅
+Public page on sellapage.com.ng/live-stores — shows a moving grid/carousel that can be paused and played of all active vendor stores. well formatted and also fully fitted to display on mobile screens starting from smallest 180PX, 260PX, 360PX to the highest but it should priortize mobile screens first sha 
+Data: query Firestore for stores where isActive: true, show store name, category, store clickable link. and what that vendor offers 
 Each card links to the vendor's store URL.
+and also a search bar where just incase visitors or guests can search for stores name 
 Navbar gets "Explore Stores" link button.
 Comes after CAC verification (badges will show on the store cards).
+
+
+IMP PLAN - 
+Proceed with the Live Stores page implementation but with these changes to the original plan:
+
+CHANGE TO DESIGN — Replace the auto-scrolling grid with a clean static paginated grid:
+- Remove the CSS keyframes auto-scroll entirely
+- Remove the pause/play controls
+- Use a standard responsive grid: 1 column on mobile, 2 on sm, 3 on md, 4 on lg
+- Load 20 stores initially, then load 20 more when the user scrolls to the bottom
+- Use Intersection Observer on a sentinel div at the bottom of the grid to trigger loading more
+- Show a subtle loading spinner when fetching more stores
+- Show "You've seen all stores" text when no more stores remain
+
+CHANGE TO DATA FETCHING — Use Firestore pagination instead of loading all stores at once:
+- Use Firestore query with .limit(20) and .startAfter(lastDoc) for subsequent pages
+- Query: stores collection, where isActive == true (or where plan is not empty/where storeName exists), ordered by createdAt descending
+- getActiveStores(lastDoc) accepts an optional lastDoc cursor for pagination
+
+Everything else from the original plan stays the same:
+- Store card design with business name, category, description, CAC badge, vendor type
+- Search bar (client-side filter on already-loaded stores)
+- Navbar link between Pricing and Dashboard
+- /live-stores route in App.jsx
+- Mobile-first responsive design
+- README changelog
+
+Proceed with implementation. — DONE ✅
+
 
 ### 5. Orders Tab Full Overhaul
 Full redesign — color, bit of motion, pagination, better status logic.
@@ -790,6 +820,17 @@ Spec session required before any code is written.
 Internal panel for Nex to manage the platform.
 Features: vendor list, plan management, Sendbox wallet balance monitoring, shipment usage tracking, revenue overview, support ticket management, feature flags, payouts tab accounts added for verification, cloudinary usage/bandwith, vendors details. well paginated and designed to feel like an actual admin panel and fine very fine and fully structured
 Auth: `ADMIN_SECRET_TOKEN` header (already in Vercel env).
+
+**CAC Verification Admin Features (add to Admin Panel):**
+- Total CAC-verified stores count (cacVerified: true)
+- Total pending/unverified stores count
+- Total verification attempts across all vendors (sum of cacRetryCount)
+- Failed attempts count (vendors who exhausted all 3 retries)
+- Vendors with 0 retries left — list with "Contact Support" flag
+- Per-vendor CAC status table: business name, RC number, verification status, retry count, last retry date
+- Filter: verified / unverified / retries exhausted
+- Export CAC verification data as CSV
+- Bulk email to unverified vendors encouraging CAC verification
 
 ### 7. AI Business Partner
 Context-aware chat assistant inside the dashboard.
@@ -1900,9 +1941,80 @@ All Prembly errors showed the same generic message: "CAC verification failed. Pl
 
 `npm run build` passed with zero errors.
 
+---
 
+## 2026-07-13 — CAC Verification Retry Limit + Email Notifications
 
+Commit/push keyword: `cac-retry-emails`
 
+Adds retry tracking (max 3 attempts per store), email notifications on verification results, and admin panel CAC features spec.
+
+### What Changed
+
+- **`src/api-handlers/verify-cac.js`**
+  - Added `sendEmail` import from `_lib/send-email.js`
+  - Reads `cacRetryCount` from store document, blocks verification if >= 3 (returns `retries_exhausted`)
+  - Increments `cacRetryCount` on every Prembly call (success or failure)
+  - Sends **failed email** on verification failure (except insufficient_funds) with remaining retries count
+  - Sends **success email** on verification with badge announcement
+  - All API responses now include `retriesLeft`
+
+- **`src/components/dashboard/CACVerificationTab.jsx`**
+  - Added `retriesLeft` state, initialized from `store.cacRetryCount` via useEffect
+  - Retry count warning (amber banner) when retries <= 2: "You have X verification attempts remaining. Each attempt costs ₦150."
+  - Exhausted state (red card with AlertCircle + "Contact Support" mailto link) when retries = 0
+  - Form hidden when exhausted — only the exhausted card shows
+  - "What your customers will see" preview also hidden when exhausted
+  - Captures `retriesLeft` from API response after each attempt
+
+- **`README.md` — Admin Panel features**
+  - Added CAC admin features spec to Admin Panel section:
+    - Total CAC-verified stores count
+    - Total pending/unverified stores count
+    - Total verification attempts across all vendors
+    - Failed attempts count (retries exhausted)
+    - Per-vendor CAC status table with filters
+    - CSV export + bulk email to unverified vendors
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+## 2026-07-13 — Live Stores Page
+
+Commit/push keyword: `live-stores`
+
+Public marketplace page at `/live-stores` showing active vendor stores with infinite scroll, search, and responsive grid.
+
+### What Changed
+
+- **`src/firebase/products.js`**
+  - Added `limit` and `startAfter` to Firestore imports
+  - Added `getActiveStores(lastDoc)` — queries `stores` where `isActive == true`, ordered by `createdAt` desc, limit 20. Returns `{ stores, lastVisible, hasMore }`
+
+- **`src/pages/LiveStoresPage.jsx`** (NEW)
+  - Hero section with brand gradient, marketplace title, and subtitle
+  - Search bar with real-time client-side filtering (by businessName, storeName, description)
+  - Responsive grid: 1 col mobile, 2 sm, 3 md, 4 lg
+  - Infinite scroll via Intersection Observer on sentinel div (200px root margin)
+  - Store cards: logo/business name, description snippet, CAC badge, vendor type badge (Products/Services/Both), link to store
+  - Loading state (spinner), empty state (no results), "all stores loaded" message
+  - Navbar + Footer
+
+- **`src/App.jsx`**
+  - Added `LiveStoresPage` import
+  - Added `/live-stores` route BEFORE the `/:storeName` catch-all
+
+- **`src/components/Navbar.jsx`**
+  - Added `Store` icon import from lucide-react
+  - Added "Explore Stores" link in desktop nav (between Pricing and auth buttons)
+  - Added "Explore Stores" link in mobile menu (with Store icon, green hover style)
+
+### Build Status
+
+`npm run build` passed with zero errors.
 
 
 
@@ -2618,3 +2730,13 @@ This is also good for security.
 
 the Features listed here are not all what the admin panel would engrave more still remains also as time goes by any feature added should be engulved as part of the things to include in the admin panel also too
 
+**CAC Verification Admin Features (add to Admin Panel):**
+- Total CAC-verified stores count (cacVerified: true)
+- Total pending/unverified stores count
+- Total verification attempts across all vendors (sum of cacRetryCount)
+- Failed attempts count (vendors who exhausted all 3 retries)
+- Vendors with 0 retries left — list with "Contact Support" flag
+- Per-vendor CAC status table: business name, RC number, verification status, retry count, last retry date
+- Filter: verified / unverified / retries exhausted
+- Export CAC verification data as CSV
+- Bulk email to unverified vendors encouraging CAC verification

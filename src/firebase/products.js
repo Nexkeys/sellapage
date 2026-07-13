@@ -10,6 +10,8 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
   getCountFromServer,
   writeBatch,
   increment,
@@ -218,4 +220,19 @@ export const saveCustomCategory = async (storeId, categoryName) => {
 export const getCustomCategories = async (storeId) => {
   const snap = await getDocs(collection(db, 'stores', storeId, 'categories'))
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+
+export const getActiveStores = async (lastDoc = null) => {
+  const constraints = [
+    where('isActive', '==', true),
+    orderBy('createdAt', 'desc'),
+    limit(20),
+  ]
+  if (lastDoc) constraints.push(startAfter(lastDoc))
+  const q = query(collection(db, 'stores'), ...constraints)
+  const snap = await getDocs(q)
+  const stores = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  const lastVisible = snap.docs[snap.docs.length - 1] || null
+  return { stores, lastVisible, hasMore: snap.docs.length === 20 }
 }

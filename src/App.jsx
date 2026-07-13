@@ -26,6 +26,7 @@ import About from './pages/about'
 import BillingCallback from './pages/BillingCallback'
 import Admin from './pages/Admin'
 import Pricing from './pages/Pricing'
+import LiveStoresPage from './pages/LiveStoresPage'
 import OfferNameLab from './pages/OfferNameLab'
 import PolicyGenerator from './pages/PolicyGenerator'
 
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/tools/policy-generator" element={<PolicyGenerator />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/review" element={<ReviewPage />} />
+          <Route path="/live-stores" element={<LiveStoresPage />} />
           <Route path="/:storeName" element={<StorePage />} />
           <Route path="/:storeName/services" element={<ServiceStorePage />} />
           <Route path="*"           element={<NotFound />} />
