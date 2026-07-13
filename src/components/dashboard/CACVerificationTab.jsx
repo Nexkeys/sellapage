@@ -8,6 +8,7 @@ import {
   CreditCard,
   Building2,
   RefreshCw,
+  Clock,
 } from 'lucide-react'
 
 const INPUT_CLASS =
@@ -17,6 +18,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
   const [rcNumber, setRcNumber] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState('')
+  const [errorType, setErrorType] = useState('')
   const [verifyResult, setVerifyResult] = useState(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
@@ -27,9 +29,11 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
     const trimmed = rcNumber.trim()
     if (!trimmed) {
       setError('Please enter your RC number.')
+      setErrorType('')
       return
     }
     setError('')
+    setErrorType('')
     setVerifyResult(null)
     setVerifying(true)
     try {
@@ -46,9 +50,11 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
       if (res.ok && data.success) {
         setVerifyResult(data)
       } else {
+        setErrorType(data.error || '')
         setError(data.message || 'Verification failed. Please try again.')
       }
     } catch {
+      setErrorType('network_error')
       setError('Network error. Please check your connection and try again.')
     } finally {
       setVerifying(false)
@@ -159,9 +165,31 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
-              <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-red-500" />
-              <p className="text-xs font-semibold text-red-600">{error}</p>
+            <div className={`flex items-start gap-2.5 rounded-xl border px-4 py-3 ${
+              errorType === 'insufficient_funds' || errorType === 'pending_payment'
+                ? 'border-amber-200 bg-amber-50'
+                : 'border-red-100 bg-red-50'
+            }`}>
+              {(errorType === 'insufficient_funds' || errorType === 'pending_payment') ? (
+                <Clock size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+              ) : (
+                <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-red-500" />
+              )}
+              <div>
+                <p className={`text-xs font-semibold ${
+                  errorType === 'insufficient_funds' || errorType === 'pending_payment'
+                    ? 'text-amber-700' : 'text-red-600'
+                }`}>{error}</p>
+                {errorType === 'rc_not_found' && (
+                  <p className="text-[11px] text-red-500 mt-0.5">Make sure the number matches your CAC registration exactly.</p>
+                )}
+                {errorType === 'invalid_request' && (
+                  <p className="text-[11px] text-red-500 mt-0.5">Enter a valid number like RC1234567 or BN9537181.</p>
+                )}
+                {(errorType === 'insufficient_funds' || errorType === 'pending_payment') && (
+                  <p className="text-[11px] text-amber-600 mt-0.5">This usually resolves automatically. You can also try again in a few minutes.</p>
+                )}
+              </div>
             </div>
           )}
 

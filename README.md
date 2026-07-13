@@ -1860,6 +1860,46 @@ This update fixes 3 bugs in the `verify-cac.js` handler that caused Prembly to r
 
 `npm run build` passed with zero errors.
 
+---
+
+## 2026-07-13 — CAC Verification Error Handling Improvement
+
+Commit/push keyword: `cac-error-handling`
+
+This update improves error handling for the CAC verification flow, replacing generic error messages with specific, user-friendly messages based on Prembly's response codes.
+
+### Problem
+All Prembly errors showed the same generic message: "CAC verification failed. Please check your RC number and try again." Users couldn't tell if it was a wallet issue, invalid number, or server error.
+
+### What Changed
+
+- **`src/api-handlers/verify-cac.js`**
+  - Added Prembly `response_code` parsing
+  - Added `pending_payment` detection from Prembly response
+  - Specific error codes returned: `insufficient_funds`, `pending_payment`, `rc_not_found`, `invalid_request`, `verification_failed`
+
+  Error code mapping:
+  | Prembly `response_code` | Our error code | User message |
+  |---|---|---|
+  | `"04"` or `pending_payment: true` | `insufficient_funds` | "Our verification system is temporarily processing your request..." |
+  | `"06"` or "not found" | `rc_not_found` | "We couldn't find a business registered with that number..." |
+  | `"05"` or "invalid" | `invalid_request` | "Invalid request. Please check your number..." |
+  | Any other | `verification_failed` | "CAC verification failed. Please try again..." |
+
+- **`src/components/dashboard/CACVerificationTab.jsx`**
+  - Added `Clock` icon import from lucide-react
+  - Added `errorType` state variable to track specific error codes
+  - Updated `handleVerify` to capture `data.error` as `errorType`
+  - Replaced generic red error banner with type-aware ErrorBanner:
+    - `insufficient_funds` / `pending_payment`: amber banner with Clock icon, "This usually resolves automatically" hint
+    - `rc_not_found`: red banner with "Make sure the number matches your CAC registration exactly" hint
+    - `invalid_request`: red banner with "Enter a valid number like RC1234567 or BN9537181" hint
+    - Default: red banner with AlertCircle icon
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
 
 
 

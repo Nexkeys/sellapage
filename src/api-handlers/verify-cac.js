@@ -74,17 +74,33 @@ export default async function handler(req, res) {
       console.error('[verify-cac] Prembly error:', premblyData)
 
       const errMsg = premblyData?.detail || premblyData?.message || ''
+      const responseCode = premblyData?.response_code || ''
+      const isPendingPayment = premblyData?.pending_payment === true
 
-      if (errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('invalid')) {
+      if (isPendingPayment || responseCode === '04') {
+        return res.status(400).json({
+          error: 'insufficient_funds',
+          message: 'Our verification system is temporarily processing your request. Please try again in a few minutes.',
+        })
+      }
+
+      if (responseCode === '06' || errMsg.toLowerCase().includes('not found')) {
         return res.status(404).json({
           error: 'rc_not_found',
-          message: 'We could not find a business registered with that RC number. Please double-check and try again.',
+          message: 'We couldn\'t find a business registered with that number. Please double-check and try again.',
+        })
+      }
+
+      if (responseCode === '05' || errMsg.toLowerCase().includes('invalid')) {
+        return res.status(400).json({
+          error: 'invalid_request',
+          message: 'Invalid request. Please check your number and try again.',
         })
       }
 
       return res.status(400).json({
         error: 'verification_failed',
-        message: 'CAC verification failed. Please check your RC number and try again.',
+        message: 'CAC verification failed. Please try again or contact support.',
       })
     }
 
