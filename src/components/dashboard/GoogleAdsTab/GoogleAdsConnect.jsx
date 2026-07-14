@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link2, Loader2, ExternalLink, Shield, Target, BarChart3, Wallet, Sparkles } from 'lucide-react'
 
-export default function GoogleAdsConnect({ store, onError, onSuccess }) {
+export default function GoogleAdsConnect({ store, onError, onSuccess, onSellapageManaged }) {
   const [loading, setLoading] = useState(null)
 
   const handleConnectOwn = () => {
@@ -13,6 +13,7 @@ export default function GoogleAdsConnect({ store, onError, onSuccess }) {
   const handleSellapageManaged = () => {
     if (!store?.id) return
     setLoading('sellapage')
+    onSellapageManaged?.()
   }
 
   return (

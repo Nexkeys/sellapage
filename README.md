@@ -2931,3 +2931,34 @@ This update adds the complete Sellapage-managed ads payment infrastructure: Pays
 `npm run build` passed with zero errors. Only pre-existing chunk size warning (3,104 kB) and dynamic import warning remain.
 
 ---
+
+## 2026-07-14 — Bug Fix: GoogleAdsConnect "Create Ad Campaign" Button Stuck Spinning
+
+Commit/push keyword: `sellapage-managed-ads-bugfix`
+
+### Problem
+
+Clicking "Create Ad Campaign" (Sellapage-managed card) showed a spinner and did nothing. The button never transitioned to the campaign form.
+
+### Root Cause
+
+In `GoogleAdsConnect.jsx`:
+1. `onSellapageManaged` prop was NOT destructured from props — only `{ store, onError, onSuccess }` was extracted
+2. `handleSellapageManaged` set `loading` to `'sellapage'` but never called `onSellapageManaged()`, so the parent's `setShowSellapageForm(true)` never fired
+
+### Fix
+
+- Added `onSellapageManaged` to destructured props: `{ store, onError, onSuccess, onSellapageManaged }`
+- Added `onSellapageManaged?.()` call inside `handleSellapageManaged`
+
+### What Changed
+
+| File | Change |
+|------|--------|
+| `GoogleAdsTab/GoogleAdsConnect.jsx` | Added `onSellapageManaged` prop + call it in handler |
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
