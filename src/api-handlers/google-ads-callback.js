@@ -1,4 +1,3 @@
-//src/api-handlers/google-ads-callback.js
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAccessToken, listAccessibleCustomers, getCustomer } from './_lib/google-ads-client.js'
@@ -20,11 +19,14 @@ export default async function handler(req, res) {
   const appUrl = process.env.APP_URL || 'https://www.sellapage.com.ng'
 
   if (authError) {
-    return res.redirect(`${appUrl}/dashboard?google-ads=error&message=${encodeURIComponent(authError)}`)
+    const message = authError === 'access_blocked'
+      ? 'Google denied access. Please try again.'
+      : `Connection failed: ${authError}`
+    return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent(message)}`)
   }
 
   if (!code || !storeId) {
-    return res.redirect(`${appUrl}/dashboard?google-ads=error&message=${encodeURIComponent('Missing authorization code')}`)
+    return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent('Missing authorization code. Please try connecting again.')}`)
   }
 
   try {
@@ -42,32 +44,44 @@ export default async function handler(req, res) {
 
     const tokenData = await tokenRes.json()
     if (!tokenRes.ok || !tokenData.refresh_token) {
-      return res.redirect(`${appUrl}/dashboard?google-ads=error&message=${encodeURIComponent(tokenData.error || 'Failed to exchange code')}`)
-    }
-
-    const accessToken = await getAccessToken(tokenData.refresh_token)
-    const customerNames = await listAccessibleCustomers(accessToken)
-
-    let accountInfo = null
-    if (customerNames.length > 0) {
-      const firstCustomer = customerNames[0]
-      const customerId = firstCustomer.split('/').pop()
-      accountInfo = await getCustomer(accessToken, customerId)
+      const msg = tokenData.error === 'invalid_grant'
+        ? 'Authorization expired. Please try connecting again.'
+        : 'Could not complete Google authentication. Please try again.'
+      return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent(msg)}`)
     }
 
     await db.collection('stores').doc(storeId).update({
       googleAdsConnected: true,
       googleAdsRefreshToken: tokenData.refresh_token,
-      googleAdsCustomerId: accountInfo?.id || null,
-      googleAdsAccountName: accountInfo?.descriptiveName || null,
-      googleAdsCurrency: accountInfo?.currencyCode || null,
-      googleAdsTimezone: accountInfo?.timeZone || null,
       googleAdsConnectedAt: new Date().toISOString(),
     })
 
-    return res.redirect(`${appUrl}/dashboard?google-ads=connected`)
+    let accountInfo = null
+    try {
+      const accessToken = await getAccessToken(tokenData.refresh_token)
+      const customerNames = await listAccessibleCustomers(accessToken)
+
+      if (customerNames.length > 0) {
+        const firstCustomer = customerNames[0]
+        const customerId = firstCustomer.split('/').pop()
+        accountInfo = await getCustomer(accessToken, customerId)
+      }
+    } catch (infoErr) {
+      console.warn('[google-ads-callback] Could not fetch account details (non-fatal):', infoErr.message)
+    }
+
+    if (accountInfo) {
+      await db.collection('stores').doc(storeId).update({
+        googleAdsCustomerId: accountInfo.id || null,
+        googleAdsAccountName: accountInfo.descriptiveName || null,
+        googleAdsCurrency: accountInfo.currencyCode || null,
+        googleAdsTimezone: accountInfo.timeZone || null,
+      })
+    }
+
+    return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=connected`)
   } catch (err) {
-    console.error('[google-ads-callback] Error:', err)
-    return res.redirect(`${appUrl}/dashboard?google-ads=error&message=${encodeURIComponent('Internal error during connection')}`)
+    console.error('[google-ads-callback] Unexpected error:', err)
+    return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent('Something went wrong. Please try connecting again.')}`)
   }
 }

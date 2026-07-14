@@ -2868,3 +2868,66 @@ the Features listed here are not all what the admin panel would engrave more sti
 - Filter: verified / unverified / retries exhausted
 - Export CAC verification data as CSV
 - Bulk email to unverified vendors encouraging CAC verification
+
+---
+
+## 2026-07-14 — Sellapage-Managed Ads: Payment Flow + Campaign Form
+
+Commit/push keyword: `sellapage-managed-ads-payment`
+
+This update adds the complete Sellapage-managed ads payment infrastructure: Paystack payment initialization/verification handlers, a campaign creation form for vendors, a safety net webhook branch, and wires everything into the dashboard.
+
+### What Changed
+
+**paystack-webhook.js** — Added `ads-payment` branch (safety net):
+- Routes by `metadata.transactionType === "ads-payment"`
+- Reads campaign details from metadata: `storeId`, `campaignName`, `campaignType`, `budgetAmount`, `targeting`
+- If vendor's Google Ads is connected: attempts campaign creation on master account (try/catch, non-fatal)
+- Creates campaign in `googleAdsCampaigns` collection with `managementMode: "sellapage"`, status `PAUSED`, payment breakdown (ad spend + 10% service charge + total paid)
+- Returns 200 on all paths (Paystack requires 200)
+
+**ads-payment-initialize.js** — NEW Paystack init for Sellapage-managed ads:
+- Validates store ownership via `auth.uid`
+- Calculates 10% service charge on ad spend
+- Initializes Paystack transaction with `transactionType: "ads-payment"` metadata
+- Callback URL: `?ads-payment=pending&tab=google-ads`
+
+**ads-payment-verify.js** — NEW Paystack verify + campaign creation:
+- Verifies transaction via Paystack API
+- If vendor's Google Ads is connected: creates campaign on master account (Campaign + Budget via Google Ads API)
+- If not connected: saves campaign as pending (will be created when Ads connects)
+- Saves to `googleAdsCampaigns` with `managementMode: "sellapage"`
+
+**GoogleAdsConnect.jsx** — Redesigned with two cards:
+- "Connect Your Account" (self-managed, OAuth) — existing flow
+- "Run Ads with Sellapage" (managed, Paystack payment) — triggers `SellapageAdsForm`
+
+**SellapageAdsForm.jsx** — NEW multi-step campaign creation form:
+- Step 1: Campaign type (Search, Display, Shopping, Performance Max) — static Tailwind classes, no dynamic imports
+- Step 2: Campaign details (name, budget, final URL)
+- Step 3: Keywords & ad copy (Search only) — headlines, descriptions
+- Step 4: Review & payment — payment breakdown (ad spend + 10% service charge + total), pay button → Paystack redirect
+
+**GoogleAdsTab.jsx** — Updated to wire Sellapage-managed form:
+- Added `showSellapageForm` state
+- Renders `SellapageAdsForm` when triggered from `GoogleAdsConnect`
+- Added `handleAdsPaymentVerify` for OAuth callback handling
+- Added `?ads-payment` URL param reading for callback redirect
+
+**api/[...route].js** — Added route cases:
+- `ads-payment-initialize` → `ads-payment-initialize.js`
+- `ads-payment-verify` → `ads-payment-verify.js`
+
+### What Did NOT Change
+
+- No changes to existing self-managed Google Ads API handlers
+- No changes to `src/pages/Dashboard.jsx`
+- No changes to `src/components/dashboard/DashboardLayout.jsx`
+- `google-ads-callback.js` unchanged
+- `google-ads-auth.js`, `google-ads-accounts.js`, `google-ads-campaigns.js`, `google-ads-reports.js` unchanged
+
+### Build Status
+
+`npm run build` passed with zero errors. Only pre-existing chunk size warning (3,104 kB) and dynamic import warning remain.
+
+---

@@ -150,6 +150,15 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "ads-payment-initialize": {
+        const { default: handler } = await import("../src/api-handlers/ads-payment-initialize.js")
+        return handler(req, res)
+      }
+      case "ads-payment-verify": {
+        const { default: handler } = await import("../src/api-handlers/ads-payment-verify.js")
+        return handler(req, res)
+      }
+
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
     }

@@ -124,7 +124,15 @@ export default function Dashboard() {
           ? 10
           : 3);
 
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const tabParam = urlParams.get('tab')
+    if (tabParam) return tabParam
+    if (urlParams.get('google-ads')) return 'google-ads'
+    if (urlParams.get('shipment')) return 'orders'
+    if (urlParams.get('ads-payment')) return 'google-ads'
+    return 'overview'
+  });
   const [showChecklist, setShowChecklist] = useState(false);
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [products, setProducts] = useState([]);

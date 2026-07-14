@@ -1,0 +1,145 @@
+import { getAdminDb } from './_lib/firebase-admin.js'
+import { getAdminAuth } from './_lib/firebase-admin.js'
+import { getAccessToken, createBudget, createCampaign } from './_lib/google-ads-client.js'
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const authHeader = req.headers.authorization || ''
+  const idToken = authHeader.replace('Bearer ', '').trim()
+  if (!idToken) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  const { reference, storeId } = req.body
+
+  if (!reference || !storeId) {
+    return res.status(400).json({ error: 'Missing required fields: reference, storeId' })
+  }
+
+  try {
+    const auth = getAdminAuth()
+    const db = getAdminDb()
+
+    let decodedToken
+    try {
+      decodedToken = await auth.verifyIdToken(idToken)
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired token' })
+    }
+
+    const storeDoc = await db.collection('stores').doc(storeId).get()
+    if (!storeDoc.exists) {
+      return res.status(404).json({ error: 'Store not found' })
+    }
+    if (storeDoc.data().ownerId !== decodedToken.uid) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    })
+    const verifyData = await verifyRes.json()
+
+    if (!verifyRes.ok || !verifyData.status || verifyData.data.status !== 'success') {
+      return res.status(400).json({ error: 'Payment verification failed' })
+    }
+
+    const metadata = verifyData.data.metadata || {}
+    if (metadata.transactionType !== 'ads-payment') {
+      return res.status(400).json({ error: 'Invalid transaction type' })
+    }
+
+    const {
+      campaignName,
+      campaignType,
+      budgetAmount,
+      targeting: targetingRaw,
+    } = metadata
+
+    const targeting = typeof targetingRaw === 'string' ? JSON.parse(targetingRaw) : targetingRaw
+
+    const storeData = storeDoc.data()
+    const refreshToken = storeData.googleAdsRefreshToken
+    const customerId = storeData.googleAdsCustomerId
+
+    if (!refreshToken || !customerId) {
+      await db.collection('stores').doc(storeId).update({
+        sellapageAdsPending: true,
+        sellapageAdsCampaignData: {
+          campaignName,
+          campaignType,
+          budgetAmount: Number(budgetAmount),
+          targeting,
+          paidAt: new Date().toISOString(),
+          reference,
+        },
+      })
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment confirmed. Campaign will be created once Google Ads is connected.',
+        pending: true,
+      })
+    }
+
+    let campaignResourceId = null
+    try {
+      const accessToken = await getAccessToken(refreshToken)
+      const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
+      const budgetResourceName = await createBudget(accessToken, customerId, {
+        name: `${campaignName} (Sellapage Managed)`,
+        amountMicros: budgetMicros,
+      })
+      campaignResourceId = await createCampaign(accessToken, customerId, {
+        name: `${campaignName} (Sellapage Managed)`,
+        budgetResourceName,
+        status: 'PAUSED',
+        advertisingChannelType: campaignType || 'SEARCH',
+      })
+    } catch (apiErr) {
+      console.warn('[ads-payment-verify] Campaign creation failed (non-fatal):', apiErr.message)
+    }
+
+    await db.collection('googleAdsCampaigns').add({
+      storeId,
+      provider: 'google',
+      managementMode: 'sellapage',
+      name: campaignName,
+      type: campaignType || 'SEARCH',
+      status: 'PAUSED',
+      budgetType: 'daily',
+      budgetAmount: Number(budgetAmount),
+      serviceCharge: Math.round(Number(budgetAmount) * 0.10),
+      totalPaid: Number(budgetAmount) + Math.round(Number(budgetAmount) * 0.10),
+      spendToDate: 0,
+      impressions: 0,
+      clicks: 0,
+      ctr: 0,
+      conversions: 0,
+      targeting: targeting || {},
+      providerCampaignId: campaignResourceId || null,
+      paystackReference: reference,
+      createdAt: new Date().toISOString(),
+      lastSyncAt: null,
+    })
+
+    await db.collection('stores').doc(storeId).update({
+      sellapageAdsPending: false,
+      sellapageAdsCampaignData: null,
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Campaign created successfully',
+      pending: false,
+    })
+  } catch (err) {
+    console.error('[ads-payment-verify] Unexpected error:', err)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { auth } from '../../firebase/config'
 import {
@@ -10,12 +10,14 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  Sparkles,
 } from 'lucide-react'
 
 import GoogleAdsConnect from './GoogleAdsTab/GoogleAdsConnect'
 import GoogleAdsOverview from './GoogleAdsTab/GoogleAdsOverview'
 import GoogleAdsCampaigns from './GoogleAdsTab/GoogleAdsCampaigns'
 import GoogleAdsReports from './GoogleAdsTab/GoogleAdsReports'
+import SellapageAdsForm from './GoogleAdsTab/SellapageAdsForm'
 
 export default function GoogleAdsTab({ store, isPremium }) {
   const [activeView, setActiveView] = useState('overview')
@@ -24,6 +26,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showSellapageForm, setShowSellapageForm] = useState(false)
 
   const isConnected = store?.googleAdsConnected || false
 
@@ -54,14 +57,50 @@ export default function GoogleAdsTab({ store, isPremium }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const googleAdsStatus = params.get('google-ads')
+    const adsPayment = params.get('ads-payment')
+
     if (googleAdsStatus === 'connected') {
       setSuccess('Google Ads account connected successfully!')
-      window.history.replaceState({}, '', '/dashboard')
+      window.history.replaceState({}, '', '/dashboard?tab=google-ads')
     } else if (googleAdsStatus === 'error') {
       setError(params.get('message') || 'Failed to connect Google Ads')
-      window.history.replaceState({}, '', '/dashboard')
+      window.history.replaceState({}, '', '/dashboard?tab=google-ads')
+    }
+
+    if (adsPayment === 'pending') {
+      const reference = params.get('reference')
+      if (reference) {
+        handleAdsPaymentVerify(reference)
+      }
+      window.history.replaceState({}, '', '/dashboard?tab=google-ads')
     }
   }, [])
+
+  const handleAdsPaymentVerify = async (reference) => {
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/ads-payment-verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reference, storeId: store.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        if (data.pending) {
+          setSuccess('Payment confirmed! Campaign will be created once Google Ads is connected.')
+        } else {
+          setSuccess('Campaign created successfully! It starts in PAUSED state.')
+        }
+      } else {
+        setError(data.error || 'Failed to verify payment')
+      }
+    } catch (err) {
+      setError('Failed to verify payment. Please refresh the page.')
+    }
+  }
 
   const fetchReports = useCallback(async (dateRange = '30d') => {
     if (!store?.id) return
@@ -137,7 +176,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
             Google Ads
           </h1>
           <p className="text-gray-400 text-xs mt-0.5">
-            {isConnected ? 'Manage campaigns and track performance' : 'Connect your Google Ads account to get started'}
+            {isConnected ? 'Manage campaigns and track performance' : 'Connect your account or let us run ads for you'}
           </p>
         </div>
         {isConnected && (
@@ -163,11 +202,24 @@ export default function GoogleAdsTab({ store, isPremium }) {
         </div>
       )}
 
-      {!isConnected && (
-        <GoogleAdsConnect store={store} onError={setError} onSuccess={setSuccess} />
+      {!isConnected && !showSellapageForm && (
+        <GoogleAdsConnect
+          store={store}
+          onError={setError}
+          onSuccess={setSuccess}
+          onSellapageManaged={() => setShowSellapageForm(true)}
+        />
       )}
 
-      {isConnected && (
+      {showSellapageForm && (
+        <SellapageAdsForm
+          store={store}
+          onBack={() => setShowSellapageForm(false)}
+          onError={setError}
+        />
+      )}
+
+      {isConnected && !showSellapageForm && (
         <>
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
             {[
