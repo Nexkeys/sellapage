@@ -2071,8 +2071,85 @@ The old service worker was caching the Navbar JS bundle. On mobile, refreshing t
 
 `npm run build` passed with zero errors.
 
+---
 
+## 2026-07-14 — Google Ads Tab: Bug Fixes + Complete Redesign
 
+Commit/push keyword: `google-ads-tab-redesign`
+
+This update fixes critical build bugs in the Google Ads dashboard components and completely redesigns the UI from harsh gradients and broken dynamic Tailwind classes to a clean, soft, Google-styled design.
+
+### Bugs Fixed
+
+**Bug 1: Missing `RefreshCw` import in `GoogleAdsOverview.jsx`**
+- `RefreshCw` was used on line 31 (refresh button) but was NOT included in the lucide-react import statement
+- This would cause a runtime crash when the component rendered
+- Fixed: Added `RefreshCw` to the import
+
+**Bug 2: Dynamic Tailwind classes won't compile (JIT mode)**
+- Multiple components used template literal Tailwind classes like `bg-${stat.color}-50`, `text-${type.color}-500`, `border-${type.color}-500`
+- Tailwind's JIT compiler cannot detect these at build time — they would render as empty strings
+- Affected files: `GoogleAdsOverview.jsx`, `GoogleAdsCampaigns.jsx`, `GoogleAdsCreateCampaign.jsx`, `GoogleAdsReports.jsx`
+- Fixed: Replaced all dynamic classes with static pre-defined color maps:
+  - `STAT_COLORS` in Overview and Reports
+  - `TYPE_CONFIG` in Campaigns
+  - `CAMPAIGN_TYPES` with full class objects in CreateCampaign
+
+**Bug 3: Dead Firestore `onSnapshot` subscription in `GoogleAdsTab.jsx`**
+- Lines 50-54 subscribed to `googleAdsCampaigns/{storeId}` with empty `onSnapshot` callbacks — no-op that subscribed but did nothing
+- Removed the dead subscription entirely — campaigns are already fetched via POST request
+
+**Bug 4: Unused lucide-react imports in `GoogleAdsTab.jsx`**
+- Imported 18 icons but only used 6 (BarChart3, Target, TrendingUp, Loader2, AlertCircle, CheckCircle2, X)
+- Removed 11 unused imports: MousePointerClick, Eye, IndianRupee, Link2, Unlink2, Plus, Pause, Play, RefreshCw, ChevronDown, ChevronUp, Search, Globe, ShoppingCart, Zap
+
+**Bug 5: `formatNaira`/`formatNumber` duplicated across 3 components**
+- These utility functions were copy-pasted identically into Overview, Campaigns, and Reports
+- Kept as local functions per component (consistent with codebase pattern) but ensured identical implementation
+
+### UI Redesign — Clean, Soft, Google-Styled Design
+
+The previous design was described as "not giving at all at all" — harsh gradients, inconsistent spacing, and broken dynamic colors. The redesign follows a clean, minimal aesthetic:
+
+**Design principles applied:**
+- **No gradient backgrounds** — all cards use flat white with `border-gray-200`
+- **Muted icon containers** — `bg-gray-50 border border-gray-100` instead of colored backgrounds
+- **Consistent color usage** — only status badges and stat icons use color (soft pastels: `bg-blue-50`, `bg-emerald-50`, etc.)
+- **Clean typography hierarchy** — `text-sm font-semibold` for headings, `text-[11px] text-gray-400` for labels
+- **Consistent spacing** — `p-4 sm:p-5` for cards, `space-y-4` for sections
+- **Subtle hover states** — `hover:bg-gray-800` instead of flashy transitions
+- **Status badges with borders** — `bg-emerald-50 text-emerald-700 border border-emerald-100` for soft, defined look
+- **CTA buttons** — `bg-gray-900 hover:bg-gray-800` (dark, clean) instead of blue gradients
+- **Google logo** — full 4-color SVG in Connect and Overview, not just blue
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `GoogleAdsTab.jsx` | Removed dead `onSnapshot`, removed unused imports, simplified premium gate, cleaned tab bar styling |
+| `GoogleAdsTab/GoogleAdsConnect.jsx` | Replaced gradient banner with flat white card, emoji icons with Lucide icons, clean CTA button |
+| `GoogleAdsTab/GoogleAdsOverview.jsx` | Fixed missing `RefreshCw` import, replaced dynamic Tailwind with `STAT_COLORS` map, larger stat cards, cleaner account info |
+| `GoogleAdsTab/GoogleAdsCampaigns.jsx` | Replaced dynamic Tailwind with `TYPE_CONFIG` map, cleaner campaign cards, status badges with borders |
+| `GoogleAdsTab/GoogleAdsCreateCampaign.jsx` | Replaced dynamic Tailwind with static class objects in `CAMPAIGN_TYPES`, cleaner form inputs with borders, dark CTA buttons, amber warning for paused state |
+| `GoogleAdsTab/GoogleAdsReports.jsx` | Replaced dynamic Tailwind with `STAT_CONFIG` map, cleaner date range pills, cleaner campaign breakdown table |
+
+### What Did NOT Change
+
+- No backend changes. All API handlers remain the same.
+- No changes to `api/[...route].js` routes.
+- No changes to `src/pages/Dashboard.jsx` or `DashboardLayout.jsx`.
+- Campaign creation logic, pause/resume logic, report fetching logic — all unchanged.
+- `google-ads-accounts.js` API handler still exists (dead code from frontend perspective, but may be used in future for account switching).
+
+### OAuth Status
+
+Google OAuth consent screen is now in **production mode** (not testing). Branding verification is under review by Google's Trust and Safety team (4-6 weeks). Until verification completes, vendors will see a "This app isn't verified" warning when connecting — they can click "Advanced" → "Go to sellapage.com.ng (unsafe)" to proceed. This is standard for all new Google OAuth apps.
+
+### Build Status
+
+`npm run build` passed with zero errors. Only pre-existing chunk size warning (3,090 kB) and dynamic import warning remain.
+
+---
 
 
 

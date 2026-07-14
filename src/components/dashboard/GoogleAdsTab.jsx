@@ -1,37 +1,20 @@
-//src/components/dashboard/GoogleAdsTab.jsx
 import { useState, useEffect, useCallback } from 'react'
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { auth } from '../../firebase/config'
 import {
   BarChart3,
   Target,
   TrendingUp,
-  MousePointerClick,
-  Eye,
-  IndianRupee,
   Loader2,
-  Link2,
-  Unlink2,
-  Plus,
-  Pause,
-  Play,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
   AlertCircle,
   CheckCircle2,
   X,
-  Search,
-  Globe,
-  ShoppingCart,
-  Zap,
 } from 'lucide-react'
 
 import GoogleAdsConnect from './GoogleAdsTab/GoogleAdsConnect'
 import GoogleAdsOverview from './GoogleAdsTab/GoogleAdsOverview'
 import GoogleAdsCampaigns from './GoogleAdsTab/GoogleAdsCampaigns'
-import GoogleAdsCreateCampaign from './GoogleAdsTab/GoogleAdsCreateCampaign'
 import GoogleAdsReports from './GoogleAdsTab/GoogleAdsReports'
 
 export default function GoogleAdsTab({ store, isPremium }) {
@@ -47,15 +30,9 @@ export default function GoogleAdsTab({ store, isPremium }) {
   useEffect(() => {
     if (!store?.id || !isConnected) return
 
-    const unsub = onSnapshot(
-      doc(db, 'googleAdsCampaigns', store.id),
-      () => {},
-      () => {}
-    )
-
     const fetchCampaigns = async () => {
       try {
-        const token = await firebaseAuth.currentUser?.getIdToken()
+        const token = await auth.currentUser?.getIdToken()
         const res = await fetch('/api/google-ads-campaigns', {
           method: 'POST',
           headers: {
@@ -72,7 +49,6 @@ export default function GoogleAdsTab({ store, isPremium }) {
     }
 
     fetchCampaigns()
-    return () => unsub()
   }, [store?.id, isConnected])
 
   useEffect(() => {
@@ -91,7 +67,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
     if (!store?.id) return
     setLoading(true)
     try {
-      const token = await firebaseAuth.currentUser?.getIdToken()
+      const token = await auth.currentUser?.getIdToken()
       const res = await fetch('/api/google-ads-reports', {
         method: 'POST',
         headers: {
@@ -118,34 +94,32 @@ export default function GoogleAdsTab({ store, isPremium }) {
 
   if (!isPremium) {
     return (
-      <div className="p-4 sm:p-5 max-w-4xl mx-auto space-y-4">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 sm:p-8 text-white">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <Target size={20} />
-            </div>
-            <h1 className="text-xl font-bold">Google Ads</h1>
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
+            <Target size={20} className="text-gray-400" />
           </div>
-          <p className="text-blue-100 text-sm">
-            Track ad performance with conversion tags on your storefront. Fire pageview, add to cart, checkout, and purchase events automatically.
-          </p>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Google Ads</h1>
+            <p className="text-xs text-gray-400">Premium feature</p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 text-center">
-          <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Target size={28} className="text-blue-500" />
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 text-center">
+          <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Target size={24} className="text-gray-300" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Upgrade to Use Google Ads</h2>
+          <h2 className="text-base font-bold text-gray-900 mb-2">Upgrade to Use Google Ads</h2>
           <p className="text-gray-500 text-sm mb-5 max-w-sm mx-auto">
             Google Ads integration is available on the <span className="font-semibold text-gray-700">Premium</span> plan. Upgrade to create, manage, and track ad campaigns.
           </p>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98]">
+          <button className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
             Upgrade Plan
           </button>
-          <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-gray-500">
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Pageview tracking</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Add to Cart tracking</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Purchase conversion</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Auto tag injection</span>
+          <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-gray-400">
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-gray-300" /> Pageview tracking</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-gray-300" /> Add to Cart tracking</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-gray-300" /> Purchase conversion</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-gray-300" /> Auto tag injection</span>
           </div>
         </div>
       </div>
@@ -153,13 +127,12 @@ export default function GoogleAdsTab({ store, isPremium }) {
   }
 
   return (
-    <div className="p-4 sm:p-5 max-w-5xl mx-auto space-y-4">
-      {/* Header */}
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-              <Target size={16} className="text-blue-600" />
+          <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center">
+              <Target size={15} className="text-gray-500" />
             </div>
             Google Ads
           </h1>
@@ -168,16 +141,13 @@ export default function GoogleAdsTab({ store, isPremium }) {
           </p>
         </div>
         {isConnected && (
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full font-medium">
-              <CheckCircle2 size={12} />
-              Connected
-            </span>
-          </div>
+          <span className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full font-medium w-fit">
+            <CheckCircle2 size={12} />
+            Connected
+          </span>
         )}
       </div>
 
-      {/* Error/Success */}
       {error && (
         <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2">
           <AlertCircle size={14} className="text-red-500 mt-0.5 shrink-0" />
@@ -186,23 +156,20 @@ export default function GoogleAdsTab({ store, isPremium }) {
         </div>
       )}
       {success && (
-        <div className="bg-green-50 border border-green-100 rounded-xl p-3 flex items-start gap-2">
-          <CheckCircle2 size={14} className="text-green-500 mt-0.5 shrink-0" />
-          <p className="text-green-600 text-xs flex-1">{success}</p>
-          <button onClick={() => setSuccess('')} className="text-green-400 hover:text-green-600"><X size={14} /></button>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-start gap-2">
+          <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 shrink-0" />
+          <p className="text-emerald-600 text-xs flex-1">{success}</p>
+          <button onClick={() => setSuccess('')} className="text-emerald-400 hover:text-emerald-600"><X size={14} /></button>
         </div>
       )}
 
-      {/* Not connected */}
       {!isConnected && (
         <GoogleAdsConnect store={store} onError={setError} onSuccess={setSuccess} />
       )}
 
-      {/* Connected views */}
       {isConnected && (
         <>
-          {/* Tab navigation */}
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'campaigns', label: 'Campaigns', icon: Target },
@@ -211,9 +178,9 @@ export default function GoogleAdsTab({ store, isPremium }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveView(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex-1 justify-center ${
                   activeView === tab.id
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -223,7 +190,6 @@ export default function GoogleAdsTab({ store, isPremium }) {
             ))}
           </div>
 
-          {/* Views */}
           {activeView === 'overview' && (
             <GoogleAdsOverview
               store={store}

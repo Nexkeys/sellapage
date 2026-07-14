@@ -1,13 +1,12 @@
-//src/components/dashboard/GoogleAdsTab/GoogleAdsCreateCampaign.jsx
 import { useState } from 'react'
 import { auth } from '../../../firebase/config'
 import { ArrowLeft, Loader2, Target, Eye, ShoppingCart, Zap } from 'lucide-react'
 
 const CAMPAIGN_TYPES = [
-  { id: 'SEARCH', label: 'Search', desc: 'Text ads on Google search results', icon: Target, color: 'blue' },
-  { id: 'DISPLAY', label: 'Display', desc: 'Visual ads across Google websites', icon: Eye, color: 'purple' },
-  { id: 'SHOPPING', label: 'Shopping', desc: 'Product ads for e-commerce', icon: ShoppingCart, color: 'green' },
-  { id: 'PERFORMANCE_MAX', label: 'Performance Max', desc: 'AI-optimized across all channels', icon: Zap, color: 'orange' },
+  { id: 'SEARCH', label: 'Search', desc: 'Text ads on Google search results', icon: Target, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', activeBg: 'bg-blue-50', activeBorder: 'border-blue-400' },
+  { id: 'DISPLAY', label: 'Display', desc: 'Visual ads across Google websites', icon: Eye, bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200', activeBg: 'bg-purple-50', activeBorder: 'border-purple-400' },
+  { id: 'SHOPPING', label: 'Shopping', desc: 'Product ads for e-commerce', icon: ShoppingCart, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-400' },
+  { id: 'PERFORMANCE_MAX', label: 'Performance Max', desc: 'AI-optimized across all channels', icon: Zap, bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200', activeBg: 'bg-orange-50', activeBorder: 'border-orange-400' },
 ]
 
 export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onError }) {
@@ -86,83 +85,79 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all">
+        <button onClick={onBack} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
           <ArrowLeft size={16} className="text-gray-600" />
         </button>
         <div>
-          <h3 className="text-sm font-bold text-gray-900">Create Campaign</h3>
-          <p className="text-[10px] text-gray-400">Step {step} of {totalSteps}</p>
+          <h3 className="text-sm font-semibold text-gray-900">Create Campaign</h3>
+          <p className="text-[11px] text-gray-400">Step {step} of {totalSteps}</p>
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-blue-500 rounded-full transition-all duration-300"
+          className="h-full bg-gray-900 rounded-full transition-all duration-300"
           style={{ width: `${(step / totalSteps) * 100}%` }}
         />
       </div>
 
-      {/* Step 1: Campaign Type */}
       {step === 1 && (
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-900">Campaign Type</h4>
+          <h4 className="text-xs font-semibold text-gray-900">Campaign Type</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {CAMPAIGN_TYPES.map((type) => (
               <button
                 key={type.id}
                 onClick={() => update('type', type.id)}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                className={`p-3.5 rounded-xl border-2 text-left transition-all ${
                   form.type === type.id
-                    ? `border-${type.color}-500 bg-${type.color}-50`
+                    ? `${type.activeBg} ${type.activeBorder}`
                     : 'border-gray-100 hover:border-gray-200 bg-white'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <type.icon size={14} className={`text-${type.color}-500`} />
-                  <span className="text-xs font-bold text-gray-900">{type.label}</span>
+                  <type.icon size={14} className={form.type === type.id ? type.text : 'text-gray-400'} />
+                  <span className="text-xs font-semibold text-gray-900">{type.label}</span>
                 </div>
-                <p className="text-[10px] text-gray-500">{type.desc}</p>
+                <p className="text-[10px] text-gray-400">{type.desc}</p>
               </button>
             ))}
           </div>
           <button
             onClick={() => setStep(2)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all"
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-semibold transition-colors"
           >
             Next
           </button>
         </div>
       )}
 
-      {/* Step 2: Campaign Details */}
       {step === 2 && (
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-900">Campaign Details</h4>
-          <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+          <h4 className="text-xs font-semibold text-gray-900">Campaign Details</h4>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
             <div>
-              <label className="text-[10px] text-gray-400 font-medium mb-1 block">Campaign Name</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Campaign Name</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => update('name', e.target.value)}
                 placeholder="e.g., Summer Sale Campaign"
-                className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border border-transparent"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 transition-colors"
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-400 font-medium mb-1 block">Budget Type</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Budget Type</label>
               <div className="flex gap-2">
                 {['daily', 'lifetime'].map((bt) => (
                   <button
                     key={bt}
                     onClick={() => update('budgetType', bt)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors border ${
                       form.budgetType === bt
-                        ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                        : 'bg-gray-50 text-gray-500 border border-transparent hover:bg-gray-100'
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
                     }`}
                   >
                     {bt === 'daily' ? 'Daily Budget' : 'Lifetime Budget'}
@@ -171,55 +166,54 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
               </div>
             </div>
             <div>
-              <label className="text-[10px] text-gray-400 font-medium mb-1 block">Budget Amount (₦)</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Budget Amount (₦)</label>
               <input
                 type="number"
                 value={form.budgetAmount}
                 onChange={(e) => update('budgetAmount', e.target.value)}
                 placeholder="e.g., 5000"
                 min="100"
-                className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border border-transparent"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 transition-colors"
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-400 font-medium mb-1 block">Final URL</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Final URL</label>
               <input
                 type="url"
                 value={form.finalUrl}
                 onChange={(e) => update('finalUrl', e.target.value)}
                 placeholder="https://your-store.com.ng"
-                className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border border-transparent"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 transition-colors"
               />
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setStep(1)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-bold transition-all">
+            <button onClick={() => setStep(1)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-semibold transition-colors">
               Back
             </button>
-            <button onClick={() => setStep(3)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all">
+            <button onClick={() => setStep(3)} className="flex-1 bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-semibold transition-colors">
               Next
             </button>
           </div>
         </div>
       )}
 
-      {/* Step 3: Keywords/Search Ads (only for Search type) */}
       {step === 3 && form.type === 'SEARCH' && (
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-900">Keywords & Ad Copy</h4>
-          <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+          <h4 className="text-xs font-semibold text-gray-900">Keywords & Ad Copy</h4>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
             <div>
-              <label className="text-[10px] text-gray-400 font-medium mb-1 block">Keywords (one per line)</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Keywords (one per line)</label>
               <textarea
                 value={form.keywords}
                 onChange={(e) => update('keywords', e.target.value)}
                 placeholder={"buy shoes online\nbest sneakers nigeria\naffordable fashion"}
                 rows={4}
-                className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border border-transparent resize-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 resize-none transition-colors"
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-400 font-medium mb-1 block">Headlines (max 30 chars each)</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Headlines (max 30 chars each)</label>
               {form.headlines.map((h, i) => (
                 <input
                   key={i}
@@ -232,12 +226,12 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
                   }}
                   placeholder={`Headline ${i + 1}`}
                   maxLength={30}
-                  className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border border-transparent mb-1.5"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 mb-1.5 transition-colors"
                 />
               ))}
             </div>
             <div>
-              <label className="text-[10px] text-gray-400 font-medium mb-1 block">Descriptions (max 90 chars each)</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Descriptions (max 90 chars each)</label>
               {form.descriptions.map((d, i) => (
                 <input
                   key={i}
@@ -250,27 +244,26 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
                   }}
                   placeholder={`Description ${i + 1}`}
                   maxLength={90}
-                  className="w-full px-3 py-2 bg-gray-50 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border border-transparent mb-1.5"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 mb-1.5 transition-colors"
                 />
               ))}
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setStep(2)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-bold transition-all">
+            <button onClick={() => setStep(2)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-semibold transition-colors">
               Back
             </button>
-            <button onClick={() => setStep(4)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all">
+            <button onClick={() => setStep(4)} className="flex-1 bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-semibold transition-colors">
               Review
             </button>
           </div>
         </div>
       )}
 
-      {/* Step 3 (non-Search) or Step 4: Review */}
       {(step === 3 && form.type !== 'SEARCH') || step === 4 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-gray-900">Review Campaign</h4>
-          <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+          <h4 className="text-xs font-semibold text-gray-900">Review Campaign</h4>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Name</span>
               <span className="font-medium text-gray-900">{form.name}</span>
@@ -300,22 +293,22 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
               </>
             )}
           </div>
-          <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3">
-            <p className="text-[10px] text-yellow-700">
-              Campaign will be created in <span className="font-bold">PAUSED</span> state. You can activate it anytime from the campaigns list.
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+            <p className="text-[11px] text-amber-700">
+              Campaign will be created in <span className="font-semibold">PAUSED</span> state. You can activate it anytime.
             </p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setStep(form.type === 'SEARCH' ? 3 : 2)}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-bold transition-all"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-semibold transition-colors"
             >
               Back
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? <Loader2 size={14} className="animate-spin" /> : null}
               Create Campaign
