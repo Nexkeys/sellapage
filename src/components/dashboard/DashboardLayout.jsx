@@ -26,6 +26,7 @@ import {
   Sparkles,
   Truck,
   BookOpen,
+  Target,
 } from "lucide-react";
 import { logoutSeller } from "../../firebase/auth";
 
@@ -45,6 +46,7 @@ const NAV_ITEMS = [
   { id: "marketing", label: "Marketing", icon: Megaphone },
   { id: "discounts", label: "Discounts", icon: Percent },
   { id: "reviews", label: "Reviews", icon: Star },
+  { id: "google-ads", label: "Google Ads", icon: Target },
   { type: "group", label: "Business" },
   { id: "online-store", label: "Business Page", icon: Globe },
   { id: "payouts", label: "Payouts", icon: Wallet },

@@ -1,0 +1,257 @@
+//src/components/dashboard/GoogleAdsTab.jsx
+import { useState, useEffect, useCallback } from 'react'
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { db } from '../../firebase/config'
+import { auth } from '../../firebase/config'
+import {
+  BarChart3,
+  Target,
+  TrendingUp,
+  MousePointerClick,
+  Eye,
+  IndianRupee,
+  Loader2,
+  Link2,
+  Unlink2,
+  Plus,
+  Pause,
+  Play,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  Search,
+  Globe,
+  ShoppingCart,
+  Zap,
+} from 'lucide-react'
+
+import GoogleAdsConnect from './GoogleAdsTab/GoogleAdsConnect'
+import GoogleAdsOverview from './GoogleAdsTab/GoogleAdsOverview'
+import GoogleAdsCampaigns from './GoogleAdsTab/GoogleAdsCampaigns'
+import GoogleAdsCreateCampaign from './GoogleAdsTab/GoogleAdsCreateCampaign'
+import GoogleAdsReports from './GoogleAdsTab/GoogleAdsReports'
+
+export default function GoogleAdsTab({ store, isPremium }) {
+  const [activeView, setActiveView] = useState('overview')
+  const [campaigns, setCampaigns] = useState([])
+  const [reports, setReports] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const isConnected = store?.googleAdsConnected || false
+
+  useEffect(() => {
+    if (!store?.id || !isConnected) return
+
+    const unsub = onSnapshot(
+      doc(db, 'googleAdsCampaigns', store.id),
+      () => {},
+      () => {}
+    )
+
+    const fetchCampaigns = async () => {
+      try {
+        const token = await firebaseAuth.currentUser?.getIdToken()
+        const res = await fetch('/api/google-ads-campaigns', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ storeId: store.id, action: 'list' }),
+        })
+        const data = await res.json()
+        if (res.ok) setCampaigns(data.campaigns || [])
+      } catch (err) {
+        console.error('Failed to fetch campaigns:', err)
+      }
+    }
+
+    fetchCampaigns()
+    return () => unsub()
+  }, [store?.id, isConnected])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const googleAdsStatus = params.get('google-ads')
+    if (googleAdsStatus === 'connected') {
+      setSuccess('Google Ads account connected successfully!')
+      window.history.replaceState({}, '', '/dashboard')
+    } else if (googleAdsStatus === 'error') {
+      setError(params.get('message') || 'Failed to connect Google Ads')
+      window.history.replaceState({}, '', '/dashboard')
+    }
+  }, [])
+
+  const fetchReports = useCallback(async (dateRange = '30d') => {
+    if (!store?.id) return
+    setLoading(true)
+    try {
+      const token = await firebaseAuth.currentUser?.getIdToken()
+      const res = await fetch('/api/google-ads-reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ storeId: store.id, dateRange }),
+      })
+      const data = await res.json()
+      if (res.ok) setReports(data)
+      else setError(data.error || 'Failed to fetch reports')
+    } catch (err) {
+      setError('Failed to fetch reports')
+    } finally {
+      setLoading(false)
+    }
+  }, [store?.id])
+
+  useEffect(() => {
+    if (isConnected && activeView === 'reports') {
+      fetchReports()
+    }
+  }, [isConnected, activeView, fetchReports])
+
+  if (!isPremium) {
+    return (
+      <div className="p-4 sm:p-5 max-w-4xl mx-auto space-y-4">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 sm:p-8 text-white">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Target size={20} />
+            </div>
+            <h1 className="text-xl font-bold">Google Ads</h1>
+          </div>
+          <p className="text-blue-100 text-sm">
+            Track ad performance with conversion tags on your storefront. Fire pageview, add to cart, checkout, and purchase events automatically.
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 text-center">
+          <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Target size={28} className="text-blue-500" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Upgrade to Use Google Ads</h2>
+          <p className="text-gray-500 text-sm mb-5 max-w-sm mx-auto">
+            Google Ads integration is available on the <span className="font-semibold text-gray-700">Premium</span> plan. Upgrade to create, manage, and track ad campaigns.
+          </p>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98]">
+            Upgrade Plan
+          </button>
+          <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Pageview tracking</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Add to Cart tracking</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Purchase conversion</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-500" /> Auto tag injection</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-4 sm:p-5 max-w-5xl mx-auto space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Target size={16} className="text-blue-600" />
+            </div>
+            Google Ads
+          </h1>
+          <p className="text-gray-400 text-xs mt-0.5">
+            {isConnected ? 'Manage campaigns and track performance' : 'Connect your Google Ads account to get started'}
+          </p>
+        </div>
+        {isConnected && (
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full font-medium">
+              <CheckCircle2 size={12} />
+              Connected
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Error/Success */}
+      {error && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2">
+          <AlertCircle size={14} className="text-red-500 mt-0.5 shrink-0" />
+          <p className="text-red-600 text-xs flex-1">{error}</p>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600"><X size={14} /></button>
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-100 rounded-xl p-3 flex items-start gap-2">
+          <CheckCircle2 size={14} className="text-green-500 mt-0.5 shrink-0" />
+          <p className="text-green-600 text-xs flex-1">{success}</p>
+          <button onClick={() => setSuccess('')} className="text-green-400 hover:text-green-600"><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Not connected */}
+      {!isConnected && (
+        <GoogleAdsConnect store={store} onError={setError} onSuccess={setSuccess} />
+      )}
+
+      {/* Connected views */}
+      {isConnected && (
+        <>
+          {/* Tab navigation */}
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
+            {[
+              { id: 'overview', label: 'Overview', icon: BarChart3 },
+              { id: 'campaigns', label: 'Campaigns', icon: Target },
+              { id: 'reports', label: 'Reports', icon: TrendingUp },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  activeView === tab.id
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <tab.icon size={13} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Views */}
+          {activeView === 'overview' && (
+            <GoogleAdsOverview
+              store={store}
+              campaigns={campaigns}
+              reports={reports}
+              loading={loading}
+              onRefresh={() => fetchReports()}
+            />
+          )}
+          {activeView === 'campaigns' && (
+            <GoogleAdsCampaigns
+              store={store}
+              campaigns={campaigns}
+              setCampaigns={setCampaigns}
+              onError={setError}
+              onSuccess={setSuccess}
+            />
+          )}
+          {activeView === 'reports' && (
+            <GoogleAdsReports
+              store={store}
+              reports={reports}
+              loading={loading}
+              onRefresh={fetchReports}
+            />
+          )}
+        </>
+      )}
+    </div>
+  )
+}

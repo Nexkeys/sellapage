@@ -129,6 +129,27 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "google-ads-auth": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-auth.js")
+        return handler(req, res)
+      }
+      case "google-ads-callback": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-callback.js")
+        return handler(req, res)
+      }
+      case "google-ads-accounts": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-accounts.js")
+        return handler(req, res)
+      }
+      case "google-ads-campaigns": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-campaigns.js")
+        return handler(req, res)
+      }
+      case "google-ads-reports": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-reports.js")
+        return handler(req, res)
+      }
+
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
     }

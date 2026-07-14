@@ -65,6 +65,7 @@ import DeliveryTab from "../components/dashboard/DeliveryTab";
 import LedgerTab from "../components/dashboard/LedgerTab";
 import CustomDomainTab from "../components/dashboard/CustomDomainTab";
 import CACVerificationTab from "../components/dashboard/CACVerificationTab";
+import GoogleAdsTab from "../components/dashboard/GoogleAdsTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -1795,6 +1796,12 @@ export default function Dashboard() {
           user={user}
           isPro={isPro}
           navigateTo={setActiveTab}
+        />
+      )}
+      {activeTab === 'google-ads' && (
+        <GoogleAdsTab
+          store={store}
+          isPremium={isPremium}
         />
       )}
       {activeTab === "payouts" && !isPro && (
