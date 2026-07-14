@@ -2047,6 +2047,30 @@ When a vendor's plan expired and downgraded from Growth (50 products) to Starter
 
 `npm run build` passed with zero errors.
 
+---
+
+## 2026-07-13 — PWA Service Worker Cache Fix (Mobile Navbar)
+
+Commit/push keyword: `sw-cache-fix`
+
+Fixes a bug where the mobile navbar's "Explore Stores" link wouldn't appear on the first hamburger menu click from the homepage.
+
+### Problem
+The old service worker was caching the Navbar JS bundle. On mobile, refreshing the homepage served the stale cached version (without "Explore Stores"). Navigating to another page loaded the fresh bundle. Desktop wasn't affected because the full nav is always visible.
+
+### What Changed
+
+- **`src/sw.js`**
+  - Added `self.skipWaiting()` — new service worker activates immediately instead of waiting for old tabs to close
+  - Added `self.addEventListener('activate', ...)` with `self.clients.claim()` — forces the new service worker to take control of all open tabs instantly
+
+- **`vercel.json`**
+  - Added `headers` section with `Cache-Control: no-cache, must-revalidate` for `index.html` — prevents browsers from serving a stale HTML shell
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
 
 
 

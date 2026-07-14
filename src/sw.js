@@ -6,6 +6,11 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { initializeApp } from 'firebase/app';
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 
+self.skipWaiting()
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 precacheAndRoute(self.__WB_MANIFEST);
 
 registerRoute(
