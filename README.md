@@ -3208,3 +3208,43 @@ Vercel's verification API returns the exact DNS record needed regardless of TLD:
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+## 2026-07-15 — Custom Domain DNS Fix v3: Use Vercel's apexName Field
+
+Commit/push keyword: `custom-domain-dns-fix-v3`
+
+Previous fix used `verification[]` array to determine DNS record type — wrong approach. The `verification[]` array is for TXT ownership verification, not A/CNAME DNS configuration. This fix uses Vercel's `apexName` field to determine if a domain is apex or subdomain.
+
+### What Changed
+
+**`src/api-handlers/add-custom-domain.js`**
+- Removed `verification[]` parsing logic
+- Uses `vercelData.name === vercelData.apexName` to determine apex vs subdomain
+- Apex domains → A record `@ → 216.198.79.1`
+- Subdomains → CNAME `subdomain → cname.vercel-dns.com`
+- No more `unsupported` case — Vercel always knows
+
+**`src/api-handlers/verify-custom-domain.js`**
+- Removed `verification[]` parsing logic
+- Uses `apexName` comparison for DNS record type
+- Simplified status logic: `verified === true` → active, `verified === false` → dns_error
+
+**`src/components/dashboard/CustomDomainTab.jsx`**
+- Removed auto-verify `useEffect` (DNS info comes from add-domain response)
+- Removed `unsupported` error handling and styling
+- Simplified verify result banner
+
+### Why apexName Works
+
+Vercel's API returns `apexName` (base domain) alongside `name` (full domain):
+- `nexkeysagency.com.ng` → `apexName: "nexkeysagency.com.ng"`, `name: "nexkeysagency.com.ng"` → equal → apex → A record
+- `shop.nexkeysagency.com.ng` → `apexName: "nexkeysagency.com.ng"`, `name: "shop.nexkeysagency.com.ng"` → not equal → subdomain → CNAME
+- `mybusiness.co.uk` → `apexName: "mybusiness.co.uk"`, `name: "mybusiness.co.uk"` → equal → apex → A record
+
+This works for ALL TLDs because Vercel determines the apex domain, not our code.
+
+### Build Status
+
+`npm run build` passed with zero errors.

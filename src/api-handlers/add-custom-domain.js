@@ -110,24 +110,10 @@ export default async function handler(req, res) {
       customDomainAddedAt: new Date().toISOString(),
     })
 
-    const verification = vercelData?.verification || []
-    const record = verification.find(
-      (v) => v.reason === 'missing_value' || v.reason === 'invalid_value'
-    ) || verification[0]
-
-    if (!record) {
-      return res.status(200).json({
-        success: true,
-        domain: cleanDomain,
-        status: 'pending',
-        unsupported: true,
-        message: 'This domain type is not currently supported. Please contact support for help connecting it.',
-      })
-    }
-
-    const dnsType = record.type
-    const dnsTarget = record.value
-    const dnsName = dnsType === 'A' ? '@' : record.domain.split('.')[0]
+    const isApex = vercelData.name === vercelData.apexName
+    const dnsType = isApex ? 'A' : 'CNAME'
+    const dnsTarget = isApex ? '216.198.79.1' : 'cname.vercel-dns.com'
+    const dnsName = isApex ? '@' : vercelData.name.split('.')[0]
 
     return res.status(200).json({
       success: true,

@@ -61,11 +61,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
         setDomainStatus('pending')
         setDomain('')
         setVerifyResult(null)
-        if (data.unsupported) {
-          setVerifyResult({ status: 'unsupported', message: data.message })
-        } else {
-          setDnsInfo({ dnsType: data.dnsType, dnsName: data.dnsName, dnsTarget: data.dnsTarget })
-        }
+        setDnsInfo({ dnsType: data.dnsType, dnsName: data.dnsName, dnsTarget: data.dnsTarget })
       } else {
         setAddError(data.message || "Couldn't add your domain. Please try again.")
       }
@@ -116,12 +112,6 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       setVerifyResult({ status: 'error', message: 'Network error.' })
     } finally { setVerifying(false) }
   }
-
-  useEffect(() => {
-    if (currentDomain && domainStatus !== 'active' && !verifyResult) {
-      handleVerify()
-    }
-  }, [currentDomain])
 
   if (!isPro) {
     return (
@@ -205,7 +195,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
           </div>
 
           {/* DNS Instructions — only show when not active and DNS info is available */}
-          {domainStatus !== 'active' && verifyResult?.status !== 'unsupported' && dnsType && (
+          {domainStatus !== 'active' && dnsType && (
             <div className="space-y-3">
               <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-3">
                 <p className="text-xs font-bold text-blue-800 flex items-center gap-1.5">
@@ -284,16 +274,12 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
                     ? 'border-green-100 bg-green-50'
                     : verifyResult.status === 'propagating'
                     ? 'border-amber-100 bg-amber-50'
-                    : verifyResult.status === 'unsupported'
-                    ? 'border-gray-200 bg-gray-50'
                     : 'border-red-100 bg-red-50'
                 }`}>
                   {verifyResult.status === 'active' ? (
                     <CheckCircle size={14} className="mt-0.5 flex-shrink-0 text-green-600" />
                   ) : verifyResult.status === 'propagating' ? (
                     <Clock size={14} className="mt-0.5 flex-shrink-0 text-amber-500" />
-                  ) : verifyResult.status === 'unsupported' ? (
-                    <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
                   ) : (
                     <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-red-500" />
                   )}
@@ -302,16 +288,9 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
                       ? 'text-green-700'
                       : verifyResult.status === 'propagating'
                       ? 'text-amber-700'
-                      : verifyResult.status === 'unsupported'
-                      ? 'text-gray-600'
                       : 'text-red-600'
                   }`}>
                     {verifyResult.message}
-                    {verifyResult.status === 'unsupported' && (
-                      <span className="block mt-1.5">
-                        <a href="mailto:support@sellapage.com" className="underline hover:text-gray-900">Contact support</a> for help connecting this domain.
-                      </span>
-                    )}
                   </p>
                 </div>
               )}
