@@ -535,7 +535,7 @@ export default async function handler(req, res) {
 
       let campaignResourceId = null
       try {
-        const { getAccessToken, createBudget, createCampaign } = await import("./_lib/google-ads-client.js")
+        const { getAccessToken, createBudget, createCampaign, createAdGroup, createResponsiveSearchAd, addKeywords } = await import("./_lib/google-ads-client.js")
         const accessToken = await getAccessToken(refreshToken)
         const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
         const budgetResourceName = await createBudget(accessToken, customerId, {
@@ -548,6 +548,29 @@ export default async function handler(req, res) {
           status: "PAUSED",
           advertisingChannelType: campaignType || "SEARCH",
         })
+
+        if (campaignResourceId && campaignType === "SEARCH" && targeting?.keywords?.length > 0) {
+          const adGroupResourceId = await createAdGroup(accessToken, customerId, {
+            campaignResourceName: campaignResourceId,
+            name: `${campaignName} Ad Group`,
+          })
+
+          if (adGroupResourceId) {
+            if (targeting.headlines?.length > 0 && targeting.descriptions?.length > 0 && targeting.finalUrl) {
+              await createResponsiveSearchAd(accessToken, customerId, {
+                adGroupResourceName: adGroupResourceId,
+                headlines: targeting.headlines,
+                descriptions: targeting.descriptions,
+                finalUrl: targeting.finalUrl,
+              })
+            }
+
+            await addKeywords(accessToken, customerId, {
+              adGroupResourceName: adGroupResourceId,
+              keywords: targeting.keywords,
+            })
+          }
+        }
       } catch (apiErr) {
         console.warn("[paystack-webhook] Ads campaign creation failed (non-fatal):", apiErr.message)
       }

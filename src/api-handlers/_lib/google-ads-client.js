@@ -198,3 +198,100 @@ export async function getCampaignReport(accessToken, customerId, dateRange = 'LA
   const query = `SELECT campaign.id, campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date DURING ${dateRange} ORDER BY metrics.cost_micros DESC`
   return searchGoogleAds(accessToken, customerId, query)
 }
+
+export async function createAdGroup(accessToken, customerId, { campaignResourceName, name }) {
+  const cleanId = customerId.replace(/-/g, '')
+  const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroups:mutate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      operations: [
+        {
+          create: {
+            resourceName: `customers/${cleanId}/adGroups/-1`,
+            name,
+            campaign: campaignResourceName,
+            type: 'SEARCH_STANDARD',
+            status: 'ENABLED',
+          },
+        },
+      ],
+    }),
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error?.message || 'Failed to create ad group')
+  return data.results?.[0]?.resourceName || null
+}
+
+export async function createResponsiveSearchAd(accessToken, customerId, { adGroupResourceName, headlines, descriptions, finalUrl }) {
+  const cleanId = customerId.replace(/-/g, '')
+  const ad = {
+    resourceName: `customers/${cleanId}/ads/-1`,
+    finalUrls: [finalUrl],
+    responsiveSearchAd: {
+      headlines: headlines.map((h) => ({ text: h })),
+      descriptions: descriptions.map((d) => ({ text: d })),
+    },
+    status: 'ENABLED',
+  }
+
+  const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroups:mutate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      operations: [
+        {
+          create: {
+            adGroup: adGroupResourceName,
+            ad,
+            status: 'ENABLED',
+          },
+        },
+      ],
+    }),
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error?.message || 'Failed to create ad')
+  return data.results?.[0]?.resourceName || null
+}
+
+export async function addKeywords(accessToken, customerId, { adGroupResourceName, keywords }) {
+  const cleanId = customerId.replace(/-/g, '')
+  const operations = keywords.map((keyword) => ({
+    create: {
+      resourceName: `customers/${cleanId}/adGroupCriteria/-1`,
+      keyword: {
+        text: keyword,
+        matchType: 'BROAD',
+      },
+      status: 'ENABLED',
+    },
+  }))
+
+  const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroupCriteria:mutate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ operations }),
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error?.message || 'Failed to add keywords')
+  return data.results || []
+}

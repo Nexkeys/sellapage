@@ -3054,3 +3054,54 @@ Hardcoded `redirectUri` in `google-ads-master-auth.js` to `https://www.sellapage
 `npm run build` passed with zero errors.
 
 ---
+
+## 2026-07-15 — Sellapage-Managed Ads: Ad Group, Ad & Keyword Creation
+
+Commit/push keyword: `sellapage-managed-ads-ad-group-creation`
+
+This update adds full ad group, ad, and keyword creation to the Sellapage-managed ads flow. Campaigns are now fully built on Google Ads with targeting — not just empty campaign shells.
+
+### Problem
+
+Campaigns were created on Google Ads with the right name, budget, and type — but without ad groups, ads, or keywords. Vendors would need to manually add these in Google Ads UI.
+
+### What Changed
+
+**`google-ads-client.js`** — Added 3 new functions:
+
+| Function | Purpose |
+|----------|---------|
+| `createAdGroup()` | Creates an ad group inside a campaign (SEARCH_STANDARD type) |
+| `createResponsiveSearchAd()` | Creates a responsive search ad with headlines, descriptions, and final URL |
+| `addKeywords()` | Adds broad match keyword targeting to an ad group |
+
+**`ads-payment-verify.js`** — Now creates full ad structure after campaign creation:
+- Creates ad group under the campaign
+- For SEARCH campaigns with keywords: creates responsive search ad + adds keywords
+- Wrapped in try/catch — non-fatal if ad creation fails (campaign still gets created)
+- Import updated to include new functions
+
+**`paystack-webhook.js`** — Same changes in the `ads-payment` safety net branch:
+- Dynamic import now includes `createAdGroup`, `createResponsiveSearchAd`, `addKeywords`
+- After campaign creation, creates ad group + ad + keywords for SEARCH campaigns
+- Wrapped in same try/catch block
+
+### Campaign Creation Flow (After This Fix)
+
+```
+Campaign created (PAUSED)
+  └── Ad Group created
+        ├── Responsive Search Ad (headlines + descriptions + final URL)
+        └── Keywords (broad match targeting)
+```
+
+### Scope
+
+- **SEARCH campaigns**: Full treatment (ad group + responsive search ad + keywords)
+- **DISPLAY/SHOPPING/PERFORMANCE_MAX**: Campaign only for now (different ad formats — can add later)
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---

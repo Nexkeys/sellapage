@@ -1,6 +1,6 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { getAdminAuth } from './_lib/firebase-admin.js'
-import { getAccessToken, createBudget, createCampaign } from './_lib/google-ads-client.js'
+import { getAccessToken, createBudget, createCampaign, createAdGroup, createResponsiveSearchAd, addKeywords } from './_lib/google-ads-client.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -77,6 +77,7 @@ export default async function handler(req, res) {
     }
 
     let campaignResourceId = null
+    let adGroupResourceId = null
     const accessToken = await getAccessToken(refreshToken)
     const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
     const budgetResourceName = await createBudget(accessToken, customerId, {
@@ -89,6 +90,33 @@ export default async function handler(req, res) {
       status: 'PAUSED',
       advertisingChannelType: campaignType || 'SEARCH',
     })
+
+    if (campaignResourceId && campaignType === 'SEARCH' && targeting?.keywords?.length > 0) {
+      try {
+        adGroupResourceId = await createAdGroup(accessToken, customerId, {
+          campaignResourceName: campaignResourceId,
+          name: `${campaignName} Ad Group`,
+        })
+
+        if (adGroupResourceId) {
+          if (targeting.headlines?.length > 0 && targeting.descriptions?.length > 0 && targeting.finalUrl) {
+            await createResponsiveSearchAd(accessToken, customerId, {
+              adGroupResourceName: adGroupResourceId,
+              headlines: targeting.headlines,
+              descriptions: targeting.descriptions,
+              finalUrl: targeting.finalUrl,
+            })
+          }
+
+          await addKeywords(accessToken, customerId, {
+            adGroupResourceName: adGroupResourceId,
+            keywords: targeting.keywords,
+          })
+        }
+      } catch (adErr) {
+        console.warn('[ads-payment-verify] Ad group/keyword creation failed (non-fatal):', adErr.message)
+      }
+    }
 
     await db.collection('googleAdsCampaigns').add({
       storeId,
