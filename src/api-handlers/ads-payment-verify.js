@@ -63,47 +63,32 @@ export default async function handler(req, res) {
 
     const targeting = typeof targetingRaw === 'string' ? JSON.parse(targetingRaw) : targetingRaw
 
-    const storeData = storeDoc.data()
-    const refreshToken = storeData.googleAdsRefreshToken
-    const customerId = storeData.googleAdsCustomerId
+    const masterDoc = await db.collection('platformSettings').doc('googleAdsMaster').get()
+    if (!masterDoc.exists) {
+      return res.status(500).json({ error: 'Master Google Ads account not connected. Please contact support.' })
+    }
+
+    const masterData = masterDoc.data()
+    const refreshToken = masterData.refreshToken
+    const customerId = masterData.customerId
 
     if (!refreshToken || !customerId) {
-      await db.collection('stores').doc(storeId).update({
-        sellapageAdsPending: true,
-        sellapageAdsCampaignData: {
-          campaignName,
-          campaignType,
-          budgetAmount: Number(budgetAmount),
-          targeting,
-          paidAt: new Date().toISOString(),
-          reference,
-        },
-      })
-
-      return res.status(200).json({
-        success: true,
-        message: 'Payment confirmed. Campaign will be created once Google Ads is connected.',
-        pending: true,
-      })
+      return res.status(500).json({ error: 'Master Google Ads account not configured. Please contact support.' })
     }
 
     let campaignResourceId = null
-    try {
-      const accessToken = await getAccessToken(refreshToken)
-      const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
-      const budgetResourceName = await createBudget(accessToken, customerId, {
-        name: `${campaignName} (Sellapage Managed)`,
-        amountMicros: budgetMicros,
-      })
-      campaignResourceId = await createCampaign(accessToken, customerId, {
-        name: `${campaignName} (Sellapage Managed)`,
-        budgetResourceName,
-        status: 'PAUSED',
-        advertisingChannelType: campaignType || 'SEARCH',
-      })
-    } catch (apiErr) {
-      console.warn('[ads-payment-verify] Campaign creation failed (non-fatal):', apiErr.message)
-    }
+    const accessToken = await getAccessToken(refreshToken)
+    const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
+    const budgetResourceName = await createBudget(accessToken, customerId, {
+      name: `${campaignName} (Sellapage Managed)`,
+      amountMicros: budgetMicros,
+    })
+    campaignResourceId = await createCampaign(accessToken, customerId, {
+      name: `${campaignName} (Sellapage Managed)`,
+      budgetResourceName,
+      status: 'PAUSED',
+      advertisingChannelType: campaignType || 'SEARCH',
+    })
 
     await db.collection('googleAdsCampaigns').add({
       storeId,
@@ -126,11 +111,6 @@ export default async function handler(req, res) {
       paystackReference: reference,
       createdAt: new Date().toISOString(),
       lastSyncAt: null,
-    })
-
-    await db.collection('stores').doc(storeId).update({
-      sellapageAdsPending: false,
-      sellapageAdsCampaignData: null,
     })
 
     return res.status(200).json({

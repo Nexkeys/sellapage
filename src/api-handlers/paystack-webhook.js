@@ -499,36 +499,57 @@ export default async function handler(req, res) {
         return res.status(200).send("Missing ads metadata, skipped")
       }
 
-      const storeDoc = await db.collection("stores").doc(storeId).get()
-      if (!storeDoc.exists) {
-        return res.status(200).send("Store not found, skipped")
-      }
-
       const targeting = typeof targetingRaw === "string" ? JSON.parse(targetingRaw) : targetingRaw
 
-      let campaignResourceId = null
-      const storeData = storeDoc.data()
-      const refreshToken = storeData.googleAdsRefreshToken
-      const customerId = storeData.googleAdsCustomerId
+      const masterDoc = await db.collection("platformSettings").doc("googleAdsMaster").get()
+      if (!masterDoc.exists) {
+        console.warn("[paystack-webhook] Master Google Ads account not connected, skipping campaign creation")
+        await db.collection("googleAdsCampaigns").add({
+          storeId,
+          provider: "google",
+          managementMode: "sellapage",
+          name: campaignName,
+          type: campaignType || "SEARCH",
+          status: "PAUSED",
+          budgetType: "daily",
+          budgetAmount: Number(budgetAmount),
+          serviceCharge: Math.round(Number(budgetAmount) * 0.10),
+          totalPaid: Number(budgetAmount) + Math.round(Number(budgetAmount) * 0.10),
+          spendToDate: 0,
+          impressions: 0,
+          clicks: 0,
+          ctr: 0,
+          conversions: 0,
+          targeting: targeting || {},
+          providerCampaignId: null,
+          paystackReference: data.reference,
+          createdAt: new Date().toISOString(),
+          lastSyncAt: null,
+        })
+        return res.status(200).send("OK")
+      }
 
-      if (refreshToken && customerId) {
-        try {
-          const { getAccessToken, createBudget, createCampaign } = await import("./_lib/google-ads-client.js")
-          const accessToken = await getAccessToken(refreshToken)
-          const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
-          const budgetResourceName = await createBudget(accessToken, customerId, {
-            name: `${campaignName} (Sellapage Managed)`,
-            amountMicros: budgetMicros,
-          })
-          campaignResourceId = await createCampaign(accessToken, customerId, {
-            name: `${campaignName} (Sellapage Managed)`,
-            budgetResourceName,
-            status: "PAUSED",
-            advertisingChannelType: campaignType || "SEARCH",
-          })
-        } catch (apiErr) {
-          console.warn("[paystack-webhook] Ads campaign creation failed (non-fatal):", apiErr.message)
-        }
+      const masterData = masterDoc.data()
+      const refreshToken = masterData.refreshToken
+      const customerId = masterData.customerId
+
+      let campaignResourceId = null
+      try {
+        const { getAccessToken, createBudget, createCampaign } = await import("./_lib/google-ads-client.js")
+        const accessToken = await getAccessToken(refreshToken)
+        const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
+        const budgetResourceName = await createBudget(accessToken, customerId, {
+          name: `${campaignName} (Sellapage Managed)`,
+          amountMicros: budgetMicros,
+        })
+        campaignResourceId = await createCampaign(accessToken, customerId, {
+          name: `${campaignName} (Sellapage Managed)`,
+          budgetResourceName,
+          status: "PAUSED",
+          advertisingChannelType: campaignType || "SEARCH",
+        })
+      } catch (apiErr) {
+        console.warn("[paystack-webhook] Ads campaign creation failed (non-fatal):", apiErr.message)
       }
 
       await db.collection("googleAdsCampaigns").add({

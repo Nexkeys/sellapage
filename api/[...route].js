@@ -150,6 +150,15 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "google-ads-master-auth": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-master-auth.js")
+        return handler(req, res)
+      }
+      case "google-ads-master-callback": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-master-callback.js")
+        return handler(req, res)
+      }
+
       case "ads-payment-initialize": {
         const { default: handler } = await import("../src/api-handlers/ads-payment-initialize.js")
         return handler(req, res)

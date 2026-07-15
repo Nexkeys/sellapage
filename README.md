@@ -2962,3 +2962,77 @@ In `GoogleAdsConnect.jsx`:
 `npm run build` passed with zero errors.
 
 ---
+
+## 2026-07-14 — Sellapage-Managed Ads: Master Account Separation
+
+Commit/push keyword: `sellapage-managed-ads-master-account`
+
+This update fixes the critical architecture flaw where Sellapage-managed ads were using vendor credentials instead of Sellapage's master account. The two flows (self-managed and Sellapage-managed) now share zero logic.
+
+### Problem
+
+`ads-payment-verify.js` and `paystack-webhook.js` were reading the vendor's `googleAdsRefreshToken` and `googleAdsCustomerId` from their store doc. This meant:
+- If vendor hadn't connected Google Ads → campaign saved as "pending" (wrong)
+- If vendor HAD connected → campaign created on vendor's account (wrong)
+- Sellapage-managed ads should ALWAYS create on Sellapage's master account
+
+### What Changed
+
+**NEW: `google-ads-master-auth.js`** — One-time OAuth redirect for Nex:
+- Redirects to Google consent screen (same as vendor flow)
+- State is hardcoded to `"master"` (no storeId)
+- Nex visits this URL once, logs in with Sellapage Ads Engine account (`sellapage.ng@gmail.com`)
+- After this, the master refresh token is stored in Firestore forever
+
+**NEW: `google-ads-master-callback.js`** — Captures master refresh token:
+- Exchanges auth code for refresh token
+- Saves to `platformSettings/googleAdsMaster` in Firestore:
+  - `refreshToken` — the master account refresh token
+  - `customerId` — `5897875835` (from env `GOOGLE_ADS_MCC_ID`)
+  - `connectedAt` — timestamp
+- Redirects to dashboard with `?google-ads=master-connected`
+
+**FIXED: `ads-payment-verify.js`** — Now uses master credentials:
+- Removed all vendor token logic (no more `storeData.googleAdsRefreshToken` check)
+- Reads master credentials from `platformSettings/googleAdsMaster`
+- Creates campaign on Sellapage's master account (`5897875835`)
+- No pend state, no error fallback — campaign creation either succeeds or throws
+- Saves to `googleAdsCampaigns` with `managementMode: "sellapage"`
+
+**FIXED: `paystack-webhook.js`** `ads-payment` branch — Same fix:
+- Reads master credentials from `platformSettings/googleAdsMaster`
+- If master account not connected: saves campaign without `providerCampaignId` (fallback)
+- Creates campaign on master account using `getAccessToken(refreshToken)`
+
+**UPDATED: `api/[...route].js`** — Added route cases:
+- `google-ads-master-auth` → `google-ads-master-auth.js`
+- `google-ads-master-callback` → `google-ads-master-callback.js`
+
+### Architecture After This Fix
+
+| | Self-Managed | Sellapage-Managed |
+|---|---|---|
+| OAuth | Vendor connects their own Google Ads | None (Nex did it once) |
+| Campaign created on | Vendor's account | Sellapage's master account (5897875835) |
+| Uses vendor tokens | Yes | No |
+| Can fail/pend | Yes (if OAuth breaks) | No — always succeeds on master account |
+| Shared logic | None | None |
+
+### One-Time Setup Required
+
+Nex must visit `/api/google-ads-master-auth` ONCE to login with the Sellapage Ads Engine Google account. After that, the refresh token lives in Firestore (`platformSettings/googleAdsMaster`) and is used for all Sellapage-managed campaigns.
+
+### Firestore Schema
+
+```
+platformSettings/googleAdsMaster
+  refreshToken: "1//0xxx..."
+  customerId: "5897875835"
+  connectedAt: timestamp
+```
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
