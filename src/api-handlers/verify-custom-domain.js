@@ -56,14 +56,24 @@ export default async function handler(req, res) {
 
     const verified = vercelData?.verified === true
 
-    const isSubdomain = domain.split('.').length > 2
-    const expectedType = isSubdomain ? 'CNAME' : 'A'
-    const expectedValue = isSubdomain ? 'cname.vercel-dns.com' : '216.198.79.1'
-    const dnsName = isSubdomain ? domain.split('.')[0] : '@'
+    const verification = vercelData?.verification || []
+    const record = verification.find(
+      (v) => v.reason === 'missing_value' || v.reason === 'invalid_value'
+    ) || verification[0]
 
-    const dnsRecordValid = vercelData?.verification?.some(
-      (v) => v.type === expectedType && v.value === expectedValue && v.reason !== 'missing_value'
-    ) ?? false
+    let dnsType = null
+    let dnsTarget = null
+    let dnsName = null
+
+    if (record) {
+      dnsType = record.type
+      dnsTarget = record.value
+      dnsName = dnsType === 'A' ? '@' : record.domain.split('.')[0]
+    }
+
+    const dnsRecordValid = record
+      ? (record.reason !== 'missing_value' && record.reason !== 'invalid_value')
+      : false
 
     let status = 'pending'
     let userMessage = ''
@@ -74,11 +84,14 @@ export default async function handler(req, res) {
       await db.collection('stores').doc(storeId).update({
         customDomainStatus: 'active',
       })
+    } else if (!record) {
+      status = 'unsupported'
+      userMessage = 'This domain type is not currently supported. Please contact support for help connecting it.'
     } else if (!dnsRecordValid) {
       status = 'dns_error'
-      userMessage = isSubdomain
-        ? `Your CNAME record is not set correctly. In your DNS provider, add a CNAME record with Host/Name: ${dnsName} pointing to cname.vercel-dns.com. This can take up to 48 hours to propagate.`
-        : `Your A record is not set correctly. In your DNS provider, add an A record with Host/Name: @ pointing to 216.198.79.1. This can take up to 48 hours to propagate.`
+      userMessage = dnsType === 'A'
+        ? `Your A record is not set correctly. In your DNS provider, add an A record with Host/Name: @ pointing to ${dnsTarget}. This can take up to 48 hours to propagate.`
+        : `Your CNAME record is not set correctly. In your DNS provider, add a CNAME record with Host/Name: ${dnsName} pointing to ${dnsTarget}. This can take up to 48 hours to propagate.`
     } else {
       status = 'propagating'
       userMessage = "Your DNS record looks correct but hasn't fully propagated yet. This can take up to 48 hours. Check back soon."
@@ -89,9 +102,9 @@ export default async function handler(req, res) {
       verified,
       status,
       message: userMessage,
-      dnsType: expectedType,
+      dnsType,
       dnsName,
-      dnsTarget: expectedValue,
+      dnsTarget,
       raw: vercelData,
     })
   } catch (err) {

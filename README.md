@@ -3166,3 +3166,45 @@ When a user has an active custom domain, their store slug in Settings is now loc
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+## 2026-07-15 — Custom Domain DNS Fix: Use Vercel Verification Array
+
+Commit/push keyword: `custom-domain-dns-fix-v2`
+
+Previous fix used dot-counting (`split('.').length > 2`) to guess root vs subdomain — failed for multi-part TLDs like `.com.ng`, `.co.uk`, `.com.au`. This fix replaces all guessing with Vercel's `verification[]` API response, which always knows the correct DNS record.
+
+### What Changed
+
+**`src/api-handlers/add-custom-domain.js`**
+- Removed dot-counting heuristic
+- Reads `vercelData.verification[]` from Vercel add-domain response
+- Extracts `type`, `value`, `domain` from first unverified entry → returns as `dnsType`, `dnsTarget`, `dnsName`
+- If no verification array → returns `{ unsupported: true, message: '...' }`
+
+**`src/api-handlers/verify-custom-domain.js`**
+- Removed dot-counting heuristic
+- Reads `vercelData.verification[]` from Vercel GET response
+- Finds unverified entry → uses its `type` and `value` for DNS check + display
+- If no verification array → returns status `unsupported`
+
+**`src/components/dashboard/CustomDomainTab.jsx`**
+- Removed `getDnsInfo()` helper (dot-counting logic)
+- Added `dnsInfo` state populated from API responses (add + verify)
+- Auto-verifies on mount for existing pending domains to get current DNS info
+- Unsupported error: gray banner with "Contact support" link
+- DNS instructions hidden when status is `unsupported` or `dnsType` is null
+- How It Works step 2 handles null `dnsType` gracefully
+
+### Why This Works for All TLDs
+
+Vercel's verification API returns the exact DNS record needed regardless of TLD:
+- `mybusiness.com` → verification returns A record `@ → 216.198.79.1`
+- `nexkeysagency.com.ng` → verification returns A record `@ → 216.198.79.1`
+- `shop.brand.ng` → verification returns CNAME `shop → cname.vercel-dns.com`
+- `app.mybusiness.co.uk` → verification returns CNAME `app → cname.vercel-dns.com`
+
+### Build Status
+
+`npm run build` passed with zero errors.

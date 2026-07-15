@@ -110,15 +110,32 @@ export default async function handler(req, res) {
       customDomainAddedAt: new Date().toISOString(),
     })
 
-    const isSubdomain = cleanDomain.split('.').length > 2
+    const verification = vercelData?.verification || []
+    const record = verification.find(
+      (v) => v.reason === 'missing_value' || v.reason === 'invalid_value'
+    ) || verification[0]
+
+    if (!record) {
+      return res.status(200).json({
+        success: true,
+        domain: cleanDomain,
+        status: 'pending',
+        unsupported: true,
+        message: 'This domain type is not currently supported. Please contact support for help connecting it.',
+      })
+    }
+
+    const dnsType = record.type
+    const dnsTarget = record.value
+    const dnsName = dnsType === 'A' ? '@' : record.domain.split('.')[0]
 
     return res.status(200).json({
       success: true,
       domain: cleanDomain,
       status: 'pending',
-      dnsType: isSubdomain ? 'CNAME' : 'A',
-      dnsName: isSubdomain ? cleanDomain.split('.')[0] : '@',
-      dnsTarget: isSubdomain ? 'cname.vercel-dns.com' : '216.198.79.1',
+      dnsType,
+      dnsName,
+      dnsTarget,
     })
   } catch (err) {
     console.error('[add-custom-domain] Error:', err)

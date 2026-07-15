@@ -19,17 +19,6 @@ import {
 const INPUT_CLASS =
   'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
 
-function getDnsInfo(domain) {
-  if (!domain) return { isSubdomain: false, dnsType: 'A', dnsName: '@', dnsTarget: '216.198.79.1' }
-  const isSubdomain = domain.split('.').length > 2
-  return {
-    isSubdomain,
-    dnsType: isSubdomain ? 'CNAME' : 'A',
-    dnsName: isSubdomain ? domain.split('.')[0] : '@',
-    dnsTarget: isSubdomain ? 'cname.vercel-dns.com' : '216.198.79.1',
-  }
-}
-
 export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
   const [domain, setDomain] = useState('')
   const [adding, setAdding] = useState(false)
@@ -40,13 +29,14 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
   const [copied, setCopied] = useState(null)
   const [currentDomain, setCurrentDomain] = useState(store?.customDomain || '')
   const [domainStatus, setDomainStatus] = useState(store?.customDomainStatus || '')
+  const [dnsInfo, setDnsInfo] = useState({ dnsType: null, dnsName: null, dnsTarget: null })
 
   useEffect(() => {
     setCurrentDomain(store?.customDomain || '')
     setDomainStatus(store?.customDomainStatus || '')
   }, [store?.customDomain, store?.customDomainStatus])
 
-  const { dnsType, dnsName, dnsTarget } = getDnsInfo(currentDomain)
+  const { dnsType, dnsName, dnsTarget } = dnsInfo
 
   const handleCopy = (text, id) => {
     navigator.clipboard.writeText(text)
@@ -67,7 +57,15 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       })
       const data = await res.json()
       if (res.ok && data.success) {
-        setCurrentDomain(data.domain); setDomainStatus('pending'); setDomain(''); setVerifyResult(null)
+        setCurrentDomain(data.domain)
+        setDomainStatus('pending')
+        setDomain('')
+        setVerifyResult(null)
+        if (data.unsupported) {
+          setVerifyResult({ status: 'unsupported', message: data.message })
+        } else {
+          setDnsInfo({ dnsType: data.dnsType, dnsName: data.dnsName, dnsTarget: data.dnsTarget })
+        }
       } else {
         setAddError(data.message || "Couldn't add your domain. Please try again.")
       }
@@ -108,6 +106,9 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       if (res.ok) {
         setVerifyResult(data)
         if (data.status === 'active') { setDomainStatus('active') }
+        if (data.dnsType) {
+          setDnsInfo({ dnsType: data.dnsType, dnsName: data.dnsName, dnsTarget: data.dnsTarget })
+        }
       } else {
         setVerifyResult({ status: 'error', message: data.message || 'Verification failed.' })
       }
@@ -115,6 +116,12 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       setVerifyResult({ status: 'error', message: 'Network error.' })
     } finally { setVerifying(false) }
   }
+
+  useEffect(() => {
+    if (currentDomain && domainStatus !== 'active' && !verifyResult) {
+      handleVerify()
+    }
+  }, [currentDomain])
 
   if (!isPro) {
     return (
@@ -197,8 +204,8 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
             </button>
           </div>
 
-          {/* DNS Instructions — only show when not active */}
-          {domainStatus !== 'active' && (
+          {/* DNS Instructions — only show when not active and DNS info is available */}
+          {domainStatus !== 'active' && verifyResult?.status !== 'unsupported' && dnsType && (
             <div className="space-y-3">
               <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-3">
                 <p className="text-xs font-bold text-blue-800 flex items-center gap-1.5">
@@ -277,12 +284,16 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
                     ? 'border-green-100 bg-green-50'
                     : verifyResult.status === 'propagating'
                     ? 'border-amber-100 bg-amber-50'
+                    : verifyResult.status === 'unsupported'
+                    ? 'border-gray-200 bg-gray-50'
                     : 'border-red-100 bg-red-50'
                 }`}>
                   {verifyResult.status === 'active' ? (
                     <CheckCircle size={14} className="mt-0.5 flex-shrink-0 text-green-600" />
                   ) : verifyResult.status === 'propagating' ? (
                     <Clock size={14} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                  ) : verifyResult.status === 'unsupported' ? (
+                    <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
                   ) : (
                     <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-red-500" />
                   )}
@@ -291,9 +302,16 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
                       ? 'text-green-700'
                       : verifyResult.status === 'propagating'
                       ? 'text-amber-700'
+                      : verifyResult.status === 'unsupported'
+                      ? 'text-gray-600'
                       : 'text-red-600'
                   }`}>
                     {verifyResult.message}
+                    {verifyResult.status === 'unsupported' && (
+                      <span className="block mt-1.5">
+                        <a href="mailto:support@sellapage.com" className="underline hover:text-gray-900">Contact support</a> for help connecting this domain.
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
@@ -361,7 +379,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
         <div className="space-y-3">
           {[
             { step: '1', title: 'Add your domain', desc: 'Enter your custom domain above and click Add Domain.' },
-            { step: '2', title: 'Set up DNS', desc: currentDomain
+            { step: '2', title: 'Set up DNS', desc: currentDomain && dnsType
                 ? `Add the ${dnsType} record shown above in your domain provider.`
                 : 'Add the DNS record shown after adding your domain in your domain provider.' },
             { step: '3', title: 'Verify & go live', desc: 'Click Verify DNS once you\'ve set up the record. SSL is automatic.' },
