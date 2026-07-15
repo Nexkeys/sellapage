@@ -4,9 +4,9 @@ export default async function handler(req, res) {
   }
 
   const clientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const redirectUri = process.env.GOOGLE_ADS_REDIRECT_URI
+  const redirectUri = 'https://www.sellapage.com.ng/api/google-ads-master-callback'
 
-  if (!clientId || !redirectUri) {
+  if (!clientId) {
     return res.status(500).json({ error: 'Google Ads OAuth not configured' })
   }
 

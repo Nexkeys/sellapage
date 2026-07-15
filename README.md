@@ -3036,3 +3036,21 @@ platformSettings/googleAdsMaster
 `npm run build` passed with zero errors.
 
 ---
+
+## 2026-07-15 — Hotfix: Master Account OAuth Redirect URI
+
+Commit/push keyword: `sellapage-managed-ads-master-callback-fix`
+
+### Problem
+
+Master auth endpoint (`/api/google-ads-master-auth`) used `GOOGLE_ADS_REDIRECT_URI` which points to `/api/google-ads-callback` (vendor flow). Google always redirected to the vendor callback, causing `stores/master` document not found error.
+
+### Fix
+
+Hardcoded `redirectUri` in `google-ads-master-auth.js` to `https://www.sellapage.com.ng/api/google-ads-master-callback`. Added this URI to Google Cloud Console OAuth2 credentials as a second authorized redirect URI.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
