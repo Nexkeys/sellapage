@@ -69,6 +69,7 @@ export default function SettingsTab({
   onDeleteAccount, deleteLoading, deleteError, onClearDeleteError,
   onLogoUpload, logoUploading,
 }) {
+  const hasCustomDomain = !!store?.customDomain
   const [form, setForm] = useState({
     businessName: store?.businessName || '',
     storeName: store?.storeName || '',
@@ -233,26 +234,46 @@ export default function SettingsTab({
 
 
         {/* Store URL slug */}
+        {hasCustomDomain && (
+          <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 mb-1.5">
+            <Lock size={12} className="text-amber-600" />
+            <p className="text-[11px] text-amber-700">
+              Your slug is locked while a custom domain is active. Remove it in <strong>Custom Domain</strong> settings to edit.
+            </p>
+          </div>
+        )}
         <div>
           <label className="block text-xs font-bold text-gray-700 mb-1.5">Business Link</label>
-          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-400/20 transition-all">
+          <div className={`flex items-center border rounded-xl overflow-hidden transition-all ${
+            hasCustomDomain
+              ? 'border-gray-200 opacity-60'
+              : 'border-gray-200 focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-400/20'
+          }`}>
             <span className="px-3 py-2.5 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap flex-shrink-0">
-              {window.location.origin}/
+              {hasCustomDomain ? `https://${store.customDomain}/` : `${window.location.origin}/`}
             </span>
             <input
               value={form.storeName}
               onChange={handleSlugChange}
-              className="flex-1 px-3 py-2.5 text-xs outline-none bg-white"
+              disabled={hasCustomDomain}
+              readOnly={hasCustomDomain}
+              className="flex-1 px-3 py-2.5 text-xs outline-none bg-white disabled:cursor-not-allowed"
               placeholder="your-store"
             />
           </div>
-          {slugError && (
+          {slugError && !hasCustomDomain && (
             <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={11} />{slugError}</p>
           )}
-          {!slugError && form.storeName && (
+          {!hasCustomDomain && !slugError && form.storeName && (
             <p className="text-gray-400 text-xs mt-1.5 flex items-center gap-1">
               <Check size={11} className="text-green-500" />
               {window.location.origin}/{form.storeName}
+            </p>
+          )}
+          {hasCustomDomain && (
+            <p className="text-gray-400 text-xs mt-1.5 flex items-center gap-1">
+              <Lock size={11} className="text-gray-400" />
+              Your live URL uses your custom domain
             </p>
           )}
         </div>

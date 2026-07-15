@@ -3143,3 +3143,26 @@ Root domains (e.g. `mybusiness.com`) always failed DNS verification because the 
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+## 2026-07-15 — Settings: Slug Lock When Custom Domain Active
+
+Commit/push keyword: `settings-slug-lock`
+
+When a user has an active custom domain, their store slug in Settings is now locked (visible but not editable). The slug URL prefix switches to show the custom domain URL, and a lock banner explains why it's locked.
+
+### What Changed
+
+**`src/components/dashboard/Settings.jsx`**
+- Added `hasCustomDomain` const derived from `store?.customDomain`
+- Lock info banner: amber banner with lock icon shown above Business Link field when custom domain is active
+- Slug input: `disabled` + `readOnly` when `hasCustomDomain` — grayed out with `opacity-60` and `cursor-not-allowed`
+- Prefix switches from `{origin}/` to `https://{customDomain}/` when locked — shows the live URL
+- Green success line replaced with gray lock message: "Your live URL uses your custom domain"
+- `slugError` hidden when locked (can't change while locked)
+- When no custom domain: current behavior unchanged (fully editable)
+
+### Build Status
+
+`npm run build` passed with zero errors.

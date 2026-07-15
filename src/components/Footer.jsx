@@ -112,7 +112,7 @@ export default function Footer() {
           <p className="text-gray-600 text-xs">
             Product Of{' '}
             <a
-              href="https://nexkeysagency.netlify.app"
+              href="https://nexkeysagency.com.ng"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-200 text-xs transition-colors"

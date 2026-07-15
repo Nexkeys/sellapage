@@ -142,7 +142,7 @@ export default function ContactUs() {
                 helping Nigerian businesses operate with more confidence.
               </p>
               <a
-                href="https://nexkeysagency.netlify.app"
+                href="https://nexkeysagency.com.ng"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-brand-600 font-semibold text-sm hover:underline"
