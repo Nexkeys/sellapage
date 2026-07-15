@@ -3248,3 +3248,48 @@ This works for ALL TLDs because Vercel determines the apex domain, not our code.
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+## 2026-07-15 — Custom Domain Resolution: Public Endpoint for Unauthenticated Visitors
+
+Commit/push keyword: `custom-domain-public-resolve`
+
+When a visitor (not logged in) visits a custom domain like `nexkeysagency.com.ng`, they saw Sellapage's homepage instead of the vendor's store. This was because `DomainResolver` required Firebase Auth to resolve custom domains, but visitors aren't authenticated.
+
+### What Changed
+
+**`src/api-handlers/public-resolve-domain.js`** — NEW
+- Public endpoint that resolves custom domains without authentication
+- Same Firestore lookup as `resolve-domain.js` but no auth token required
+- POST `/api/public-resolve-domain` with `{ domain }` → returns `{ storeName, storeId }`
+
+**`api/[...route].js`**
+- Added route case for `public-resolve-domain`
+
+**`src/components/DomainResolver.jsx`**
+- If user is logged in → uses `/api/resolve-domain` (authenticated)
+- If user is NOT logged in → uses `/api/public-resolve-domain` (public)
+- On failure (domain not found) → shows "Domain Not Configured" error page instead of homepage
+
+### How It Works
+
+```
+Visitor visits nexkeysagency.com.ng
+    ↓
+DomainResolver checks hostname = "nexkeysagency.com.ng"
+    ↓
+Not in MAIN_DOMAINS → calls /api/public-resolve-domain (no auth needed)
+    ↓
+Firestore finds store with customDomain = "nexkeysagency.com.ng"
+    ↓
+Returns storeName (e.g., "denver-store")
+    ↓
+DomainResolver navigates to /denver-store
+    ↓
+StorePage renders the correct store
+```
+
+### Build Status
+
+`npm run build` passed with zero errors.

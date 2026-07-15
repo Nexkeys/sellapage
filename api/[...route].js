@@ -124,6 +124,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/resolve-domain.js")
         return handler(req, res)
       }
+      case "public-resolve-domain": {
+        const { default: handler } = await import("../src/api-handlers/public-resolve-domain.js")
+        return handler(req, res)
+      }
       case "verify-cac": {
         const { default: handler } = await import("../src/api-handlers/verify-cac.js")
         return handler(req, res)

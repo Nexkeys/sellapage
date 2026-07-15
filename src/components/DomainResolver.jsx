@@ -22,18 +22,14 @@ export default function DomainResolver({ children }) {
     const resolveDomain = async () => {
       try {
         const token = await user?.getIdToken()
-        if (!token) {
-          setChecking(false)
-          setResolved(true)
-          return
-        }
 
-        const res = await fetch('/api/resolve-domain', {
+        const endpoint = token ? '/api/resolve-domain' : '/api/public-resolve-domain'
+        const headers = { 'Content-Type': 'application/json' }
+        if (token) headers.Authorization = `Bearer ${token}`
+
+        const res = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          headers,
           body: JSON.stringify({ domain: hostname }),
         })
 
@@ -43,11 +39,11 @@ export default function DomainResolver({ children }) {
           navigate(`/${data.storeName}`, { replace: true })
         } else {
           setChecking(false)
-          setResolved(true)
+          setResolved(false)
         }
       } catch {
         setChecking(false)
-        setResolved(true)
+        setResolved(false)
       }
     }
 
