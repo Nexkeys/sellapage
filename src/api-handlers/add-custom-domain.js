@@ -110,11 +110,15 @@ export default async function handler(req, res) {
       customDomainAddedAt: new Date().toISOString(),
     })
 
+    const isSubdomain = cleanDomain.split('.').length > 2
+
     return res.status(200).json({
       success: true,
       domain: cleanDomain,
       status: 'pending',
-      cnameTarget: 'cname.vercel-dns.com',
+      dnsType: isSubdomain ? 'CNAME' : 'A',
+      dnsName: isSubdomain ? cleanDomain.split('.')[0] : '@',
+      dnsTarget: isSubdomain ? 'cname.vercel-dns.com' : '216.198.79.1',
     })
   } catch (err) {
     console.error('[add-custom-domain] Error:', err)

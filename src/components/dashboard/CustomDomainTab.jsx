@@ -19,6 +19,17 @@ import {
 const INPUT_CLASS =
   'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
 
+function getDnsInfo(domain) {
+  if (!domain) return { isSubdomain: false, dnsType: 'A', dnsName: '@', dnsTarget: '216.198.79.1' }
+  const isSubdomain = domain.split('.').length > 2
+  return {
+    isSubdomain,
+    dnsType: isSubdomain ? 'CNAME' : 'A',
+    dnsName: isSubdomain ? domain.split('.')[0] : '@',
+    dnsTarget: isSubdomain ? 'cname.vercel-dns.com' : '216.198.79.1',
+  }
+}
+
 export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
   const [domain, setDomain] = useState('')
   const [adding, setAdding] = useState(false)
@@ -26,7 +37,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
   const [verifying, setVerifying] = useState(false)
   const [addError, setAddError] = useState('')
   const [verifyResult, setVerifyResult] = useState(null)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(null)
   const [currentDomain, setCurrentDomain] = useState(store?.customDomain || '')
   const [domainStatus, setDomainStatus] = useState(store?.customDomainStatus || '')
 
@@ -35,20 +46,18 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
     setDomainStatus(store?.customDomainStatus || '')
   }, [store?.customDomain, store?.customDomainStatus])
 
-  const handleCopy = (text) => {
+  const { dnsType, dnsName, dnsTarget } = getDnsInfo(currentDomain)
+
+  const handleCopy = (text, id) => {
     navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopied(id)
+    setTimeout(() => setCopied(null), 2000)
   }
 
   const handleAddDomain = async () => {
     const trimmed = domain.trim()
-    if (!trimmed) {
-      setAddError('Please enter a domain.')
-      return
-    }
-    setAddError('')
-    setAdding(true)
+    if (!trimmed) { setAddError('Please enter a domain.'); return }
+    setAddError(''); setAdding(true)
     try {
       const token = await user?.getIdToken()
       const res = await fetch('/api/add-custom-domain', {
@@ -58,18 +67,12 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       })
       const data = await res.json()
       if (res.ok && data.success) {
-        setCurrentDomain(data.domain)
-        setDomainStatus('pending')
-        setDomain('')
-        setVerifyResult(null)
+        setCurrentDomain(data.domain); setDomainStatus('pending'); setDomain(''); setVerifyResult(null)
       } else {
         setAddError(data.message || "Couldn't add your domain. Please try again.")
       }
-    } catch {
-      setAddError('Network error. Please check your connection and try again.')
-    } finally {
-      setAdding(false)
-    }
+    } catch { setAddError('Network error. Please check your connection and try again.') }
+    finally { setAdding(false) }
   }
 
   const handleRemoveDomain = async () => {
@@ -84,22 +87,16 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       })
       const data = await res.json()
       if (res.ok && data.success) {
-        setCurrentDomain('')
-        setDomainStatus('')
-        setVerifyResult(null)
+        setCurrentDomain(''); setDomainStatus(''); setVerifyResult(null)
       } else {
         setAddError(data.message || "Couldn't remove your domain. Please try again.")
       }
-    } catch {
-      setAddError('Network error. Please check your connection and try again.')
-    } finally {
-      setRemoving(false)
-    }
+    } catch { setAddError('Network error.') }
+    finally { setRemoving(false) }
   }
 
   const handleVerify = async () => {
-    setVerifying(true)
-    setVerifyResult(null)
+    setVerifying(true); setVerifyResult(null)
     try {
       const token = await user?.getIdToken()
       const res = await fetch('/api/verify-custom-domain', {
@@ -110,17 +107,13 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       const data = await res.json()
       if (res.ok) {
         setVerifyResult(data)
-        if (data.status === 'active') {
-          setDomainStatus('active')
-        }
+        if (data.status === 'active') { setDomainStatus('active') }
       } else {
-        setVerifyResult({ status: 'error', message: data.message || 'Verification failed. Please try again.' })
+        setVerifyResult({ status: 'error', message: data.message || 'Verification failed.' })
       }
     } catch {
-      setVerifyResult({ status: 'error', message: 'Network error. Please check your connection.' })
-    } finally {
-      setVerifying(false)
-    }
+      setVerifyResult({ status: 'error', message: 'Network error.' })
+    } finally { setVerifying(false) }
   }
 
   if (!isPro) {
@@ -150,8 +143,6 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
     )
   }
 
-  const cnameTarget = 'cname.vercel-dns.com'
-
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-5">
 
@@ -174,12 +165,12 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
       {currentDomain ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
                 <Globe size={16} className="text-green-600" />
               </div>
-              <div>
-                <p className="font-bold text-gray-900 text-sm">{currentDomain}</p>
+              <div className="min-w-0">
+                <p className="font-bold text-gray-900 text-sm truncate">{currentDomain}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {domainStatus === 'active' ? (
                     <>
@@ -206,18 +197,20 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
             </button>
           </div>
 
+          {/* DNS Instructions — only show when not active */}
           {domainStatus !== 'active' && (
             <div className="space-y-3">
-              {/* DNS Instructions */}
               <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-3">
                 <p className="text-xs font-bold text-blue-800 flex items-center gap-1.5">
                   <AlertCircle size={13} />
                   DNS Setup Required
                 </p>
                 <p className="text-xs text-blue-700 leading-relaxed">
-                  In your domain provider's DNS settings (Namecheap, GoDaddy, Cloudflare, etc.), add the following CNAME record:
+                  In your domain provider's DNS settings (Namecheap, GoDaddy, Cloudflare, etc.), add the following {dnsType} record:
                 </p>
-                <div className="rounded-lg bg-white border border-blue-200 overflow-hidden">
+
+                {/* Desktop table */}
+                <div className="hidden sm:block rounded-lg bg-white border border-blue-200 overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-blue-100/60">
@@ -228,17 +221,21 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="px-3 py-2.5 font-semibold text-gray-700">CNAME</td>
-                        <td className="px-3 py-2.5 text-gray-700">{currentDomain.split('.')[0]}</td>
+                        <td className="px-3 py-2.5">
+                          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-black ${
+                            dnsType === 'A' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                          }`}>{dnsType}</span>
+                        </td>
+                        <td className="px-3 py-2.5 font-mono text-gray-700">{dnsName}</td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-gray-700">{cnameTarget}</span>
+                            <span className="font-mono text-gray-700 break-all">{dnsTarget}</span>
                             <button
                               type="button"
-                              onClick={() => handleCopy(cnameTarget)}
+                              onClick={() => handleCopy(dnsTarget, 'target')}
                               className="flex-shrink-0 p-1 rounded text-gray-400 hover:text-green-600 transition-colors"
                             >
-                              {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                              {copied === 'target' ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
                             </button>
                           </div>
                         </td>
@@ -246,6 +243,14 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile stacked cards */}
+                <div className="sm:hidden space-y-2">
+                  <DnsCard label="Type" value={dnsType} badge={dnsType === 'A' ? 'purple' : 'blue'} />
+                  <DnsCard label="Name / Host" value={dnsName} onCopy={() => handleCopy(dnsName, 'name')} copied={copied === 'name'} />
+                  <DnsCard label="Value / Points to" value={dnsTarget} onCopy={() => handleCopy(dnsTarget, 'target')} copied={copied === 'target'} mono />
+                </div>
+
                 <p className="text-[11px] text-blue-600 leading-relaxed">
                   DNS changes can take up to 48 hours to propagate. Once done, click Verify DNS below.
                 </p>
@@ -295,6 +300,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
             </div>
           )}
 
+          {/* Active domain — visit link */}
           {domainStatus === 'active' && (
             <div className="flex items-center gap-2">
               <a
@@ -355,7 +361,9 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
         <div className="space-y-3">
           {[
             { step: '1', title: 'Add your domain', desc: 'Enter your custom domain above and click Add Domain.' },
-            { step: '2', title: 'Set up DNS', desc: `Add a CNAME record in your domain provider pointing to ${cnameTarget}.` },
+            { step: '2', title: 'Set up DNS', desc: currentDomain
+                ? `Add the ${dnsType} record shown above in your domain provider.`
+                : 'Add the DNS record shown after adding your domain in your domain provider.' },
             { step: '3', title: 'Verify & go live', desc: 'Click Verify DNS once you\'ve set up the record. SSL is automatic.' },
           ].map((item) => (
             <div key={item.step} className="flex items-start gap-3">
@@ -371,6 +379,33 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
         </div>
       </div>
 
+    </div>
+  )
+}
+
+
+function DnsCard({ label, value, onCopy, copied, mono, badge }) {
+  return (
+    <div className="rounded-lg bg-white border border-blue-200 px-3 py-2.5 flex items-center justify-between gap-2">
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">{label}</p>
+        {badge ? (
+          <span className={`inline-block mt-0.5 rounded px-1.5 py-0.5 text-[10px] font-black ${
+            badge === 'purple' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+          }`}>{value}</span>
+        ) : (
+          <p className={`text-xs mt-0.5 break-all ${mono ? 'font-mono text-gray-700' : 'text-gray-700'}`}>{value}</p>
+        )}
+      </div>
+      {onCopy && (
+        <button
+          type="button"
+          onClick={onCopy}
+          className="flex-shrink-0 p-1.5 rounded text-gray-400 hover:text-green-600 transition-colors"
+        >
+          {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+        </button>
+      )}
     </div>
   )
 }

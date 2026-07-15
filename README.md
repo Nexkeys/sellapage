@@ -3105,3 +3105,41 @@ Campaign created (PAUSED)
 `npm run build` passed with zero errors.
 
 ---
+
+## 2026-07-15 — Custom Domain DNS Fix: Root vs Subdomain + Mobile UI
+
+Commit/push keyword: `custom-domain-dns-fix`
+
+Root domains (e.g. `mybusiness.com`) always failed DNS verification because the code only checked for CNAME records. Root domains require A records (`@ → 216.198.79.1`). This fix detects the domain type and checks/renders the correct DNS record.
+
+### What Changed
+
+**`src/api-handlers/verify-custom-domain.js`**
+- Detects root vs subdomain (2 dots = root, 3+ dots = subdomain)
+- For root domains: checks A record (`api.vercel.com/v10/domains/records/A`) — `@ → 216.198.79.1`
+- For subdomains: checks CNAME record (`api.vercel.com/v10/domains/records/CNAME`) — `sub → cname.vercel-dns.com`
+- Returns both verification statuses so frontend can display correct results
+- Updated error messages to reference the correct record type
+
+**`src/api-handlers/add-custom-domain.js`**
+- Added domain type detection before returning response
+- Returns `dnsType` (A/CNAME), `dnsName` (@ or subdomain prefix), `dnsTarget` (IP or CNAME)
+
+**`src/components/dashboard/CustomDomainTab.jsx`** — Full rewrite:
+- `getDnsInfo()` helper: detects root vs subdomain, returns correct DNS type/name/target
+- Desktop DNS table: shows correct record type (purple badge for A, blue for CNAME)
+- Mobile stacked cards: on small screens, each DNS field (Type, Name, Value) renders as a separate card with copy button — no horizontal scrolling needed
+- Improved status display: amber warning for pending, green for active, red for errors
+- "Visit your domain" link visible when domain is active
+- Better error messages that reference the correct DNS record type
+
+### DNS Rules
+
+| Domain Type | Example | Record Type | Name | Value |
+|---|---|---|---|---|
+| Root domain | `mybusiness.com` | A | `@` | `216.198.79.1` |
+| Subdomain | `shop.brand.ng` | CNAME | `shop` | `cname.vercel-dns.com` |
+
+### Build Status
+
+`npm run build` passed with zero errors.

@@ -55,13 +55,18 @@ export default async function handler(req, res) {
     }
 
     const verified = vercelData?.verified === true
-    const cnameValid = vercelData?.verification?.some(
-      (v) => v.type === 'CNAME' && v.value === 'cname.vercel-dns.com' && v.reason !== 'missing_value'
+
+    const isSubdomain = domain.split('.').length > 2
+    const expectedType = isSubdomain ? 'CNAME' : 'A'
+    const expectedValue = isSubdomain ? 'cname.vercel-dns.com' : '216.198.79.1'
+    const dnsName = isSubdomain ? domain.split('.')[0] : '@'
+
+    const dnsRecordValid = vercelData?.verification?.some(
+      (v) => v.type === expectedType && v.value === expectedValue && v.reason !== 'missing_value'
     ) ?? false
 
     let status = 'pending'
     let userMessage = ''
-    let cnameTarget = 'cname.vercel-dns.com'
 
     if (verified) {
       status = 'active'
@@ -69,12 +74,14 @@ export default async function handler(req, res) {
       await db.collection('stores').doc(storeId).update({
         customDomainStatus: 'active',
       })
-    } else if (!cnameValid) {
-      status = 'cname_error'
-      userMessage = `Your CNAME record is not set correctly. In your DNS provider, add a CNAME record for your domain pointing to ${cnameTarget}. This can take up to 48 hours to propagate.`
+    } else if (!dnsRecordValid) {
+      status = 'dns_error'
+      userMessage = isSubdomain
+        ? `Your CNAME record is not set correctly. In your DNS provider, add a CNAME record with Host/Name: ${dnsName} pointing to cname.vercel-dns.com. This can take up to 48 hours to propagate.`
+        : `Your A record is not set correctly. In your DNS provider, add an A record with Host/Name: @ pointing to 216.198.79.1. This can take up to 48 hours to propagate.`
     } else {
       status = 'propagating'
-      userMessage = "Your CNAME looks correct but DNS hasn't fully propagated yet. This can take up to 48 hours. Check back soon."
+      userMessage = "Your DNS record looks correct but hasn't fully propagated yet. This can take up to 48 hours. Check back soon."
     }
 
     return res.status(200).json({
@@ -82,7 +89,9 @@ export default async function handler(req, res) {
       verified,
       status,
       message: userMessage,
-      cnameTarget,
+      dnsType: expectedType,
+      dnsName,
+      dnsTarget: expectedValue,
       raw: vercelData,
     })
   } catch (err) {
