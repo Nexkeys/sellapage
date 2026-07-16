@@ -3558,3 +3558,44 @@ Commit/push keyword: `bugfixes-whatsapp-toggle-receipt`
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-16] ReferralTab Withdrawal Message Fix
+
+#### Fixed
+- **Misleading "Refer X more vendors" withdrawal message** — The message calculated `⌈(₦5,000 - available) / ₦500⌉` which assumed a flat ₦500 reward per referral (Growth plan only). Incorrect for Pro (₦1,000) or Premium (₦2,000) referrals. Also confusing at ₦0 balance. Replaced with accurate informational text: "Earn ₦500 – ₦2,000 for each vendor you refer who upgrades to a paid plan. Withdrawals start at ₦5,000."
+
+#### Changed
+- `src/components/dashboard/ReferralTab.jsx` — Replaced misleading count with accurate plan-range text.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-16] Admin Panel — Role-Based Access System (Phase 1)
+
+#### Added
+- **`src/utils/adminRoles.js`** — Role utility with `getAdminRole(uid)` (fetches from Firestore `admins/{uid}`), `canAccessTab(role, tab)`, `getRoleLabel(role)`. Tab access: Health → Super Admin only; Directory → Super Admin + Operations; Referrals + Withdrawals → Super Admin + Finance.
+- **Firestore `admins` collection** — Document per admin user: `{ role, assignedBy, assignedAt, active }`. Roles: `super_admin`, `finance`, `support`, `operations`, `marketing`.
+- **Role badge in admin header** — Shows assigned role (e.g., "Super Admin", "Finance Admin") with Shield icon.
+
+#### Changed
+- `src/pages/Admin.jsx` — Removed hardcoded `ADMIN_UID` check. Replaced with role-based access via `getAdminRole()`. Tab bar now filters tabs based on admin role (users only see tabs they have access to). Defaults to first accessible tab. Authorization shield shows "Contact the Super Admin to get access" for non-admin users. Loading state while checking permissions.
+
+#### How to assign roles
+Use Firebase Console or a server-side script to create documents in the `admins` collection:
+```
+admins/{uid} = {
+  role: "super_admin" | "finance" | "support" | "operations" | "marketing",
+  assignedBy: "xBJZGcVuHyQayXcztNmqENFSEoE3",
+  assignedAt: Timestamp,
+  active: true
+}
+```
+
+### Build Status
+
+`npm run build` passed with zero errors.

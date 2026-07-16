@@ -465,7 +465,7 @@ export default function ReferralTab({ user, store }) {
                 <div className="mt-4 bg-gray-50 rounded-xl p-3 text-center">
                   <Info className="w-4 h-4 text-gray-400 mx-auto mb-1" />
                   <p className="text-xs text-gray-500">
-                    Refer {Math.ceil((minimumKobo - available) / 50000)} more vendors who upgrade to reach the minimum
+                    Earn ₦500 – ₦2,000 for each vendor you refer who upgrades to a paid plan. Withdrawals start at ₦5,000.
                   </p>
                 </div>
               )}

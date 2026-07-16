@@ -4,18 +4,28 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   Lock, Loader2, RefreshCw, Database, Cloud, Globe, 
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
-  Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle
+  Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle, Shield
 } from 'lucide-react';
+import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 
-const ADMIN_UID = 'xBJZGcVuHyQayXcztNmqENFSEoE3';
+const ADMIN_TABS = [
+  { id: 'health', label: 'System Health & Logs', icon: Database },
+  { id: 'directory', label: 'Merchant Directory', icon: Users },
+  { id: 'referrals', label: 'Referrals', icon: TrendingUp },
+  { id: 'withdrawals', label: 'Withdrawals', icon: Clock },
+]
 
 
 
 export default function Admin() {
   const { user } = useAuth();
   
+  // ── Admin Role ──
+  const [adminRole, setAdminRole] = useState(null);
+  const [roleLoading, setRoleLoading] = useState(true);
+
   // ── Tabs ──
-  const [activeTab, setActiveTab] = useState('health'); // 'health' | 'directory'
+  const [activeTab, setActiveTab] = useState('health');
 
   // ── Tab A: Health State ──
   const [healthData, setHealthData] = useState(null);
@@ -159,23 +169,37 @@ export default function Admin() {
     }
   }, [wdStatusFilter, fetchWithdrawals]);
 
+  // ── Fetch Admin Role ──
+  useEffect(() => {
+    if (!user) { setRoleLoading(false); return }
+    getAdminRole(user.uid).then(role => {
+      setAdminRole(role)
+      setRoleLoading(false)
+      // Default to first accessible tab
+      if (role) {
+        const firstTab = ADMIN_TABS.find(t => canAccessTab(role, t.id))
+        if (firstTab) setActiveTab(firstTab.id)
+      }
+    })
+  }, [user])
+
   // ── Lifecycle Hooks ──
   useEffect(() => {
-    if (user?.uid === ADMIN_UID) {
-      if (activeTab === 'health' && !healthData) {
-        fetchHealth();
-      } else if (activeTab === 'directory' && !dirData) {
-        fetchDirectory(page, search);
-      } else if (activeTab === 'referrals' && !refStats) {
-        fetchReferrals();
-      } else if (activeTab === 'withdrawals') {
-        fetchWithdrawals(wdStatusFilter);
-      }
+    if (!user || !adminRole) return;
+
+    if (activeTab === 'health' && !healthData) {
+      fetchHealth();
+    } else if (activeTab === 'directory' && !dirData) {
+      fetchDirectory(page, search);
+    } else if (activeTab === 'referrals' && !refStats) {
+      fetchReferrals();
+    } else if (activeTab === 'withdrawals') {
+      fetchWithdrawals(wdStatusFilter);
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, adminRole]);
 
   useEffect(() => {
-    if (!user || user.uid !== ADMIN_UID) return;
+    if (!user || !adminRole) return;
     
     // Optimization: Only heartbeat on Health Tab
     let interval;
@@ -239,7 +263,18 @@ export default function Admin() {
   };
 
   // ── Authorization Shield ──
-  if (!user || user.uid !== ADMIN_UID) {
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center max-w-sm w-full">
+          <Loader2 size={24} className="animate-spin text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-400 text-sm">Checking permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !adminRole) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center max-w-sm w-full">
@@ -247,7 +282,7 @@ export default function Admin() {
             <Lock size={24} className="text-red-500" />
           </div>
           <h1 className="font-display font-extrabold text-gray-900 text-lg mb-2">Access Denied</h1>
-          <p className="text-gray-400 text-sm leading-relaxed">This page is private and restricted to administrative accounts.</p>
+          <p className="text-gray-400 text-sm leading-relaxed">This page is restricted to admin accounts. Contact the Super Admin to get access.</p>
         </div>
       </div>
     );
@@ -291,9 +326,12 @@ export default function Admin() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">Operations Console</h1>
-              <p className="text-gray-400 text-xs mt-1 font-medium">
-                Master Administrative Dashboard
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Shield size={12} className="text-green-600" />
+                <p className="text-green-600 text-xs font-bold uppercase tracking-wider">
+                  {getRoleLabel(adminRole)}
+                </p>
+              </div>
             </div>
             {activeTab === 'health' && (
               <button
@@ -307,39 +345,21 @@ export default function Admin() {
             )}
           </div>
           
-          <div className="flex flex-col sm:flex-row p-1 bg-gray-100 rounded-xl gap-1">
-            <button
-              onClick={() => setActiveTab('health')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
-                activeTab === 'health' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-              }`}
-            >
-              <Database size={16} /> System Health & Logs
-            </button>
-            <button
-              onClick={() => setActiveTab('directory')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
-                activeTab === 'directory' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-              }`}
-            >
-              <Users size={16} /> Merchant Directory
-            </button>
-            <button
-              onClick={() => setActiveTab('referrals')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
-                activeTab === 'referrals' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-              }`}
-            >
-              <TrendingUp size={16} /> Referrals
-            </button>
-            <button
-              onClick={() => setActiveTab('withdrawals')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
-                activeTab === 'withdrawals' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-              }`}
-            >
-              <Clock size={16} /> Withdrawals
-            </button>
+          <div className="flex flex-col sm:flex-row p-1 bg-gray-100 rounded-xl gap-1 overflow-x-auto">
+            {ADMIN_TABS.filter(t => canAccessTab(adminRole, t.id)).map(tab => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                    activeTab === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                  }`}
+                >
+                  <Icon size={16} /> {tab.label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
