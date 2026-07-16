@@ -872,6 +872,11 @@ Plan gate: Premium only.
 Same model as Meta.
 Plan gate: Premium only.
 
+
+### 14. User Session History And Logout
+Here each users would be able to see the location and devices they're actively logged in on and also their past log in history very well paginated and designed with mobile responsiveness first of all from the smallest screen to the biggest and users would be able to choose to log out of a particular device or session they're logged into and it immediately logs out of that device or session, similar to what Facebook and other big companies do to enable the user's awareness and security
+
+
 ---
 
 ## SELLAPAGE MOBILE APP — React Native (Expo)
@@ -917,6 +922,7 @@ NOT a PWA. Separate codebase at `C:\Users\user\Documents\sellapage-app`.
 8. EAS Build for Android APK (test internally)
 9. Google Play Store submission
 
+## N.B - THE APP SHOULD HAVE ALL THE FEATURES I REPEAT ALL THE POSSIBLE FEATURES THAT THE HOMEPAGE/SITE HAS BUT JUST DIFFERENT SETUPS THE FLOW REMAIN SAME, LOGIC WOULD ONLY TWEAK WHERE NECESSARY AND THE UI ACROSS ALL APPS SCREEN IS VERY NICE AND MOBILE RESPONSIVE ONLY AS THERE'D BE NO NEED FOR IT BEING DESKTOP RESPONSIVE ONLY MOBILE AND TABLET RESPONSIVE BUT MOBILE RESPONSIVENESS IS PRIORTIZED FIRST STARTING FROM THE SMALLEST SCREEN (280PX) TO THE BIGGEST TAB SCREEN BUT PRIORTIZE SMALL SCREENS ACROSS ALL THE DASHBOARD SESSIONS AND ON THE MOBILE APP THE RELOAD OR REFERESH WHEN A USER REFRESHES OR RELOADS A PAGE OR TAB RATHER THAT THEY ARE CURRENTLY ON IT SHOULD JUST REFRESH AND STAY ON THAT TAB AND ALSO THINGS LIKE THE LIVESTOR PAGE CAN'T BE ACCESSIBLE FROM THE APP BECAUSE UNLIKE THE PWA WHEN A USER IS USING THE APP IT DOESN'T SUPPORT OPENING WEB LINKS SO IT'D REDIRECT TO THE USER'S BROWSER TO VIEW THEIR STORE PAGE I HOPE YOU GET THIS FLOW 
 ---
 
 ## LOGISTICS — Sendbox Integration Notes

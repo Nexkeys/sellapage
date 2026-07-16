@@ -9,9 +9,12 @@ desktop.ini
 firestore.rules
 To-dos.txt
 README.md
+Topship-DOCS.txt
+Vercel API DOC.txt
+Sendbox-DOCS.txt
+
 
 # Local Vercel folder
 .aider*
 .vercel
 .env*
-README.md
