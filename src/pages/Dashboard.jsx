@@ -1068,6 +1068,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleWhatsAppToggle = async (value) => {
+    try {
+      await updateStore(store.id, { showWhatsApp: value });
+      setStore((prev) => ({ ...prev, showWhatsApp: value }));
+    } catch (err) {
+      console.error("WhatsApp toggle failed", err);
+    }
+  };
+
   const handleDeliverySave = async (formData) => {
     setDeliverySaving(true);
     setDeliveryError("");
@@ -1661,6 +1670,7 @@ export default function Dashboard() {
           onClearDeleteError={() => setDeleteError("")}
           onLogoUpload={handleLogoUpload}
           logoUploading={logoUploading}
+          onWhatsAppToggle={handleWhatsAppToggle}
           navigateTo={setActiveTab}
         />
       )}
@@ -1809,7 +1819,7 @@ export default function Dashboard() {
         />
       )}
       {activeTab === 'referral-program' && (
-        <ReferralTab user={user} />
+        <ReferralTab user={user} store={store} />
       )}
       {activeTab === 'google-ads' && (
         <GoogleAdsTab

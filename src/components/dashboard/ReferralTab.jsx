@@ -13,14 +13,15 @@ function formatKobo(amount) {
   return `₦${(amount / 100).toLocaleString('en-NG')}`
 }
 
-export default function ReferralTab({ user }) {
+export default function ReferralTab({ user, store }) {
   const [token, setToken] = useState(null)
-  const [store, setStore] = useState(null)
-  const [referralCode, setReferralCode] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [referralCode, setReferralCode] = useState(store?.referralCode || null)
+  const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [referralLink, setReferralLink] = useState('')
+  const [referralLink, setReferralLink] = useState(
+    store?.referralCode ? `https://sellapage.com.ng/register?ref=${store.referralCode}` : ''
+  )
   const [showBankForm, setShowBankForm] = useState(false)
   const [bankForm, setBankForm] = useState({ bankName: '', bankCode: '', accountNumber: '' })
   const [bankSaving, setBankSaving] = useState(false)
@@ -33,6 +34,12 @@ export default function ReferralTab({ user }) {
   const [withdrawSuccess, setWithdrawSuccess] = useState('')
   const [showBankList, setShowBankList] = useState(false)
   const [bankSearch, setBankSearch] = useState('')
+  const [bankVerified, setBankVerified] = useState(store?.referralBankVerified || false)
+  const [bankName, setBankName] = useState(store?.referralBankName || '')
+  const [bankAccount, setBankAccount] = useState(store?.referralBankAccount || '')
+  const [bankAccountName, setBankAccountName] = useState(store?.referralBankAccountName || '')
+  const [localAvailable, setLocalAvailable] = useState(store?.referralAvailable || 0)
+  const [localWithdrawn, setLocalWithdrawn] = useState(store?.referralWithdrawn || 0)
   const [referralStats, setReferralStats] = useState(null)
   const [recentReferrals, setRecentReferrals] = useState([])
   const [withdrawalHistory, setWithdrawalHistory] = useState([])
@@ -74,25 +81,12 @@ export default function ReferralTab({ user }) {
     }
   }, [user])
 
-  const fetchStore = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/get-store`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      if (data.store) {
-        setStore(data.store)
-        if (data.store.referralCode) {
-          setReferralCode(data.store.referralCode)
-          setReferralLink(`https://sellapage.com.ng/register?ref=${data.store.referralCode}`)
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load store:', err)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (store?.referralCode) {
+      setReferralCode(store.referralCode)
+      setReferralLink(`https://sellapage.com.ng/register?ref=${store.referralCode}`)
     }
-  }, [token])
+  }, [store?.referralCode])
 
   const fetchReferralStats = useCallback(async () => {
     try {
@@ -123,10 +117,9 @@ export default function ReferralTab({ user }) {
 
   useEffect(() => {
     if (token) {
-      fetchStore()
       fetchReferralStats()
     }
-  }, [token, fetchStore, fetchReferralStats])
+  }, [token, fetchReferralStats])
 
   useEffect(() => {
     if (showHistory && token) {
@@ -148,7 +141,6 @@ export default function ReferralTab({ user }) {
       if (data.success) {
         setReferralCode(data.referralCode)
         setReferralLink(`https://sellapage.com.ng/register?ref=${data.referralCode}`)
-        setStore(prev => ({ ...prev, referralCode: data.referralCode }))
       }
     } catch {
     } finally {
@@ -208,13 +200,10 @@ export default function ReferralTab({ user }) {
       const data = await res.json()
       if (data.success) {
         setBankSuccess(`Account verified: ${data.accountName}`)
-        setStore(prev => ({
-          ...prev,
-          referralBankName: bankForm.bankName,
-          referralBankAccount: bankForm.accountNumber,
-          referralBankAccountName: data.accountName,
-          referralBankVerified: true,
-        }))
+        setBankVerified(true)
+        setBankName(bankForm.bankName)
+        setBankAccount(bankForm.accountNumber)
+        setBankAccountName(data.accountName)
         setShowBankForm(false)
         setTimeout(() => setBankSuccess(''), 5000)
       } else {
@@ -250,11 +239,8 @@ export default function ReferralTab({ user }) {
       const data = await res.json()
       if (data.success) {
         setWithdrawSuccess(data.message || 'Withdrawal request submitted!')
-        setStore(prev => ({
-          ...prev,
-          referralAvailable: (prev.referralAvailable || 0) - amountKobo,
-          referralWithdrawn: (prev.referralWithdrawn || 0) + amountKobo,
-        }))
+        setLocalAvailable(prev => prev - amountKobo)
+        setLocalWithdrawn(prev => prev + amountKobo)
         setWithdrawAmount('')
         setTimeout(() => {
           setShowWithdraw(false)
@@ -274,23 +260,15 @@ export default function ReferralTab({ user }) {
     b.name.toLowerCase().includes(bankSearch.toLowerCase())
   )
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
-      </div>
-    )
-  }
-
-  const available = store?.referralAvailable || 0
+  const available = localAvailable || store?.referralAvailable || 0
   const pending = store?.referralPending || 0
-  const withdrawn = store?.referralWithdrawn || 0
+  const withdrawn = localWithdrawn || store?.referralWithdrawn || 0
   const totalEarned = store?.referralTotalEarned || 0
   const totalClicks = store?.referralTotalClicks || 0
   const totalSignups = store?.referralTotalSignups || 0
   const totalPaid = store?.referralTotalPaid || 0
   const hasCode = !!referralCode
-  const hasBank = !!store?.referralBankVerified
+  const hasBank = bankVerified || !!store?.referralBankVerified
   const minimumKobo = 500000
   const progressToMin = Math.min(100, Math.round((available / minimumKobo) * 100))
 
@@ -453,8 +431,8 @@ export default function ReferralTab({ user }) {
                 <ShieldCheck className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-medium text-green-900">Bank Account Verified</span>
               </div>
-              <p className="text-sm text-green-800">{store?.referralBankName}</p>
-              <p className="text-sm text-green-800">{store?.referralBankAccount} — {store?.referralBankAccountName}</p>
+              <p className="text-sm text-green-800">{bankName || store?.referralBankName}</p>
+              <p className="text-sm text-green-800">{bankAccount || store?.referralBankAccount} — {bankAccountName || store?.referralBankAccountName}</p>
             </div>
           )}
 
@@ -678,7 +656,7 @@ export default function ReferralTab({ user }) {
             <div className="bg-gray-50 rounded-xl p-4 mb-4">
               <p className="text-sm text-gray-600">Available Balance</p>
               <p className="text-2xl font-bold text-green-600">{formatKobo(available)}</p>
-              <p className="text-xs text-gray-500 mt-1">{store?.referralBankName} — {store?.referralBankAccount}</p>
+              <p className="text-xs text-gray-500 mt-1">{bankName || store?.referralBankName} — {bankAccount || store?.referralBankAccount}</p>
             </div>
 
             <div className="space-y-4">

@@ -68,6 +68,7 @@ export default function SettingsTab({
   onSave, saveLoading, saveError, saveSuccess,
   onDeleteAccount, deleteLoading, deleteError, onClearDeleteError,
   onLogoUpload, logoUploading,
+  onWhatsAppToggle,
 }) {
   const hasCustomDomain = !!store?.customDomain
   const [form, setForm] = useState({
@@ -301,7 +302,11 @@ export default function SettingsTab({
           </div>
           <button
             type="button"
-            onClick={() => setForm(p => ({ ...p, showWhatsApp: !p.showWhatsApp }))}
+            onClick={() => {
+              const newVal = !form.showWhatsApp
+              setForm(p => ({ ...p, showWhatsApp: newVal }))
+              if (onWhatsAppToggle) onWhatsAppToggle(newVal)
+            }}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.showWhatsApp ? 'bg-green-600' : 'bg-gray-300'}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.showWhatsApp ? 'translate-x-6' : 'translate-x-1'}`} />

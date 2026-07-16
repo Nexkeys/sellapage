@@ -3426,3 +3426,18 @@ Commit/push keyword: `bugfixes-whatsapp-toggle-receipt`
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-16] Bug Fixes — ReferralTab, Firestore Index, WhatsApp Toggle
+
+#### Fixed
+- **ReferralTab data source**: Removed broken `GET /api/get-store` call (endpoint didn't exist). ReferralTab now receives `store` prop from Dashboard like every other tab. Removed unused `loading` state and spinner.
+- **Firestore composite index error**: `referral-stats.js` queried `referralRewards` with `.where('referrerId', '==', uid).orderBy('createdAt', 'desc')` which required a composite index. Removed `.orderBy()`, sorted client-side instead.
+- **WhatsApp toggle persistence**: Toggle now saves to Firestore immediately on click (no need to click "Save Changes"). Added `onWhatsAppToggle` prop flow: SettingsTab → Dashboard → `updateStore(store.id, { showWhatsApp: value })`.
+
+#### Changed
+- `src/components/dashboard/ReferralTab.jsx` — Removed `fetchStore()`, `loading` state, spinner. Accepts `store` from Dashboard props.
+- `src/api-handlers/referral-stats.js` — Removed `.orderBy('createdAt', 'desc')` from `referralRewards` query. Added client-side sort by `createdAt` descending.
+- `src/components/dashboard/Settings.jsx` — Added `onWhatsAppToggle` prop. Toggle button calls `onWhatsAppToggle(newVal)` on click instead of waiting for form save.
+- `src/pages/Dashboard.jsx` — Added `handleWhatsAppToggle(value)` function that saves `showWhatsApp` to Firestore and updates local store state. Passed as `onWhatsAppToggle` prop to SettingsTab.

@@ -33,15 +33,21 @@ export default async function handler(req, res) {
     const rewardsSnap = await db
       .collection('referralRewards')
       .where('referrerId', '==', uid)
-      .orderBy('createdAt', 'desc')
-      .limit(20)
+      .limit(50)
       .get()
 
-    const recentReferrals = rewardsSnap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
-    }))
+    const recentReferrals = rewardsSnap.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
+      }))
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return dateB - dateA
+      })
+      .slice(0, 20)
 
     return res.status(200).json({
       success: true,
