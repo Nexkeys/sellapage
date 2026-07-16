@@ -3505,3 +3505,25 @@ Commit/push keyword: `bugfixes-whatsapp-toggle-receipt`
 - `src/api-handlers/referral-bank-save.js` — Added `resolveData.code` check for Paystack error codes. Generic fallback now returns fixed user-friendly message instead of raw Paystack text. Removed duplicate `PAYSTACK_SECRET_KEY` check (was at lines 78-83, same check already at lines 22-28).
 - `src/api-handlers/referral-withdrawals.js` — Removed `.orderBy('createdAt', 'desc')`. Added client-side sort by `createdAt` descending.
 - `src/api-handlers/admin-referrals.js` — Removed `.orderBy('createdAt', 'desc')` and `.offset()` from `rewards` and `withdrawals` actions. Added client-side sort and pagination. Added `total` count to response.
+
+---
+
+### [2026-07-16] Referral Signup Flow + Delete Account Cleanup
+
+#### Fixed
+- **CRITICAL: `referredBy` was storing raw referral code, not UID** — `Login.jsx` passed the raw code string (e.g., `SP-ABCDE1`) as `referredBy`, but `registerSeller()` in `auth.js` used it as a Firestore document UID (`stores/{referredBy}`). The referrer lookup silently failed — `referralTotalSignups` was NEVER incremented on signup. Fixed by calling `POST /api/referral-resolve-code` to resolve the code to a `referrerId` (UID) before passing to `registerSeller()`.
+- **No `/register` route** — Referral links point to `/register?ref=SP-XXX` but there was no route. The `/:storeName` catch-all might match `/register` as a store name. Added `/register` route pointing to `<Login />`.
+- **Delete account didn't decrement referrer's count** — When a referred user deleted their account, the referrer's `referralTotalSignups` stayed inflated. Added `FieldValue.increment(-1)` to `delete-account.js` that runs before the batch delete.
+
+#### Added
+- **Registration form: Referral Code input field** — New optional "Referral Code" field on the "Create Store" form. Pre-filled from URL `?ref=` param or localStorage. Validates the code against `POST /api/referral-resolve-code` before registration. Shows loading state while checking, success checkmark when valid, or red error message if code doesn't exist: "This referral code doesn't exist. Please check the code or sign up without one."
+- **`/register` route** — Added `<Route path="/register" element={<Login />} />` to `App.jsx`.
+
+#### Changed
+- `src/pages/Login.jsx` — Added `referralCode` to form state, `referralValidated`/`referralError`/`referralChecking` state. Added `validateReferralCode()` function that calls `POST /api/referral-resolve-code`. Registration form now validates referral code before calling `registerSeller()`. Passes resolved `referrerId` (UID) instead of raw code string. Referral code input field shows validation status. Pre-fills from localStorage on mount.
+- `src/App.jsx` — Added `/register` route.
+- `src/api-handlers/delete-account.js` — Added `FieldValue` import from `firebase-admin/firestore`. Before batch delete, reads `storeData.referredBy`. If present, decrements the referrer's `referralTotalSignups` by 1 using `FieldValue.increment(-1)`.
+
+### Build Status
+
+`npm run build` passed with zero errors.

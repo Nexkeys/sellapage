@@ -1,7 +1,7 @@
 //src/api-handlers/delete-account.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { sendEmail } from './_lib/send-email.js'
 
 if (!getApps().length) {
@@ -67,6 +67,21 @@ export default async function handler(req, res) {
     const storeData = storeSnap.data()
     const businessName = storeData.businessName || 'Merchant'
     const email = storeData.email
+
+    // Decrement referrer's signup count if this user was referred
+    if (storeData.referredBy) {
+      try {
+        const referrerRef = db.collection('stores').doc(storeData.referredBy)
+        const referrerSnap = await referrerRef.get()
+        if (referrerSnap.exists()) {
+          await referrerRef.update({
+            referralTotalSignups: FieldValue.increment(-1),
+          })
+        }
+      } catch (err) {
+        console.error('[delete-account] Failed to decrement referrer signup count:', err)
+      }
+    }
 
     // Start cleanup
     const batch = db.batch()

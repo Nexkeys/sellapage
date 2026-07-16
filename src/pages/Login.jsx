@@ -34,17 +34,28 @@ export default function Login() {
     storeName: '',
     description: '',
     vendorType: 'products',
+    referralCode: '',
   })
+  const [referralValidated, setReferralValidated] = useState(false)
+  const [referralError, setReferralError] = useState('')
+  const [referralChecking, setReferralChecking] = useState(false)
 
   // 3. Cache the referral tracking code safely if found in the link
   useEffect(() => {
     if (refCode) {
-      localStorage.setItem('vendor_referral_code', refCode.trim())
+      const code = refCode.trim()
+      localStorage.setItem('vendor_referral_code', code)
+      setForm(prev => ({ ...prev, referralCode: code }))
       fetch('/api/referral-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: refCode.trim() }),
+        body: JSON.stringify({ code }),
       }).catch(() => {})
+    } else {
+      const saved = localStorage.getItem('vendor_referral_code') || ''
+      if (saved) {
+        setForm(prev => ({ ...prev, referralCode: saved }))
+      }
     }
   }, [refCode])
 
@@ -62,6 +73,33 @@ export default function Login() {
     setMode(newMode)
     setError('')
     setResetSent(false)
+    setReferralError('')
+  }
+
+  const validateReferralCode = async (code) => {
+    if (!code || !code.trim()) return { valid: false, referrerId: null }
+    setReferralChecking(true)
+    setReferralError('')
+    try {
+      const res = await fetch('/api/referral-resolve-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim() }),
+      })
+      const data = await res.json()
+      if (data.success && data.referrerId) {
+        setReferralValidated(true)
+        setReferralChecking(false)
+        return { valid: true, referrerId: data.referrerId }
+      }
+      setReferralError('This referral code doesn\'t exist. Please check the code or sign up without one.')
+      setReferralChecking(false)
+      return { valid: false, referrerId: null }
+    } catch {
+      setReferralError('Could not verify referral code. Please try again.')
+      setReferralChecking(false)
+      return { valid: false, referrerId: null }
+    }
   }
 
   const handleReset = async (e) => {
@@ -107,8 +145,18 @@ export default function Login() {
           console.error('Error sending login alert notification:', err)
         }
       } else {
-        // 4. Fetch tracking code from cache right at submission (fallback to null if organic signup)
-        const savedRefCode = localStorage.getItem('vendor_referral_code') || null
+        // Validate referral code if provided
+        const codeToValidate = form.referralCode.trim() || localStorage.getItem('vendor_referral_code') || null
+        let resolvedReferrerId = null
+
+        if (codeToValidate) {
+          const result = await validateReferralCode(codeToValidate)
+          if (!result.valid) {
+            setLoading(false)
+            return
+          }
+          resolvedReferrerId = result.referrerId
+        }
 
         await registerSeller(form.email, form.password, {
           businessName: form.businessName.trim(),
@@ -116,13 +164,11 @@ export default function Login() {
           storeName: form.storeName.trim(),
           description: form.description.trim(),
           vendorType: form.vendorType || 'products',
-          referredBy: savedRefCode, // Injected into storeData payload
+          referredBy: resolvedReferrerId,
         })
 
-        // 5. Clear tracking cache completely upon successful document creation
-        if (savedRefCode) {
-          localStorage.removeItem('vendor_referral_code')
-        }
+        // Clear tracking cache
+        localStorage.removeItem('vendor_referral_code')
       }
       navigate('/dashboard')
     } catch (err) {
@@ -307,6 +353,37 @@ export default function Login() {
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all resize-none"
                     placeholder="Tell customers what you sell…"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Referral Code <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    name="referralCode"
+                    value={form.referralCode}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '')
+                      setForm(prev => ({ ...prev, referralCode: val }))
+                      setReferralError('')
+                      setReferralValidated(false)
+                    }}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+                    placeholder="e.g. SP-ABC123"
+                    disabled={referralChecking}
+                  />
+                  {referralChecking && (
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Loader2 size={12} className="animate-spin" /> Checking code…
+                    </p>
+                  )}
+                  {referralError && (
+                    <p className="text-xs text-red-500 mt-1">{referralError}</p>
+                  )}
+                  {referralValidated && form.referralCode && !referralError && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <CheckCircle size={12} /> Valid referral code
+                    </p>
+                  )}
                 </div>
               </>
             )}
