@@ -75,13 +75,6 @@ export default async function handler(req, res) {
     const resolveData = await resolveRes.json()
     console.log(`[referral-bank-save] Paystack response: status=${resolveRes.ok} payload=`, JSON.stringify(resolveData))
 
-    if (!process.env.PAYSTACK_SECRET_KEY) {
-      return res.status(500).json({
-        error: 'payment_not_configured',
-        message: 'Bank verification is not available right now. Please contact support.',
-      })
-    }
-
     if (resolveRes.status === 401 || resolveRes.status === 403) {
       console.error('[referral-bank-save] Paystack auth failed. Status:', resolveRes.status)
       return res.status(500).json({
@@ -92,16 +85,24 @@ export default async function handler(req, res) {
 
     if (!resolveRes.ok || resolveData.status === false) {
       const psMsg = resolveData.message || ''
+      const psCode = resolveData.code || ''
       const lowerMsg = psMsg.toLowerCase()
 
-      if (lowerMsg.includes('account') && (lowerMsg.includes('not found') || lowerMsg.includes('does not exist'))) {
+      if (psCode === 'invalid_bank_code' || (lowerMsg.includes('bank') && lowerMsg.includes('invalid'))) {
+        return res.status(400).json({
+          error: 'invalid_bank',
+          message: 'This bank could not be recognized. Please re-select your bank from the list.',
+        })
+      }
+
+      if (psCode === 'invalid_account' || lowerMsg.includes('account') && (lowerMsg.includes('not found') || lowerMsg.includes('does not exist') || lowerMsg.includes('could not resolve'))) {
         return res.status(400).json({
           error: 'account_not_found',
           message: `This account number doesn't exist at ${bankName}. Please double-check your account number.`,
         })
       }
 
-      if (lowerMsg.includes('bank') && (lowerMsg.includes('invalid') || lowerMsg.includes('not recognized'))) {
+      if (lowerMsg.includes('bank') && lowerMsg.includes('not recognized')) {
         return res.status(400).json({
           error: 'invalid_bank',
           message: 'This bank could not be recognized. Please re-select your bank from the list.',
@@ -110,7 +111,7 @@ export default async function handler(req, res) {
 
       return res.status(400).json({
         error: 'resolve_failed',
-        message: psMsg || 'Could not verify this account. Please check your bank and account number, then try again.',
+        message: 'Could not verify this account. Please check your bank and account number, then try again.',
       })
     }
 

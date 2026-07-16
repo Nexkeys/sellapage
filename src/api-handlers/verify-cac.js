@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   if (!cleanRC || !/^\d+$/.test(cleanRC)) {
     return res.status(400).json({
       error: 'invalid_rc',
-      message: 'Please enter a valid RC or BN number — numbers only, e.g. RC1234567 or BN9537181.',
+      message: 'Please enter a valid RC or BN number — numbers only, e.g. RC1234567 or BN1234567.',
     })
   }
 

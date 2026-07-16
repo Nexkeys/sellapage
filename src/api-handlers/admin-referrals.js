@@ -61,42 +61,56 @@ export default async function handler(req, res) {
     if (action === 'rewards') {
       const page = parseInt(req.query.page) || 1
       const limit = parseInt(req.query.limit) || 20
-      const offset = (page - 1) * limit
 
       const snap = await db
         .collection('referralRewards')
-        .orderBy('createdAt', 'desc')
-        .offset(offset)
-        .limit(limit)
+        .limit(200)
         .get()
 
-      const rewards = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
-      }))
+      const rewards = snap.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
+        }))
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return dateB - dateA
+        })
 
-      return res.status(200).json({ success: true, rewards, page, limit })
+      const offset = (page - 1) * limit
+      const paged = rewards.slice(offset, offset + limit)
+
+      return res.status(200).json({ success: true, rewards: paged, page, limit, total: rewards.length })
     }
 
     if (action === 'withdrawals') {
       const statusFilter = req.query.status || 'all'
       const page = parseInt(req.query.page) || 1
       const limit = parseInt(req.query.limit) || 20
-      const offset = (page - 1) * limit
 
-      let query = db.collection('withdrawal_requests').orderBy('createdAt', 'desc')
+      let query = db.collection('withdrawal_requests')
       if (statusFilter !== 'all') {
         query = query.where('status', '==', statusFilter)
       }
 
-      const snap = await query.offset(offset).limit(limit).get()
-      const withdrawals = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
+      const snap = await query.limit(200).get()
+      const withdrawals = snap.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return dateB - dateA
+        })
 
-      return res.status(200).json({ success: true, withdrawals, page, limit })
+      const offset = (page - 1) * limit
+      const paged = withdrawals.slice(offset, offset + limit)
+
+      return res.status(200).json({ success: true, withdrawals: paged, page, limit, total: withdrawals.length })
     }
 
     if (action === 'process-withdrawal' && req.method === 'POST') {

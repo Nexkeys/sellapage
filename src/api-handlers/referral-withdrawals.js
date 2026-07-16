@@ -27,14 +27,19 @@ export default async function handler(req, res) {
     const snapshot = await db
       .collection('withdrawal_requests')
       .where('userId', '==', uid)
-      .orderBy('createdAt', 'desc')
       .limit(50)
       .get()
 
-    const withdrawals = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
+    const withdrawals = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return dateB - dateA
+      })
 
     return res.status(200).json({
       success: true,

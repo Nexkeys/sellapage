@@ -210,7 +210,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
                   <p className="text-[11px] text-red-500 mt-0.5">Make sure the number matches your CAC registration exactly.</p>
                 )}
                 {errorType === 'invalid_request' && (
-                  <p className="text-[11px] text-red-500 mt-0.5">Enter a valid number like RC1234567 or BN9537181.</p>
+                  <p className="text-[11px] text-red-500 mt-0.5">Enter a valid number like RC1234567 or BN1234567.</p>
                 )}
                 {(errorType === 'insufficient_funds' || errorType === 'pending_payment') && (
                   <p className="text-[11px] text-amber-600 mt-0.5">This usually resolves automatically. You can also try again in a few minutes.</p>
@@ -237,7 +237,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
                 type="text"
                 value={rcNumber}
                 onChange={(e) => { setRcNumber(e.target.value); setError('') }}
-                placeholder="e.g. RC1234567, BN9537181, or 1234567"
+                placeholder="e.g. RC1234567, BN1234567, or 1234567"
                 className={INPUT_CLASS}
                 onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
               />
@@ -255,7 +255,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
               </button>
             </div>
             <p className="text-[11px] text-gray-400">
-              You can enter with or without the prefix — RC1234567, BN9537181, and 1234567 all work.
+              You can enter with or without the prefix — RC1234567, BN1234567, and 1234567 all work.
             </p>
           </div>
 

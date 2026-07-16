@@ -97,8 +97,8 @@ export default function About() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { value: '100+',     label: 'Active Nigerian Stores' },
-              { value: '2024', label: 'Launched' },
+              { value: '10000+',     label: 'Active Nigerian Stores' },
+              { value: '2026', label: 'Launched' },
               { value: '₦0',       label: 'To Get Started' },
             ].map((stat) => (
               <div
@@ -167,11 +167,11 @@ export default function About() {
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {[
-              { label: 'Business Registration', status: 'CAC Registered — BN 9537181' },
+              { label: 'Business Registration', status: 'CAC Registered — BN - 9689086' },
               { label: 'Payment Processing',    status: 'Paystack — CBN licensed' },
               { label: 'Data Storage',          status: 'Google Firebase — encrypted at rest' },
               { label: 'Image Hosting',         status: 'Cloudinary — global CDN' },
-              { label: 'Hosting',               status: 'Netlify — SOC 2 certified' },
+              { label: 'Hosting',               status: 'Vercel — SOC 2 certified' },
               { label: 'Push Notifications',    status: 'Firebase Cloud Messaging (FCM)' },
               { label: 'Email Delivery',        status: 'Resend' },
               { label: 'Support',               status: 'sellapage.ng@gmail.com' },

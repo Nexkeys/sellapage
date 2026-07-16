@@ -9,7 +9,7 @@
 
 1. Who This Is For & The People Involved
 
-Founder & CEO: Ernest Uwaoma, goes by "Nex." Born 22 July 2006, based in Lagos, Nigeria. Runs NexKeys Agency (CAC registered, BN No. 9537181, Software Development/Web Designing; registered address: 17 Babatunde Street Olodi Apapa Lagos; business email: nexkeysagency@gmail.com; personal email: ernestuwaoma3@gmail.com; phone: +2348033004474).
+Founder & CEO: Ernest Uwaoma, goes by "Nex." Born 22 July 2006, based in Lagos, Nigeria. Runs NexKeys Agency (CAC registered, BN No. 9689086, Business Development Services; registered address: 17 Babatunde Street Olodi Apapa Lagos; business email: nexkeysagency@gmail.com; personal email: ernestuwaoma3@gmail.com; phone: +2348033004474).
 Co-Founder & CSO: Obediah Miracle.
 Communication style: Nex is direct, casual, mixes standard English with Nigerian Pidgin. He does NOT want sycophantic responses and the use of &amp — he wants honest, practical, no-fluff answers. If something is a bad idea, say so. If something is broken, say so plainly. He is a "AI Assisted Developer" — he directs the build through natural language and product thinking, not by writing code himself.
 The Development Pipeline — critical, read carefully
@@ -3491,3 +3491,17 @@ Commit/push keyword: `bugfixes-whatsapp-toggle-receipt`
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-16] Referral: Bank Error Messages, Withdrawal History Index Fix
+
+#### Fixed
+- **Bank save error messages** — Paystack responses now mapped to vendor-friendly text using `resolveData.code` field. "Check parameters or try again" → "Could not verify this account. Please check your bank and account number, then try again." `invalid_bank_code` → "This bank could not be recognized. Please re-select your bank from the list." `invalid_account` → "This account number doesn't exist at [bank]. Please double-check your account number." Removed duplicate `PAYSTACK_SECRET_KEY` validation check.
+- **`referral-withdrawals.js` Firestore index error** — Removed `.orderBy('createdAt', 'desc')` from `withdrawal_requests` query (required composite index on `userId` + `createdAt`). Fetched 50 docs, sorted client-side by `createdAt` descending.
+- **`admin-referrals.js` Firestore index errors** — Removed `.orderBy('createdAt', 'desc')` and `.offset()` from both `referralRewards` and `withdrawal_requests` queries. Fetches 200 docs, sorts and paginates client-side. Also fixed admin withdrawals query (`.where('status').orderBy('createdAt')` required composite index on `status` + `createdAt`).
+
+#### Changed
+- `src/api-handlers/referral-bank-save.js` — Added `resolveData.code` check for Paystack error codes. Generic fallback now returns fixed user-friendly message instead of raw Paystack text. Removed duplicate `PAYSTACK_SECRET_KEY` check (was at lines 78-83, same check already at lines 22-28).
+- `src/api-handlers/referral-withdrawals.js` — Removed `.orderBy('createdAt', 'desc')`. Added client-side sort by `createdAt` descending.
+- `src/api-handlers/admin-referrals.js` — Removed `.orderBy('createdAt', 'desc')` and `.offset()` from `rewards` and `withdrawals` actions. Added client-side sort and pagination. Added `total` count to response.
