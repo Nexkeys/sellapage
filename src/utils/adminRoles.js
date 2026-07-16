@@ -23,7 +23,8 @@ export async function getAdminRole(uid) {
     const data = snap.data()
     if (data.active === false) return null
     return data.role || null
-  } catch {
+  } catch (err) {
+    console.error('[getAdminRole] Error:', err)
     return null
   }
 }
