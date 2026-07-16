@@ -149,15 +149,17 @@ function OrdersTab({ store, activeThemeObj }) {
           Use the store checkout and direct contact options to start or follow
           up on an order with this business.
         </p>
-        <a
-          href={buildEnquiryURL(store?.whatsappNumber, store?.businessName)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1fba5a] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm"
-        >
-          <MessageCircle size={15} />
-          Start an Order
-        </a>
+        {store.showWhatsApp !== false && (
+          <a
+            href={buildEnquiryURL(store?.whatsappNumber, store?.businessName)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1fba5a] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm"
+          >
+            <MessageCircle size={15} />
+            Start an Order
+          </a>
+        )}
       </div>
     </div>
   );
@@ -417,20 +419,22 @@ function StoreCheckoutModal({
           {step === "delivery" && (
             <div className="space-y-4">
               {deliveryZones.length === 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
                   <p>
                     This seller hasn&apos;t set up delivery zones yet — contact
                     them on WhatsApp to arrange delivery.
                   </p>
-                  <a
-                    href={buildEnquiryURL(store.whatsappNumber, store.businessName)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 mt-3 text-green-700 font-semibold hover:underline"
-                  >
-                    <MessageCircle size={14} />
-                    Chat on WhatsApp
-                  </a>
+                  {store.showWhatsApp !== false && (
+                    <a
+                      href={buildEnquiryURL(store.whatsappNumber, store.businessName)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-3 text-green-700 font-semibold hover:underline"
+                    >
+                      <MessageCircle size={14} />
+                      Chat on WhatsApp
+                    </a>
+                  )}
                 </div>
               ) : (
                 <>
@@ -1201,24 +1205,26 @@ export default function StorePage() {
                     <div
                       className={`flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3 ${store.description ? "" : "mt-6"}`}
                     >
-                      <a
-                        href={buildEnquiryURL(
-                          store.whatsappNumber,
-                          store.businessName,
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`inline-flex items-center justify-center gap-2 px-6 py-3 transition-all shadow-xl shadow-black/10 ${activeThemeObj.structuralStyle.buttonClasses}`}
-                        style={{
-                          backgroundColor:
-                            themeAccent !== activeThemeObj.defaultColors.accent
-                              ? themeAccent
-                              : undefined,
-                        }}
-                      >
-                        <MessageCircle size={15} />
-                        Chat on WhatsApp
-                      </a>
+                      {store.showWhatsApp !== false && (
+                        <a
+                          href={buildEnquiryURL(
+                            store.whatsappNumber,
+                            store.businessName,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center justify-center gap-2 px-6 py-3 transition-all shadow-xl shadow-black/10 ${activeThemeObj.structuralStyle.buttonClasses}`}
+                          style={{
+                            backgroundColor:
+                              themeAccent !== activeThemeObj.defaultColors.accent
+                                ? themeAccent
+                                : undefined,
+                          }}
+                        >
+                          <MessageCircle size={15} />
+                          Chat on WhatsApp
+                        </a>
+                      )}
                       {products.length > 0 && (
                         <button
                           onClick={scrollToAll}
@@ -1232,24 +1238,29 @@ export default function StorePage() {
                       )}
                     </div>
 
-                    {vendorType === "both" && (
-                      <button
-                        onClick={() => navigate(`/${store.storeName}/services`)}
-                        className="mt-4 text-sm font-semibold text-white/90 hover:text-white underline underline-offset-4 transition-colors"
-                      >
-                        View Our Services →
-                      </button>
-                    )}
-                    {store?.whatsappCommunityLink && (
-                      <a
-                        href={store.whatsappCommunityLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white px-5 py-2.5 rounded-2xl font-bold text-xs transition-all border border-white/25 backdrop-blur-sm"
-                      >
-                        <MessageCircle size={13} fill="currentColor" />
-                        Join Our WhatsApp Community
-                      </a>
+                    {(vendorType === "both" || store?.whatsappCommunityLink) && (
+                      <div className="flex flex-wrap items-center gap-3 mt-4">
+                        {vendorType === "both" && (
+                          <button
+                            onClick={() => navigate(`/${store.storeName}/services`)}
+                            className="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white px-5 py-2.5 rounded-2xl font-bold text-xs transition-all border border-white/25 backdrop-blur-sm"
+                          >
+                            View Our Services
+                            <ArrowRight size={13} />
+                          </button>
+                        )}
+                        {store?.whatsappCommunityLink && (
+                          <a
+                            href={store.whatsappCommunityLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white px-5 py-2.5 rounded-2xl font-bold text-xs transition-all border border-white/25 backdrop-blur-sm"
+                          >
+                            <MessageCircle size={13} fill="currentColor" />
+                            Join Our WhatsApp Community
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
 

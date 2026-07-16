@@ -1048,6 +1048,7 @@ export default function Dashboard() {
         businessName: formData.businessName.trim(),
         storeName: formData.storeName.trim(),
         whatsappNumber: formData.whatsappNumber.trim(),
+        showWhatsApp: formData.showWhatsApp,
         description: formData.description.trim(),
         themeColor: formData.themeColor || "",
         vendorType: formData.vendorType,
@@ -1808,7 +1809,7 @@ export default function Dashboard() {
         />
       )}
       {activeTab === 'referral-program' && (
-        <ReferralTab token={token} />
+        <ReferralTab user={user} />
       )}
       {activeTab === 'google-ads' && (
         <GoogleAdsTab

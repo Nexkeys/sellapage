@@ -215,16 +215,18 @@ export default function StoreNavbar({
             )}
 
             {/* Chat button */}
-            <a
-              href={buildEnquiryURL(store?.whatsappNumber, store?.businessName)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-1.5 active:scale-95 px-3 py-2 sm:px-4 text-xs transition-all shadow-sm whitespace-nowrap ${activeThemeObj?.structuralStyle?.buttonClasses || "bg-[#25D366] hover:bg-[#1fba5a] text-white rounded-xl font-bold"}`}
-            >
-              <MessageCircle size={14} />
-              <span className="hidden sm:inline">Chat with us</span>
-              <span className="sm:hidden">Chat</span>
-            </a>
+            {store.showWhatsApp !== false && (
+              <a
+                href={buildEnquiryURL(store?.whatsappNumber, store?.businessName)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-1.5 active:scale-95 px-3 py-2 sm:px-4 text-xs transition-all shadow-sm whitespace-nowrap ${activeThemeObj?.structuralStyle?.buttonClasses || "bg-[#25D366] hover:bg-[#1fba5a] text-white rounded-xl font-bold"}`}
+              >
+                <MessageCircle size={14} />
+                <span className="hidden sm:inline">Chat with us</span>
+                <span className="sm:hidden">Chat</span>
+              </a>
+            )}
           </div>
         </div>
 

@@ -74,6 +74,7 @@ export default function SettingsTab({
     businessName: store?.businessName || '',
     storeName: store?.storeName || '',
     whatsappNumber: store?.whatsappNumber || '',
+    showWhatsApp: store?.showWhatsApp !== false,
     description: store?.description || '',
     vendorType: store?.vendorType || 'products',
   })
@@ -93,10 +94,11 @@ export default function SettingsTab({
       businessName: store?.businessName || '',
       storeName: store?.storeName || '',
       whatsappNumber: store?.whatsappNumber || '',
+      showWhatsApp: store?.showWhatsApp !== false,
       description: store?.description || '',
       vendorType: store?.vendorType || 'products',
     })
-  }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.description, store?.vendorType])
+  }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.showWhatsApp, store?.description, store?.vendorType])
 
 
   const handleSlugChange = e => {
@@ -289,6 +291,21 @@ export default function SettingsTab({
             placeholder="+234 801 234 5678"
           />
           <p className="text-gray-400 text-xs mt-1.5">Used for customer order and booking messages from your public page.</p>
+        </div>
+
+        {/* Show WhatsApp Toggle */}
+        <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
+          <div>
+            <p className="text-xs font-bold text-gray-700">Show Chat button on store page</p>
+            <p className="text-gray-400 text-xs mt-0.5">Visitors will see a "Chat on WhatsApp" button</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setForm(p => ({ ...p, showWhatsApp: !p.showWhatsApp }))}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.showWhatsApp ? 'bg-green-600' : 'bg-gray-300'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.showWhatsApp ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
         </div>
 
 

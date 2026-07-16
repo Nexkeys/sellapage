@@ -79,11 +79,13 @@ const styles = StyleSheet.create({
 })
 
 function formatNaira(amount) {
-  return `₦${Number(amount || 0).toLocaleString('en-NG')}`
+  return `NGN ${Number(amount || 0).toLocaleString('en-NG')}`
 }
 
 function formatDate(date) {
-  const d = date ? new Date(date) : new Date()
+  if (!date) return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  if (isNaN(d.getTime())) return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   return d.toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',

@@ -37,7 +37,7 @@ Auth	Firebase Auth
 Payments	Paystack	Subaccount split-payment, one per vendor
 Logistics	Sendbox	Rate calc + shipment creation/tracking
 AI descriptions	NVIDIA NIM	
-Email	Resend	RESEND_FROM_EMAIL unset, pending domain verification
+Email	Resend	RESEND_FROM_EMAIL domain verified
 Push	Firebase Cloud Messaging	
 Media	Cloudinary	
 Code execution	Cursor / Codex / Antigravity	
@@ -624,8 +624,7 @@ https://sellapage.com.ng — hosted on Vercel, GitHub CI/CD, auto-deploy on push
 ## OPEN BUGS & KNOWN ISSUES
 
 ### Active Bugs
-1. **Status change emails not sent** — When vendor changes order status via StatusPicker dropdown (confirmed/dispatched/cancelled), no email is sent to the customer. Only `mark-delivered.js` sends an email (delivered status only via separate button). Fix needed: add email send to the `onUpdateOrder` handler for all status changes.
-
+(none)
 
 ### Resolved Bugs (Historical)
 - Bug 0: Dual service worker conflict — FIXED
@@ -637,6 +636,10 @@ https://sellapage.com.ng — hosted on Vercel, GitHub CI/CD, auto-deploy on push
 - Bug 6: Download Receipt silent failure (cartItems not saved) — FIXED (paystack-webhook.js now saves cartItems array)
 - Bug 7: Cron job pointing to dead Netlify URL — FIXED (updated to Vercel route)
 - Bug 8: OrdersTab isPro crash (undefined variable) — FIXED
+- Bug 9: Status change emails not sent — FIXED (update-order-status.js)
+- Bug 10: ReferralTab "token is not defined" crash — FIXED
+- Bug 11: Receipt₦ symbol showing as ¦ — FIXED (NGN fallback)
+- Bug 12: Receipt "Invalid Date" — FIXED (Firestore Timestamp handling)
 - Bug 9: Review page Done button did nothing — FIXED (navigate('/'))
 - Bug 10: Submit review storeId lookup — FIXED (orderDoc.ref.parent.parent.id)
 
@@ -3366,6 +3369,59 @@ referralBankVerified: boolean — Bank verification status
 6. After 14 days → pending moves to available
 7. Vendor A requests withdrawal (min ₦5,000) → withdrawal request created
 8. Admin approves → bank transfer sent
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+## 2026-07-16 — Bug Fixes: ReferralTab, WhatsApp Toggle, Hero Layout, Receipt
+
+Commit/push keyword: `bugfixes-whatsapp-toggle-receipt`
+
+### Fix 1: ReferralTab "token is not defined" Error
+
+**Problem:** Clicking "Referral Program" tab crashed with `ReferenceError: token is not defined`. Dashboard.jsx passed `<ReferralTab token={token} />` but `token` only existed inside async handler functions, not at component scope.
+
+**Fix:**
+- `Dashboard.jsx` — Changed `<ReferralTab token={token} />` to `<ReferralTab user={user} />`
+- `ReferralTab.jsx` — Changed prop from `{ token }` to `{ user }`, added `useState` for token, added `useEffect` to call `user.getIdToken()` on mount
+
+### Fix 2: WhatsApp Chat Button Toggle
+
+**Problem:** Vendors couldn't hide the "Chat on WhatsApp" button from their store page. Some vendors don't want customers accessing their personal WhatsApp number.
+
+**Fix:**
+- `Settings.jsx` — Added `showWhatsApp` to form state, added toggle switch below WhatsApp number field ("Show Chat button on store page"), defaults to `true`
+- `Dashboard.jsx` — `handleSettingsSave` now saves `showWhatsApp` to Firestore
+- `StorePage.jsx` — Hero "Chat on WhatsApp" button, checkout "no delivery zones" link, and Orders tab "Start an Order" button all wrapped in `store.showWhatsApp !== false` check
+- `StoreNavbar.jsx` — "Chat with us" button wrapped in `store.showWhatsApp !== false` check
+- Community links (`whatsappCommunityLink`) left untouched — separate feature, not direct personal chat
+
+**Firestore field:** `showWhatsApp: boolean` (default `true` for existing vendors via `!== false` check)
+
+### Fix 3: StorePage Hero Button Layout
+
+**Problem:** "View Our Services →" was a plain text underline link while "Join Our WhatsApp Community" was a styled button. They sat on separate rows with different sizing, looking misaligned.
+
+**Fix:**
+- `StorePage.jsx` — Both "View Our Services" and "Join Our WhatsApp Community" now wrapped in a single `flex flex-wrap items-center gap-3 mt-4` container with matching `bg-white/15 hover:bg-white/25 rounded-2xl` button styles
+- `ServiceStorePage.jsx` — Same fix applied to "Shop Our Products" + "Join Our WhatsApp Community" pair. Added `ArrowRight` import from lucide-react
+
+### Fix 4: Receipt Currency Symbol
+
+**Problem:** PDF receipt showed `¦50` instead of `₦50`. The `@react-pdf/renderer` Helvetica font doesn't support the₦ (U+20A6) character.
+
+**Fix:**
+- `src/utils/generateReceipt.jsx` — Changed `formatNaira()` from `₦${...}` to `NGN ${...}`
+
+### Fix 5: Receipt "Invalid Date"
+
+**Problem:** Receipt showed "Invalid Date" for the Date field. Firestore Timestamp objects passed to `new Date(date)` without conversion, and `new Date(undefined)` produces "Invalid Date".
+
+**Fix:**
+- `src/utils/generateReceipt.jsx` — `formatDate()` now handles Firestore Timestamp objects (`date?.toDate ? date.toDate() : new Date(date)`), falls back to current date if parsing fails (`isNaN(d.getTime())`)
 
 ### Build Status
 

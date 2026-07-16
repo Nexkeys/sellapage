@@ -13,7 +13,8 @@ function formatKobo(amount) {
   return `₦${(amount / 100).toLocaleString('en-NG')}`
 }
 
-export default function ReferralTab({ token }) {
+export default function ReferralTab({ user }) {
+  const [token, setToken] = useState(null)
   const [store, setStore] = useState(null)
   const [referralCode, setReferralCode] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -66,6 +67,12 @@ export default function ReferralTab({ token }) {
     { name: 'Wema Bank', code: '035' },
     { name: 'Zenith Bank', code: '057' },
   ]
+
+  useEffect(() => {
+    if (user) {
+      user.getIdToken().then(setToken)
+    }
+  }, [user])
 
   const fetchStore = useCallback(async () => {
     try {
