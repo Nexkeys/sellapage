@@ -1,6 +1,14 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -11,13 +19,34 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const { bankName, bankCode, accountNumber } = req.body
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    console.error('[referral-bank-save] PAYSTACK_SECRET_KEY is not set')
+    return res.status(500).json({
+      error: 'payment_not_configured',
+      message: 'Bank verification is not available right now. Please contact support.',
+    })
+  }
+
+  let body
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+  } catch {
+    return res.status(400).json({ error: 'Invalid request body' })
+  }
+
+  const { bankName, bankCode, accountNumber } = body || {}
   if (!bankName || !bankCode || !accountNumber) {
-    return res.status(400).json({ error: 'Missing bank name, code, or account number' })
+    return res.status(400).json({
+      error: 'missing_fields',
+      message: 'Please select a bank and enter your account number.',
+    })
   }
 
   if (!/^\d{10}$/.test(accountNumber)) {
-    return res.status(400).json({ error: 'Account number must be exactly 10 digits' })
+    return res.status(400).json({
+      error: 'invalid_account_number',
+      message: 'Account number must be exactly 10 digits.',
+    })
   }
 
   try {
@@ -33,20 +62,64 @@ export default async function handler(req, res) {
 
     const uid = decodedToken.uid
 
-    const resolveRes = await fetch(
-      `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        },
-      }
-    )
+    const resolveUrl = `https://api.paystack.co/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`
+    console.log(`[referral-bank-save] Resolving account: bank=${bankName} code=${bankCode} number=${accountNumber}`)
+
+    const resolveRes = await fetch(resolveUrl, {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    })
 
     const resolveData = await resolveRes.json()
-    if (!resolveData.status || !resolveData.data?.account_name) {
+    console.log(`[referral-bank-save] Paystack response: status=${resolveRes.ok} payload=`, JSON.stringify(resolveData))
+
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      return res.status(500).json({
+        error: 'payment_not_configured',
+        message: 'Bank verification is not available right now. Please contact support.',
+      })
+    }
+
+    if (resolveRes.status === 401 || resolveRes.status === 403) {
+      console.error('[referral-bank-save] Paystack auth failed. Status:', resolveRes.status)
+      return res.status(500).json({
+        error: 'paystack_auth_failed',
+        message: 'Bank verification is temporarily unavailable. Please try again later.',
+      })
+    }
+
+    if (!resolveRes.ok || resolveData.status === false) {
+      const psMsg = resolveData.message || ''
+      const lowerMsg = psMsg.toLowerCase()
+
+      if (lowerMsg.includes('account') && (lowerMsg.includes('not found') || lowerMsg.includes('does not exist'))) {
+        return res.status(400).json({
+          error: 'account_not_found',
+          message: `This account number doesn't exist at ${bankName}. Please double-check your account number.`,
+        })
+      }
+
+      if (lowerMsg.includes('bank') && (lowerMsg.includes('invalid') || lowerMsg.includes('not recognized'))) {
+        return res.status(400).json({
+          error: 'invalid_bank',
+          message: 'This bank could not be recognized. Please re-select your bank from the list.',
+        })
+      }
+
       return res.status(400).json({
-        error: 'account_not_found',
-        message: 'Could not verify account. Please check your bank and account number.',
+        error: 'resolve_failed',
+        message: psMsg || 'Could not verify this account. Please check your bank and account number, then try again.',
+      })
+    }
+
+    const accountName = resolveData.data?.account_name
+    if (!accountName) {
+      console.error('[referral-bank-save] No account_name in response:', JSON.stringify(resolveData))
+      return res.status(400).json({
+        error: 'no_account_name',
+        message: 'Could not retrieve the account holder name. Please try again.',
       })
     }
 
@@ -54,16 +127,21 @@ export default async function handler(req, res) {
       referralBankName: bankName,
       referralBankCode: bankCode,
       referralBankAccount: accountNumber,
-      referralBankAccountName: resolveData.data.account_name,
+      referralBankAccountName: accountName,
       referralBankVerified: true,
     })
 
+    console.log(`[referral-bank-save] Bank saved successfully for uid=${uid}: ${bankName} - ${accountName}`)
+
     return res.status(200).json({
       success: true,
-      accountName: resolveData.data.account_name,
+      accountName,
     })
   } catch (err) {
-    console.error('[referral-bank-save] Error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error('[referral-bank-save] Unexpected error:', err)
+    return res.status(500).json({
+      error: 'server_error',
+      message: 'Something went wrong. Please try again.',
+    })
   }
 }

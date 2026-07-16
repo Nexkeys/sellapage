@@ -3441,3 +3441,53 @@ Commit/push keyword: `bugfixes-whatsapp-toggle-receipt`
 - `src/api-handlers/referral-stats.js` — Removed `.orderBy('createdAt', 'desc')` from `referralRewards` query. Added client-side sort by `createdAt` descending.
 - `src/components/dashboard/Settings.jsx` — Added `onWhatsAppToggle` prop. Toggle button calls `onWhatsAppToggle(newVal)` on click instead of waiting for form save.
 - `src/pages/Dashboard.jsx` — Added `handleWhatsAppToggle(value)` function that saves `showWhatsApp` to Firestore and updates local store state. Passed as `onWhatsAppToggle` prop to SettingsTab.
+
+---
+
+### [2026-07-16] Referral Bank Account Flow — Dynamic Banks, Better Errors
+
+#### Added
+- **New API handler**: `src/api-handlers/get-banks.js`
+  - `GET /api/get-banks` — Fetches Nigerian bank list from Paystack `/bank` API
+  - Caches in Firestore `cache/bankList` doc with 24-hour TTL
+  - Falls back to stale cache if Paystack API fails
+  - No auth required (public bank list)
+  - Returns `{ success, banks: [{ name, code, slug, longcode }] }`, sorted alphabetically
+  - Filters to active banks only
+
+- **Route**: Added `get-banks` case to `api/[...route].js`
+
+#### Changed
+- **`src/api-handlers/referral-bank-save.js`** — Full rewrite:
+  - Added CORS headers + OPTIONS handler
+  - Added `PAYSTACK_SECRET_KEY` validation before API call
+  - Added `encodeURIComponent()` for Paystack resolve URL parameters
+  - Added full Paystack response logging (`console.log`)
+  - Returns specific, vendor-friendly error messages:
+    - "This account number doesn't exist at [bank]" (account not found)
+    - "This bank could not be recognized" (invalid bank code)
+    - "Bank verification is not available right now. Please contact support." (missing API key)
+    - "Bank verification is temporarily unavailable" (Paystack auth failure)
+    - "Could not retrieve the account holder name" (no account_name in response)
+    - "Network error. Check your connection and try again." (catch-all)
+  - Added request body parsing with `JSON.parse` fallback
+  - Improved success logging with uid, bank name, account name
+
+- **`src/components/dashboard/ReferralTab.jsx`**:
+  - Removed hardcoded `NIGERIAN_BANKS` array (26 entries)
+  - Fetches banks from `GET /api/get-banks` on mount
+  - Added `banks`, `banksLoading`, `banksError` state
+  - Bank selector shows loading spinner while fetching
+  - Bank selector shows error state with "Tap to retry" button on failure
+  - "Verify & Save" button disabled when banks aren't loaded or no bank selected
+  - "Add Bank Account" button disabled when bank list failed to load
+  - Account number input shows helper text: "Enter your 10-digit Nigerian bank account number"
+  - Error display shows the actual API message (vendor-friendly)
+  - Network errors show "Network error. Please check your connection and try again."
+
+#### Removed
+- Hardcoded `NIGERIAN_BANKS` array from ReferralTab (replaced by dynamic Paystack bank list)
+
+### Build Status
+
+`npm run build` passed with zero errors.

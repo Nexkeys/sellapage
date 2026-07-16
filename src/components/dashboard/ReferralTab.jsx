@@ -45,41 +45,36 @@ export default function ReferralTab({ user, store }) {
   const [withdrawalHistory, setWithdrawalHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
-
-  const NIGERIAN_BANKS = [
-    { name: 'Access Bank', code: '044' },
-    { name: 'Citibank Nigeria', code: '023' },
-    { name: 'Ecobank Nigeria', code: '050' },
-    { name: 'Fidelity Bank', code: '070' },
-    { name: 'First Bank of Nigeria', code: '011' },
-    { name: 'First City Monument Bank', code: '214' },
-    { name: 'Globus Bank', code: '00100' },
-    { name: 'Guaranty Trust Bank', code: '058' },
-    { name: ' Heritage Bank', code: '030' },
-    { name: 'Keystone Bank', code: '082' },
-    { name: 'Kuda Bank', code: '090267' },
-    { name: 'Opay', code: '999991' },
-    { name: 'Palmpay', code: '999992' },
-    { name: 'Polaris Bank', code: '076' },
-    { name: 'Providus Bank', code: '101' },
-    { name: 'Stanbic IBTC Bank', code: '221' },
-    { name: 'Standard Chartered Bank', code: '068' },
-    { name: 'Sterling Bank', code: '232' },
-    { name: 'SunTrust Bank', code: '100' },
-    { name: 'Titan Trust Bank', code: '102' },
-    { name: 'Union Bank', code: '032' },
-    { name: 'United Bank for Africa', code: '033' },
-    { name: 'Unity Bank', code: '215' },
-    { name: 'VFD Microfinance Bank', code: '56' },
-    { name: 'Wema Bank', code: '035' },
-    { name: 'Zenith Bank', code: '057' },
-  ]
+  const [banks, setBanks] = useState([])
+  const [banksLoading, setBanksLoading] = useState(false)
+  const [banksError, setBanksError] = useState('')
 
   useEffect(() => {
     if (user) {
       user.getIdToken().then(setToken)
     }
   }, [user])
+
+  useEffect(() => {
+    const fetchBanks = async () => {
+      setBanksLoading(true)
+      setBanksError('')
+      try {
+        const res = await fetch(`${API_BASE}/api/get-banks`)
+        const data = await res.json()
+        if (data.success && data.banks?.length) {
+          setBanks(data.banks)
+        } else {
+          setBanksError(data.error || 'Failed to load bank list')
+        }
+      } catch {
+        setBanksError('Could not load bank list. Check your connection.')
+      } finally {
+        setBanksLoading(false)
+      }
+    }
+    fetchBanks()
+  }, [])
 
   useEffect(() => {
     if (store?.referralCode) {
@@ -205,12 +200,14 @@ export default function ReferralTab({ user, store }) {
         setBankAccount(bankForm.accountNumber)
         setBankAccountName(data.accountName)
         setShowBankForm(false)
+        setBankError('')
         setTimeout(() => setBankSuccess(''), 5000)
       } else {
-        setBankError(data.message || data.error || 'Failed to save bank details')
+        setBankError(data.message || 'Failed to verify account. Please check your details and try again.')
       }
-    } catch {
-      setBankError('Network error. Please try again.')
+    } catch (err) {
+      console.error('[ReferralTab] Bank save error:', err)
+      setBankError('Network error. Please check your connection and try again.')
     } finally {
       setBankSaving(false)
     }
@@ -256,7 +253,7 @@ export default function ReferralTab({ user, store }) {
     }
   }
 
-  const filteredBanks = NIGERIAN_BANKS.filter(b =>
+  const filteredBanks = banks.filter(b =>
     b.name.toLowerCase().includes(bankSearch.toLowerCase())
   )
 
@@ -417,8 +414,13 @@ export default function ReferralTab({ user, store }) {
                     Add your bank details to receive referral payouts.
                   </p>
                   <button
-                    onClick={() => setShowBankForm(true)}
-                    className="mt-3 bg-amber-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-amber-700 transition-all"
+                    onClick={() => {
+                      if (banks.length > 0 || !banksError) {
+                        setShowBankForm(true)
+                      }
+                    }}
+                    disabled={banksError && banks.length === 0}
+                    className="mt-3 bg-amber-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Add Bank Account
                   </button>
@@ -540,6 +542,15 @@ export default function ReferralTab({ user, store }) {
               </button>
             </div>
 
+            {bankError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{bankError}</span>
+                </p>
+              </div>
+            )}
+
             {bankSuccess && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-green-700 flex items-center gap-2">
@@ -548,52 +559,83 @@ export default function ReferralTab({ user, store }) {
               </div>
             )}
 
-            {bankError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-red-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" /> {bankError}
-                </p>
-              </div>
-            )}
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bank</label>
                 <div className="relative">
-                  <button
-                    onClick={() => setShowBankList(!showBankList)}
-                    className="w-full text-left border border-gray-300 rounded-lg py-2.5 px-3 text-sm bg-white hover:border-gray-400 transition-all flex items-center justify-between"
-                  >
-                    <span className={bankForm.bankName ? 'text-gray-900' : 'text-gray-400'}>
-                      {bankForm.bankName || 'Select your bank'}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </button>
-                  {showBankList && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      <div className="sticky top-0 bg-white p-2 border-b border-gray-100">
-                        <input
-                          type="text"
-                          placeholder="Search banks..."
-                          value={bankSearch}
-                          onChange={(e) => setBankSearch(e.target.value)}
-                          className="w-full text-sm border border-gray-200 rounded-lg py-2 px-3 focus:outline-none focus:border-green-500"
-                        />
-                      </div>
-                      {filteredBanks.map((bank) => (
-                        <button
-                          key={bank.code}
-                          onClick={() => {
-                            setBankForm(prev => ({ ...prev, bankName: bank.name, bankCode: bank.code }))
-                            setShowBankList(false)
-                            setBankSearch('')
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-all border-b border-gray-50 last:border-0"
-                        >
-                          {bank.name}
-                        </button>
-                      ))}
+                  {banksLoading ? (
+                    <div className="w-full border border-gray-200 rounded-lg py-2.5 px-3 text-sm bg-gray-50 flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                      <span className="text-gray-400">Loading banks...</span>
                     </div>
+                  ) : banksError ? (
+                    <div className="w-full border border-red-200 rounded-lg py-2.5 px-3 text-sm bg-red-50">
+                      <p className="text-red-600 text-xs mb-2">{banksError}</p>
+                      <button
+                        onClick={async () => {
+                          setBanksLoading(true)
+                          setBanksError('')
+                          try {
+                            const res = await fetch(`${API_BASE}/api/get-banks`)
+                            const data = await res.json()
+                            if (data.success && data.banks?.length) {
+                              setBanks(data.banks)
+                            } else {
+                              setBanksError(data.error || 'Failed to load bank list')
+                            }
+                          } catch {
+                            setBanksError('Could not load bank list. Check your connection.')
+                          } finally {
+                            setBanksLoading(false)
+                          }
+                        }}
+                        className="text-xs text-red-700 font-medium underline hover:text-red-800"
+                      >
+                        Tap to retry
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setShowBankList(!showBankList)}
+                        className="w-full text-left border border-gray-300 rounded-lg py-2.5 px-3 text-sm bg-white hover:border-gray-400 transition-all flex items-center justify-between"
+                      >
+                        <span className={bankForm.bankName ? 'text-gray-900' : 'text-gray-400'}>
+                          {bankForm.bankName || 'Select your bank'}
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </button>
+                      {showBankList && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          <div className="sticky top-0 bg-white p-2 border-b border-gray-100">
+                            <input
+                              type="text"
+                              placeholder="Search banks..."
+                              value={bankSearch}
+                              onChange={(e) => setBankSearch(e.target.value)}
+                              className="w-full text-sm border border-gray-200 rounded-lg py-2 px-3 focus:outline-none focus:border-green-500"
+                            />
+                          </div>
+                          {filteredBanks.length === 0 ? (
+                            <p className="text-sm text-gray-500 text-center py-4">No banks found</p>
+                          ) : (
+                            filteredBanks.map((bank) => (
+                              <button
+                                key={bank.code}
+                                onClick={() => {
+                                  setBankForm(prev => ({ ...prev, bankName: bank.name, bankCode: bank.code }))
+                                  setShowBankList(false)
+                                  setBankSearch('')
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-all border-b border-gray-50 last:border-0"
+                              >
+                                {bank.name}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -609,12 +651,13 @@ export default function ReferralTab({ user, store }) {
                   placeholder="0123456789"
                   className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-green-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Enter your 10-digit Nigerian bank account number</p>
               </div>
 
               <button
                 onClick={saveBank}
-                disabled={bankSaving}
-                className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                disabled={bankSaving || banksLoading || !!banksError || !bankForm.bankCode}
+                className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {bankSaving ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</>

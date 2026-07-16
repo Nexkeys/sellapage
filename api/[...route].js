@@ -144,6 +144,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/referral-resolve-code.js")
         return handler(req, res)
       }
+      case "get-banks": {
+        const { default: handler } = await import("../src/api-handlers/get-banks.js")
+        return handler(req, res)
+      }
       case "referral-bank-save": {
         const { default: handler } = await import("../src/api-handlers/referral-bank-save.js")
         return handler(req, res)
