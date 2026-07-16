@@ -35,6 +35,19 @@ export default function Admin() {
   const [approvingId, setApprovingId] = useState(null);
   const LIMIT = 10;
 
+  // ── Tab C: Referrals State ──
+  const [refStats, setRefStats] = useState(null);
+  const [refRewards, setRefRewards] = useState([]);
+  const [refLoading, setRefLoading] = useState(false);
+  const [refError, setRefError] = useState('');
+
+  // ── Tab D: Withdrawals State ──
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [wdLoading, setWdLoading] = useState(false);
+  const [wdError, setWdError] = useState('');
+  const [wdStatusFilter, setWdStatusFilter] = useState('pending');
+  const [processingWd, setProcessingWd] = useState(null);
+
   // ── Fetch Actions ──
   const fetchHealth = useCallback(async () => {
     setHealthLoading(true);
@@ -85,6 +98,67 @@ export default function Admin() {
     }
   }, []);
 
+  const fetchReferrals = useCallback(async () => {
+    setRefLoading(true);
+    setRefError('');
+    try {
+      const [statsRes, rewardsRes] = await Promise.all([
+        fetch('/api/admin-referrals?action=stats', {
+          headers: { 'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '' },
+        }),
+        fetch('/api/admin-referrals?action=rewards&limit=20', {
+          headers: { 'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '' },
+        }),
+      ]);
+      if (!statsRes.ok || !rewardsRes.ok) throw new Error('Failed to load referral data');
+      const statsData = await statsRes.json();
+      const rewardsData = await rewardsRes.json();
+      setRefStats(statsData.stats);
+      setRefRewards(rewardsData.rewards || []);
+    } catch (err) {
+      setRefError('Failed to load referral data.');
+    } finally {
+      setRefLoading(false);
+    }
+  }, []);
+
+  const fetchWithdrawals = useCallback(async (status = 'pending') => {
+    setWdLoading(true);
+    setWdError('');
+    try {
+      const res = await fetch(`/api/admin-referrals?action=withdrawals&status=${status}&limit=50`, {
+        headers: { 'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '' },
+      });
+      if (!res.ok) throw new Error('Failed to load withdrawals');
+      const data = await res.json();
+      setWithdrawals(data.withdrawals || []);
+    } catch (err) {
+      setWdError('Failed to load withdrawals.');
+    } finally {
+      setWdLoading(false);
+    }
+  }, []);
+
+  const processWithdrawal = useCallback(async (withdrawalId, status) => {
+    setProcessingWd(withdrawalId);
+    try {
+      const res = await fetch('/api/admin-referrals?action=process-withdrawal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '',
+        },
+        body: JSON.stringify({ withdrawalId, status }),
+      });
+      if (!res.ok) throw new Error('Failed to process withdrawal');
+      fetchWithdrawals(wdStatusFilter);
+    } catch (err) {
+      console.error('processWithdrawal error:', err);
+    } finally {
+      setProcessingWd(null);
+    }
+  }, [wdStatusFilter, fetchWithdrawals]);
+
   // ── Lifecycle Hooks ──
   useEffect(() => {
     if (user?.uid === ADMIN_UID) {
@@ -92,6 +166,10 @@ export default function Admin() {
         fetchHealth();
       } else if (activeTab === 'directory' && !dirData) {
         fetchDirectory(page, search);
+      } else if (activeTab === 'referrals' && !refStats) {
+        fetchReferrals();
+      } else if (activeTab === 'withdrawals') {
+        fetchWithdrawals(wdStatusFilter);
       }
     }
   }, [user, activeTab]);
@@ -245,6 +323,22 @@ export default function Admin() {
               }`}
             >
               <Users size={16} /> Merchant Directory
+            </button>
+            <button
+              onClick={() => setActiveTab('referrals')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'referrals' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+              }`}
+            >
+              <TrendingUp size={16} /> Referrals
+            </button>
+            <button
+              onClick={() => setActiveTab('withdrawals')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'withdrawals' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+              }`}
+            >
+              <Clock size={16} /> Withdrawals
             </button>
           </div>
         </div>
@@ -776,6 +870,136 @@ export default function Admin() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB C: REFERRALS */}
+        {/* ============================================================== */}
+        {activeTab === 'referrals' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {refError && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{refError}</div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-gray-800">Referral Program Overview</h2>
+              <button onClick={fetchReferrals} disabled={refLoading} className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">
+                {refLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Refresh
+              </button>
+            </div>
+
+            {refLoading && !refStats ? (
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-green-600" size={24} /></div>
+            ) : refStats && (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Referrals', value: refStats.totalReferrals },
+                    { label: 'Pending Rewards', value: `₦${(refStats.totalPending / 100).toLocaleString()}` },
+                    { label: 'Paid Out', value: `₦${(refStats.totalRewardsPaid / 100).toLocaleString()}` },
+                    { label: 'Pending Withdrawals', value: refStats.pendingWithdrawals },
+                  ].map(s => (
+                    <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-xs p-4">
+                      <p className="text-xs text-gray-500 font-medium">{s.label}</p>
+                      <p className="text-xl font-black text-gray-900 mt-1">{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <h3 className="font-bold text-sm text-gray-800">Recent Rewards</h3>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {refRewards.length === 0 ? (
+                      <div className="p-8 text-center text-gray-400 text-sm">No referral rewards yet.</div>
+                    ) : refRewards.map(r => (
+                      <div key={r.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{r.referredUserName || r.referredUserEmail || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">{r.plan} plan · {new Date(r.createdAt).toLocaleDateString('en-NG')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-green-600">₦{(r.rewardAmount / 100).toLocaleString()}</p>
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${r.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB D: WITHDRAWALS */}
+        {/* ============================================================== */}
+        {activeTab === 'withdrawals' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {wdError && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{wdError}</div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-gray-800">Withdrawal Queue</h2>
+              <div className="flex gap-2">
+                {['pending', 'completed', 'rejected', 'all'].map(status => (
+                  <button
+                    key={status}
+                    onClick={() => { setWdStatusFilter(status); fetchWithdrawals(status); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${wdStatusFilter === status ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {wdLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-green-600" size={24} /></div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+                <div className="divide-y divide-gray-50">
+                  {withdrawals.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400 text-sm">No withdrawal requests.</div>
+                  ) : withdrawals.map(w => (
+                    <div key={w.id} className="px-4 py-4 hover:bg-gray-50/50 transition-colors">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{w.storeName || 'Unknown Store'}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{w.bankName} · {w.bankAccount} · {w.bankAccountName}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{new Date(w.createdAt).toLocaleString('en-NG')}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-base font-black text-gray-900">₦{(w.amount / 100).toLocaleString()}</p>
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full mt-1 inline-block ${w.status === 'completed' ? 'bg-green-100 text-green-700' : w.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{w.status}</span>
+                          {w.status === 'pending' && (
+                            <div className="flex gap-2 mt-2 justify-end">
+                              <button
+                                onClick={() => processWithdrawal(w.id, 'completed')}
+                                disabled={processingWd === w.id}
+                                className="text-[11px] font-bold bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-all disabled:opacity-50"
+                              >
+                                {processingWd === w.id ? '...' : 'Approve'}
+                              </button>
+                              <button
+                                onClick={() => processWithdrawal(w.id, 'rejected')}
+                                disabled={processingWd === w.id}
+                                className="text-[11px] font-bold bg-red-100 text-red-700 px-3 py-1 rounded-lg hover:bg-red-200 transition-all disabled:opacity-50"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

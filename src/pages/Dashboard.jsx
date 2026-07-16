@@ -65,6 +65,7 @@ import DeliveryTab from "../components/dashboard/DeliveryTab";
 import LedgerTab from "../components/dashboard/LedgerTab";
 import CustomDomainTab from "../components/dashboard/CustomDomainTab";
 import CACVerificationTab from "../components/dashboard/CACVerificationTab";
+import ReferralTab from "../components/dashboard/ReferralTab";
 import GoogleAdsTab from "../components/dashboard/GoogleAdsTab";
 
 const EMPTY_FORM = {
@@ -1805,6 +1806,9 @@ export default function Dashboard() {
           isPro={isPro}
           navigateTo={setActiveTab}
         />
+      )}
+      {activeTab === 'referral-program' && (
+        <ReferralTab token={token} />
       )}
       {activeTab === 'google-ads' && (
         <GoogleAdsTab

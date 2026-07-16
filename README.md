@@ -2869,6 +2869,16 @@ the Features listed here are not all what the admin panel would engrave more sti
 - Export CAC verification data as CSV
 - Bulk email to unverified vendors encouraging CAC verification
 
+**Custom Domain Admin Features (add to Admin Panel):**
+- Total custom domains connected count (customDomain field exists)
+- Total active/verified domains count (customDomainStatus: 'active')
+- Total pending DNS setup count (customDomainStatus: 'pending')
+- Per-vendor custom domain table: vendor name, store URL, custom domain, status (active/pending/removed), date added
+- Filter: active / pending / all
+- Search by domain name or vendor name
+- Export custom domain data as CSV
+- Bulk email to vendors with pending domains encouraging DNS setup
+
 ---
 
 ## 2026-07-14 — Sellapage-Managed Ads: Payment Flow + Campaign Form
@@ -3289,6 +3299,73 @@ DomainResolver navigates to /denver-store
     ↓
 StorePage renders the correct store
 ```
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+## 2026-07-16 — Referral System: Full Implementation (Phases 1–13)
+
+Commit/push keyword: `referral-system`
+
+Complete vendor referral program. Vendors share referral links, earn ₦500–₦₂,₀₀₀ when referred vendors upgrade to paid plans. Withdrawals via bank transfer with admin approval queue.
+
+### Files Created
+
+- **`src/api-handlers/referral-generate-code.js`** — Generates unique `SP-XXXXXXXX` codes, saves to store doc with wallet fields
+- **`src/api-handlers/referral-track.js`** — Increments referrer's click count when referral link is visited
+- **`src/api-handlers/referral-resolve-code.js`** — Resolves referral code to referrer UID (for signup flow)
+- **`src/api-handlers/referral-bank-save.js`** — Saves bank account details, verifies via Paystack resolve API
+- **`src/api-handlers/referral-withdraw-request.js`** — Creates withdrawal requests, enforces ₦5,000 minimum, single pending request limit
+- **`src/api-handlers/referral-stats.js`** — Returns referral stats + recent rewards for dashboard
+- **`src/api-handlers/referral-withdrawals.js`** — Returns vendor's withdrawal history
+- **`src/api-handlers/admin-referrals.js`** — Admin endpoint: referral stats, all rewards, all withdrawals, process withdrawal (approve/reject)
+- **`src/components/dashboard/ReferralTab.jsx`** — Full referral dashboard UI: hero, code/link, share buttons, wallet, progress bar, stats, recent referrals, withdrawal modal, bank setup modal
+
+### Files Modified
+
+- **`src/firebase/auth.js`** — Added `increment` import; increments referrer's `referralTotalSignups` on signup
+- **`src/pages/Login.jsx`** — Calls `/api/referral-track` when referral code is detected in URL
+- **`src/pages/Dashboard.jsx`** — Imported ReferralTab, wired `referral-program` tab
+- **`src/components/dashboard/DashboardLayout.jsx`** — Added `referral-program` nav item with Share2 icon
+- **`src/api-handlers/paystack-webhook.js`** — Added referral reward creation after first paid subscription (₦500 growth, ₦1,000 pro, ₦2,000 premium), increments referrer's pending balance
+- **`api/[...route].js`** — Added 7 new route cases: `referral-generate-code`, `referral-track`, `referral-resolve-code`, `referral-bank-save`, `referral-withdraw-request`, `referral-stats`, `referral-withdrawals`, `admin-referrals`
+
+### Firestore Fields (stores collection)
+
+```
+referralCode: string          — Unique "SP-XXXXXXXX" code
+referralPending: number       — Pending rewards (kobo) — 14-day hold
+referralAvailable: number     — Available for withdrawal (kobo)
+referralWithdrawn: number     — Total withdrawn (kobo)
+referralTotalEarned: number   — Lifetime earnings (kobo)
+referralTotalClicks: number   — Link click count
+referralTotalSignups: number  — Signup count from referral
+referralTotalPaid: number     — Paid referral count
+referralBankName: string      — Bank name
+referralBankCode: string      — Bank code
+referralBankAccount: string   — Account number
+referralBankAccountName: string — Resolved account name
+referralBankVerified: boolean — Bank verification status
+```
+
+### Firestore Collections
+
+- `referralRewards` — Reward records (referrerId, referredUserId, plan, rewardAmount, status, availableAt)
+- `withdrawal_requests` — Withdrawal audit log (userId, amount, bank details, status, processedAt, processedBy)
+
+### Reward Flow
+
+1. Vendor A shares referral link → `?ref=SP-XXXXXXXX`
+2. Vendor B visits → click tracked via `/api/referral-track`
+3. Vendor B signs up → `referredBy` saved to Firestore, referrer's `referralTotalSignups` incremented
+4. Vendor B pays for first plan → Paystack webhook creates reward record, credits referrer's pending balance
+5. 14-day holding period → `availableAt` field on reward record
+6. After 14 days → pending moves to available
+7. Vendor A requests withdrawal (min ₦5,000) → withdrawal request created
+8. Admin approves → bank transfer sent
 
 ### Build Status
 

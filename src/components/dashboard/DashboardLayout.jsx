@@ -27,6 +27,7 @@ import {
   Truck,
   BookOpen,
   Target,
+  Share2,
 } from "lucide-react";
 import { logoutSeller } from "../../firebase/auth";
 
@@ -46,6 +47,7 @@ const NAV_ITEMS = [
   { id: "marketing", label: "Marketing", icon: Megaphone },
   { id: "discounts", label: "Discounts", icon: Percent },
   { id: "reviews", label: "Reviews", icon: Star },
+  { id: "referral-program", label: "Referral Program", icon: Share2 },
   { id: "google-ads", label: "Google Ads", icon: Target },
   { type: "group", label: "Business" },
   { id: "online-store", label: "Business Page", icon: Globe },

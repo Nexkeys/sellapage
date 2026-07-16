@@ -688,6 +688,43 @@ export default async function handler(req, res) {
 
   await batch.commit();
 
+  // --- Referral Reward Creation ---
+  try {
+    const referredById = storeCheckData.referredBy
+    if (referredById) {
+      const referralSnap = await db.collection("stores").doc(storeId).collection("subscriptions").limit(2).get()
+      if (referralSnap.size === 1) {
+        const referrerSnap = await db.collection("stores").doc(referredById).get()
+        if (referrerSnap.exists) {
+          const REFERRAL_REWARDS = { growth: 50000, pro: 100000, premium: 200000 }
+          const rewardAmount = REFERRAL_REWARDS[plan] || 0
+          if (rewardAmount > 0) {
+            await db.collection("referralRewards").add({
+              referrerId: referredById,
+              referredUserId: storeId,
+              referredUserEmail: storeCheckData.email || "",
+              referredUserName: storeCheckData.businessName || "",
+              plan,
+              billingPeriod,
+              amountPaid: data.amount,
+              rewardAmount,
+              status: "pending",
+              createdAt: Timestamp.now(),
+              availableAt: Timestamp.fromMillis(Date.now() + 14 * 24 * 60 * 60 * 1000),
+            })
+            await db.collection("stores").doc(referredById).update({
+              referralPending: FieldValue.increment(rewardAmount),
+              referralTotalEarned: FieldValue.increment(rewardAmount),
+              referralTotalPaid: FieldValue.increment(1),
+            })
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[Referral Reward] Error:", err)
+  }
+
   // Send notifications — reuse storeCheckSnap from earlier
   const storeData = storeCheckSnap.data() || {};
   const planLabel = { growth: "Growth", pro: "Pro", premium: "Premium" }[plan];

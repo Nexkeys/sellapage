@@ -132,6 +132,38 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/verify-cac.js")
         return handler(req, res)
       }
+      case "referral-generate-code": {
+        const { default: handler } = await import("../src/api-handlers/referral-generate-code.js")
+        return handler(req, res)
+      }
+      case "referral-track": {
+        const { default: handler } = await import("../src/api-handlers/referral-track.js")
+        return handler(req, res)
+      }
+      case "referral-resolve-code": {
+        const { default: handler } = await import("../src/api-handlers/referral-resolve-code.js")
+        return handler(req, res)
+      }
+      case "referral-bank-save": {
+        const { default: handler } = await import("../src/api-handlers/referral-bank-save.js")
+        return handler(req, res)
+      }
+      case "referral-withdraw-request": {
+        const { default: handler } = await import("../src/api-handlers/referral-withdraw-request.js")
+        return handler(req, res)
+      }
+      case "referral-stats": {
+        const { default: handler } = await import("../src/api-handlers/referral-stats.js")
+        return handler(req, res)
+      }
+      case "referral-withdrawals": {
+        const { default: handler } = await import("../src/api-handlers/referral-withdrawals.js")
+        return handler(req, res)
+      }
+      case "admin-referrals": {
+        const { default: handler } = await import("../src/api-handlers/admin-referrals.js")
+        return handler(req, res)
+      }
 
       case "google-ads-auth": {
         const { default: handler } = await import("../src/api-handlers/google-ads-auth.js")
