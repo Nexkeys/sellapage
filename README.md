@@ -3527,3 +3527,34 @@ Commit/push keyword: `bugfixes-whatsapp-toggle-receipt`
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-16] Referral Signup Count Fix — Server-Side Increment
+
+#### Fixed
+- **CRITICAL: Referral `referralTotalSignups` never incremented on signup** — `auth.js` used client-side `updateDoc(referrerRef, { referralTotalSignups: increment(1) })` to increment the referrer's count. Firestore security rules (`allow update: if request.auth.uid == storeId`) blocked writes to another user's store doc. The error was caught silently (`console.error`). Moved increment to a server-side API endpoint using Firebase Admin SDK (bypasses security rules).
+
+#### Added
+- **`POST /api/referral-signup`** — New server-side endpoint (`src/api-handlers/referral-signup.js`). Verifies Firebase token, validates referrer store exists, increments `referralTotalSignups` via `FieldValue.increment(1)`. Returns 404 if referrer not found, 401 if token invalid.
+
+#### Changed
+- `src/firebase/auth.js` — Removed `increment` import from `firebase/firestore`. Removed broken client-side `updateDoc` block (lines 37-47) that tried to increment referrer's count. Changed `registerSeller()` return from `return user` to `return { user, referredBy: storeData.referredBy || null }`.
+- `src/pages/Login.jsx` — Added `auth` import from `../firebase/auth`. After `registerSeller()`, destructures `{ user, referredBy }` (unused but available). If `resolvedReferrerId` exists, fire-and-forget calls `POST /api/referral-signup` with `{ referrerId }`. Failure is non-blocking — logged to console but registration proceeds.
+- `api/[...route].js` — Added `case "referral-signup"` to router switch.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-16] OnlineStoreTab UX Writing Simplification
+
+#### Changed
+- **All vendor-facing copy simplified** — Removed jargon ("Vector", "Matrix", "Schema", "Inscription", "Archetype", "Hex Accent Mapping", "Brand Stamp", "Hero Billboard", "Catalog Archetype", "Layout Display Schema", "Commit Layout State", "Premium Component Block", "Printable Store QR Vector", "Registering file...", "Uploading assets...", "Rendering matrix...", "Compile QR Code"). Replaced with everyday English: "Store Link", "Logo", "Colour", "Layout", "Footer Text", "Banner Image", "Custom Colours", "QR Code", "Generate QR Code", "Upload Logo", etc.
+- `src/components/dashboard/OnlineStoreTab.jsx` — 30+ text changes across all sections (Store Link, Theme Settings, Growth Customisation, Live Preview, QR Code, WhatsApp Community, paywall block).
+
+### Build Status
+
+`npm run build` passed with zero errors.

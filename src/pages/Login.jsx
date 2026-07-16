@@ -2,7 +2,7 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
-import { loginSeller, registerSeller, resetPassword } from '../firebase/auth'
+import { loginSeller, registerSeller, resetPassword, auth } from '../firebase/auth'
 
 const ERROR_MESSAGES = {
   'auth/user-not-found': 'No account found with that email.',
@@ -166,6 +166,19 @@ export default function Login() {
           vendorType: form.vendorType || 'products',
           referredBy: resolvedReferrerId,
         })
+
+        if (resolvedReferrerId) {
+          try {
+            const token = await auth.currentUser.getIdToken()
+            await fetch('/api/referral-signup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ referrerId: resolvedReferrerId }),
+            })
+          } catch (err) {
+            console.error('Failed to notify referrer:', err)
+          }
+        }
 
         // Clear tracking cache
         localStorage.removeItem('vendor_referral_code')

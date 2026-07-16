@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   deleteUser,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore'
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from './config'
 
 export const registerSeller = async (email, password, storeData) => {
@@ -34,18 +34,6 @@ export const registerSeller = async (email, password, storeData) => {
     createdAt: new Date(),
   })
 
-  if (storeData.referredBy) {
-    try {
-      const referrerRef = doc(db, 'stores', storeData.referredBy)
-      const referrerSnap = await getDoc(referrerRef)
-      if (referrerSnap.exists()) {
-        await updateDoc(referrerRef, { referralTotalSignups: increment(1) })
-      }
-    } catch (err) {
-      console.error('Failed to increment referrer signup count:', err)
-    }
-  }
-
   // Send welcome notification
   try {
     const token = await user.getIdToken()
@@ -61,7 +49,7 @@ export const registerSeller = async (email, password, storeData) => {
     console.error('Error sending welcome notification:', err)
   }
 
-  return user
+  return { user, referredBy: storeData.referredBy || null }
 }
 
 export const loginSeller = async (email, password) => {

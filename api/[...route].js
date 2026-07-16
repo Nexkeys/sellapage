@@ -168,6 +168,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/admin-referrals.js")
         return handler(req, res)
       }
+      case "referral-signup": {
+        const { default: handler } = await import("../src/api-handlers/referral-signup.js")
+        return handler(req, res)
+      }
 
       case "google-ads-auth": {
         const { default: handler } = await import("../src/api-handlers/google-ads-auth.js")

@@ -205,9 +205,9 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       {/* Title Segment */}
       <div className="flex flex-col gap-1">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">Distribution Channels</p>
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">Your Store</p>
         <h1 className="text-2xl font-black tracking-tight text-gray-900 sm:text-3xl">Online Store</h1>
-        <p className="text-xs text-gray-400 sm:text-sm">Your live digital shop storefront — route traffic here to accept customer transactions.</p>
+        <p className="text-xs text-gray-400 sm:text-sm">Share this link with customers to visit your store.</p>
       </div>
 
       {/* ── SECTION 1: Store Link Controller ───────────────────────────────── */}
@@ -220,8 +220,8 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="font-black text-gray-900 text-sm tracking-tight">Live URL Vector</p>
-            <p className="text-gray-400 text-[11px] font-medium truncate">Distribute this web path to collect incoming conversions.</p>
+            <p className="font-black text-gray-900 text-sm tracking-tight">Store Link</p>
+            <p className="text-gray-400 text-[11px] font-medium truncate">Copy and share this link anywhere</p>
           </div>
         </div>
 
@@ -280,13 +280,13 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               </div>
               <div>
                 <p className="font-black text-gray-900 text-sm tracking-tight">Pro Theme Settings</p>
-                <p className="text-gray-400 text-[11px] font-medium">Select and fine-tune premium skins.</p>
+                <p className="text-gray-400 text-[11px] font-medium">Pick a theme and customise the colours.</p>
               </div>
             </div>
 
             {/* Custom Theme Options Grid Track */}
             <div className="space-y-2">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Catalog Archetype</p>
+              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Theme</p>
               <div className="grid grid-cols-2 gap-2 max-h-[190px] overflow-y-auto p-0.5 scrollbar-thin">
                 {themes.map((theme) => {
                   const isPreviewing = previewThemeId === theme.id
@@ -320,7 +320,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
 
             {/* Custom Bottom Footer Box Input */}
             <div className="space-y-1.5 pt-4 border-t border-gray-100">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Custom Footer Inscription</p>
+              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Footer Text</p>
               <div className="relative">
                 <Type size={14} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
                 <textarea
@@ -335,7 +335,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
 
             {/* Core Hero Banner Module Row */}
             <div className="space-y-1.5 pt-4 border-t border-gray-100">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Hero Billboard Cover</p>
+              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Banner Image</p>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 {heroBannerUrl && (
                   <div className="relative w-full sm:w-20 h-12 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden flex-shrink-0 bg-gray-50">
@@ -355,7 +355,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                     : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-purple-400 text-gray-600'
                 }`}>
                   {bannerUploading ? (
-                    <><Loader2 size={13} className="animate-spin text-purple-600" /> Uploading assets...</>
+                    <><Loader2 size={13} className="animate-spin text-purple-600" /> Uploading...</>
                   ) : (
                     <><ImageIcon size={14} className="text-gray-400" /> Choose Cover Image</>
                   )}
@@ -372,7 +372,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
 
             {/* Custom Theme Color Matrix Picker */}
             <div className="space-y-2 pt-4 border-t border-gray-100">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Hex Accent Mapping</p>
+              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Custom Colours</p>
               <div className="grid grid-cols-2 gap-2">
                 {['background', 'card', 'text', 'primary'].map(colorKey => (
                   <div key={colorKey} className="flex items-center justify-between bg-gray-50 border border-gray-200/60 p-2 rounded-xl">
@@ -389,7 +389,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                 ))}
               </div>
               <div className="text-left pt-0.5">
-                 <button type="button" onClick={() => setCustomColors({})} className="text-[10px] text-purple-600 hover:text-purple-700 font-extrabold underline bg-transparent border-none p-0 cursor-pointer">Reset Color Configuration</button>
+                 <button type="button" onClick={() => setCustomColors({})} className="text-[10px] text-purple-600 hover:text-purple-700 font-extrabold underline bg-transparent border-none p-0 cursor-pointer">Reset Colours</button>
               </div>
             </div>
 
@@ -405,7 +405,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                 }`}
               >
                 {themeSaved && <Check size={14} strokeWidth={2.5} />}
-                {themeSaved ? 'Branding Matrix Saved!' : 'Apply Theme Architecture'}
+                {themeSaved ? 'Branding Matrix Saved!' : 'Save Theme'}
               </button>
             </div>
           </div>
@@ -418,13 +418,13 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               </div>
               <div>
                 <p className="font-black text-gray-900 text-sm tracking-tight">Customise Appearance</p>
-                <p className="text-gray-400 text-[11px] font-medium">Configure basic profile assets & styling.</p>
+                <p className="text-gray-400 text-[11px] font-medium">Upload your logo and pick a colour.</p>
               </div>
             </div>
 
             {/* Logo Controller Slot */}
             <div className="space-y-2">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Brand Stamp Logo</p>
+              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Logo</p>
               <div className="flex items-center gap-3 bg-gray-50/50 border border-gray-100 p-2.5 rounded-xl">
                 {store?.logoUrl && (
                   <img
@@ -439,9 +439,9 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                     : 'bg-gray-900 hover:bg-gray-800 text-white'
                 }`}>
                   {logoUploading ? (
-                    <><Loader2 size={13} className="animate-spin text-white" /> Registering file...</>
+                    <><Loader2 size={13} className="animate-spin text-white" /> Uploading...</>
                   ) : (
-                    <><UploadCloud size={13} /> Upload Brand Logo</>
+                    <><UploadCloud size={13} /> Upload Logo</>
                   )}
                   <input
                     type="file"
@@ -456,7 +456,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
 
             {/* Base Swatch Color Node Row */}
             <div className="space-y-2 pt-4 border-t border-gray-100">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Primary Base Hue</p>
+              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Colour</p>
               <div className="flex flex-wrap items-center gap-2 bg-gray-50/50 border border-gray-100 p-2.5 rounded-xl">
                 {COLOUR_SWATCHES.map((swatch) => {
                   const isSelected = store?.themeColor === swatch.hex
@@ -483,7 +483,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
 
             {/* Core Product Arrangement Selector Stack */}
             <div className="space-y-2 pt-4 border-t border-gray-100">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Layout Display Schema</p>
+              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Layout</p>
               <div className="space-y-2">
                 {LAYOUT_OPTIONS.map((option) => {
                   const Icon = option.icon
@@ -526,7 +526,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                   }`}
                 >
                   {layoutSaved && <Check size={14} strokeWidth={2.5} />}
-                  {layoutSaved ? 'Layout Saved!' : 'Commit Layout State'}
+                  {layoutSaved ? 'Layout Saved!' : 'Save Layout'}
                 </button>
               </div>
             </div>
@@ -538,10 +538,10 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               <Palette size={18} />
             </div>
             <div className="space-y-1">
-              <p className="text-[9px] font-extrabold uppercase tracking-widest text-purple-600">Premium Component Block</p>
-              <h3 className="font-black text-gray-900 text-sm tracking-tight">Themes & Bespoke Branding</h3>
+              <p className="text-[9px] font-extrabold uppercase tracking-widest text-purple-600">Upgrade Required</p>
+              <h3 className="font-black text-gray-900 text-sm tracking-tight">Themes & Branding</h3>
               <p className="text-gray-400 text-xs max-w-[240px] mx-auto leading-relaxed font-medium">
-                Unlock 20 premium layout layers, advanced hex toggles, logos, and custom structural page banners.
+                Get access to premium themes, custom colours, logo upload, and banner images.
               </p>
             </div>
             <button
@@ -562,8 +562,8 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                 <Eye size={16} className="text-blue-600" />
               </div>
               <div>
-                <p className="font-black text-gray-900 text-sm tracking-tight">Real-Time Mobile Render</p>
-                <p className="text-gray-400 text-[11px] font-medium">Live wireframe view of your customer checkout experience.</p>
+                <p className="font-black text-gray-900 text-sm tracking-tight">Live Preview</p>
+                <p className="text-gray-400 text-[11px] font-medium">See how your store looks on mobile.</p>
               </div>
             </div>
             
@@ -584,7 +584,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 py-3 rounded-xl text-xs font-bold transition-all active:scale-[0.99]"
             >
-              <ExternalLink size={13} /> External Window View
+              <ExternalLink size={13} /> Open Store
             </a>
           </div>
         ) : (
@@ -593,8 +593,8 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               <Eye size={16} strokeWidth={2.5} />
             </div>
             <div className="space-y-1">
-              <h3 className="font-black text-gray-900 text-sm tracking-tight">Evaluate Layout Setup</h3>
-              <p className="text-gray-400 text-xs max-w-xs leading-relaxed font-medium">Verify exactly how custom products organize and stack across small device displays.</p>
+              <h3 className="font-black text-gray-900 text-sm tracking-tight">Preview Your Store</h3>
+              <p className="text-gray-400 text-xs max-w-xs leading-relaxed font-medium">See how your products look on mobile.</p>
             </div>
             <a
               href={url}
@@ -653,7 +653,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
             <p className="text-xs text-red-500 font-semibold">{communityLinkError}</p>
           )}
           <p className="text-[11px] text-gray-400 leading-relaxed">
-            When saved, a &quot;Join Community&quot; button appears on your storefront so customers can connect with your WhatsApp group.
+            Once saved, customers will see a &quot;Join Community&quot; button on your store page.
           </p>
           {store?.whatsappCommunityLink && (
             <a
@@ -681,7 +681,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
                 <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/>
               </svg>
-              <span className="text-[9px] mt-1.5 font-bold uppercase tracking-wider">Matrix Empty</span>
+              <span className="text-[9px] mt-1.5 font-bold uppercase tracking-wider">No QR Yet</span>
             </div>
           )}
         </div>
@@ -689,9 +689,9 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
         {/* Text Actions Control Grid */}
         <div className="flex-1 text-center sm:text-left space-y-2 w-full">
           <div>
-            <h4 className="font-black text-gray-900 text-sm tracking-tight">Printable Store QR Vector</h4>
+            <h4 className="font-black text-gray-900 text-sm tracking-tight">QR Code</h4>
             <p className="text-gray-400 text-[11px] font-medium leading-relaxed max-w-sm mt-0.5 mx-auto sm:mx-0">
-              Generate static physical scannable matrices. Embed on invoices, delivery tags, package boxes, or physical marketing collateral.
+              Print this on flyers, packaging, or business cards so customers can scan and visit your store.
             </p>
           </div>
 
@@ -707,9 +707,9 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               className="inline-flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 text-white px-4 py-3 sm:py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-[0.98]"
             >
               {qrGenerating ? (
-                <><Loader2 size={13} className="animate-spin text-white" /> Rendering matrix...</>
+                <><Loader2 size={13} className="animate-spin text-white" /> Generating...</>
               ) : (
-                <><QrCode size={13} /> {qrDataUrl ? 'Regenerate QR' : 'Compile QR Code'}</>
+                <><QrCode size={13} /> {qrDataUrl ? 'Regenerate QR' : 'Generate QR Code'}</>
               )}
             </button>
 
@@ -726,7 +726,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
 
           {qrDataUrl && (
             <p className="text-gray-400 text-[10px] font-medium" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              ℹ️ Standard resolution asset compiled. Ready for cross-platform distribution.
+              QR code ready. Download and use it anywhere.
             </p>
           )}
         </div>
