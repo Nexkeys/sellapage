@@ -172,15 +172,19 @@ export default function Admin() {
   // ── Fetch Admin Role ──
   useEffect(() => {
     if (!user) { setRoleLoading(false); return }
-    getAdminRole(user.uid).then(role => {
-      setAdminRole(role)
-      setRoleLoading(false)
-      // Default to first accessible tab
-      if (role) {
-        const firstTab = ADMIN_TABS.find(t => canAccessTab(role, t.id))
-        if (firstTab) setActiveTab(firstTab.id)
-      }
-    })
+    getAdminRole(user.uid)
+      .then(role => {
+        setAdminRole(role)
+        setRoleLoading(false)
+        if (role) {
+          const firstTab = ADMIN_TABS.find(t => canAccessTab(role, t.id))
+          if (firstTab) setActiveTab(firstTab.id)
+        }
+      })
+      .catch(err => {
+        console.error('[Admin] Role check failed:', err)
+        setRoleLoading(false)
+      })
   }, [user])
 
   // ── Lifecycle Hooks ──
