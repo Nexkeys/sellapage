@@ -1,4 +1,4 @@
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs, limit, query } from 'firebase/firestore'
 import { db } from '../firebase/config'
 
 export const ADMIN_ROLES = {
@@ -18,8 +18,13 @@ const TAB_ACCESS = {
 
 export async function getAdminRole(uid) {
   console.log('[getAdminRole] Called with uid:', uid)
-  console.log('[getAdminRole] db type:', typeof db, db?.app?.name || 'unknown')
+  console.log('[getAdminRole] db project:', db.app.options.projectId)
+  console.log('[getAdminRole] db app name:', db.app.name)
   try {
+    const adminsCol = collection(db, 'admins')
+    const listSnap = await getDocs(query(adminsCol, limit(10)))
+    console.log('[getAdminRole] admins collection docs:', listSnap.docs.map(d => ({ id: d.id, data: d.data() })))
+
     const ref = doc(db, 'admins', uid)
     console.log('[getAdminRole] Document path:', ref.path)
     const snap = await getDoc(ref)
