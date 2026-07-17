@@ -3605,3 +3605,27 @@ admins/{uid} = {
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-17] Admin Panel — Role Debug Logging [DONE]
+
+#### Added
+- **`src/utils/adminRoles.js`** — Added aggressive `console.log` / `console.warn` / `console.error` tracing to `getAdminRole()`: logs uid, db instance, document path, `snap.exists()` result, `snap.data()`, active field, role value, and error details (code + message). Purpose: diagnose why `snap.exists()` returns false despite Firestore document existing in Console.
+- **`src/pages/Admin.jsx`** — Added `console.log` in role-check useEffect: logs user presence, `user.uid`, and role result. Purpose: trace the full chain from component mount to role resolution.
+
+#### How to read the console logs
+1. Open `/admin` in browser
+2. Open DevTools Console
+3. Expected log chain:
+   - `[Admin] useEffect fired. user: SET uid: xBJZGcVuHyQayXcztNmqENFSEoE3`
+   - `[Admin] Calling getAdminRole with uid: xBJZGcVuHyQayXcztNmqENFSEoE3`
+   - `[getAdminRole] Called with uid: xBJZGcVuHyQayXcztNmqENFSEoE3`
+   - `[getAdminRole] Document path: admins/xBJZGcVuHyQayXcztNmqENFSEoE3`
+   - `[getAdminRole] snap.exists(): true` ← **if false, document not found at this path**
+   - `[Admin] Role resolved: super_admin`
+4. If `snap.exists()` is false, the Firestore SDK cannot find the document despite it existing in Console — indicates a Firestore instance / project mismatch or cache issue.
+
+### Build Status
+
+`npm run build` passed with zero errors.

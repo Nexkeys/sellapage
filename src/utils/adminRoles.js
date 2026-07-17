@@ -17,14 +17,29 @@ const TAB_ACCESS = {
 }
 
 export async function getAdminRole(uid) {
+  console.log('[getAdminRole] Called with uid:', uid)
+  console.log('[getAdminRole] db type:', typeof db, db?.app?.name || 'unknown')
   try {
-    const snap = await getDoc(doc(db, 'admins', uid))
-    if (!snap.exists()) return null
+    const ref = doc(db, 'admins', uid)
+    console.log('[getAdminRole] Document path:', ref.path)
+    const snap = await getDoc(ref)
+    console.log('[getAdminRole] snap.exists():', snap.exists())
+    if (snap.exists()) {
+      console.log('[getAdminRole] snap.data():', JSON.stringify(snap.data()))
+    }
+    if (!snap.exists()) {
+      console.warn('[getAdminRole] Document NOT found at path:', ref.path)
+      return null
+    }
     const data = snap.data()
-    if (data.active === false) return null
+    if (data.active === false) {
+      console.warn('[getAdminRole] Document found but active=false')
+      return null
+    }
+    console.log('[getAdminRole] Role resolved:', data.role)
     return data.role || null
   } catch (err) {
-    console.error('[getAdminRole] Error:', err)
+    console.error('[getAdminRole] Error:', err.code, err.message, err)
     return null
   }
 }
