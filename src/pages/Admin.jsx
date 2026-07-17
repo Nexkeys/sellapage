@@ -13,6 +13,7 @@ const ADMIN_TABS = [
   { id: 'directory', label: 'Merchant Directory', icon: Users },
   { id: 'referrals', label: 'Referrals', icon: TrendingUp },
   { id: 'withdrawals', label: 'Withdrawals', icon: Clock },
+  { id: 'admins', label: 'Team', icon: Shield },
 ]
 
 
@@ -57,6 +58,11 @@ export default function Admin() {
   const [wdError, setWdError] = useState('');
   const [wdStatusFilter, setWdStatusFilter] = useState('pending');
   const [processingWd, setProcessingWd] = useState(null);
+
+  // ── Tab E: Admin Team State ──
+  const [adminList, setAdminList] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState('');
 
   // ── Fetch Actions ──
   const fetchHealth = useCallback(async () => {
@@ -169,6 +175,24 @@ export default function Admin() {
     }
   }, [wdStatusFilter, fetchWithdrawals]);
 
+  const fetchAdmins = useCallback(async () => {
+    setAdminLoading(true);
+    setAdminError('');
+    try {
+      const res = await fetch('/api/admin-manage?action=list', {
+        headers: { 'x-admin-token': import.meta.env.VITE_ADMIN_SECRET_TOKEN || '' },
+      });
+      if (!res.ok) throw new Error('Failed to load admin team');
+      const data = await res.json();
+      setAdminList(data.admins || []);
+    } catch (err) {
+      console.error('fetchAdmins error:', err);
+      setAdminError('Failed to load admin team. Check server logs.');
+    } finally {
+      setAdminLoading(false);
+    }
+  }, []);
+
   // ── Fetch Admin Role ──
   useEffect(() => {
     if (!user) { setRoleLoading(false); return }
@@ -199,6 +223,8 @@ export default function Admin() {
       fetchReferrals();
     } else if (activeTab === 'withdrawals') {
       fetchWithdrawals(wdStatusFilter);
+    } else if (activeTab === 'admins' && adminList.length === 0) {
+      fetchAdmins();
     }
   }, [user, activeTab, adminRole]);
 
@@ -255,10 +281,8 @@ export default function Admin() {
     
     if (service === 'firestore') return { label: 'Connected', color: 'bg-green-50 text-green-600 border-green-200' };
     if (service === 'cloudinary') return { label: 'Active', color: 'bg-green-50 text-green-600 border-green-200' };
-    if (service === 'netlify') {
-      return value.siteStatus === 'ready' 
-        ? { label: 'Online', color: 'bg-green-50 text-green-600 border-green-200' }
-        : { label: value.siteStatus || 'Unknown', color: 'bg-amber-50 text-amber-600 border-amber-200' };
+    if (service === 'vercel') {
+      return { label: value.status === 'deployed' ? 'Online' : (value.status || 'Unknown'), color: value.status === 'deployed' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-amber-50 text-amber-600 border-amber-200' };
     }
     if (service === 'ai') {
       return { label: 'Active', color: 'bg-green-50 text-green-600 border-green-200' };
@@ -390,7 +414,7 @@ export default function Admin() {
               {[
                 { id: 'firestore', name: 'Firebase Firestore', desc: 'Core platform document records', data: healthData?.platform, icon: <Database size={18} className="text-blue-600" /> },
                 { id: 'cloudinary', name: 'Cloudinary Storage', desc: 'Merchant images and cloud assets', data: healthData?.cloudinary, icon: <Cloud size={18} className="text-blue-600" /> },
-                { id: 'netlify', name: 'Netlify Instance', desc: 'Production site deployment state', data: healthData?.netlify, icon: <Globe size={18} className="text-blue-600" /> },
+                { id: 'vercel', name: 'Vercel Instance', desc: 'Production deployment state', data: healthData?.vercel, icon: <Globe size={18} className="text-blue-600" /> },
                 { id: 'ai', name: 'NVIDIA AI Engine', desc: 'Automatic descriptions generation', data: healthData?.ai, icon: <Sparkles size={18} className="text-blue-600" /> }
               ].map(service => {
                 const status = getStatusConfig(service.id, service.data);
@@ -414,9 +438,9 @@ export default function Admin() {
                           Total Generations: {healthData.ai.totalAiGenerations?.toLocaleString() || 0}
                         </p>
                       )}
-                      {service.id === 'netlify' && healthData?.netlify?.netlifyCredits !== undefined && healthData?.netlify?.netlifyCredits !== null && (
+                      {service.id === 'vercel' && healthData?.vercel?.region && (
                         <p className="text-[10px] text-green-600 font-bold mt-2 font-mono">
-                          Available Netlify Balance/Credits: ${(healthData.netlify.netlifyCredits).toFixed(2)} USD
+                          Region: {healthData.vercel.region} · Env: {healthData.vercel.environment || 'production'}
                         </p>
                       )}
                     </div>
@@ -503,30 +527,29 @@ export default function Admin() {
               <div className="bg-white rounded-2xl border border-gray-100 shadow-2xs p-5 flex flex-col justify-between min-h-[220px]">
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-50 pb-2 flex items-center gap-2">
-                    <Globe size={16} className="text-gray-400" /> Netlify Traffic Capacity
+                    <Globe size={16} className="text-gray-400" /> Vercel Deployment
                   </h3>
-                  {healthData?.netlify && healthData.netlify.bandwidthUsedGB !== null ? (
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <p className="font-bold text-gray-700">Platform Infrastructure Bandwidth</p>
-                        <p className="font-mono text-gray-500">{healthData.netlify.bandwidthUsedGB.toFixed(2)} GB / {healthData.netlify.bandwidthLimitGB.toFixed(0)} GB</p>
+                  {healthData?.vercel ? (
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <p className="font-bold text-gray-700">Status</p>
+                        <span className="text-green-600 font-bold">{healthData.vercel.status || 'deployed'}</span>
                       </div>
-                      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            healthData.netlify.bandwidthPercent >= 90 ? 'bg-red-500' : healthData.netlify.bandwidthPercent >= 70 ? 'bg-amber-400' : 'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min(healthData.netlify.bandwidthPercent, 100)}%` }}
-                        />
+                      <div className="flex items-center justify-between text-xs">
+                        <p className="font-bold text-gray-700">Region</p>
+                        <span className="font-mono text-gray-500">{healthData.vercel.region || 'unknown'}</span>
                       </div>
-                      <p className="text-[11px] text-gray-400 mt-1.5 font-medium">{healthData.netlify.bandwidthPercent.toFixed(1)}% capacity consumed</p>
+                      <div className="flex items-center justify-between text-xs">
+                        <p className="font-bold text-gray-700">Environment</p>
+                        <span className="font-mono text-gray-500">{healthData.vercel.environment || 'production'}</span>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-xs italic text-gray-300 mt-4">Netlify routing bandwidth metrics unavailable.</p>
+                    <p className="text-xs italic text-gray-300 mt-4">Vercel deployment metrics unavailable.</p>
                   )}
                 </div>
                 <div className="text-[11px] text-gray-400 font-medium bg-gray-50 border border-gray-100/60 p-3 rounded-xl mt-4">
-                  Netlify bandwidth allocations reset on your next account billing cycle.
+                  Vercel serverless functions handle all API routing and deployments.
                 </div>
               </div>
             </div>
@@ -937,7 +960,7 @@ export default function Admin() {
                   </div>
                   <div className="divide-y divide-gray-50">
                     {refRewards.length === 0 ? (
-                      <div className="p-8 text-center text-gray-400 text-sm">No referral rewards yet.</div>
+                      <div className="p-8 text-center text-gray-400 text-sm">No referral rewards yet. When vendors upgrade to a paid plan, referral rewards will appear here.</div>
                     ) : refRewards.map(r => (
                       <div key={r.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
                         <div>
@@ -1027,7 +1050,82 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ============================================================== */}
+        {/* TAB E: ADMIN TEAM */}
+        {/* ============================================================== */}
+        {activeTab === 'admins' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {adminError && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{adminError}</div>
+            )}
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-gray-800">Admin Team</h2>
+              <button onClick={fetchAdmins} disabled={adminLoading} className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">
+                {adminLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Refresh
+              </button>
+            </div>
+            {adminLoading && adminList.length === 0 ? (
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-green-600" size={24} /></div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+                <div className="divide-y divide-gray-50">
+                  {adminList.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400 text-sm">No admin accounts found.</div>
+                  ) : adminList.map(a => (
+                    <div key={a.id} className="px-4 py-4 hover:bg-gray-50/50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-gray-900 font-mono truncate">{a.id}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Assigned by {a.assignedBy || 'Unknown'} · {a.assignedAt ? new Date(a.assignedAt).toLocaleDateString('en-NG') : 'Unknown date'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-[10px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full border ${
+                            a.role === 'super_admin' ? 'bg-gray-900 text-white border-gray-900' :
+                            a.role === 'finance' ? 'bg-green-50 text-green-700 border-green-200' :
+                            a.role === 'operations' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                            'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            {getRoleLabel(a.role)}
+                          </span>
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${a.active !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {a.active !== false ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
+
+      {/* Mobile Bottom Nav */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 sm:hidden z-50 safe-area-bottom">
+        <div className="flex items-center justify-around py-2 px-1">
+          {ADMIN_TABS.filter(t => canAccessTab(adminRole, t.id)).map(tab => {
+            const Icon = tab.icon;
+            const label = tab.id === 'health' ? 'Health' : tab.id === 'directory' ? 'Merchants' : tab.id === 'referrals' ? 'Referrals' : tab.id === 'withdrawals' ? 'Payouts' : 'Team';
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] font-bold transition-colors min-w-0 ${
+                  activeTab === tab.id ? 'text-green-600' : 'text-gray-400'
+                }`}
+              >
+                <Icon size={18} />
+                <span className="truncate">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -14,6 +14,7 @@ const TAB_ACCESS = {
   directory: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.OPERATIONS],
   referrals: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.FINANCE],
   withdrawals: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.FINANCE],
+  admins: [ADMIN_ROLES.SUPER_ADMIN],
 }
 
 export async function getAdminRole(uid) {

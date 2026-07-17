@@ -24,7 +24,7 @@ Always format fixes as a numbered, explicit prompt that Cursor/Codex can execute
 2. The Product — What Sellapage Actually Is
 Sellapage (sellapage.com.ng) is a Nigerian SaaS commerce platform — think "Better and simpler version of Shopify commerce," purpose-built for the Nigerian SME reality, not a copy-paste of Western e-commerce assumptions.
 Target users: Non-technical Nigerian SME owners — fashion sellers, food vendors, freelancers offering services, small retailers. People currently selling via WhatsApp/Instagram DMs with zero structure, no online store, no automated payment collection, no order tracking, no delivery setup, no ads runnings and no professional trust signal.
-Core value proposition: A real professional, mobile-first online store in minutes, with working payment collection (Paystack), real delivery logistics (Sendbox), automatic order tracking, customer relationship tools, and zero technical setup — at a price Nigerian SMEs can afford, with no commission on top of subscription (deliberate decision — see Section 6).
+Core value proposition: A real professional, mobile-first online store in minutes, with working payment collection (Paystack), real delivery logistics (Sendbox and Topship), automatic order tracking, customer relationship tools, and zero technical setup — at a price Nigerian SMEs can afford, with no commission on top of subscription (deliberate decision — see Section 6).
 Origin/philosophy: Build fast, build cheap, avoid overengineering, get to real paying customers as fast as possible.  thinking over feature completeness, always. Must work flawlessly on mobile first then larger screens since the overwhelming majority of vendors and customers operate from phones.
 Trust benchmark references explicitly given by Nex: Jumia, Amazon, Konga, Temu, Glovo. Not to match their infrastructure budget, but because their UX patterns around trust, order tracking, and delivery transparency are the gold standard Nigerian users already expect. "Let's build ours to be security tight, no/less mistakes, even if we can't afford their setup at least let's be trustworthy and valueworthy to the Nigerian market."
 3. Full Tech Stack
@@ -3649,6 +3649,28 @@ Delete the old Firestore document with trailing space and recreate without it:
 4. Fields: `{ role: "super_admin", assignedBy: "system", assignedAt: Timestamp, active: true }`
 
 **OR** — just deploy first. The `.trim()` fix will work even with the trailing space document ID still in Firestore.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-17] Admin Panel Overhaul — Health Fix, Vercel Labels, Mobile Nav, Admin Team Tab [DONE]
+
+#### Fixed
+- **`src/api-handlers/admin-health.js`** — Fixed critical variable naming bug: 7 Firestore queries were destructured into 6 variables with shifted names (`recentSnap` was actually `premiumSnap`, etc). Added missing 7th variable `recentStoresSnap`. This caused `ReferenceError: premiumSnap is not defined` → entire health tab returned null/error. NVIDIA AI query returns 0 because `aiGenerated` field requires a Firestore composite index.
+
+#### Changed
+- **`src/pages/Admin.jsx`** — Replaced all "Netlify" references with "Vercel" (service card, traffic section, bandwidth section). Vercel section now shows deployment status, region, and environment instead of Netlify bandwidth metrics.
+- **`src/pages/Admin.jsx`** — Added "Team" (Admins) tab — shows all admin accounts from Firestore `admins` collection with UID, role badge, assigned by, date, and active status. Super Admin only.
+- **`src/pages/Admin.jsx`** — Added mobile bottom navigation bar (fixed bottom, `sm:hidden`) with icons for each accessible tab (Health, Merchants, Referrals, Payouts, Team).
+- **`src/pages/Admin.jsx`** — Improved referral empty state message.
+- **`src/utils/adminRoles.js`** — Added `admins: [ADMIN_ROLES.SUPER_ADMIN]` to TAB_ACCESS.
+
+#### Added
+- **`src/api-handlers/admin-manage.js`** — New API: `list` (GET all admins), `update` (POST change role/active), `add` (POST create admin). Requires `x-admin-token` auth.
+- **`api/[...route].js`** — Registered `admin-manage` route.
 
 ### Build Status
 

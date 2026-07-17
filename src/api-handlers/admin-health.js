@@ -192,7 +192,8 @@ export default async function handler(req, res) {
             totalStoresSnap,
             growthSnap,
             proSnap,
-            recentSnap,
+            premiumSnap,
+            recentStoresSnap,
             productsSnap,
             leadsSnap,
           ] = await Promise.all([
@@ -210,7 +211,7 @@ export default async function handler(req, res) {
           const proStores = proSnap.data().count;
           const premiumStores = premiumSnap.data().count;
 
-          const recentStores = recentSnap.docs.map((doc) => {
+          const recentStores = recentStoresSnap.docs.map((doc) => {
             const data = doc.data();
             return {
               id: doc.id,

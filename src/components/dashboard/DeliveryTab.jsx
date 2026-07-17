@@ -193,7 +193,7 @@ export default function DeliveryTab({
         </p>
         <h1 className="text-xl font-bold tracking-tight text-gray-900">Delivery</h1>
         <p className="mt-0.5 text-xs text-gray-400">
-          Manage your pickup address, delivery zones, and Sendbox courier settings.
+          Manage your pickup address, delivery zones, and Sellapage courier settings.
         </p>
       </div>
 
@@ -219,7 +219,7 @@ export default function DeliveryTab({
           <div>
             <h2 className="font-bold text-gray-900 text-sm">Pickup Address</h2>
             <p className="text-gray-400 text-[11px] mt-0.5">
-              Where your orders will be shipped from via Sendbox.
+              Where your orders will be shipped from via Sendbox/TopShip.
             </p>
           </div>
         </div>
@@ -470,7 +470,7 @@ export default function DeliveryTab({
             <div>
               <h2 className="font-bold text-gray-900 text-sm">Active Shipments</h2>
               <p className="text-gray-400 text-[11px] mt-0.5">
-                Track orders shipped via Sendbox. Click Refresh to get live status.
+                Track orders shipped via Sendbox/TopShip. Click Refresh to get live status.
               </p>
             </div>
           </div>
