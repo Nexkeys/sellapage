@@ -171,12 +171,9 @@ export default function Admin() {
 
   // ── Fetch Admin Role ──
   useEffect(() => {
-    console.log('[Admin] useEffect fired. user:', user ? 'SET' : 'NULL', 'uid:', user?.uid)
-    if (!user) { console.log('[Admin] No user, skipping role check'); setRoleLoading(false); return }
-    console.log('[Admin] Calling getAdminRole with uid:', user.uid)
+    if (!user) { setRoleLoading(false); return }
     getAdminRole(user.uid)
       .then(role => {
-        console.log('[Admin] Role resolved:', role)
         setAdminRole(role)
         setRoleLoading(false)
         if (role) {

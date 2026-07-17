@@ -3629,3 +3629,27 @@ admins/{uid} = {
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-17] Admin Panel — Role Check Fix (Trailing Space in Document ID) [DONE]
+
+#### Root Cause
+Firestore document `admins/xBJZGcVuHyQayXcztNmqENFSEoE3` had a **trailing space** in the document ID (29 chars with space charCode 32), while `user.uid` is 28 chars with no trailing space. `getDoc` does exact match — `"xBJZGcVuHyQayXcztNmqENFSEoE3 " !== "xBJZGcVuHyQayXcztNmqENFSEoE3"`, so `snap.exists()` always returned false. Diagnosed via charCode comparison logging across 3 iterations of debug code.
+
+#### Fixed
+- **`src/utils/adminRoles.js`** — Added `.trim()` to `uid` parameter in `getAdminRole()` before querying Firestore. Removed all debug logging. Cleaned up imports. File reduced from 73 lines to 49 lines.
+- **`src/pages/Admin.jsx`** — Removed all debug console.log statements from role-check useEffect. Restored clean production logging.
+
+#### Action Required (Nex)
+Delete the old Firestore document with trailing space and recreate without it:
+1. Go to Firebase Console → Firestore → `admins` collection
+2. Delete document `xBJZGcVuHyQayXcztNmqENFSEoE3 ` (the one with trailing space — 29 chars)
+3. Recreate with document ID `xBJZGcVuHyQayXcztNmqENFSEoE3` (no trailing space — 28 chars)
+4. Fields: `{ role: "super_admin", assignedBy: "system", assignedAt: Timestamp, active: true }`
+
+**OR** — just deploy first. The `.trim()` fix will work even with the trailing space document ID still in Firestore.
+
+### Build Status
+
+`npm run build` passed with zero errors.
