@@ -3675,3 +3675,29 @@ Delete the old Firestore document with trailing space and recreate without it:
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-18] Admin Panel — Full Overhaul: 11 Tabs, New APIs, Bug Fixes, Mobile Responsive [DONE]
+
+#### Fixed
+- **`src/utils/adminRoles.js`** — Added tab access for `cac`, `domains`, `flags`, `tickets`, `analytics`, `revenue` to TAB_ACCESS. Marketing role now gets `directory`, `tickets`, `analytics`. Support role gets `tickets`.
+- **`src/api-handlers/admin-health.js`** — NVIDIA AI Engine now returns `today`, `thisWeek`, `thisMonth` counts (not just total). Vercel section now fetches recent deployments from Vercel API (if `VERCEL_TOKEN` is set) showing commit messages, branch, and state.
+- **`src/api-handlers/admin-referrals.js`** — Removed dead `authHeader`/`idToken` code. Fixed `processedAt` to use `new Date()` instead of ISO string. Added `approvedBy`, `approvedAt`, `paidAt` audit log fields on process-withdrawal. Added payout confirmation email via Resend on completed withdrawal. Resolves store name from `referralRewards` → `referredUserId` → `stores/{uid}` for display.
+- **`src/api-handlers/admin-manage.js`** — Fixed `.update()` crash on non-existent UID (now checks doc exists first). Fixed `.set()` overwrite (now checks if admin already exists, returns 409). Added role validation against `VALID_ROLES` array. Added `.trim()` on uid. Added boolean coercion for `active` field. Now uses shared `getAdminDb`.
+- **`src/api-handlers/admin-referrals.js`** — Fixed `sendEmail` call to use positional args `(to, subject, html)` not object syntax.
+
+#### Added — New API Handlers
+- **`src/api-handlers/admin-cac.js`** — CAC Verification Admin: `list` (paginated stores with CAC status, filterable), `update` (set verified/rejected/pending), `retry-verify` (reset CAC state).
+- **`src/api-handlers/admin-domains.js`** — Custom Domain Admin: `list` (stores with custom domains, stats), `update` (set domain status), `remove` (remove custom domain).
+- **`src/api-handlers/admin-flags.js`** — Feature Flags: `list` (all flags), `update` (create or toggle), `delete`. Uses Firestore `featureFlags` collection.
+- **`src/api-handlers/admin-tickets.js`** — Support Tickets: `list` (paginated from `supportMessages`, filterable), `update` (change status, assign).
+- **`src/api-handlers/admin-analytics.js`** — Platform Analytics: `overview` (stores, premium, conversion, signups, tickets), `signups` (daily series), `orders` (total/paid/delivered/revenue).
+- **`api/[...route].js`** — Registered `admin-cac`, `admin-domains`, `admin-flags`, `admin-tickets`, `admin-analytics`.
+
+#### Changed — Admin.jsx Full Rewrite
+- **`src/pages/Admin.jsx`** — Complete rewrite with 11 tabs: Health, Merchants, Referrals, Payouts, CAC Verification, Custom Domains, Feature Flags, Support Tickets, Analytics, Revenue, Team. Mobile responsive with hamburger menu, bottom nav bar (11 tabs), tab-specific colors, pagination on CAC/Domains/Directory.
+
+### Build Status
+
+`npm run build` passed with zero errors.

@@ -1,68 +1,95 @@
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminDb } from './_lib/firebase-admin.js'
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
-  });
-}
-
-const adminDb = getFirestore();
+const VALID_ROLES = ['super_admin', 'finance', 'support', 'operations', 'marketing']
 
 export default async function handler(req, res) {
   try {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    if (req.method === 'OPTIONS') return res.status(204).end();
-    if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    if (req.method === 'OPTIONS') return res.status(204).end()
+    if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' })
 
-    const adminToken = req.headers['x-admin-token'];
-    if (!process.env.ADMIN_SECRET_TOKEN) return res.status(403).json({ error: 'Missing ADMIN_SECRET_TOKEN' });
-    if (!adminToken) return res.status(403).json({ error: 'Missing x-admin-token header' });
-    if (adminToken !== process.env.ADMIN_SECRET_TOKEN) return res.status(403).json({ error: 'Token mismatch' });
+    const adminToken = req.headers['x-admin-token']
+    if (!process.env.ADMIN_SECRET_TOKEN) return res.status(403).json({ error: 'Missing ADMIN_SECRET_TOKEN' })
+    if (!adminToken) return res.status(403).json({ error: 'Missing x-admin-token header' })
+    if (adminToken !== process.env.ADMIN_SECRET_TOKEN) return res.status(403).json({ error: 'Token mismatch' })
 
-    const action = (req.query.action || 'list');
+    const db = getAdminDb()
+    const action = (req.query.action || 'list')
 
     if (action === 'list') {
-      const snap = await adminDb.collection('admins').get();
+      const snap = await db.collection('admins').get()
       const admins = snap.docs.map(d => ({
         id: d.id,
         ...d.data(),
         assignedAt: d.data().assignedAt?.toDate?.()?.toISOString() || null,
-      }));
-      return res.status(200).json({ admins });
+      }))
+      return res.status(200).json({ admins })
     }
 
     if (action === 'update' && req.method === 'POST') {
-      let body = {};
-      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body; } catch {}
-      const { uid, role, active } = body;
-      if (!uid) return res.status(400).json({ error: 'Missing uid' });
-      const update = {};
-      if (role !== undefined) update.role = role;
-      if (active !== undefined) update.active = active;
-      await adminDb.collection('admins').doc(uid).update(update);
-      return res.status(200).json({ success: true, uid, updated: update });
+      let body = {}
+      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch {}
+      const { uid, role, active } = body
+      if (!uid || !uid.trim()) return res.status(400).json({ error: 'Missing uid' })
+
+      const cleanUid = uid.trim()
+      const docRef = db.collection('admins').doc(cleanUid)
+      const docSnap = await docRef.get()
+
+      if (!docSnap.exists) {
+        return res.status(404).json({ error: 'Admin not found. Add them first.' })
+      }
+
+      const update = {}
+      if (role !== undefined) {
+        if (!VALID_ROLES.includes(role)) {
+          return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` })
+        }
+        update.role = role
+      }
+      if (active !== undefined) {
+        update.active = active === true || active === 'true'
+      }
+      if (Object.keys(update).length === 0) {
+        return res.status(400).json({ error: 'Nothing to update' })
+      }
+
+      await docRef.update(update)
+      return res.status(200).json({ success: true, uid: cleanUid, updated: update })
     }
 
     if (action === 'add' && req.method === 'POST') {
-      let body = {};
-      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body; } catch {}
-      const { uid, role } = body;
-      if (!uid || !role) return res.status(400).json({ error: 'Missing uid or role' });
-      await adminDb.collection('admins').doc(uid).set({
+      let body = {}
+      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch {}
+      const { uid, role } = body
+      if (!uid || !uid.trim()) return res.status(400).json({ error: 'Missing uid' })
+      if (!role) return res.status(400).json({ error: 'Missing role' })
+      if (!VALID_ROLES.includes(role)) {
+        return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` })
+      }
+
+      const cleanUid = uid.trim()
+      const docRef = db.collection('admins').doc(cleanUid)
+      const docSnap = await docRef.get()
+
+      if (docSnap.exists) {
+        return res.status(409).json({ error: 'Admin already exists. Use update to change their role.' })
+      }
+
+      await docRef.set({
         role,
         assignedBy: 'manual',
         assignedAt: new Date(),
         active: true,
-      });
-      return res.status(200).json({ success: true, uid, role });
+      })
+      return res.status(200).json({ success: true, uid: cleanUid, role })
     }
 
-    return res.status(400).json({ error: 'Unknown action' });
+    return res.status(400).json({ error: 'Unknown action' })
   } catch (err) {
-    console.error('admin-manage error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('admin-manage error:', err)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

@@ -240,20 +240,34 @@ export default async function handler(req, res) {
         // Group 2: NVIDIA AI Engine Usage Data
         (async () => {
           try {
-            const aiProductsSnap = await adminDb
-              .collectionGroup('products')
-              .where('aiGenerated', '==', true)
-              .count()
-              .get();
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            const [totalSnap, todaySnap, weekSnap, monthSnap] = await Promise.all([
+              adminDb.collectionGroup('products').where('aiGenerated', '==', true).count().get(),
+              adminDb.collectionGroup('products').where('aiGenerated', '==', true).where('createdAt', '>=', todayStart).count().get(),
+              adminDb.collectionGroup('products').where('aiGenerated', '==', true).where('createdAt', '>=', weekStart).count().get(),
+              adminDb.collectionGroup('products').where('aiGenerated', '==', true).where('createdAt', '>=', monthStart).count().get(),
+            ]);
 
             return {
-              totalAiGenerations: aiProductsSnap.data().count,
+              totalAiGenerations: totalSnap.data().count,
+              today: todaySnap.data().count,
+              thisWeek: weekSnap.data().count,
+              thisMonth: monthSnap.data().count,
             };
           } catch (err) {
-            console.error("🔴 FIREBASE INDEX LINK DETECTED:", err);
-            return {
-              totalAiGenerations: 0,
-            };
+            console.error("AI engine query error:", err.message);
+            try {
+              const fallback = await adminDb.collectionGroup('products').where('aiGenerated', '==', true).count().get();
+              return { totalAiGenerations: fallback.data().count, today: 0, thisWeek: 0, thisMonth: 0 };
+            } catch {
+              return { totalAiGenerations: 0, today: 0, thisWeek: 0, thisMonth: 0 };
+            }
           }
         })(),
 
@@ -297,12 +311,41 @@ export default async function handler(req, res) {
       ai: aiResult.status === 'fulfilled' ? aiResult.value : null,
       cloudinary:
         cloudinaryResult.status === 'fulfilled' ? cloudinaryResult.value : null,
-      vercel: {
-        platform: 'Vercel',
-        status: 'deployed',
-        region: process.env.VERCEL_REGION || 'unknown',
-        environment: process.env.NODE_ENV || 'production',
+      vercel: (() => {
+        const base = {
+          platform: 'Vercel',
+          status: 'deployed',
+          region: process.env.VERCEL_REGION || 'unknown',
+          environment: process.env.NODE_ENV || 'production',
+          recentDeployments: [],
+        };
+        if (process.env.VERCEL_TOKEN) {
+          base.deploymentsAvailable = true;
+        }
+        return base;
+      })()
+    };
+
+    if (process.env.VERCEL_TOKEN) {
+      try {
+        const depRes = await fetch('https://api.vercel.com/v6/deployments?limit=5&target=production', {
+          headers: { Authorization: `Bearer ${process.env.VERCEL_TOKEN}` },
+        });
+        if (depRes.ok) {
+          const depData = await depRes.json();
+          responseBody.vercel.recentDeployments = (depData.deployments || []).map(d => ({
+            id: d.uid,
+            url: d.url,
+            state: d.state,
+            createdAt: d.createdAt,
+            commitMessage: d.meta?.commitMessage || '',
+            branch: d.meta?.branch || '',
+          }));
+        }
+      } catch (depErr) {
+        console.error('Vercel deployments fetch failed:', depErr.message);
       }
+    }
     };
 
     return res.status(200).json(responseBody);

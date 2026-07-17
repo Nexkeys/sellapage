@@ -216,6 +216,27 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "admin-cac": {
+        const { default: handler } = await import("../src/api-handlers/admin-cac.js")
+        return handler(req, res)
+      }
+      case "admin-domains": {
+        const { default: handler } = await import("../src/api-handlers/admin-domains.js")
+        return handler(req, res)
+      }
+      case "admin-flags": {
+        const { default: handler } = await import("../src/api-handlers/admin-flags.js")
+        return handler(req, res)
+      }
+      case "admin-tickets": {
+        const { default: handler } = await import("../src/api-handlers/admin-tickets.js")
+        return handler(req, res)
+      }
+      case "admin-analytics": {
+        const { default: handler } = await import("../src/api-handlers/admin-analytics.js")
+        return handler(req, res)
+      }
+
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
     }

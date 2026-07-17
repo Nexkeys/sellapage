@@ -1,8 +1,7 @@
-import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
+import { getAdminDb } from './_lib/firebase-admin.js'
+import { sendEmail } from './_lib/send-email.js'
 
 export default async function handler(req, res) {
-  const authHeader = req.headers.authorization || ''
-  const idToken = authHeader.replace('Bearer ', '').trim()
   const adminToken = req.headers['x-admin-token']
 
   if (!adminToken || adminToken !== process.env.ADMIN_SECRET_TOKEN) {
@@ -20,8 +19,6 @@ export default async function handler(req, res) {
 
       let totalRewardsPaid = 0
       let totalPending = 0
-      let totalAvailable = 0
-      let totalWithdrawn = 0
       const planBreakdown = { growth: 0, pro: 0, premium: 0 }
 
       rewardsSnap.docs.forEach(doc => {
@@ -79,10 +76,25 @@ export default async function handler(req, res) {
           return dateB - dateA
         })
 
-      const offset = (page - 1) * limit
-      const paged = rewards.slice(offset, offset + limit)
+      const enrichedRewards = await Promise.all(
+        rewards.map(async (r) => {
+          let referredStoreName = r.referredUserId || 'Unknown'
+          try {
+            if (r.referredUserId) {
+              const storeSnap = await db.collection('stores').doc(r.referredUserId).get()
+              if (storeSnap.exists) {
+                referredStoreName = storeSnap.data().storeName || storeSnap.data().handle || r.referredUserId
+              }
+            }
+          } catch {}
+          return { ...r, referredStoreName }
+        })
+      )
 
-      return res.status(200).json({ success: true, rewards: paged, page, limit, total: rewards.length })
+      const offset = (page - 1) * limit
+      const paged = enrichedRewards.slice(offset, offset + limit)
+
+      return res.status(200).json({ success: true, rewards: paged, page, limit, total: enrichedRewards.length })
     }
 
     if (action === 'withdrawals') {
@@ -114,7 +126,9 @@ export default async function handler(req, res) {
     }
 
     if (action === 'process-withdrawal' && req.method === 'POST') {
-      const { withdrawalId, status, note } = req.body
+      let body = {}
+      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body; } catch {}
+      const { withdrawalId, status, note, adminUid } = body
       if (!withdrawalId || !['completed', 'rejected'].includes(status)) {
         return res.status(400).json({ error: 'Invalid parameters' })
       }
@@ -131,14 +145,20 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Withdrawal already processed' })
       }
 
-      const batch = db.batch()
-
-      batch.update(withdrawalRef, {
+      const updateFields = {
         status,
-        processedAt: new Date().toISOString(),
-        processedBy: 'admin',
+        processedAt: new Date(),
+        approvedBy: adminUid || 'admin',
+        approvedAt: new Date(),
         note: note || '',
-      })
+      }
+
+      if (status === 'completed') {
+        updateFields.paidAt = new Date()
+      }
+
+      const batch = db.batch()
+      batch.update(withdrawalRef, updateFields)
 
       if (status === 'rejected') {
         const storeRef = db.collection('stores').doc(withdrawalData.userId)
@@ -149,7 +169,42 @@ export default async function handler(req, res) {
 
       await batch.commit()
 
-      return res.status(200).json({ success: true, message: `Withdrawal ${status}` })
+      let emailSent = false
+      if (status === 'completed') {
+        try {
+          const storeSnap = await db.collection('stores').doc(withdrawalData.userId).get()
+          if (storeSnap.exists) {
+            const storeData = storeSnap.data()
+            const recipientEmail = storeData.email || storeData.ownerEmail
+            if (recipientEmail) {
+              const amountNaira = ((withdrawalData.amount || 0) / 100).toLocaleString()
+              await sendEmail(
+                recipientEmail,
+                `Sellapage - Payout Confirmed ₦${amountNaira}`,
+                `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #16a34a;">Payout Confirmed</h2>
+                    <p>Hi ${storeData.storeName || 'there'},</p>
+                    <p>Your referral withdrawal request has been processed successfully.</p>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                      <p style="margin: 4px 0;"><strong>Amount:</strong> ₦${amountNaira}</p>
+                      <p style="margin: 4px 0;"><strong>Bank:</strong> ${withdrawalData.bankName || 'N/A'}</p>
+                      <p style="margin: 4px 0;"><strong>Account:</strong> ${withdrawalData.bankAccount || 'N/A'}</p>
+                      <p style="margin: 4px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString('en-NG')}</p>
+                    </div>
+                    <p style="color: #6b7280; font-size: 13px;">If you have questions, contact support.</p>
+                  </div>`
+              )
+              emailSent = true
+            }
+          }
+        } catch (emailErr) {
+          console.error('[admin-referrals] Email send failed:', emailErr.message)
+        }
+
+        await withdrawalRef.update({ emailSent })
+      }
+
+      return res.status(200).json({ success: true, message: `Withdrawal ${status}`, emailSent })
     }
 
     return res.status(400).json({ error: 'Invalid action' })
