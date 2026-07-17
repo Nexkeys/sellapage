@@ -53,3 +53,21 @@ export async function getAdminRole(uid) {
     return null
   }
 }
+
+export function canAccessTab(role, tab) {
+  if (!role) return false
+  const allowed = TAB_ACCESS[tab]
+  if (!allowed) return false
+  return allowed.includes(role)
+}
+
+export function getRoleLabel(role) {
+  const labels = {
+    [ADMIN_ROLES.SUPER_ADMIN]: 'Super Admin',
+    [ADMIN_ROLES.FINANCE]: 'Finance Admin',
+    [ADMIN_ROLES.SUPPORT]: 'Support Admin',
+    [ADMIN_ROLES.OPERATIONS]: 'Operations Admin',
+    [ADMIN_ROLES.MARKETING]: 'Marketing Admin',
+  }
+  return labels[role] || role
+}
