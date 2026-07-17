@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   Lock, Loader2, RefreshCw, Database, Cloud, Globe, 
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
-  Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle, Shield
+  Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle, Shield, star
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 
