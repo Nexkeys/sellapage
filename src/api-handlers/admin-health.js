@@ -346,7 +346,6 @@ export default async function handler(req, res) {
         console.error('Vercel deployments fetch failed:', depErr.message);
       }
     }
-    };
 
     return res.status(200).json(responseBody);
   } catch (err) {

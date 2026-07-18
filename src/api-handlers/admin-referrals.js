@@ -21,12 +21,40 @@ export default async function handler(req, res) {
       let totalPending = 0
       const planBreakdown = { growth: 0, pro: 0, premium: 0 }
 
+      const referrerTotals = {}
       rewardsSnap.docs.forEach(doc => {
         const d = doc.data()
         if (d.status === 'paid') totalRewardsPaid += d.rewardAmount || 0
         if (d.status === 'pending') totalPending += d.rewardAmount || 0
         if (planBreakdown[d.plan] !== undefined) planBreakdown[d.plan]++
+        const refId = d.referrerId || d.referrerUserId
+        if (refId) {
+          if (!referrerTotals[refId]) referrerTotals[refId] = { totalEarned: 0, totalReferrals: 0 }
+          referrerTotals[refId].totalEarned += d.rewardAmount || 0
+          referrerTotals[refId].totalReferrals++
+        }
       })
+
+      let highestEarner = null
+      let maxEarned = 0
+      for (const [refId, data] of Object.entries(referrerTotals)) {
+        if (data.totalEarned > maxEarned) {
+          maxEarned = data.totalEarned
+          highestEarner = { refId, ...data }
+        }
+      }
+      if (highestEarner) {
+        try {
+          const storeSnap = await db.collection('stores').doc(highestEarner.refId).get()
+          if (storeSnap.exists) {
+            const sd = storeSnap.data()
+            highestEarner.storeName = sd.storeName || sd.handle || ''
+            highestEarner.whatsappNumber = sd.whatsappNumber || ''
+            highestEarner.email = sd.email || sd.ownerEmail || ''
+          }
+        } catch {}
+        highestEarner.totalEarnedFormatted = `NGN ${(highestEarner.totalEarned / 100).toLocaleString()}`
+      }
 
       let pendingWithdrawals = 0
       let completedWithdrawals = 0
@@ -51,6 +79,7 @@ export default async function handler(req, res) {
           completedWithdrawals,
           totalWithdrawalAmount,
           planBreakdown,
+          highestEarner,
         },
       })
     }

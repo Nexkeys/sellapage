@@ -1,5 +1,7 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 
+const PLAN_ORDER = { premium: 0, pro: 1, growth: 2, starter: 3 }
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
@@ -25,17 +27,32 @@ export default async function handler(req, res) {
         query = query.where('status', '==', statusFilter)
       }
 
-      const snap = await query.limit(200).get()
+      const snap = await query.limit(500).get()
 
       const tickets = snap.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || null,
-          updatedAt: doc.data().updatedAt?.toDate?.()?.toISOString() || null,
-          resolvedAt: doc.data().resolvedAt?.toDate?.()?.toISOString() || null,
-        }))
+        .map(doc => {
+          const d = doc.data()
+          return {
+            id: doc.id,
+            storeId: d.storeId || '',
+            storeName: d.storeName || '',
+            businessName: d.businessName || '',
+            email: d.email || '',
+            whatsappNumber: d.whatsappNumber || '',
+            plan: d.plan || 'starter',
+            category: d.category || 'general',
+            message: d.message || '',
+            status: d.status || 'open',
+            assignedTo: d.assignedTo || '',
+            createdAt: d.createdAt?.toDate?.()?.toISOString() || null,
+            updatedAt: d.updatedAt?.toDate?.()?.toISOString() || null,
+            resolvedAt: d.resolvedAt?.toDate?.()?.toISOString() || null,
+          }
+        })
         .sort((a, b) => {
+          const planA = PLAN_ORDER[a.plan] ?? 4
+          const planB = PLAN_ORDER[b.plan] ?? 4
+          if (planA !== planB) return planA - planB
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
           return dateB - dateA
@@ -64,13 +81,9 @@ export default async function handler(req, res) {
       const updateData = { updatedAt: new Date() }
       if (status) {
         updateData.status = status
-        if (status === 'resolved') {
-          updateData.resolvedAt = new Date()
-        }
+        if (status === 'resolved') updateData.resolvedAt = new Date()
       }
-      if (assignTo !== undefined) {
-        updateData.assignedTo = assignTo
-      }
+      if (assignTo !== undefined) updateData.assignedTo = assignTo
 
       await db.collection('supportMessages').doc(ticketId).update(updateData)
       return res.status(200).json({ success: true, ticketId, updated: updateData })

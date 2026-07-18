@@ -1,4 +1,4 @@
-import { getAdminDb } from './_lib/firebase-admin.js'
+import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
 const VALID_ROLES = ['super_admin', 'finance', 'support', 'operations', 'marketing']
 
@@ -85,6 +85,45 @@ export default async function handler(req, res) {
         active: true,
       })
       return res.status(200).json({ success: true, uid: cleanUid, role })
+    }
+
+    if (action === 'create-user' && req.method === 'POST') {
+      let body = {}
+      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch {}
+      const { email, password, role, displayName } = body
+      if (!email || !email.trim()) return res.status(400).json({ error: 'Email is required' })
+      if (!password || password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
+      if (!role) return res.status(400).json({ error: 'Role is required' })
+      if (!VALID_ROLES.includes(role)) {
+        return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` })
+      }
+
+      const auth = getAdminAuth()
+      let userRecord
+      try {
+        userRecord = await auth.createUser({
+          email: email.trim(),
+          password,
+          displayName: displayName || '',
+        })
+      } catch (authErr) {
+        if (authErr.code === 'auth/email-already-exists') {
+          return res.status(409).json({ error: 'An account with this email already exists.' })
+        }
+        return res.status(500).json({ error: `Failed to create user: ${authErr.message}` })
+      }
+
+      const uid = userRecord.uid
+      await db.collection('admins').doc(uid).set({
+        role,
+        email: email.trim(),
+        displayName: displayName || '',
+        assignedBy: 'panel',
+        assignedAt: new Date(),
+        active: true,
+      })
+
+      return res.status(200).json({ success: true, uid, email: email.trim(), role })
     }
 
     return res.status(400).json({ error: 'Unknown action' })
