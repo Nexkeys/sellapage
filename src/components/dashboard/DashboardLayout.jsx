@@ -30,6 +30,7 @@ import {
   Share2,
 } from "lucide-react";
 import { logoutSeller } from "../../firebase/auth";
+import AnnouncementBanner from "./AnnouncementBanner";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard },
@@ -445,6 +446,7 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <main ref={mainContentRef} className="flex-1 overflow-y-auto">
+          <AnnouncementBanner />
           {/* 7-day Expiry Alert */}
           {isExpiringSoon && (
             <div className="w-full bg-amber-50 border-b border-amber-100 text-amber-700 text-xs font-semibold text-center px-4 py-2 flex-shrink-0">

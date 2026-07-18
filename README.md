@@ -3713,3 +3713,26 @@ Delete the old Firestore document with trailing space and recreate without it:
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-19] Announcement Banner Never Reached Vendor Dashboard — FIXED
+
+#### Root Cause
+Announcements saved correctly to Firestore via `src/api-handlers/admin-announcements.js` (`create`/`list` worked fine from Admin.jsx), but never appeared on the vendor dashboard because of two separate gaps:
+1. No dashboard component ever called `GET /api/admin-announcements?action=active` or rendered a banner. `src/pages/Dashboard.jsx` and `src/components/dashboard/DashboardLayout.jsx` had zero announcement-related code.
+2. Even if it had been wired up, the `active` action was gated behind the same `x-admin-token === ADMIN_SECRET_TOKEN` check as the admin-only mutation actions (`create`/`update`/`delete`). Shipping that secret into the public vendor dashboard bundle so it could read `active` would have let any vendor extract the token from devtools and use it to create/edit/delete announcements too.
+
+#### Fixed
+- **`src/api-handlers/admin-announcements.js`** — The admin-token check now only applies to `list`, `create`, `update`, `delete`. `action=active` with `GET` is public/unauthenticated (read-only, non-sensitive banner data), so the vendor dashboard can call it directly with no token.
+- **`src/components/dashboard/AnnouncementBanner.jsx`** (NEW) — Fetches `/api/admin-announcements?action=active` on mount, renders one banner per active announcement (type-colored: info=blue, warning=amber, promo=purple, matching Admin.jsx's badge colors), mobile-first stacked layout, each dismissible via an X button. Dismissed announcement IDs are stored in `localStorage` (`sellapage_dismissed_announcements`) so a dismissed banner stays hidden on future refreshes but a newly created announcement (new Firestore doc ID) still shows.
+- **`src/components/dashboard/DashboardLayout.jsx`** — Imports and renders `<AnnouncementBanner />` inside `<main>`, above the existing 7-day plan-expiry alert, so it shows above every tab on every dashboard refresh (same insertion point pattern already used for the expiry alert).
+
+#### What did NOT change
+- `admin-announcements.js` `list`/`create`/`update`/`delete` still require the admin token exactly as before — only the public read (`active`) was relaxed.
+- No changes to the Admin.jsx Announcements tab UI or its create/toggle/delete flows.
+- No changes to Firestore data shape (`announcements` collection: `title`, `message`, `type`, `active`, `createdAt`, `expiresAt`).
+
+### Build Status
+
+`npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change).

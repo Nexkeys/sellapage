@@ -6,14 +6,18 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(204).end()
 
-  const adminToken = req.headers['x-admin-token']
-  if (!adminToken || adminToken !== process.env.ADMIN_SECRET_TOKEN) {
-    return res.status(403).json({ error: 'Forbidden' })
+  const action = req.query.action || 'list'
+  const isPublicActiveRead = action === 'active' && req.method === 'GET'
+
+  if (!isPublicActiveRead) {
+    const adminToken = req.headers['x-admin-token']
+    if (!adminToken || adminToken !== process.env.ADMIN_SECRET_TOKEN) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
   }
 
   try {
     const db = getAdminDb()
-    const action = req.query.action || 'list'
 
     if (action === 'list') {
       const snap = await db.collection('announcements').limit(100).get()
