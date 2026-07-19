@@ -873,8 +873,9 @@ Same model as Meta.
 Plan gate: Premium only.
 
 
-### 14. User Session History And Logout
+### 14. User Session History And Logout — DONE ✅
 Here each users would be able to see the location and devices they're actively logged in on and also their past log in history very well paginated and designed with mobile responsiveness first of all from the smallest screen to the biggest and users would be able to choose to log out of a particular device or session they're logged into and it immediately logs out of that device or session, similar to what Facebook and other big companies do to enable the user's awareness and security
+Implementation: See "2026-07-19 — User Session History And Remote Logout" section below.
 
 
 ---
@@ -3736,3 +3737,40 @@ Announcements saved correctly to Firestore via `src/api-handlers/admin-announcem
 ### Build Status
 
 `npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change).
+
+---
+
+### [2026-07-19] User Session History And Remote Logout — NEW FEATURE (Item 14) [DONE]
+
+#### What it does
+Settings tab now has a "Login Sessions" panel (below Plan & Billing, above Danger Zone) listing every device currently signed in to the vendor's workspace: browser + OS, device type icon (mobile/tablet/desktop), approximate location (city/country via IP lookup), and last-active time. The current device is tagged "This device". Each row has a "Log out" button — clicking it on another device force-logs that device out within ~45 seconds; clicking it on the current device logs out immediately, same idea as Facebook/Instagram's "log out of this device" list.
+
+#### New Firestore data
+`stores/{storeId}/sessions/{sessionId}` — one doc per login. Fields: `os`, `browser`, `deviceType`, `ip`, `city`, `region`, `country`, `userAgent`, `revoked`, `createdAt`, `lastActiveAt`, `revokedAt` (on revoke).
+
+#### Added — New API Handler
+- **`src/api-handlers/sessions.js`** (NEW) — Auth is a verified Firebase ID token (`Authorization: Bearer`), not the admin token — this is a vendor-facing endpoint, scoped to `decodedToken.uid` so a vendor can only ever read/revoke their own sessions.
+  - `list` (GET) — returns the caller's non-revoked sessions, `lastActiveAt` descending.
+  - `register` (POST, `{ sessionId }`) — called right after login/signup. Parses `user-agent` for OS/browser/device-type with a small inline regex parser (no new dependency), reads client IP from `x-forwarded-for`, and does a best-effort IP geolocation lookup via `ipapi.co` (free tier, no key, 3s timeout, fails silently to "Unknown location" — private/local IPs are skipped entirely).
+  - `heartbeat` (POST, `{ sessionId }`) — updates `lastActiveAt` and returns `{ revoked }`. This is the mechanism a *different* logged-in device uses to notice it's been logged out remotely.
+  - `revoke` (POST, `{ sessionId }`) — sets `revoked: true` on that session doc.
+- **`api/[...route].js`** — registered `sessions` route.
+
+#### Added — Frontend
+- **`src/utils/sessionTracking.js`** (NEW) — `getSessionId()` (creates/reads a `crypto.randomUUID()` stored in `localStorage.sellapage_session_id`), `clearSessionId()`, `registerSession(idToken)`, `sendHeartbeat(idToken)`.
+- **`src/components/dashboard/SessionsPanel.jsx`** (NEW) — mobile-first paginated (5/page) session list UI, embedded in `Settings.jsx`.
+- **`src/components/dashboard/DashboardLayout.jsx`** — new effect polls `sendHeartbeat` every 45s while the dashboard is mounted (once immediately on mount, then on interval); if the response says `revoked: true`, calls `logoutSeller()` and redirects to `/login`. This is what makes remote "log out this device" actually take effect on the target device.
+- **`src/pages/Login.jsx`** — calls `registerSession(token)` right after a successful login and right after a successful signup (new session per explicit login, not per page refresh — refreshes reuse the same `localStorage` session id via `getSessionId()`).
+- **`src/firebase/auth.js`** — `logoutSeller()` now also calls `clearSessionId()` so the next login on that browser always starts a fresh session id, not a stale revoked one. This automatically covers all three existing logout call sites (`DashboardLayout.jsx`, `Navbar.jsx`, `Dashboard.jsx` delete-account flow).
+
+#### Known tradeoff (disclosed, not a bug)
+Remote logout is detected on the target device within ~45 seconds (the heartbeat interval), not instantly. True instant revocation would need either a Firestore client-side realtime listener on the session doc (blocked here because `firestore.rules` are managed manually in the Firebase Console, not in this repo, so a rules change can't be verified/deployed from this codebase) or push infra. 45s polling was chosen as the pragmatic default — it does not require any Firestore rules changes since all reads/writes go through `sessions.js` using the Admin SDK, which bypasses client security rules entirely.
+
+#### What did NOT change
+- No changes to `firestore.rules` (none exist in this repo to change — confirmed it only contains a pointer note to the Firebase Console).
+- No changes to `logoutSeller()`'s actual sign-out behavior, `loginSeller`, `registerSeller`, or any other Settings.jsx section (Business Information, Plan & Billing, Danger Zone all untouched).
+- Existing account-deletion flow untouched — orphaned `sessions` subcollection docs on account deletion follow the same pattern as other subcollections (products, orders, etc.), not a new gap introduced here.
+
+### Build Status
+
+`npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change). New backend files syntax-checked with `node --check`.

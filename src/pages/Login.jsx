@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import { loginSeller, registerSeller, resetPassword, auth } from '../firebase/auth'
+import { registerSession } from '../utils/sessionTracking'
 
 const ERROR_MESSAGES = {
   'auth/user-not-found': 'No account found with that email.',
@@ -133,6 +134,12 @@ export default function Login() {
         const token = await credential.user.getIdToken()
 
         try {
+          await registerSession(token)
+        } catch (err) {
+          console.error('Failed to register session:', err)
+        }
+
+        try {
           await fetch('/api/notify', {
             method: 'POST',
             headers: {
@@ -182,6 +189,13 @@ export default function Login() {
 
         // Clear tracking cache
         localStorage.removeItem('vendor_referral_code')
+
+        try {
+          const token = await auth.currentUser.getIdToken()
+          await registerSession(token)
+        } catch (err) {
+          console.error('Failed to register session:', err)
+        }
       }
       navigate('/dashboard')
     } catch (err) {

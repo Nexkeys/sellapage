@@ -99,6 +99,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/reset-password.js");
         return await handlerFunc(req, res);
       }
+      case "sessions": {
+        const { default: handlerFunc } = await import("../src/api-handlers/sessions.js");
+        return await handlerFunc(req, res);
+      }
 
       case "sendbox-tracking": {
         const { default: handlerFunc } = await import("../src/api-handlers/sendbox-tracking.js");

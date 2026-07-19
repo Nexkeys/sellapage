@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from './config'
+import { clearSessionId } from '../utils/sessionTracking'
 
 export const registerSeller = async (email, password, storeData) => {
   const credential = await createUserWithEmailAndPassword(auth, email, password)
@@ -57,6 +58,7 @@ export const loginSeller = async (email, password) => {
 }
 
 export const logoutSeller = async () => {
+  clearSessionId()
   return await signOut(auth)
 }
 

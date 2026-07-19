@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { FREE_PLAN_LIMIT } from '../../firebase/products'
 import { PLAN_PRICES, formatPrice } from '../../utils/billingPlans'
+import SessionsPanel from './SessionsPanel'
 
 
 const getInitials = (name = '') => {
@@ -470,6 +471,10 @@ export default function SettingsTab({
           </div>
         )}
       </div>
+
+
+      {/* ── Login Sessions ── */}
+      <SessionsPanel />
 
 
       {/* ── Danger Zone ── */}

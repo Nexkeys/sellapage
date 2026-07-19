@@ -29,8 +29,9 @@ import {
   Target,
   Share2,
 } from "lucide-react";
-import { logoutSeller } from "../../firebase/auth";
+import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
+import { sendHeartbeat } from "../../utils/sessionTracking";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard },
@@ -107,6 +108,33 @@ export default function DashboardLayout({
     await logoutSeller();
     navigate("/");
   };
+
+  useEffect(() => {
+    if (!store?.id) return;
+    let cancelled = false;
+
+    const check = async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      try {
+        const token = await currentUser.getIdToken();
+        const revoked = await sendHeartbeat(token);
+        if (revoked && !cancelled) {
+          await logoutSeller();
+          navigate("/login");
+        }
+      } catch {
+        // Silently ignore — a missed heartbeat is retried on the next interval.
+      }
+    };
+
+    check();
+    const interval = setInterval(check, 45000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [store?.id]);
 
   const plan = store?.plan || "starter";
   const planStatus = store?.planStatus || "active";
