@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   X,
   Sparkles,
+  Unlink,
 } from 'lucide-react'
 
 import GoogleAdsConnect from './GoogleAdsTab/GoogleAdsConnect'
@@ -27,6 +28,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showSellapageForm, setShowSellapageForm] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
 
   const isConnected = store?.googleAdsConnected || false
 
@@ -99,6 +101,31 @@ export default function GoogleAdsTab({ store, isPremium }) {
       }
     } catch (err) {
       setError('Failed to verify payment. Please refresh the page.')
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect your Google Ads account? You can reconnect anytime.')) return
+    setDisconnecting(true)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/google-ads-disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ storeId: store.id }),
+      })
+      if (res.ok) {
+        window.location.reload()
+      } else {
+        setError('Failed to disconnect. Please try again.')
+      }
+    } catch {
+      setError('Failed to disconnect. Please try again.')
+    } finally {
+      setDisconnecting(false)
     }
   }
 
@@ -180,10 +207,21 @@ export default function GoogleAdsTab({ store, isPremium }) {
           </p>
         </div>
         {isConnected && (
-          <span className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full font-medium w-fit">
-            <CheckCircle2 size={12} />
-            Connected
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full font-medium w-fit">
+              <CheckCircle2 size={12} />
+              Connected
+            </span>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+              title="Disconnect Google Ads account"
+            >
+              <Unlink size={12} />
+              {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+            </button>
+          </div>
         )}
       </div>
 

@@ -688,7 +688,20 @@ export default function OrdersTab({
           insuranceType,
         }),
       })
-      const data = await res.json()
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        // A hard platform timeout (Vercel 504) returns a plain-text/HTML body, not
+        // JSON — res.json() throws in that case. Distinguish that from a genuine
+        // network failure so the error message actually reflects what happened.
+        if (res.status === 504) {
+          setBookingError('The booking took too long to complete — this usually means Topship\'s staging server is slow or the courier is temporarily unavailable right now. Please try again.')
+        } else {
+          setBookingError('Could not connect to book the shipment. Please check your connection.')
+        }
+        return
+      }
       if (res.ok && data.success) {
         await onUpdateOrder?.(bookingShipmentOrder.id, {
           topshipTrackingId: data.trackingId || '',

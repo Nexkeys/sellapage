@@ -4041,6 +4041,30 @@ const shipmentId = bookRecord?.id
 
 ---
 
+### [2026-07-20] Topship: Function Timeout Fixed + Clearer Errors When Topship's Side Is Slow
+
+#### What happened
+Retrying "Express" (after the array-unwrap fix) got past `save-shipment` cleanly and reached `pay-from-wallet` too (confirmed via Vercel's "External APIs" panel showing all 3 calls: Firebase token-cert fetch → `save-shipment` → `pay-from-wallet`) — but the whole request then hit `504 FUNCTION_INVOCATION_TIMEOUT`, "Task timed out after 15 seconds." Nex also flagged that the resulting frontend error ("Could not connect to book the shipment. Please check your connection.") was misleading — implying a problem on the vendor's end when the real cause was Topship's side being slow.
+
+#### Root cause
+- **`vercel.json`** capped `api/[...route].js` (the single catch-all handling every API route in the app) at `maxDuration: 15`. Topship bookings now chain up to 3 sequential external calls per request (Firebase cert fetch + `save-shipment` + `pay-from-wallet`), and `pay-from-wallet` — a real wallet/financial operation on Topship's staging backend — is apparently slow enough to blow past 15s combined. This is a hard platform-level kill that happens *before* our own `try/catch` gets a chance to run, so Vercel serves its own plain-text 504 page instead of JSON.
+- **`OrdersTab.jsx`'s `bookTopshipDirect`** did `const data = await res.json()` unconditionally. Vercel's 504 body isn't valid JSON, so `res.json()` throws, landing in the generic catch block and showing the misleading connectivity message regardless of actual cause.
+
+#### Fix — three parts
+1. **`vercel.json`** — `maxDuration` raised `15 → 30` for `api/[...route].js`. Confirmed safe: this project is on Vercel's Hobby tier (per the router file's own comment), which allows configuring up to 60s — 30 is conservative headroom, not the ceiling. This affects every route through the catch-all (unavoidable, single-file router), but is harmless for routes that already finish in well under a second.
+2. **`src/api-handlers/_lib/topship-booking.js`** — both the `save-shipment` and `pay-from-wallet` fetch calls now pass `signal: AbortSignal.timeout(12000)` (a new `TOPSHIP_CALL_TIMEOUT_MS` constant), wrapped in a try/catch that specifically detects the abort (`isTimeoutError()` — checks `err.name` for `'TimeoutError'`/`'AbortError'`) and returns a clean, specific message instead of letting the error propagate to a platform-level kill: *"Topship's booking service didn't respond in time — the courier may be temporarily unavailable on their end..."* for `save-shipment`, and a distinct message for `pay-from-wallet` noting the draft shipment was already created. 12s per call leaves comfortable room under the new 30s function budget even with both calls plus Firebase auth overhead running sequentially.
+3. **`src/components/dashboard/OrdersTab.jsx`** — `bookTopshipDirect`'s response parsing now wraps `res.json()` in its own try/catch. If parsing fails and `res.status === 504`, shows *"The booking took too long to complete — this usually means Topship's staging server is slow or the courier is temporarily unavailable right now."* instead of the generic connectivity message. A genuine network failure (fetch itself rejects) still shows the original "check your connection" message, since that one's accurate for that case.
+
+#### What did NOT change
+- No other Topship files — `topship-create-shipment.js` and the `paystack-webhook.js` Topship branch already just forward whatever error message `bookTopshipShipment` returns, so the clearer messages from part 2 flow through automatically.
+- Sendbox — untouched, per standing instruction. (Its own `maxDuration` exposure is a pre-existing characteristic of the shared catch-all file, not something newly introduced here.)
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
 ### [2026-07-20] Google Ads OAuth — Vendor Callback Redirect URI Bug Fixed
 
 #### The bug
@@ -4061,6 +4085,81 @@ This was a copy-paste error from when the master account OAuth flow was created.
 - No Google Cloud Console changes — both redirect URIs were already registered.
 - No changes to the master account flow (`google-ads-master-auth.js` / `google-ads-master-callback.js`).
 - Vendor OAuth flow was already working before the master account feature was added — this was purely a regression from copy-paste.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-20] Google Ads — CustomerId Not Saved After OAuth + API Handler Fallback Fix
+
+#### The bug
+Vendor successfully connected their Google Ads account (OAuth completed, refresh token saved, dashboard showed "Connected" badge), but both `/api/google-ads-campaigns` and `/api/google-ads-reports` returned 400 with "Google Ads not connected or no account selected". The dashboard showed "Google Ads not connected" error banner despite the Connected status.
+
+#### Root cause
+Two-layer failure:
+
+1. **`google-ads-callback.js`**: The OAuth callback saved `googleAdsConnected: true` and `googleAdsRefreshToken` first, then attempted to fetch account details (customer ID, name, currency, timezone) inside a **non-fatal try/catch**. The `getCustomer()` call (which uses `customerClient:findRichResults`) failed silently, so `googleAdsCustomerId` was **never saved** to the store doc. The callback still redirected as "success."
+
+2. **`google-ads-campaigns.js` / `google-ads-reports.js`**: Both handlers required `googleAdsCustomerId` to be present in the store doc. When it was null, they returned 400 immediately — no fallback, no attempt to resolve it.
+
+Net result: `googleAdsConnected: true` but `googleAdsCustomerId: null` → frontend shows "Connected" → API handlers reject with 400.
+
+#### Fixes
+
+**`src/api-handlers/google-ads-callback.js`:**
+- Moved the `getAccessToken` + `listAccessibleCustomers` calls **outside** the try/catch — they are now critical, not optional.
+- `customerId` is always extracted from the first accessible customer resource name and **always saved** to the store doc, even if `getCustomer()` fails.
+- `getCustomer()` failure is non-fatal — only the detailed info (account name, currency, timezone) is skipped.
+- If no accessible customers exist, redirects with an error message instead of silently saving an incomplete connection.
+
+**`src/api-handlers/_lib/google-ads-client.js`:**
+- Added `resolveCustomerId(refreshToken)` helper — takes a refresh token, lists accessible customers, returns the first customer ID (or null). Used as fallback by API handlers.
+
+**`src/api-handlers/google-ads-campaigns.js`:**
+- Changed `customerId` from `const` to `let`.
+- If `customerId` is missing from the store doc, calls `resolveCustomerId(refreshToken)` as fallback.
+- If fallback succeeds, saves the resolved `customerId` back to the store doc (so subsequent requests don't need to resolve again).
+- If both store doc and fallback return null, returns a clear error: "No Google Ads account found. Please reconnect."
+
+**`src/api-handlers/google-ads-reports.js`:**
+- Same fallback pattern as campaigns handler.
+
+#### What did NOT change
+- No frontend changes — the UI already handles the error states correctly.
+- No changes to `google-ads-master-auth.js` or `google-ads-master-callback.js` (master account flow).
+- No Vercel env var changes.
+- No Google Cloud Console changes.
+- `getCustomer()` function itself unchanged — the fix is about handling its failure gracefully, not changing its implementation.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-20] Google Ads — Disconnect Button Added
+
+#### Why
+After the previous fix (customerId fallback), vendors who connected before the fix still have an incomplete store doc — `googleAdsConnected: true` but `googleAdsCustomerId: null`. There was no way to disconnect and reconnect from the dashboard UI to trigger the new callback code. Vendors were stuck.
+
+#### What was added
+
+**`src/api-handlers/google-ads-disconnect.js` (new file):**
+- POST endpoint that verifies the auth token and clears all Google Ads fields from the store doc: `googleAdsConnected`, `googleAdsRefreshToken`, `googleAdsCustomerId`, `googleAdsAccountName`, `googleAdsCurrency`, `googleAdsTimezone`, `googleAdsConnectedAt` — all set to `false`/`null`.
+- Ownership check: verifies the requesting user is the store owner.
+
+**`api/[...route].js`:**
+- Added route case `google-ads-disconnect` pointing to the new handler.
+
+**`src/components/dashboard/GoogleAdsTab.jsx`:**
+- Added `Unlink` icon import from lucide-react.
+- Added `disconnecting` state and `handleDisconnect()` function — shows a confirmation dialog, calls `/api/google-ads-disconnect`, then reloads the page.
+- Added a "Disconnect" button next to the green "Connected" badge — styled as subtle text that turns red on hover. Disabled during disconnect with loading text.
+
+#### User flow
+Vendor clicks "Disconnect" → confirmation dialog → account disconnected → page reloads → "Connect Your Account" card appears → vendor reconnects → new callback saves `customerId` properly → campaigns and reports work.
 
 ### Build Status
 

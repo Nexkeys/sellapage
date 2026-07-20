@@ -8,6 +8,7 @@ import {
   createCampaign,
   updateCampaignStatus,
   listCampaigns,
+  resolveCustomerId,
 } from './_lib/google-ads-client.js'
 
 if (!getApps().length) {
@@ -51,9 +52,19 @@ export default async function handler(req, res) {
     }
 
     const refreshToken = storeDoc.data().googleAdsRefreshToken
-    const customerId = storeDoc.data().googleAdsCustomerId
-    if (!refreshToken || !customerId) {
-      return res.status(400).json({ error: 'Google Ads not connected or no account selected' })
+    let customerId = storeDoc.data().googleAdsCustomerId
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Google Ads not connected' })
+    }
+
+    if (!customerId) {
+      customerId = await resolveCustomerId(refreshToken)
+      if (customerId) {
+        await db.collection('stores').doc(storeId).update({ googleAdsCustomerId: customerId })
+      }
+    }
+    if (!customerId) {
+      return res.status(400).json({ error: 'No Google Ads account found. Please reconnect.' })
     }
 
     const accessToken = await getAccessToken(refreshToken)

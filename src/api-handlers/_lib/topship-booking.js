@@ -5,6 +5,17 @@
 // reviewed staging logs/reports. Flip TOPSHIP_ENV=production (and add
 // TOPSHIP_PRODUCTION_KEY) once that approval lands — no other code changes needed.
 
+// save-shipment and pay-from-wallet are real booking/payment operations (not quote
+// lookups), so they get a longer per-call budget than e.g. the geolocation timeout
+// used elsewhere in this codebase. Kept comfortably under the 30s function-level
+// maxDuration (vercel.json) so a slow Topship response is caught here, as a clean
+// JSON error, instead of the whole function getting hard-killed by the platform.
+const TOPSHIP_CALL_TIMEOUT_MS = 12000
+
+function isTimeoutError(err) {
+  return err?.name === 'TimeoutError' || err?.name === 'AbortError'
+}
+
 function getTopshipConfig() {
   const env = (process.env.TOPSHIP_ENV || 'staging').toLowerCase()
   if (env === 'production') {
@@ -201,11 +212,24 @@ export async function bookTopshipShipment({
     }],
   }
 
-  const bookRes = await fetch(`${baseUrl}/save-shipment`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(saveShipmentPayload),
-  })
+  let bookRes
+  try {
+    bookRes = await fetch(`${baseUrl}/save-shipment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(saveShipmentPayload),
+      signal: AbortSignal.timeout(TOPSHIP_CALL_TIMEOUT_MS),
+    })
+  } catch (err) {
+    if (isTimeoutError(err)) {
+      console.error(`[topship-booking] save-shipment timed out after ${TOPSHIP_CALL_TIMEOUT_MS}ms`)
+      return {
+        success: false,
+        error: "Topship's booking service didn't respond in time — the courier may be temporarily unavailable on their end. Try a different courier or try again shortly.",
+      }
+    }
+    throw err
+  }
 
   const bookData = await bookRes.json()
   if (!bookRes.ok) {
@@ -235,11 +259,24 @@ export async function bookTopshipShipment({
   }
 
   const payFromWalletPayload = { detail: { shipmentId } }
-  const payRes = await fetch(`${baseUrl}/pay-from-wallet`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(payFromWalletPayload),
-  })
+  let payRes
+  try {
+    payRes = await fetch(`${baseUrl}/pay-from-wallet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(payFromWalletPayload),
+      signal: AbortSignal.timeout(TOPSHIP_CALL_TIMEOUT_MS),
+    })
+  } catch (err) {
+    if (isTimeoutError(err)) {
+      console.error(`[topship-booking] pay-from-wallet timed out after ${TOPSHIP_CALL_TIMEOUT_MS}ms`)
+      return {
+        success: false,
+        error: "Topship's payment service didn't respond in time — the shipment draft was created but payment could not be confirmed. Try again shortly before booking a new one.",
+      }
+    }
+    throw err
+  }
 
   const payDataRaw = await payRes.json()
   if (!payRes.ok) {

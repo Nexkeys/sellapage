@@ -19,6 +19,14 @@ export async function getAccessToken(refreshToken) {
   return data.access_token
 }
 
+export async function resolveCustomerId(refreshToken) {
+  const accessToken = await getAccessToken(refreshToken)
+  const resourceNames = await listAccessibleCustomers(accessToken)
+  if (!resourceNames.length) return null
+  const firstCustomer = resourceNames[0]
+  return firstCustomer.split('/').pop()
+}
+
 export async function listAccessibleCustomers(accessToken) {
   const res = await fetch(`${BASE_URL}/customers:listAccessibleCustomers`, {
     method: 'GET',

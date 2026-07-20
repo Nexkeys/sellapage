@@ -50,34 +50,37 @@ export default async function handler(req, res) {
       return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent(msg)}`)
     }
 
+    const accessToken = await getAccessToken(tokenData.refresh_token)
+    const customerNames = await listAccessibleCustomers(accessToken)
+
+    if (!customerNames.length) {
+      await db.collection('stores').doc(storeId).update({
+        googleAdsConnected: true,
+        googleAdsRefreshToken: tokenData.refresh_token,
+        googleAdsConnectedAt: new Date().toISOString(),
+      })
+      return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent('Connected but no Google Ads accounts found. Please create a Google Ads account first.')}`)
+    }
+
+    const firstCustomer = customerNames[0]
+    const customerId = firstCustomer.split('/').pop()
+
+    let accountInfo = null
+    try {
+      accountInfo = await getCustomer(accessToken, customerId)
+    } catch (infoErr) {
+      console.warn('[google-ads-callback] getCustomer failed, saving raw customerId:', infoErr.message)
+    }
+
     await db.collection('stores').doc(storeId).update({
       googleAdsConnected: true,
       googleAdsRefreshToken: tokenData.refresh_token,
       googleAdsConnectedAt: new Date().toISOString(),
+      googleAdsCustomerId: customerId,
+      googleAdsAccountName: accountInfo?.descriptiveName || null,
+      googleAdsCurrency: accountInfo?.currencyCode || null,
+      googleAdsTimezone: accountInfo?.timeZone || null,
     })
-
-    let accountInfo = null
-    try {
-      const accessToken = await getAccessToken(tokenData.refresh_token)
-      const customerNames = await listAccessibleCustomers(accessToken)
-
-      if (customerNames.length > 0) {
-        const firstCustomer = customerNames[0]
-        const customerId = firstCustomer.split('/').pop()
-        accountInfo = await getCustomer(accessToken, customerId)
-      }
-    } catch (infoErr) {
-      console.warn('[google-ads-callback] Could not fetch account details (non-fatal):', infoErr.message)
-    }
-
-    if (accountInfo) {
-      await db.collection('stores').doc(storeId).update({
-        googleAdsCustomerId: accountInfo.id || null,
-        googleAdsAccountName: accountInfo.descriptiveName || null,
-        googleAdsCurrency: accountInfo.currencyCode || null,
-        googleAdsTimezone: accountInfo.timeZone || null,
-      })
-    }
 
     return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=connected`)
   } catch (err) {

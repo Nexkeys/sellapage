@@ -205,6 +205,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/google-ads-callback.js")
         return handler(req, res)
       }
+      case "google-ads-disconnect": {
+        const { default: handler } = await import("../src/api-handlers/google-ads-disconnect.js")
+        return handler(req, res)
+      }
       case "google-ads-accounts": {
         const { default: handler } = await import("../src/api-handlers/google-ads-accounts.js")
         return handler(req, res)
