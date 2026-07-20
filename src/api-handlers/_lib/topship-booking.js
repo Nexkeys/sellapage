@@ -144,63 +144,73 @@ export async function bookTopshipShipment({
   const senderSplit = splitAddress(senderDetail?.addressLine1 || senderDetail?.address || '')
   const receiverSplit = splitAddress(receiverDetail?.addressLine1 || receiverDetail?.address || '')
 
+  // Built as a named variable (not inlined into the fetch call) specifically so the
+  // exact payload can be logged verbatim on failure — see TEMP DEBUG LOGGING note
+  // below. Remove that logging once the Topship "Unauthorized" issue is resolved.
+  const saveShipmentPayload = {
+    shipment: [{
+      items: items.length ? items : [{
+        category: 'Others',
+        description: 'Package',
+        weight: 1,
+        quantity: 1,
+        value: shipmentCharge,
+      }],
+      itemCollectionMode,
+      pricingTier,
+      insuranceType,
+      insuranceCharge,
+      discount: 0,
+      shipmentRoute,
+      shipmentCharge,
+      pickupCharge,
+      deliveryLocation: '',
+      pickupId: '',
+      pickupPartner: itemCollectionMode === 'PickUp' ? 'Standard' : '',
+      valueAddedTaxCharge,
+      senderDetail: {
+        name: senderDetail?.name || '',
+        email: senderDetail?.email || '',
+        phoneNumber: senderDetail?.phone || senderDetail?.phoneNumber || '',
+        addressLine1: senderSplit.line1,
+        addressLine2: senderSplit.line2,
+        addressLine3: senderSplit.line3,
+        country: senderDetail?.country || 'Nigeria',
+        state: senderDetail?.state || '',
+        city: senderDetail?.city || '',
+        countryCode: senderDetail?.countryCode || 'NG',
+        postalCode: senderDetail?.postalCode || '',
+      },
+      receiverDetail: {
+        name: receiverDetail?.name || '',
+        email: receiverDetail?.email || '',
+        phoneNumber: receiverDetail?.phone || receiverDetail?.phoneNumber || '',
+        addressLine1: receiverSplit.line1,
+        addressLine2: receiverSplit.line2,
+        addressLine3: receiverSplit.line3,
+        country: receiverDetail?.country || 'Nigeria',
+        state: receiverDetail?.state || '',
+        city: receiverDetail?.city || '',
+        countryCode: receiverDetail?.countryCode || 'NG',
+        postalCode: receiverDetail?.postalCode || '',
+      },
+    }],
+  }
+
   const bookRes = await fetch(`${baseUrl}/save-shipment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      shipment: [{
-        items: items.length ? items : [{
-          category: 'Others',
-          description: 'Package',
-          weight: 1,
-          quantity: 1,
-          value: shipmentCharge,
-        }],
-        itemCollectionMode,
-        pricingTier,
-        insuranceType,
-        insuranceCharge,
-        discount: 0,
-        shipmentRoute,
-        shipmentCharge,
-        pickupCharge,
-        deliveryLocation: '',
-        pickupId: '',
-        pickupPartner: itemCollectionMode === 'PickUp' ? 'Standard' : '',
-        valueAddedTaxCharge,
-        senderDetail: {
-          name: senderDetail?.name || '',
-          email: senderDetail?.email || '',
-          phoneNumber: senderDetail?.phone || senderDetail?.phoneNumber || '',
-          addressLine1: senderSplit.line1,
-          addressLine2: senderSplit.line2,
-          addressLine3: senderSplit.line3,
-          country: senderDetail?.country || 'Nigeria',
-          state: senderDetail?.state || '',
-          city: senderDetail?.city || '',
-          countryCode: senderDetail?.countryCode || 'NG',
-          postalCode: senderDetail?.postalCode || '',
-        },
-        receiverDetail: {
-          name: receiverDetail?.name || '',
-          email: receiverDetail?.email || '',
-          phoneNumber: receiverDetail?.phone || receiverDetail?.phoneNumber || '',
-          addressLine1: receiverSplit.line1,
-          addressLine2: receiverSplit.line2,
-          addressLine3: receiverSplit.line3,
-          country: receiverDetail?.country || 'Nigeria',
-          state: receiverDetail?.state || '',
-          city: receiverDetail?.city || '',
-          countryCode: receiverDetail?.countryCode || 'NG',
-          postalCode: receiverDetail?.postalCode || '',
-        },
-      }],
-    }),
+    body: JSON.stringify(saveShipmentPayload),
   })
 
   const bookData = await bookRes.json()
   if (!bookRes.ok) {
+    // TEMP DEBUG LOGGING (2026-07-20): logs the exact raw request body on failure so
+    // it can be handed to Topship support verbatim if they ask for it while
+    // investigating the /save-shipment "Unauthorized" issue. Safe to remove once
+    // that's resolved — see README.md changelog for context.
     console.error('[topship-booking] save-shipment error:', bookData)
+    console.error('[topship-booking] save-shipment request payload was:', JSON.stringify(saveShipmentPayload, null, 2))
     return {
       success: false,
       error: `Topship rejected the booking request (save-shipment): ${describeTopshipError(bookData, 'Failed to save Topship shipment draft')}`,
@@ -214,15 +224,19 @@ export async function bookTopshipShipment({
     return { success: false, error: 'Topship did not return a shipment id', data: bookData }
   }
 
+  const payFromWalletPayload = { detail: { shipmentId } }
   const payRes = await fetch(`${baseUrl}/pay-from-wallet`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ detail: { shipmentId } }),
+    body: JSON.stringify(payFromWalletPayload),
   })
 
   const payData = await payRes.json()
   if (!payRes.ok) {
+    // TEMP DEBUG LOGGING (2026-07-20): see the matching note on the save-shipment
+    // failure branch above — same reasoning, same removal plan.
     console.error('[topship-booking] pay-from-wallet error:', payData)
+    console.error('[topship-booking] pay-from-wallet request payload was:', JSON.stringify(payFromWalletPayload, null, 2))
     return {
       success: false,
       error: `Topship rejected the wallet payment (pay-from-wallet): ${describeTopshipError(payData, 'Failed to pay for Topship shipment from wallet')}`,

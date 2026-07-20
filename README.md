@@ -3956,3 +3956,23 @@ New `describeTopshipError(data, fallback)` helper — Topship's error responses 
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-20] Topship: Correction on Prior Diagnosis + Temp Raw-Payload Debug Logging
+
+#### Correction to the previous entry's theory
+The prior entry guessed the `/save-shipment` "Unauthorized" was likely a staging-key permission tier (quote-only vs. write-enabled). Nex surfaced the original Topship onboarding email thread (Jul 8–10), which contradicts that: Topship's own tech team said *"Once you are done with the staging integration, we will carry out due diligence on the staging integration you have done"* — due diligence happens by reviewing a completed staging integration, which implies the staging key is meant to support real booking calls, not that booking is gated behind a separate activation step. Correcting the record here rather than leaving a wrong theory standing. Root cause is still unconfirmed — Claude has no live network access to Topship's API from this environment, so it can't test against their server directly to isolate it further. The `/save-shipment` request payload was re-verified field-by-field against their docs and matches the documented shape, so no further code-side cause was found on this pass either.
+
+#### `src/api-handlers/_lib/topship-booking.js` — TEMP debug logging (2026-07-20)
+Both the `save-shipment` and `pay-from-wallet` request bodies are now built as named variables (`saveShipmentPayload`, `payFromWalletPayload`) instead of being inlined into the `fetch()` call, and are `console.error`'d verbatim (via `JSON.stringify(..., null, 2)`) alongside Topship's error response whenever either call fails. Purpose: if Topship support asks for the exact payload while investigating the "Unauthorized" issue, it's sitting in Vercel logs ready to copy, instead of needing to be reconstructed by hand. **Marked TEMP in code comments — remove once the Topship issue is resolved**, since verbose request-body logging isn't something to leave running indefinitely (no PII beyond what's already visible in the order data itself, but still unnecessary log noise once the immediate debugging need passes).
+
+Also drafted (not sent by Claude — Nex sends it) a follow-up reply to the existing Topship email thread with the concrete repro: `GET /get-shipment-rate` succeeds with the staging key, `POST /save-shipment` fails with `{"message":"Unauthorized"}` using the identical Bearer-token header, timestamped, asking directly whether write endpoints need separate activation.
+
+#### What did NOT change
+- No behavior change to the booking flow itself — this is logging only.
+- The `saveShipmentPayload`/`payFromWalletPayload` values sent to Topship are identical to before; only *how* they're logged on failure changed.
+
+### Build Status
+
+`npm run build` passed with zero errors.
