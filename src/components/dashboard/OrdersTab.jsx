@@ -193,8 +193,12 @@ export default function OrdersTab({
   const [deleteError, setDeleteError] = useState('')
   const [statusError, setStatusError] = useState('')
 
-  // Sendbox Shipment Booking States
+  // Shipment Booking States (shared by Sendbox and Topship)
   const [bookingShipmentOrder, setBookingShipmentOrder] = useState(null)
+  const [showProviderModal, setShowProviderModal] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState('sendbox')
+  const [itemCategory, setItemCategory] = useState('Fashion')
+  const [insuranceType, setInsuranceType] = useState('None')
   const [SendboxRates, setSendboxRates] = useState([])
   const [loadingRates, setLoadingRates] = useState(false)
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
@@ -254,6 +258,44 @@ export default function OrdersTab({
     const verifyAndBook = async () => {
       try {
         const token = await user?.getIdToken()
+
+        if (parsed.provider === 'topship') {
+          // Topship redirect flow: a single call does verify + book, no dependency
+          // on a separate verify endpoint (see topship-create-shipment.js).
+          const bookRes = await fetch('/api/topship-create-shipment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              storeId: parsed.storeId,
+              orderId: parsed.orderId,
+              reference,
+              courierId: parsed.courierId,
+              senderDetails: parsed.senderDetails,
+              receiverDetails: parsed.receiverDetails,
+              weight: parsed.weight,
+              itemCategory: parsed.itemCategory || 'Others',
+              insuranceType: parsed.insuranceType || 'None',
+            }),
+          })
+          const bookData = await bookRes.json()
+          if (bookRes.ok && bookData.success) {
+            sessionStorage.removeItem(`sellapage_shipment_${reference}`)
+            const newUrl = window.location.pathname
+            window.history.replaceState({}, '', newUrl)
+            await onUpdateOrder?.(parsed.orderId, {
+              topshipTrackingId: bookData.trackingId || '',
+              topshipTrackingUrl: bookData.trackingUrl || '',
+              topshipShipmentId: bookData.shipmentId || '',
+              provider: 'topship',
+              status: 'dispatched',
+            })
+            setShipmentPaymentResult({ success: true, trackingId: bookData.trackingId || '' })
+          } else {
+            setShipmentPaymentResult({ success: false, error: bookData.error || 'Shipment booking failed after payment.' })
+          }
+          return
+        }
+
         const verifyRes = await fetch('/api/sendbox-payment-verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -433,7 +475,21 @@ export default function OrdersTab({
     }
   }
 
-  const openSendboxModal = (order) => {
+  const openProviderModal = (order) => {
+    setBookingShipmentOrder(order)
+    setShowProviderModal(true)
+    setBookingError('')
+  }
+
+  const selectProvider = (provider) => {
+    setSelectedProvider(provider)
+    setShowProviderModal(false)
+    setItemCategory('Fashion')
+    setInsuranceType('None')
+    if (bookingShipmentOrder) initShipmentForm(bookingShipmentOrder, provider)
+  }
+
+  const initShipmentForm = (order, provider) => {
     setBookingShipmentOrder(order)
     setBookingError('')
     setBookingSuccess('')
@@ -471,13 +527,14 @@ export default function OrdersTab({
         receiverCity: order.deliveryAddress?.city || order.deliveryAddress?.lga || '',
         receiverState: order.deliveryAddress?.state || '',
         receiverLga: order.deliveryAddress?.lga || '',
-      })
+      }, provider)
     } else {
       setBookingError('Please configure your pickup address in the Delivery tab first.')
     }
   }
 
-  const triggerFetchRates = async (weightVal, detailsObj = {}) => {
+  const triggerFetchRates = async (weightVal, detailsObj = {}, providerOverride) => {
+    const provider = providerOverride || selectedProvider
     const sStreet = detailsObj.senderStreet ?? senderStreet
     const sCity = detailsObj.senderCity ?? senderCity
     const sState = detailsObj.senderState ?? senderState
@@ -499,31 +556,42 @@ export default function OrdersTab({
     setBookingError('')
     setSendboxRates([])
     try {
-      const res = await fetch('/api/sendbox-rates', {
+      const isTopship = provider === 'topship'
+      const endpoint = isTopship ? '/api/topship-rates' : '/api/sendbox-rates'
+      const body = isTopship
+        ? {
+            storeId: store.id,
+            senderDetails: { city: sCity, countryCode: 'NG' },
+            receiverDetails: { city: rCity, countryCode: 'NG' },
+            weight: Number(weightVal) || 1,
+          }
+        : {
+            storeId: store.id,
+            senderDetails: {
+              name: senderName || store?.businessName || '',
+              phone: senderPhone || store?.whatsappNumber || '',
+              email: senderEmail || store?.email || '',
+              address: sStreet,
+              city: sCity,
+              state: sState,
+            },
+            receiverDetails: {
+              name: receiverName || '',
+              phone: receiverPhone || '',
+              email: receiverEmail || '',
+              address: rStreet,
+              city: rCity,
+              state: rState,
+            },
+            weight: Number(weightVal) || 1,
+            packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 5000),
+            packageType: packageType,
+          }
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId: store.id,
-          senderDetails: {
-            name: senderName || store?.businessName || '',
-            phone: senderPhone || store?.whatsappNumber || '',
-            email: senderEmail || store?.email || '',
-            address: sStreet,
-            city: sCity,
-            state: sState,
-          },
-          receiverDetails: {
-            name: receiverName || '',
-            phone: receiverPhone || '',
-            email: receiverEmail || '',
-            address: rStreet,
-            city: rCity,
-            state: rState,
-          },
-          weight: Number(weightVal) || 1,
-          packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 5000),
-          packageType: packageType,
-        }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok && Array.isArray(data.rates)) {
@@ -533,7 +601,7 @@ export default function OrdersTab({
           setSelectedServiceCode(data.rates[0].service_code || '')
         }
       } else {
-        setBookingError(data.error || 'Failed to fetch rates from Sendbox.')
+        setBookingError(data.error || `Failed to fetch rates from ${isTopship ? 'Topship' : 'Sendbox'}.`)
       }
     } catch (err) {
       console.error(err)
@@ -564,68 +632,85 @@ export default function OrdersTab({
     if (!selectedRate) return
     setPaymentInitializing(true)
     setPaymentError('')
+    const isTopship = selectedProvider === 'topship'
     try {
       const token = await user?.getIdToken()
-      const res = await fetch('/api/sendbox-payment-initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          storeId: store.id,
-          orderId: bookingShipmentOrder.id,
-          courierName: selectedRate.courier_name,
-          shippingFee: Number(selectedRate.total_shipping_fee),
-          courierId: selectedCourierId,
-          senderDetails: {
-            name: senderName || store?.businessName || '',
-            phone: senderPhone || store?.whatsappNumber || '',
-            email: senderEmail || store?.email || '',
-            address: senderStreet,
-            city: senderCity,
-            state: senderState,
-          },
-          receiverDetails: {
-            name: receiverName || '',
-            phone: receiverPhone || '',
-            email: receiverEmail || '',
-            address: receiverStreet,
-            city: receiverCity,
-            state: receiverState,
-            lga: receiverLga || '',
-          },
-          weight: Number(packageWeight) || 1,
-          pickupDate: pickupDate,
-          packageType: packageType,
-        }),
-      })
-      const data = await res.json()
-      if (res.ok && data.authorization_url) {
-        sessionStorage.setItem(
-          `sellapage_shipment_${data.reference}`,
-          JSON.stringify({
+      const senderDetails = {
+        name: senderName || store?.businessName || '',
+        phone: senderPhone || store?.whatsappNumber || '',
+        email: senderEmail || store?.email || '',
+        address: senderStreet,
+        city: senderCity,
+        state: senderState,
+      }
+      const receiverDetails = {
+        name: receiverName || '',
+        phone: receiverPhone || '',
+        email: receiverEmail || '',
+        address: receiverStreet,
+        city: receiverCity,
+        state: receiverState,
+        lga: receiverLga || '',
+      }
+
+      const initEndpoint = isTopship ? '/api/topship-payment-initialize' : '/api/sendbox-payment-initialize'
+      const initBody = isTopship
+        ? {
             storeId: store.id,
             orderId: bookingShipmentOrder.id,
-            senderDetails: {
-              name: senderName || store?.businessName || '',
-              phone: senderPhone || store?.whatsappNumber || '',
-              email: senderEmail || store?.email || '',
-              address: senderStreet,
-              city: senderCity,
-              state: senderState,
-            },
-            receiverDetails: {
-              name: receiverName || '',
-              phone: receiverPhone || '',
-              email: receiverEmail || '',
-              address: receiverStreet,
-              city: receiverCity,
-              state: receiverState,
-              lga: receiverLga || '',
-            },
+            courierName: selectedRate.courier_name,
+            shippingFee: Number(selectedRate.total_shipping_fee),
+            courierId: selectedCourierId,
+            senderDetails,
+            receiverDetails,
+            weight: Number(packageWeight) || 1,
+            pickupDate: pickupDate,
+            itemCategory,
+            insuranceType,
+          }
+        : {
+            storeId: store.id,
+            orderId: bookingShipmentOrder.id,
+            courierName: selectedRate.courier_name,
+            shippingFee: Number(selectedRate.total_shipping_fee),
+            courierId: selectedCourierId,
+            senderDetails,
+            receiverDetails,
             weight: Number(packageWeight) || 1,
             pickupDate: pickupDate,
             packageType: packageType,
-          })
-        )
+          }
+
+      const res = await fetch(initEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(initBody),
+      })
+      const data = await res.json()
+      if (res.ok && data.authorization_url) {
+        const sessionPayload = isTopship
+          ? {
+              provider: 'topship',
+              storeId: store.id,
+              orderId: bookingShipmentOrder.id,
+              courierId: selectedCourierId,
+              senderDetails,
+              receiverDetails,
+              weight: Number(packageWeight) || 1,
+              pickupDate: pickupDate,
+              itemCategory,
+              insuranceType,
+            }
+          : {
+              storeId: store.id,
+              orderId: bookingShipmentOrder.id,
+              senderDetails,
+              receiverDetails,
+              weight: Number(packageWeight) || 1,
+              pickupDate: pickupDate,
+              packageType: packageType,
+            }
+        sessionStorage.setItem(`sellapage_shipment_${data.reference}`, JSON.stringify(sessionPayload))
         window.location.href = data.authorization_url
       } else {
         setPaymentError(data.error || 'Failed to initialize payment. Please try again.')
@@ -1026,10 +1111,10 @@ export default function OrdersTab({
                               {markingDelivered === order.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
                             </button>
                           )}
-                          {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId) && (
+                          {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId || order.topshipTrackingId) && (
                             <button
                               type="button"
-                              onClick={() => openSendboxModal(order)}
+                              onClick={() => openProviderModal(order)}
                               className="inline-flex items-center justify-center rounded-xl p-2 text-gray-300 opacity-0 transition-all duration-200 hover:bg-green-50 hover:text-green-600 group-hover:opacity-100 focus:opacity-100"
                               title="Book Shipment"
                               aria-label="Book Shipment"
@@ -1193,10 +1278,10 @@ export default function OrdersTab({
                       Delivered
                     </button>
                   )}
-                  {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId) && (
+                  {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId || order.topshipTrackingId) && (
                     <button
                       type="button"
-                      onClick={() => openSendboxModal(order)}
+                      onClick={() => openProviderModal(order)}
                       className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-green-600 transition-all hover:bg-green-50"
                     >
                       <Truck size={13} />
@@ -1438,10 +1523,63 @@ export default function OrdersTab({
         )
       })()}
 
-      {bookingShipmentOrder && (
+      {showProviderModal && bookingShipmentOrder && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+          <div className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+            <div className="border-b border-gray-100 px-5 py-3.5 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-950 flex items-center gap-2">
+                  <Truck className="text-green-600" size={20} />
+                  Choose a Delivery Provider
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Rates and courier options depend on which provider you pick.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowProviderModal(false); setBookingShipmentOrder(null) }}
+                className="rounded-xl p-2 text-gray-400 transition-all duration-200 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close provider selection"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <button
+                type="button"
+                onClick={() => selectProvider('sendbox')}
+                className="w-full text-left rounded-2xl border-2 border-gray-100 hover:border-green-400 hover:bg-green-50/40 transition-all p-4 flex items-start gap-3"
+              >
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                  <Truck size={18} className="text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Sendbox</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Local delivery across Nigeria.</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => selectProvider('topship')}
+                className="w-full text-left rounded-2xl border-2 border-gray-100 hover:border-blue-400 hover:bg-blue-50/40 transition-all p-4 flex items-start gap-3"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <Truck size={18} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Topship</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Local + international shipping, 150+ countries.</p>
+                  <p className="text-[10px] font-bold text-amber-600 mt-1 uppercase tracking-wide">Staging — testing in progress</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bookingShipmentOrder && !showProviderModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
           <div className="relative w-full sm:max-w-xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
-            
+
             {/* Modal Header */}
             <div className="border-b border-gray-100 px-5 py-3.5 flex items-center justify-between">
               <div>
@@ -1450,7 +1588,7 @@ export default function OrdersTab({
                   Book Shipment
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Prepare shipment details and calculate rates with Sendbox
+                  Prepare shipment details and calculate rates with {selectedProvider === 'topship' ? 'Topship' : 'Sendbox'}
                 </p>
               </div>
               <button
@@ -1629,25 +1767,54 @@ export default function OrdersTab({
                   />
                 </div>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                  <div className="flex-1">
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Package Type</label>
-                    <select
-                      value={packageType}
-                      onChange={(e) => {
-                        setPackageType(e.target.value)
-                        if (packageWeight > 0) {
-                          triggerFetchRates(packageWeight)
-                        }
-                      }}
-                      className={INPUT_CLASS}
-                    >
-                      <option value="general">General items</option>
-                      <option value="food">Food items</option>
-                    </select>
-                    {packageType === 'food' && (
-                      <p className="text-xs text-amber-600 mt-1">Food items can only be dropped off — pickup is not available.</p>
-                    )}
-                  </div>
+                  {selectedProvider === 'topship' ? (
+                    <>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Item Category</label>
+                        <select
+                          value={itemCategory}
+                          onChange={(e) => setItemCategory(e.target.value)}
+                          className={INPUT_CLASS}
+                        >
+                          {['Fashion', 'FoodItems', 'LaptopsAndTablets', 'Phones', 'Document', 'HomeDecor', 'BeautyProducts', 'Others'].map(cat => (
+                            <option key={cat} value={cat}>{cat.replace(/([A-Z])/g, ' $1').trim()}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Insurance</label>
+                        <select
+                          value={insuranceType}
+                          onChange={(e) => setInsuranceType(e.target.value)}
+                          className={INPUT_CLASS}
+                        >
+                          <option value="None">None</option>
+                          <option value="Premium">Premium</option>
+                          <option value="Extended">Extended</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Package Type</label>
+                      <select
+                        value={packageType}
+                        onChange={(e) => {
+                          setPackageType(e.target.value)
+                          if (packageWeight > 0) {
+                            triggerFetchRates(packageWeight)
+                          }
+                        }}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="general">General items</option>
+                        <option value="food">Food items</option>
+                      </select>
+                      {packageType === 'food' && (
+                        <p className="text-xs text-amber-600 mt-1">Food items can only be dropped off — pickup is not available.</p>
+                      )}
+                    </div>
+                  )}
                   <div className="flex-1">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Package Weight (kg)</label>
                     <input

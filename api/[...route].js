@@ -55,6 +55,22 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/sendbox-payment-initialize.js");
         return await handlerFunc(req, res);
       }
+      case "topship-rates": {
+        const { default: handlerFunc } = await import("../src/api-handlers/topship-rates.js");
+        return await handlerFunc(req, res);
+      }
+      case "topship-payment-initialize": {
+        const { default: handlerFunc } = await import("../src/api-handlers/topship-payment-initialize.js");
+        return await handlerFunc(req, res);
+      }
+      case "topship-create-shipment": {
+        const { default: handlerFunc } = await import("../src/api-handlers/topship-create-shipment.js");
+        return await handlerFunc(req, res);
+      }
+      case "topship-tracking": {
+        const { default: handlerFunc } = await import("../src/api-handlers/topship-tracking.js");
+        return await handlerFunc(req, res);
+      }
       case "ai-describe": {
         const { default: handlerFunc } = await import("../src/api-handlers/ai-describe.js");
         return await handlerFunc(req, res);

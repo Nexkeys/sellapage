@@ -1113,7 +1113,11 @@ All three API handlers return clean, user-friendly error messages:
 
 
 ###
-# TOPSHIP API INTEGRATION PLAN 
+# TOPSHIP API INTEGRATION PLAN — STAGING DONE ✅ / PRODUCTION BLOCKED ⚠️
+
+## ⚠️ PRODUCTION BLOCKED — awaiting Topship's review of staging logs/reports before they issue a production key.
+Implemented and building against **staging only**. `TOPSHIP_ENV` defaults to `staging` and only `TOPSHIP_STAGING_KEY` is set in `.env` — there is no `TOPSHIP_PRODUCTION_KEY` yet. Topship will not issue a production key until they've reviewed staging logs/reports from real usage. Do not flip `TOPSHIP_ENV=production` until that key exists. See "2026-07-20 — Topship Integration (Staging)" in the changelog below for the full implementation writeup.
+
 Now I have everything confirmed. Here's the final comprehensive plan:
 
 ---
@@ -3838,3 +3842,59 @@ Decided with Nex before implementing: (1) fix the `mark-delivered.js` ownership 
 ### Build Status
 
 `npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change).
+
+---
+
+### [2026-07-20] Topship Integration (Staging) — Second Delivery Provider Alongside Sendbox
+
+## ⚠️ STAGING ONLY — PRODUCTION BLOCKED
+`TOPSHIP_ENV` defaults to `'staging'`. Only `TOPSHIP_STAGING_KEY` exists in `.env` — there is no `TOPSHIP_PRODUCTION_KEY`. Topship will not issue a production key until they've reviewed logs/reports from real staging usage. **Do not set `TOPSHIP_ENV=production`** until that key is obtained and added. Flipping the switch later needs zero code changes — see `_lib/topship-booking.js`.
+
+Implements the previously-approved "TOPSHIP API INTEGRATION PLAN" section above (provider-selector modal, KOBO conversion, 45-char address splitting) — that plan had been fully designed but never executed. This pass adapted it to what's actually in the codebase today (confirmed by re-reading every file it touches) and scoped it to staging.
+
+#### Pre-existing bug found during research (flagged, not fixed)
+`OrdersTab.jsx`'s post-Paystack-redirect flow calls `/api/sendbox-payment-verify` — **that handler does not exist**, no route case for it either. Every Sendbox shipment redirect hits this dead endpoint and shows a false "Payment verification failed" error, even though the shipment almost always still gets booked moments later by the independent, HMAC-verified webhook safety net in `paystack-webhook.js`. Left untouched per the standing instruction not to touch Sendbox logic — but it shaped the Topship design below: rather than depend on an equivalent (and equally fragile) two-call verify+book pattern, Topship's redirect flow verifies the Paystack transaction *itself*, server-side, inside `topship-create-shipment.js`, in one call.
+
+#### New — `src/api-handlers/_lib/topship-booking.js`
+Shared helper, same role as `_lib/sendbox-booking.js`. `TOPSHIP_ENV` resolves the base URL (`https://topship-staging.africa/api` staging / `https://api-topship.com/api` production) and API key. Exports: `splitAddress(address, maxLen=45)` (word-boundary splitter for Topship's 45-char address line limit), `getTopshipRates(...)` (`GET /get-shipment-rate`), `bookTopshipShipment(...)` (`POST /save-shipment` then `POST /pay-from-wallet`, KOBO conversion at the boundary, VAT = 7.5% of shipmentCharge+pickupCharge+insuranceCharge, `insuranceCharge` submitted as 0 and left for Topship to calculate per the docs — needs validating against real staging responses), `trackTopshipShipment(...)` (`GET /track-shipment`).
+
+#### New — `src/api-handlers/topship-rates.js`
+No auth (mirrors `sendbox-rates.js`, which is also unauthenticated — rate lookups carry no money risk). Maps Topship's response to the exact shape the frontend's existing rate-list UI already renders: `{courier_id, courier_name, total_shipping_fee, delivery_eta, provider: 'topship', pricing_tier}` — confirmed against `OrdersTab.jsx`'s existing JSX so the rate-selection UI needed zero changes to also render Topship rates.
+
+#### New — `src/api-handlers/topship-payment-initialize.js`
+Deliberately a separate file rather than a `provider` param added to `sendbox-payment-initialize.js`, so that file stays untouched. Same shape (Paystack `/transaction/initialize`, ₦250 service charge, same `callback_url`), `metadata.provider: 'topship'` plus `itemCategory`/`insuranceType` instead of `packageType`.
+
+#### New — `src/api-handlers/topship-create-shipment.js`
+Verifies Firebase ID token + store ownership, **then independently verifies the Paystack `reference`** via `GET /transaction/verify/:reference` (status must be `success`, `metadata.storeId`/`orderId` must match) before calling `bookTopshipShipment` — the safety step described above. On success writes `topshipTrackingId`, `topshipShipmentId`, `topshipTrackingUrl`, `topshipStatus`, `provider: 'topship'`, `status: 'dispatched'`, and a `statusLog` entry (`changedByLabel: 'Shipment Booked (Topship)'`) — reuses the `statusLog` mechanism from the Orders Tab overhaul.
+
+#### New — `src/api-handlers/topship-tracking.js`
+Mirrors `sendbox-tracking.js`'s exact contract (`POST {storeId, trackingCode}`). Topship's `/track-shipment` only exposes a current status/message, not a per-event history array like Sendbox — synthesizes a single-entry timeline so the shared timeline UI in `DeliveryTab.jsx` still renders something.
+
+#### `src/api-handlers/paystack-webhook.js` (touched, additively)
+The existing `transactionType === "shipment"` Sendbox branch's condition gained one clause: `&& data.metadata?.provider !== "topship"` — its body is byte-for-byte unchanged. A new sibling branch handles `provider === "topship"`, calling `bookTopshipShipment` directly (webhook is already HMAC-verified by Paystack, same trust model as the existing Sendbox branch — no extra verify call needed here).
+
+#### `api/[...route].js`
+Added route cases: `topship-rates`, `topship-payment-initialize`, `topship-create-shipment`, `topship-tracking`. Purely additive.
+
+#### `src/components/dashboard/OrdersTab.jsx`
+- New state: `selectedProvider`, `showProviderModal`, `itemCategory` (default `'Fashion'`), `insuranceType` (default `'None'`).
+- New provider-selector modal (two cards — Sendbox / Topship, the Topship card carries a visible "Staging — testing in progress" label) opens first when "Book Shipment" is clicked (`openProviderModal`); picking a card (`selectProvider`) opens the existing booking modal, now generically named `initShipmentForm` (was `openSendboxModal`).
+- `triggerFetchRates` takes a `providerOverride` param (avoids a stale-closure bug that would otherwise read `selectedProvider` before its `setState` from the same click had applied) and branches the endpoint/body; Sendbox's request body is byte-for-byte unchanged.
+- Booking form shows an Item Category + Insurance dropdown for Topship instead of Sendbox's Package Type dropdown.
+- `proceedToPaystack` branches the payment-initialize endpoint and the `sessionStorage` payload shape by provider; Sendbox's payload is unchanged.
+- The redirect-handling `useEffect` branches on `parsed.provider`: `topship` → single call to `/api/topship-create-shipment`; anything else (including old in-flight sessionStorage from before this shipped) → **the existing Sendbox calls, completely unchanged**.
+- Both "Book Shipment" trigger buttons (desktop table + mobile card) now call `openProviderModal` and also hide once `order.topshipTrackingId` is set, not just the Sendbox fields.
+
+#### `src/components/dashboard/DeliveryTab.jsx`
+- `activeShipments` filter extended to include `o.topshipTrackingId` (Topship shipments would otherwise be invisible in this tab after booking).
+- Each shipment card gets a Sendbox/Topship provider badge.
+- `refreshTracking` branches to `/api/topship-tracking` for Topship shipments; Sendbox path unchanged. No cron job — same page-load/manual-refresh UX already in place, matching the README's own noted fallback for Topship's lack of webhooks and this project's lean serverless philosophy.
+
+#### What did NOT change
+- Every existing Sendbox file (`sendbox-rates.js`, `sendbox-create-shipment.js`, `sendbox-payment-initialize.js`, `_lib/sendbox-booking.js`, `sendbox-tracking.js`, `sendbox-webhook.js`) — zero edits.
+- The pre-existing missing-`sendbox-payment-verify.js` bug — flagged above, not fixed here.
+- The Orders Tab overhaul's `statusLog` mechanism — reused as-is by the new Topship write paths, not altered.
+
+### Build Status
+
+`npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change). New/edited backend files also syntax-checked individually with `node --check`.

@@ -127,13 +127,16 @@ export default function DeliveryTab({
   }
 
   const refreshTracking = async (order) => {
-    const trackingCode = order.sendboxTrackingId || order.sendboxOrderCode || order.SendboxTrackingId
+    const isTopship = !!order.topshipTrackingId && !(order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)
+    const trackingCode = isTopship
+      ? order.topshipTrackingId
+      : (order.sendboxTrackingId || order.sendboxOrderCode || order.SendboxTrackingId)
     if (!trackingCode) return
     setTrackingLoading((prev) => ({ ...prev, [order.id]: true }))
     setTrackingError((prev) => ({ ...prev, [order.id]: '' }))
     try {
       const token = await user?.getIdToken()
-      const res = await fetch('/api/sendbox-tracking', {
+      const res = await fetch(isTopship ? '/api/topship-tracking' : '/api/sendbox-tracking', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +169,7 @@ export default function DeliveryTab({
   const hasPickupAddress =
     store?.pickupAddress?.streetAddress && store?.pickupAddress?.state
 
-  const activeShipments = (orders || []).filter((o) => o.sendboxTrackingId || o.sendboxOrderCode || o.SendboxTrackingId || o.SendboxOrderId)
+  const activeShipments = (orders || []).filter((o) => o.sendboxTrackingId || o.sendboxOrderCode || o.SendboxTrackingId || o.SendboxOrderId || o.topshipTrackingId)
   const zonesTotalPages = Math.max(1, Math.ceil((zones || []).length / DELIVERY_ZONES_PER_PAGE))
   const safeZonesPage = Math.min(zonesPage, zonesTotalPages)
   const paginatedZones = (zones || []).slice(
@@ -492,6 +495,7 @@ export default function DeliveryTab({
               const tracking = trackingData[order.id]
               const isLoading = trackingLoading[order.id]
               const error = trackingError[order.id]
+              const isTopship = !!order.topshipTrackingId && !(order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)
               return (
                 <div
                   key={order.id}
@@ -499,14 +503,19 @@ export default function DeliveryTab({
                 >
                   <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="font-bold text-gray-900 text-sm truncate">
-                        {order.customerName || 'Customer'}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-gray-900 text-sm truncate">
+                          {order.customerName || 'Customer'}
+                        </p>
+                        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border flex-shrink-0 ${isTopship ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                          {isTopship ? 'Topship' : 'Sendbox'}
+                        </span>
+                      </div>
                       <p className="text-[11px] text-gray-500 mt-0.5 truncate">
                         {order.items || 'Order'}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        Tracking: {order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode}
+                        Tracking: {isTopship ? order.topshipTrackingId : (order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)}
                       </p>
                     </div>
                     <div className="grid grid-cols-1 gap-1.5 flex-shrink-0 min-[360px]:grid-cols-3 sm:flex sm:flex-col">
@@ -523,7 +532,18 @@ export default function DeliveryTab({
                         )}
                         Refresh
                       </button>
-                      {(order.sendboxTrackingUrl || order.SendboxTrackingUrl) && (
+                      {isTopship && order.topshipTrackingUrl && (
+                        <a
+                          href={order.topshipTrackingUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-all"
+                        >
+                          <ExternalLink size={11} />
+                          Track
+                        </a>
+                      )}
+                      {!isTopship && (order.sendboxTrackingUrl || order.SendboxTrackingUrl) && (
                         <a
                           href={order.sendboxTrackingUrl || order.SendboxTrackingUrl}
                           target="_blank"
@@ -534,7 +554,7 @@ export default function DeliveryTab({
                           Track
                         </a>
                       )}
-                      {(order.sendboxWaybillUrl || order.SendboxWaybillUrl) && (
+                      {!isTopship && (order.sendboxWaybillUrl || order.SendboxWaybillUrl) && (
                         <a
                           href={order.sendboxWaybillUrl || order.SendboxWaybillUrl}
                           target="_blank"
@@ -582,7 +602,7 @@ export default function DeliveryTab({
 
                   {!tracking && !error && (
                     <p className="text-[11px] text-gray-400">
-                      Status: {order.SendboxStatus || 'created'} - Click Refresh for live update
+                      Status: {isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')} - Click Refresh for live update
                     </p>
                   )}
                 </div>

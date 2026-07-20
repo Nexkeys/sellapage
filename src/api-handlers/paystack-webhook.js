@@ -406,7 +406,7 @@ export default async function handler(req, res) {
     return res.status(200).send("OK");
   }
 
-  if (transactionType === "shipment") {
+  if (transactionType === "shipment" && data.metadata?.provider !== "topship") {
     try {
       const { createSendboxShipment } = await import("./_lib/sendbox-booking.js")
       const {
@@ -493,6 +493,100 @@ export default async function handler(req, res) {
       return res.status(200).send("OK")
     } catch (err) {
       console.error("[paystack-webhook] Shipment safety net error:", err)
+      return res.status(200).send("Shipment processing error")
+    }
+  }
+
+  // Topship safety net — mirrors the Sendbox branch above but for Topship-provider
+  // shipments. STAGING ONLY (see _lib/topship-booking.js). No separate Paystack verify
+  // call needed here: this webhook is already HMAC-verified by Paystack, same trust
+  // model as the Sendbox branch above.
+  if (transactionType === "shipment" && data.metadata?.provider === "topship") {
+    try {
+      const { bookTopshipShipment } = await import("./_lib/topship-booking.js")
+      const {
+        storeId,
+        orderId,
+        courierId,
+        senderDetails: senderDetailsRaw,
+        receiverDetails: receiverDetailsRaw,
+        weight,
+        shippingFee,
+        itemCategory,
+        insuranceType,
+      } = data.metadata || {}
+
+      if (!storeId || !orderId || !courierId) {
+        return res.status(200).send("Missing shipment metadata, skipped")
+      }
+
+      const orderRef = db.collection("stores").doc(storeId).collection("orders").doc(orderId)
+      const orderDoc = await orderRef.get()
+      if (!orderDoc.exists) {
+        return res.status(200).send("Order not found, skipped")
+      }
+
+      const senderDetails = typeof senderDetailsRaw === "string" ? JSON.parse(senderDetailsRaw) : senderDetailsRaw
+      const receiverDetails = typeof receiverDetailsRaw === "string" ? JSON.parse(receiverDetailsRaw) : receiverDetailsRaw
+      const shippingFeeNum = Number(shippingFee) || 0
+
+      const result = await bookTopshipShipment({
+        items: [{
+          category: itemCategory || "Others",
+          description: "Package",
+          weight: Number(weight) || 1,
+          quantity: 1,
+          value: Math.round(shippingFeeNum * 100),
+        }],
+        itemCollectionMode: "PickUp",
+        pricingTier: courierId,
+        insuranceType: insuranceType || "None",
+        shipmentChargeNaira: shippingFeeNum,
+        senderDetail: {
+          name: senderDetails?.name,
+          email: senderDetails?.email,
+          phone: senderDetails?.phone,
+          addressLine1: senderDetails?.address,
+          state: senderDetails?.state,
+          city: senderDetails?.city,
+        },
+        receiverDetail: {
+          name: receiverDetails?.name,
+          email: receiverDetails?.email,
+          phone: receiverDetails?.phone,
+          addressLine1: receiverDetails?.address,
+          state: receiverDetails?.state,
+          city: receiverDetails?.city,
+        },
+      })
+
+      if (!result.success) {
+        console.error("[paystack-webhook] Topship shipment creation failed:", result.error)
+        return res.status(200).send("Shipment creation failed")
+      }
+
+      const shipData = result.data
+      const now = new Date()
+
+      await orderRef.update({
+        topshipTrackingId: shipData?.trackingId || shipData?.thirdPartyTrackingId || "",
+        topshipShipmentId: shipData?.id || "",
+        topshipTrackingUrl: shipData?.trackingUrl || "",
+        topshipStatus: shipData?.shipmentStatus || "Confirmed",
+        provider: "topship",
+        status: "dispatched",
+        updatedAt: now.toISOString(),
+        statusLog: FieldValue.arrayUnion({
+          status: "dispatched",
+          changedAt: now.toISOString(),
+          changedBy: "system",
+          changedByLabel: "Shipment Booked (Topship)",
+        }),
+      })
+
+      return res.status(200).send("OK")
+    } catch (err) {
+      console.error("[paystack-webhook] Topship shipment safety net error:", err)
       return res.status(200).send("Shipment processing error")
     }
   }
