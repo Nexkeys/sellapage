@@ -4002,3 +4002,66 @@ Invalid Value Added Tax Charge!, Got 38598, Expecting 38599
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-20] VAT Fix Confirmed Working + New Bug: save-shipment Response Is an Array, Not an Object
+
+#### VAT fix confirmed
+Nex tested 3 different couriers (Glovo, Chowdeck, and a third "Express" pricingTier) after the `Math.ceil` fix shipped. None hit a VAT mismatch this time (38599 and 56209 both accepted) — the fix holds across multiple real requests, not just the one that originally surfaced it.
+
+#### What the 3 courier attempts actually showed
+- **Glovo** → `Error saving shipment (Error getting weigh-bill (Could not get shipment from Glovo Intra-city))`. Topship's own downstream integration with Glovo failing on their side — nothing wrong with our payload, this is Glovo's live availability status passed through by Topship.
+- **Chowdeck** → `Error saving shipment (Error getting weigh-bill (Sorry, we are not taking orders at this moment))`. Also not our bug — Chowdeck (the courier) reporting they're not accepting orders right now.
+- **"Express"** → **actually succeeded on Topship's side.** The raw response logged a complete, valid shipment: `id`, `trackingId: 'T761290351'`, `shipmentStatus: 'Draft'`, full sender/receiver echo, their own `valueAddedTaxCharge: 320475` (confirms the shipment was accepted as valid, further corroborating the VAT fix). **But our code reported `"Topship did not return a shipment id"` and returned failure anyway.**
+
+So: 2 of 3 failures were genuine Topship/courier-availability issues (exactly what staging testing is supposed to surface — not something fixable in this codebase), and 1 of 3 was a real integration bug, diagnosed and fixed below.
+
+#### Root cause: `/save-shipment`'s response is array-wrapped, contradicting its own docs
+The successful "Express" response was `[ { id: '775006e0-...', trackingId: 'T761290351', ... } ]` — a **one-element array**, not the bare object `Topship-DOCS.txt` shows in its documented example response. Likely explanation: the *request* body's `shipment` field is an array (`{ shipment: [{...}] }`), and Topship's backend echoes that array shape back in the response too, one entry per submitted item — the docs' example just wasn't updated to reflect it.
+
+`_lib/topship-booking.js` was reading `bookData?.id` directly. Since `bookData` was actually an array, `.id` was always `undefined`, even on a fully successful booking — every previously-successful Topship staging booking this session would have hit this same false failure, not just this one.
+
+#### Fix — `src/api-handlers/_lib/topship-booking.js`
+```js
+const bookRecord = Array.isArray(bookData) ? bookData[0] : bookData
+const shipmentId = bookRecord?.id
+```
+`bookRecord` (not `bookData`) is used from that point on. Applied the same defensive unwrap preemptively to the `pay-from-wallet` response too (`payData`) — its docs also show a bare object, and given `/save-shipment`'s docs just turned out to be wrong about this exact thing, `/pay-from-wallet`'s documented shape can't be assumed correct either until actually observed (booking never previously got far enough to reach `pay-from-wallet`, since it returned early on the missing id every time).
+
+`topship-create-shipment.js` and the `paystack-webhook.js` Topship branch both consume `result.data` from `bookTopshipShipment` generically — no changes needed there, they get the correctly-unwrapped object automatically now.
+
+#### What did NOT change
+- `topship-create-shipment.js`, `paystack-webhook.js`, `topship-rates.js` — none needed edits, the fix is fully contained in `_lib/topship-booking.js`.
+- The VAT `Math.ceil` fix from the previous entry — unchanged, confirmed still correct.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-20] Google Ads OAuth — Vendor Callback Redirect URI Bug Fixed
+
+#### The bug
+Vendor OAuth flow ("Connect Your Account") was failing with "Could not complete Google authentication" after the consent screen. Vercel logs showed the callback receiving a valid authorization code and making the token exchange POST, but the response was always a 307 redirect to the error page. No execution logs were captured because the error was caught and silently redirected.
+
+#### Root cause
+`src/api-handlers/google-ads-callback.js` line 40 had the **master account's** redirect URI hardcoded:
+```js
+redirect_uri: 'https://www.sellapage.com.ng/api/google-ads-master-callback',
+```
+This was a copy-paste error from when the master account OAuth flow was created. The vendor callback is supposed to use `process.env.GOOGLE_ADS_REDIRECT_URI` (which points to `/api/google-ads-callback`). Google's token endpoint received a `redirect_uri` that didn't match the one sent in the original auth request → rejected with `invalid_grant` → catch block → error redirect.
+
+#### Fix
+- `src/api-handlers/google-ads-callback.js`: Changed `redirect_uri` from hardcoded master URI to `process.env.GOOGLE_ADS_REDIRECT_URI`.
+
+#### What did NOT change
+- No Vercel env var changes — `GOOGLE_ADS_REDIRECT_URI` was already set correctly.
+- No Google Cloud Console changes — both redirect URIs were already registered.
+- No changes to the master account flow (`google-ads-master-auth.js` / `google-ads-master-callback.js`).
+- Vendor OAuth flow was already working before the master account feature was added — this was purely a regression from copy-paste.
+
+### Build Status
+
+`npm run build` passed with zero errors.

@@ -37,7 +37,7 @@ export default async function handler(req, res) {
         code,
         client_id: process.env.GOOGLE_ADS_CLIENT_ID,
         client_secret: process.env.GOOGLE_ADS_CLIENT_SECRET,
-        redirect_uri: 'https://www.sellapage.com.ng/api/google-ads-master-callback',
+        redirect_uri: process.env.GOOGLE_ADS_REDIRECT_URI,
         grant_type: 'authorization_code',
       }),
     })

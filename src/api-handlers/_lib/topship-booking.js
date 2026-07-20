@@ -222,10 +222,16 @@ export async function bookTopshipShipment({
     }
   }
 
-  const shipmentId = bookData?.id
+  // Topship's docs show a bare object as the /save-shipment response, but real staging
+  // responses come back as a one-element ARRAY (confirmed 2026-07-20 against a live
+  // successful booking) — presumably because the request body's `shipment` field is
+  // itself an array. Unwrap defensively rather than trusting the docs here.
+  const bookRecord = Array.isArray(bookData) ? bookData[0] : bookData
+
+  const shipmentId = bookRecord?.id
   if (!shipmentId) {
     console.error('[topship-booking] save-shipment returned no id:', bookData)
-    return { success: false, error: 'Topship did not return a shipment id', data: bookData }
+    return { success: false, error: 'Topship did not return a shipment id', data: bookRecord }
   }
 
   const payFromWalletPayload = { detail: { shipmentId } }
@@ -235,18 +241,22 @@ export async function bookTopshipShipment({
     body: JSON.stringify(payFromWalletPayload),
   })
 
-  const payData = await payRes.json()
+  const payDataRaw = await payRes.json()
   if (!payRes.ok) {
     // TEMP DEBUG LOGGING (2026-07-20): see the matching note on the save-shipment
     // failure branch above — same reasoning, same removal plan.
-    console.error('[topship-booking] pay-from-wallet error:', payData)
+    console.error('[topship-booking] pay-from-wallet error:', payDataRaw)
     console.error('[topship-booking] pay-from-wallet request payload was:', JSON.stringify(payFromWalletPayload, null, 2))
     return {
       success: false,
-      error: `Topship rejected the wallet payment (pay-from-wallet): ${describeTopshipError(payData, 'Failed to pay for Topship shipment from wallet')}`,
-      data: payData,
+      error: `Topship rejected the wallet payment (pay-from-wallet): ${describeTopshipError(payDataRaw, 'Failed to pay for Topship shipment from wallet')}`,
+      data: payDataRaw,
     }
   }
+
+  // Same defensive unwrap as save-shipment above, applied preemptively since we haven't
+  // yet observed a real pay-from-wallet success response to confirm its actual shape.
+  const payData = Array.isArray(payDataRaw) ? payDataRaw[0] : payDataRaw
 
   return { success: true, data: payData }
 }
