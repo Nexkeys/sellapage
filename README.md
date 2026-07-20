@@ -3976,3 +3976,29 @@ Also drafted (not sent by Claude — Nex sends it) a follow-up reply to the exis
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+### [2026-07-20] Topship: "Unauthorized" Resolved (New Key) + VAT Rounding Bug Fixed
+
+#### The "Unauthorized" issue is resolved — key rotation
+Topship replied to the drafted email with a replacement staging key ("The key should work just fine, but just in case there is a problem with it, here is a new key"). Nex swapped it into `.env` and Vercel and retried booking. **The Unauthorized error is gone** — `POST /save-shipment` now authenticates successfully and gets as far as Topship's business-logic validation, which is real, confirmed progress. Root cause of the original key's failure is still unknown (Topship didn't say what was wrong with the old one), but it's no longer blocking — moot at this point.
+
+#### New bug found immediately after, from a real Topship response — and fixed
+With auth working, the very next attempt returned a validation error instead:
+```
+Invalid Value Added Tax Charge!, Got 38598, Expecting 38599
+```
+**Diagnosis:** `_lib/topship-booking.js` computed `valueAddedTaxCharge = Math.round(shipmentCharge * 0.075)`. For that request, `shipmentCharge = 514642` kobo → `514642 × 0.075 = 38598.15` → `Math.round` gives `38598`. Topship expected `38599` — one kobo higher. Cross-checked against an earlier logged attempt (`749450 × 0.075 = 56208.75`, sent as `56209`, no VAT error on that one) — `56208.75` rounds to `56209` under both standard rounding and ceiling, so that data point alone was inconclusive, but the `38598.15` case isn't: `Math.round` gives `38598`, `Math.ceil` gives `38599`. Topship's expected value matches `Math.ceil` in the one case where the two methods actually disagree.
+
+**Fix — `src/api-handlers/_lib/topship-booking.js`:** `Math.round(...)` → `Math.ceil(...)` for `valueAddedTaxCharge`, with a code comment recording the exact evidence above so the reasoning doesn't get lost. One line, no other files touched — `bookTopshipShipment` is the only place this value is computed; `topship-create-shipment.js` and the `paystack-webhook.js` Topship branch both consume it from there rather than recomputing it.
+
+**Not yet fully confirmed:** this is the best-fitting rule from two data points, not a documented spec (Topship's docs just say "7.5% of totalCharge," no rounding rule stated). If a future booking gets a VAT mismatch again with a *different* expected value, the rule may be more specific (e.g. rounding to the nearest whole Naira rather than nearest kobo) and would need revisiting with that new data point.
+
+#### What did NOT change
+- No other files touched — this was purely the one-line `Math.round` → `Math.ceil` swap.
+- The TEMP raw-payload debug logging from the previous entry is still in place (not removed yet) — useful for catching exactly this kind of thing, will stay until booking succeeds end-to-end on staging.
+
+### Build Status
+
+`npm run build` passed with zero errors.

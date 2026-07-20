@@ -139,7 +139,11 @@ export async function bookTopshipShipment({
   const shipmentCharge = Math.round((Number(shipmentChargeNaira) || 0) * 100)
   const pickupCharge = Math.round((Number(pickupChargeNaira) || 0) * 100)
   const insuranceCharge = 0
-  const valueAddedTaxCharge = Math.round((shipmentCharge + pickupCharge + insuranceCharge) * 0.075)
+  // Topship rejects VAT computed with standard rounding (confirmed via a real staging
+  // response: "Invalid Value Added Tax Charge!, Got 38598, Expecting 38599" for a
+  // 514642-kobo shipmentCharge, where 514642*0.075=38598.15 — they expect it rounded
+  // UP, not to nearest). Math.round would give 38598 here; Math.ceil gives 38599.
+  const valueAddedTaxCharge = Math.ceil((shipmentCharge + pickupCharge + insuranceCharge) * 0.075)
 
   const senderSplit = splitAddress(senderDetail?.addressLine1 || senderDetail?.address || '')
   const receiverSplit = splitAddress(receiverDetail?.addressLine1 || receiverDetail?.address || '')
