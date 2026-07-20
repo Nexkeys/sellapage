@@ -164,6 +164,12 @@ export default async function handler(req, res) {
       paymentStatus: "paid",
       paymentMethod: "card",
       createdAt: Timestamp.now(),
+      statusLog: [{
+        status: "pending",
+        changedAt: new Date().toISOString(),
+        changedBy: "system",
+        changedByLabel: "Order Placed",
+      }],
     });
 
     if (typeof promoCode === "string" && promoCode.trim()) {
@@ -476,6 +482,12 @@ export default async function handler(req, res) {
           courierTrackingUrl: trackingUrl,
           bookingTimestamp: now.toISOString(),
           shipmentBooked: true,
+          statusLog: FieldValue.arrayUnion({
+            status: "confirmed",
+            changedAt: now.toISOString(),
+            changedBy: "system",
+            changedByLabel: "Shipment Booked",
+          }),
         })
 
       return res.status(200).send("OK")

@@ -6,6 +6,9 @@ import {
   Check,
   CheckCircle,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
   CreditCard,
   FileText,
   Info,
@@ -26,13 +29,19 @@ import {
 } from 'lucide-react'
 import { generateOrderReceipt } from '../../utils/generateReceipt'
 
+// The 5 statuses a vendor can manually pick from the dropdown.
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { value: 'confirmed', label: 'Confirmed', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { value: 'dispatched', label: 'Dispatched', color: 'bg-violet-50 text-violet-700 border-violet-200' },
-  { value: 'delivered', label: 'Delivered', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-50 text-red-700 border-red-200' },
+  { value: 'pending', label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' },
+  { value: 'confirmed', label: 'Confirmed', color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+  { value: 'dispatched', label: 'Dispatched', color: 'bg-violet-50 text-violet-700 border-violet-200', dot: 'bg-violet-500' },
+  { value: 'delivered', label: 'Delivered', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
 ]
+
+// 'in_transit' is courier-driven only (set by the Sendbox webhook) — vendors never pick it manually,
+// but it must still render a correct badge/timeline entry instead of being coerced to "Pending".
+const COURIER_ONLY_STATUS = { value: 'in_transit', label: 'In Transit', color: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' }
+const ALL_STATUSES = [...STATUS_OPTIONS, COURIER_ONLY_STATUS]
 
 const PAYMENT_STATUS_OPTIONS = [
   { value: 'unpaid', label: 'Unpaid', color: 'bg-slate-100 text-slate-700 border-slate-200' },
@@ -47,6 +56,8 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: 'other', label: 'Other' },
 ]
 
+const ORDERS_PER_PAGE = 10
+
 const INPUT_CLASS =
   'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
 
@@ -55,7 +66,11 @@ function getOption(options, value, fallback) {
 }
 
 function normalizeStatus(status) {
-  return getOption(STATUS_OPTIONS, status, 'pending').value
+  return getOption(ALL_STATUSES, status, 'pending').value
+}
+
+function getStatusConfig(status) {
+  return getOption(ALL_STATUSES, normalizeStatus(status), 'pending')
 }
 
 function normalizePaymentStatus(status) {
@@ -80,28 +95,67 @@ function formatTotal(total) {
   return `NGN ${amount.toLocaleString('en-NG')}`
 }
 
-function StatusPicker({ status, onChange }) {
+function StatusPicker({ status, onChange, disabled = false }) {
   const key = normalizeStatus(status)
-  const config = getOption(STATUS_OPTIONS, key, 'pending')
+  const config = getStatusConfig(status)
+  const isCourierOnly = key === 'in_transit'
 
   return (
-    <div className={`relative inline-flex min-w-[8rem] items-center rounded-xl border ${config.color}`}>
+    <div className={`relative inline-flex min-w-[8rem] items-center rounded-xl border transition-opacity ${config.color} ${disabled ? 'opacity-60' : ''}`}>
       <select
         value={key}
         onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
         aria-label="Fulfillment status"
-        className="w-full appearance-none rounded-xl bg-transparent py-1.5 pl-3 pr-8 text-xs font-extrabold uppercase tracking-wide outline-none transition-all cursor-pointer focus:ring-2 focus:ring-green-500/25"
+        className="w-full appearance-none rounded-xl bg-transparent py-1.5 pl-3 pr-8 text-xs font-extrabold uppercase tracking-wide outline-none transition-all cursor-pointer focus:ring-2 focus:ring-green-500/25 disabled:cursor-not-allowed"
       >
+        {isCourierOnly && (
+          <option value="in_transit" disabled>{config.label} (Courier)</option>
+        )}
         {STATUS_OPTIONS.map(option => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
       </select>
-      <ChevronDown
-        size={14}
-        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-60"
-      />
+      {disabled ? (
+        <Lock size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-60" />
+      ) : (
+        <ChevronDown
+          size={14}
+          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-60"
+        />
+      )}
+    </div>
+  )
+}
+
+function OrderStatusTimeline({ order }) {
+  const rawLog = Array.isArray(order.statusLog) && order.statusLog.length > 0
+    ? order.statusLog
+    : [{ status: order.status || 'pending', changedAt: order.createdAt, changedBy: 'system', changedByLabel: 'Order Placed' }]
+
+  const toMs = (value) => {
+    if (typeof value?.toDate === 'function') return value.toDate().getTime()
+    const t = new Date(value || 0).getTime()
+    return Number.isNaN(t) ? 0 : t
+  }
+  const sorted = [...rawLog].sort((a, b) => toMs(a.changedAt) - toMs(b.changedAt))
+
+  return (
+    <div className="space-y-2.5 border-l-2 border-gray-100 pl-3.5">
+      {sorted.map((entry, idx) => {
+        const config = getStatusConfig(entry.status)
+        return (
+          <div key={idx} className="relative">
+            <span className={`absolute -left-[18px] top-1 h-2 w-2 rounded-full ring-2 ring-white ${config.dot || 'bg-gray-400'}`} />
+            <p className="text-[11px] font-bold text-gray-700">{config.label}</p>
+            <p className="text-[10px] text-gray-400">
+              {formatOrderDate(entry.changedAt)} · {entry.changedByLabel || 'System'}
+            </p>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -180,6 +234,10 @@ export default function OrdersTab({
   const [filterPayment, setFilterPayment] = useState('all')
   const [filterOrderType, setFilterOrderType] = useState('all')
   const [filterSort, setFilterSort] = useState('newest')
+
+  // Pagination + inline status-timeline expand state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [expandedOrderId, setExpandedOrderId] = useState(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -312,8 +370,8 @@ export default function OrdersTab({
       await onDeleteOrder?.(confirmingDelete.id)
       if (editingOrder?.id === confirmingDelete.id) resetForm()
       setConfirmingDelete(null)
-    } catch {
-      setDeleteError('Could not delete this order. The record has been restored.')
+    } catch (err) {
+      setDeleteError(err?.message || 'Could not delete this order. The record has been restored.')
     } finally {
       setDeleteLoading(false)
     }
@@ -346,13 +404,13 @@ export default function OrdersTab({
     }
 
     try {
-      const res = await fetch('/api/mark-delivered', {
+      const res = await fetch('/api/update-order-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ storeId: store.id, orderId: order.id }),
+        body: JSON.stringify({ storeId: store.id, orderId: order.id, newStatus: 'delivered' }),
       })
 
       const data = await res.json()
@@ -613,6 +671,16 @@ export default function OrdersTab({
     })
   }, [orders, filterSearch, filterStatus, filterPayment, filterOrderType, filterSort])
 
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterSearch, filterStatus, filterPayment, filterOrderType, filterSort])
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedOrders = filteredOrders.slice(
+    (safeCurrentPage - 1) * ORDERS_PER_PAGE,
+    safeCurrentPage * ORDERS_PER_PAGE
+  )
 
   if (!isPro) {
     return (
@@ -845,7 +913,7 @@ export default function OrdersTab({
 
       {!ordersLoading && filteredOrders.length > 0 && (
         <>
-          <section className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white md:block">
+          <section className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white md:block animate-in fade-in duration-200">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-left">
                 <thead>
@@ -861,7 +929,11 @@ export default function OrdersTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map(order => (
+                  {paginatedOrders.map(order => {
+                    const isLocked = normalizeStatus(order.status) === 'delivered'
+                    const isExpanded = expandedOrderId === order.id
+                    return (
+                    <>
                     <tr key={order.id} className="group border-b border-gray-100 transition-colors hover:bg-gray-50/40 last:border-b-0">
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <div className="flex items-start gap-2 text-[11px] font-medium text-gray-500">
@@ -923,6 +995,7 @@ export default function OrdersTab({
                         <StatusPicker
                           status={order.status}
                           onChange={(value) => handleStatusChange(order.id, value)}
+                          disabled={isLocked}
                         />
                       </td>
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
@@ -932,6 +1005,15 @@ export default function OrdersTab({
                       </td>
                       <td className="px-3 py-3.5 align-top">
                         <div className="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                            className={`inline-flex items-center justify-center rounded-xl p-2 transition-all duration-200 hover:bg-gray-100 hover:text-gray-700 ${isExpanded ? 'text-gray-600 bg-gray-100' : 'text-gray-300 opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
+                            title="View status timeline"
+                            aria-label="View status timeline"
+                          >
+                            <Clock size={15} />
+                          </button>
                           {order.orderType === 'checkout' && normalizeStatus(order.status) !== 'delivered' && normalizeStatus(order.status) !== 'cancelled' && (
                             <button
                               type="button"
@@ -968,23 +1050,38 @@ export default function OrdersTab({
                           )}
                           <button
                             type="button"
-                            onClick={() => openDeleteDialog(order)}
-                            className="inline-flex items-center justify-center rounded-xl p-2 text-gray-300 opacity-0 transition-all duration-200 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 focus:opacity-100"
+                            onClick={() => !isLocked && openDeleteDialog(order)}
+                            disabled={isLocked}
+                            className={`inline-flex items-center justify-center rounded-xl p-2 transition-all duration-200 ${isLocked ? 'text-gray-200 cursor-not-allowed opacity-0 group-hover:opacity-100' : 'text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 focus:opacity-100'}`}
+                            title={isLocked ? 'Delivered orders are locked and cannot be deleted' : 'Delete order'}
                             aria-label="Delete order"
                           >
-                            <Trash2 size={15} />
+                            {isLocked ? <Lock size={13} /> : <Trash2 size={15} />}
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    {isExpanded && (
+                      <tr className="border-b border-gray-100 bg-gray-50/40 last:border-b-0 animate-in fade-in duration-150">
+                        <td colSpan={9} className="px-5 py-4">
+                          <p className="mb-2.5 text-[10px] font-extrabold uppercase tracking-widest text-gray-400">Status Timeline</p>
+                          <OrderStatusTimeline order={order} />
+                        </td>
+                      </tr>
+                    )}
+                    </>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           </section>
 
-          <section className="space-y-2.5 md:hidden">
-            {filteredOrders.map(order => (
+          <section className="space-y-2.5 md:hidden animate-in fade-in duration-200">
+            {paginatedOrders.map(order => {
+              const isLocked = normalizeStatus(order.status) === 'delivered'
+              const isExpanded = expandedOrderId === order.id
+              return (
               <article key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -1019,6 +1116,7 @@ export default function OrdersTab({
                   <StatusPicker
                     status={order.status}
                     onChange={(value) => handleStatusChange(order.id, value)}
+                    disabled={isLocked}
                   />
                 </div>
 
@@ -1068,7 +1166,22 @@ export default function OrdersTab({
                   </p>
                 )}
 
-                <div className="flex items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
+                {isExpanded && (
+                  <div className="mb-3 rounded-xl bg-gray-50 p-3.5 animate-in fade-in duration-150">
+                    <p className="mb-2.5 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">Status Timeline</p>
+                    <OrderStatusTimeline order={order} />
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                    className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition-all ${isExpanded ? 'bg-gray-100 text-gray-700' : 'text-gray-500 hover:bg-gray-50'}`}
+                  >
+                    <Clock size={13} />
+                    Timeline
+                  </button>
                   {order.orderType === 'checkout' && normalizeStatus(order.status) !== 'delivered' && normalizeStatus(order.status) !== 'cancelled' && (
                     <button
                       type="button"
@@ -1102,23 +1215,47 @@ export default function OrdersTab({
                   )}
                   <button
                     type="button"
-                    onClick={() => openDeleteDialog(order)}
-                    className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-red-600 transition-all hover:bg-red-50"
+                    onClick={() => !isLocked && openDeleteDialog(order)}
+                    disabled={isLocked}
+                    className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition-all ${isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}
                   >
-                    <Trash2 size={13} />
-                    Delete
+                    {isLocked ? <Lock size={13} /> : <Trash2 size={13} />}
+                    {isLocked ? 'Locked' : 'Delete'}
                   </button>
                 </div>
               </article>
-            ))}
+              )
+            })}
           </section>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-3 py-2.5">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft size={13} /> Previous
+              </button>
+              <span className="text-xs font-bold text-gray-500">{safeCurrentPage} / {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage === totalPages}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next <ChevronRight size={13} />
+              </button>
+            </div>
+          )}
         </>
       )}
 
       <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
         <Info size={13} className="flex-shrink-0 text-gray-400 mt-0.5" />
         <p className="text-[11px] text-gray-400 leading-relaxed">
-          <span className="font-semibold text-gray-600">Order status guide:</span> Only update the status when it reflects the actual state of the order. Once an order is marked as <span className="font-semibold">Delivered</span>, the status is locked and cannot be changed.
+          <span className="font-semibold text-gray-600">Order status guide:</span> Only update the status when it reflects the actual state of the order. Once an order is marked as <span className="font-semibold">Delivered</span>, its status is locked and the order can no longer be deleted.
         </p>
       </div>
 

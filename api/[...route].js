@@ -75,10 +75,6 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/submit-review.js");
         return await handlerFunc(req, res);
       }
-      case "mark-delivered": {
-        const { default: handlerFunc } = await import("../src/api-handlers/mark-delivered.js");
-        return await handlerFunc(req, res);
-      }
       case "delete-account": {
         const { default: handlerFunc } = await import("../src/api-handlers/delete-account.js");
         return await handlerFunc(req, res);

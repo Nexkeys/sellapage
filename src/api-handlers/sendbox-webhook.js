@@ -1,4 +1,5 @@
 //src/api-handlers/sendbox-webhook.js/
+import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb } from './_lib/firebase-admin.js'
 
 export default async function handler(req, res) {
@@ -46,11 +47,18 @@ export default async function handler(req, res) {
       ? 'cancelled'
       : 'dispatched'
 
+    const changedAtIso = new Date().toISOString()
     await orderDoc.ref.update({
       sendboxStatus: statusCode,
       sendboxStatusLabel: statusLabel,
       status: firestoreStatus,
-      updatedAt: new Date().toISOString(),
+      updatedAt: changedAtIso,
+      statusLog: FieldValue.arrayUnion({
+        status: firestoreStatus,
+        changedAt: changedAtIso,
+        changedBy: 'sendbox',
+        changedByLabel: 'Courier Update',
+      }),
     })
 
     console.log(`[sendbox-webhook] Updated order ${orderDoc.id} — status: ${statusCode}`)

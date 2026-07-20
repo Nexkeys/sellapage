@@ -1,6 +1,8 @@
 import crypto from 'crypto'
+import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
+import { sendPush } from './_lib/send-push.js'
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -80,10 +82,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Cannot change status of a delivered order' })
     }
 
+    const changedAtIso = new Date().toISOString()
     const updatePayload = {
       status: newStatus,
-      updatedAt: new Date().toISOString(),
-      [`statusHistory.${newStatus}`]: new Date().toISOString(),
+      updatedAt: changedAtIso,
+      [`statusHistory.${newStatus}`]: changedAtIso,
+      statusLog: FieldValue.arrayUnion({
+        status: newStatus,
+        changedAt: changedAtIso,
+        changedBy: decodedToken.uid,
+        changedByLabel: 'Vendor',
+      }),
     }
 
     let reviewToken = orderData.reviewToken || null
@@ -93,10 +102,27 @@ export default async function handler(req, res) {
       updatePayload.reviewToken = reviewToken
       updatePayload.reviewTokenUsed = false
       updatePayload.reviewSubmitted = false
-      updatePayload.deliveredAt = new Date().toISOString()
+      updatePayload.deliveredAt = changedAtIso
     }
 
     await orderRef.update(updatePayload)
+
+    if (newStatus === 'delivered') {
+      try {
+        const storeSnapForPush = await db.collection('stores').doc(storeId).get()
+        const fcmToken = storeSnapForPush.data()?.fcmToken
+        if (fcmToken) {
+          await sendPush(
+            fcmToken,
+            'Order Delivered ✅',
+            `${orderData.customerName || 'A customer'}'s order has been marked as delivered.`,
+            { orderId, type: 'order_delivered' }
+          )
+        }
+      } catch (pushErr) {
+        console.error('[update-order-status] Push notification failed:', pushErr)
+      }
+    }
 
     const storeSnap = await db.collection('stores').doc(storeId).get()
     const storeData = storeSnap.data() || {}
@@ -159,7 +185,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ success: true, status: newStatus })
+    return res.status(200).json({ success: true, status: newStatus, reviewToken })
   } catch (err) {
     console.error('[update-order-status] Error:', err)
     return res.status(500).json({ error: 'Internal server error' })

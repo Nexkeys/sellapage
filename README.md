@@ -808,7 +808,7 @@ Everything else from the original plan stays the same:
 Proceed with implementation. — DONE ✅
 
 
-### 5. Orders Tab Full Overhaul
+### 5. Orders Tab Full Overhaul — DONE ✅
 Full redesign — color, bit of motion, pagination, better status logic.
 New features:
 - Status timeline/audit log (each status change logged with timestamp and who changed it)
@@ -817,7 +817,7 @@ New features:
 - Better mobile card layout
 - Pagination
 - Color-coded status badges
-Spec session required before any code is written.
+Implementation: See "2026-07-20 — Orders Tab Full Overhaul Implementation" section below.
 
 ### 6. Admin Panel
 Internal panel for Nex to manage the platform.
@@ -3798,6 +3798,42 @@ Three separate mobile nav patterns competing for the same job, and the bottom ba
 - Every tab's content, state, and fetch/handler logic (Health, Merchants, Referrals, Payouts, CAC, Domains, Announcements, Tickets, Analytics, Revenue, Team) — zero edits inside any `{activeTab === '...' && ...}` block.
 - Role-based tab visibility (`canAccessTab` from `src/utils/adminRoles.js`) — the drawer filters from the same already-role-filtered `at` array the old UI used.
 - No other pages touched.
+
+### Build Status
+
+`npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change).
+
+---
+
+### [2026-07-20] Orders Tab Full Overhaul Implementation (Item 5) [DONE]
+
+#### Pre-work findings that changed scope
+Before touching the UI, three research passes found order status changes were happening through three independent, disagreeing write paths: `update-order-status.js` (vendor, ownership-checked, had a delivered-lock), `mark-delivered.js` (vendor, but **missing the ownership check** — any authenticated vendor could mark another store's order delivered), and `sendbox-webhook.js` (courier-driven, no auth, no delivered-lock). The existing `statusHistory` field was a map keyed by status name (overwrites on repeat transitions, no actor, populated by only one of the three paths) — not usable as a real audit log.
+
+Decided with Nex before implementing: (1) fix the `mark-delivered.js` ownership gap by consolidating it into `update-order-status.js`; (2) leave `sendbox-webhook.js` status-writes unguarded (courier events still get logged, just not blocked from updating status post-delivery); (3) audit log = an array field on the order document (`statusLog` via `arrayUnion`), not a subcollection, since orders are already loaded in full by `Dashboard.jsx` — zero extra reads.
+
+#### Backend
+
+- **`src/api-handlers/update-order-status.js`** — now the single source of truth for status changes. Writes `statusLog: FieldValue.arrayUnion({ status, changedAt, changedBy: decodedToken.uid, changedByLabel: 'Vendor' })` alongside the existing `statusHistory.${newStatus}` map (kept, additive). Absorbed `mark-delivered.js`'s delivered-only extras (review token generation, `deliveredAt`, and the vendor push notification via `sendPush`) into the existing `newStatus === 'delivered'` branch. Response now also returns `reviewToken` so the frontend's "Mark as Delivered" flow still gets it. No change to the existing delivered-lock guard.
+- **`src/api-handlers/mark-delivered.js`** — deleted. Its route case removed from `api/[...route].js`. It duplicated `update-order-status.js`'s delivered logic without the `decodedToken.uid === storeId` ownership check.
+- **`src/api-handlers/sendbox-webhook.js`** — appends a `statusLog` entry (`changedBy: 'sendbox', changedByLabel: 'Courier Update'`) at the same point it writes `status`. No delivered-lock added here — deliberate, per the scope decision above.
+- **`src/api-handlers/paystack-webhook.js`** — seeds `statusLog` with a `{ status: 'pending', changedBy: 'system', changedByLabel: 'Order Placed' }` entry at order creation, and appends a `changedByLabel: 'Shipment Booked'` entry on the shipment-metadata branch that sets `status: 'confirmed'` directly — so both previously-invisible system transitions now show in the timeline.
+- **`src/pages/Dashboard.jsx`** — `handleDeleteOrder` now throws if the order's `status === 'delivered'`, extending "locked editing" to deletion (previously unlocked at any status — no other order-editing surface exists today besides status and deletion).
+
+#### Frontend — `src/components/dashboard/OrdersTab.jsx`
+
+- **Status vocabulary fix**: `STATUS_OPTIONS` (5 vendor-settable values, unchanged) is now paired with a `COURIER_ONLY_STATUS` (`in_transit`, sky color) folded into a new `ALL_STATUSES` lookup. `normalizeStatus`/`getStatusConfig` now recognize `in_transit` instead of silently coercing it to "Pending" — this was a pre-existing display bug (courier-set `in_transit` orders rendered a wrong badge) that fell out naturally from the "color-coded status badges" spec item. The vendor's manual dropdown still only offers the 5 selectable statuses; `in_transit` shows as a disabled, informational option only when it's the current live status.
+- **Pagination**: `ORDERS_PER_PAGE = 10`, `currentPage` state, `safeCurrentPage`/`totalPages`/`paginatedOrders` derived from the existing `filteredOrders` memo, page resets to 1 on any filter/search change. Prev/Next control (shared by both desktop table and mobile cards) reuses the exact pattern already established in `Products.jsx`.
+- **Status timeline / audit log**: new `OrderStatusTimeline` component, reusing the minimal `border-l-2` + stacked label/timestamp idiom already proven in `DeliveryTab.jsx`'s shipment tracking card (no new dependency). Reads `order.statusLog`, falls back to a single synthesized "Order Placed" entry for pre-existing orders created before this shipped. Each entry shows a colored dot (matches the status's badge color), label, timestamp, and actor (`Vendor` / `Order Placed` / `Shipment Booked` / `Courier Update`). Toggled per-order via a `Clock`-icon "Timeline" button — an expandable row in the desktop table, an expandable block in the mobile card.
+- **Locked editing once delivered**: `StatusPicker` now accepts a `disabled` prop (opacity-60, a `Lock` icon replaces the chevron, `<select disabled>`), wired to `true` whenever `normalizeStatus(order.status) === 'delivered'`, in both the desktop and mobile renders. The Delete action is similarly disabled + relabeled "Locked" with a lock icon in that state (client-side mirror of the new `Dashboard.jsx` guard). Book Shipment and Download Receipt stay active on delivered orders — those are follow-up actions, not order edits. The bottom info banner copy was updated to mention deletion, not just status.
+- **Motion**: `animate-in fade-in duration-200` added to both list sections (matches the convention already used for tab switches in `Admin.jsx`) and to the timeline expand blocks. No new dependency — Tailwind's built-in animate utilities only.
+- **Mobile-first**: all of the above was built mobile-card-first per explicit instruction — the timeline toggle, lock states, and pagination controls exist identically in both the mobile `<article>` cards and the desktop `<table>`, not bolted on to one and ported later.
+
+#### What did NOT change
+- The Sendbox shipment-booking flow (rates → payment → Paystack redirect → verify → create-shipment, ~5 API calls, `sessionStorage`-surviving state) — untouched except repointing the "Mark as Delivered" button from `/api/mark-delivered` to `/api/update-order-status`.
+- No admin-side order status override was added — no admin tooling touched orders before this and none does now.
+- Editing order contents (items, address, notes) — no such capability existed before and none was introduced; only the status control and deletion carry the lock.
+- Filtering/search/sort logic in `OrdersTab.jsx` — unchanged, pagination was layered on top of the existing `filteredOrders` memo.
 
 ### Build Status
 

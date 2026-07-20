@@ -528,6 +528,9 @@ export default function Dashboard() {
     const deletedOrder = orders.find((order) => order.id === orderId);
     const deletedIndex = orders.findIndex((order) => order.id === orderId);
     if (!deletedOrder) return;
+    if (deletedOrder.status === "delivered") {
+      throw new Error("This order is delivered and locked — it can no longer be deleted.");
+    }
 
     setOrders((prev) => prev.filter((order) => order.id !== orderId));
 
