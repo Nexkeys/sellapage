@@ -3774,3 +3774,31 @@ Remote logout is detected on the target device within ~45 seconds (the heartbeat
 ### Build Status
 
 `npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change). New backend files syntax-checked with `node --check`.
+
+---
+
+### [2026-07-20] Admin Panel Mobile Nav Restructure — Structural Only, No Logic/Content Changes
+
+#### Root Cause
+`src/pages/Admin.jsx` had three separate, overlapping tab-switcher UIs stacked on top of each other:
+1. A `hidden sm:flex` horizontal pill bar in the header (fine, desktop/tablet only).
+2. A hamburger-toggled dropdown directly under the header — an 11-item `grid-cols-4` grid of tiny icon+label buttons.
+3. A `fixed bottom-0` bar cramming all 11 tabs into one `justify-around` row with `flex-1` — on a ~375px phone that's ~30px per tab, icon + 8px truncated label. This was the "awful" navbar.
+
+Three separate mobile nav patterns competing for the same job, and the bottom bar in particular couldn't scale past a handful of tabs.
+
+#### Fixed — Shell/Nav Only
+- **`src/pages/Admin.jsx`** — Removed the dropdown grid and the fixed bottom bar entirely. Replaced both with a single off-canvas drawer (mirrors the pattern already proven in `src/components/dashboard/DashboardLayout.jsx`'s vendor sidebar: overlay + slide-in panel, closes on backdrop tap or X): hamburger in the header opens it, tabs render as a full-width vertical list with full labels (not truncated), grouped under section headers (`Overview`, `Merchants & Money`, `Trust & Growth`, `Engagement`, `Team`) for scannability at 11 items.
+  - New `ADMIN_TAB_GROUPS` constant — purely presentational grouping for the drawer only. Does not touch `ADMIN_TABS`, `canAccessTab()` role filtering, or any tab body.
+  - Header now shows the active tab's label as a small subtitle next to the role badge on mobile (`sm:hidden`), so there's always an indicator of which section you're on since the persistent pill bar is desktop-only.
+  - Removed the now-unnecessary `pb-24` bottom padding on the page wrapper (was reserved for the fixed bottom bar).
+  - Desktop/tablet horizontal pill bar (`hidden sm:flex`, `sm` and up) is untouched — it wasn't the reported problem.
+
+#### What did NOT change
+- Every tab's content, state, and fetch/handler logic (Health, Merchants, Referrals, Payouts, CAC, Domains, Announcements, Tickets, Analytics, Revenue, Team) — zero edits inside any `{activeTab === '...' && ...}` block.
+- Role-based tab visibility (`canAccessTab` from `src/utils/adminRoles.js`) — the drawer filters from the same already-role-filtered `at` array the old UI used.
+- No other pages touched.
+
+### Build Status
+
+`npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change).

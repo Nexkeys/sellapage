@@ -23,6 +23,16 @@ const ADMIN_TABS = [
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
+// Grouping used only by the mobile nav drawer — purely presentational, does not affect
+// ADMIN_TABS, role filtering (canAccessTab), or any tab's content/logic.
+const ADMIN_TAB_GROUPS = [
+  { label: 'Overview', ids: ['health'] },
+  { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
+  { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
+  { label: 'Engagement', ids: ['announcements', 'tickets'] },
+  { label: 'Team', ids: ['admins'] },
+];
+
 const PLAN_N = { premium: 0, pro: 1, growth: 2, starter: 3 };
 const PLAN_C = { premium: 'bg-yellow-50 text-yellow-700 border-yellow-200', pro: 'bg-gray-900 text-white border-gray-900', growth: 'bg-green-50 text-green-700 border-green-200', starter: 'bg-gray-100 text-gray-600 border-gray-200' };
 
@@ -345,25 +355,35 @@ export default function Admin() {
 
   const at = ADMIN_TABS.filter(t => canAccessTab(adminRole, t.id));
 
+  const activeTabMeta = at.find(t => t.id === activeTab);
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4">
         {/* Header */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sm:hidden p-2 rounded-xl bg-gray-100 text-gray-600 flex-shrink-0">{mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}</button>
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button onClick={() => setMobileMenuOpen(true)} className="sm:hidden p-2 rounded-xl bg-gray-100 text-gray-600 flex-shrink-0" aria-label="Open menu"><Menu size={18} /></button>
               <div className="min-w-0">
-                <h1 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight truncate">Operations Console</h1>
-                <div className="flex items-center gap-1.5 mt-0.5"><Shield size={11} className="text-green-600" /><p className="text-green-600 text-[10px] font-bold uppercase tracking-wider">{getRoleLabel(adminRole)}</p></div>
+                <h1 className="text-base sm:text-xl font-black text-gray-900 tracking-tight truncate">Operations Console</h1>
+                <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                  <Shield size={11} className="text-green-600 flex-shrink-0" />
+                  <p className="text-green-600 text-[10px] font-bold uppercase tracking-wider flex-shrink-0">{getRoleLabel(adminRole)}</p>
+                  {activeTabMeta && (
+                    <>
+                      <span className="text-gray-300 text-[10px] sm:hidden flex-shrink-0">·</span>
+                      <p className="text-gray-400 text-[10px] font-bold sm:hidden truncate">{activeTabMeta.label}</p>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            {activeTab === 'health' && <button onClick={fetchHealth} disabled={healthLoading} className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 text-white px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0">{healthLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Refresh</button>}
+            {activeTab === 'health' && <button onClick={fetchHealth} disabled={healthLoading} className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 text-white px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0">{healthLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} <span className="hidden sm:inline">Refresh</span></button>}
           </div>
           <div className="hidden sm:flex mt-3 p-1 bg-gray-100 rounded-xl gap-1 overflow-x-auto scrollbar-hide">
             {at.map(tab => { const I = tab.icon; return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTab === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><I size={14} /> <span className="hidden lg:inline">{tab.label}</span><span className="lg:hidden">{tab.short}</span></button>; })}
           </div>
-          {mobileMenuOpen && <div className="sm:hidden mt-3 p-2 bg-gray-50 rounded-xl border border-gray-100 grid grid-cols-4 gap-1">{at.map(tab => { const I = tab.icon; return <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }} className={`flex flex-col items-center gap-0.5 py-2 rounded-lg text-[9px] font-bold ${activeTab === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}><I size={14} /><span>{tab.short}</span></button>; })}</div>}
         </div>
 
         {/* HEALTH */}
@@ -546,8 +566,49 @@ export default function Admin() {
         </div>}
       </div>
 
-      {/* Mobile Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-200 sm:hidden z-50"><div className="flex items-center justify-around py-1.5 px-0.5">{at.map(tab=>{const I=tab.icon;return <button key={tab.id} onClick={()=>setActiveTab(tab.id)} className={`flex flex-col items-center gap-0.5 px-1 py-1 text-[8px] font-bold min-w-0 flex-1 ${activeTab===tab.id?'text-green-600':'text-gray-400'}`}><I size={15} /><span className="truncate">{tab.short}</span></button>;})}</div></div>
+      {/* Mobile Nav Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 sm:hidden">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-white shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Shield size={16} className="text-green-600 flex-shrink-0" />
+                <span className="font-black text-gray-900 text-sm tracking-tight truncate">Operations Console</span>
+              </div>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex-shrink-0" aria-label="Close menu"><X size={18} /></button>
+            </div>
+            <p className="px-4 pt-3 text-[10px] font-bold text-green-600 uppercase tracking-wider">{getRoleLabel(adminRole)}</p>
+            <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+              {ADMIN_TAB_GROUPS.map(group => {
+                const groupTabs = at.filter(t => group.ids.includes(t.id));
+                if (!groupTabs.length) return null;
+                return (
+                  <div key={group.label}>
+                    <p className="px-2 pb-1.5 text-[9px] font-extrabold uppercase tracking-[0.12em] text-gray-400">{group.label}</p>
+                    <div className="space-y-0.5">
+                      {groupTabs.map(tab => {
+                        const I = tab.icon;
+                        const active = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${active ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            <I size={16} className="flex-shrink-0" />
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
