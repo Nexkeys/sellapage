@@ -32,15 +32,26 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: result.error })
     }
 
-    const rates = result.data.map((r, index) => ({
-      courier_id: r.mode || `topship_rate_${index}`,
-      courier_name: r.mode || 'Topship',
-      fee: Number(r.cost || 0) / 100,
-      total_shipping_fee: Number(r.cost || 0) / 100,
-      delivery_eta: r.duration || '',
-      provider: 'topship',
-      pricing_tier: r.pricingTier || r.mode || 'Budget',
-    }))
+    // NOTE: `pricingTier` (Budget/Express/FedEx/Premium/LastMileBudget) is the enum
+    // value Topship's /save-shipment actually requires. `mode` is just a free-text
+    // display string from their staging environment — sometimes a friendly name
+    // ("Chowdeck Shipping"), sometimes a raw courier UUID. Never send `mode` to the
+    // booking call; always book with `pricing_tier`.
+    const isUuidLike = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str || '')
+
+    const rates = result.data.map((r, index) => {
+      const pricingTier = r.pricingTier || 'Budget'
+      const modeLabel = isUuidLike(r.mode) ? '' : (r.mode || '')
+      return {
+        courier_id: `topship_${index}_${pricingTier}`,
+        courier_name: modeLabel && modeLabel !== pricingTier ? modeLabel : pricingTier,
+        fee: Number(r.cost || 0) / 100,
+        total_shipping_fee: Number(r.cost || 0) / 100,
+        delivery_eta: r.duration || '',
+        provider: 'topship',
+        pricing_tier: pricingTier,
+      }
+    })
 
     return res.status(200).json({ rates })
   } catch (err) {

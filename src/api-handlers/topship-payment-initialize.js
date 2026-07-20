@@ -23,6 +23,7 @@ export default async function handler(req, res) {
     courierName,
     shippingFee,
     courierId,
+    pricingTier,
     senderDetails,
     receiverDetails,
     weight,
@@ -31,9 +32,9 @@ export default async function handler(req, res) {
     insuranceType,
   } = req.body
 
-  if (!storeId || !orderId || !courierId) {
+  if (!storeId || !orderId || !pricingTier) {
     return res.status(400).json({
-      error: 'Missing required fields: storeId, orderId, courierId',
+      error: 'Missing required fields: storeId, orderId, pricingTier',
     })
   }
 
@@ -92,7 +93,8 @@ export default async function handler(req, res) {
           provider: 'topship',
           storeId,
           orderId,
-          courierId,
+          courierId: courierId || '',
+          pricingTier,
           courierName: courierName || '',
           shippingFee: shippingFeeNum,
           serviceCharge: SERVICE_CHARGE,

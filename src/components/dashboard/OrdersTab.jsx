@@ -199,6 +199,12 @@ export default function OrdersTab({
   const [selectedProvider, setSelectedProvider] = useState('sendbox')
   const [itemCategory, setItemCategory] = useState('Fashion')
   const [insuranceType, setInsuranceType] = useState('None')
+  const [topshipCountries, setTopshipCountries] = useState([])
+  const [senderCountryCode, setSenderCountryCode] = useState('NG')
+  const [receiverCountryCode, setReceiverCountryCode] = useState('NG')
+  const [senderPostalCode, setSenderPostalCode] = useState('')
+  const [receiverPostalCode, setReceiverPostalCode] = useState('')
+  const [topshipBookingDirect, setTopshipBookingDirect] = useState(false)
   const [SendboxRates, setSendboxRates] = useState([])
   const [loadingRates, setLoadingRates] = useState(false)
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
@@ -269,7 +275,7 @@ export default function OrdersTab({
               storeId: parsed.storeId,
               orderId: parsed.orderId,
               reference,
-              courierId: parsed.courierId,
+              pricingTier: parsed.pricingTier,
               senderDetails: parsed.senderDetails,
               receiverDetails: parsed.receiverDetails,
               weight: parsed.weight,
@@ -486,6 +492,16 @@ export default function OrdersTab({
     setShowProviderModal(false)
     setItemCategory('Fashion')
     setInsuranceType('None')
+    setSenderCountryCode('NG')
+    setReceiverCountryCode('NG')
+    setSenderPostalCode('')
+    setReceiverPostalCode('')
+    if (provider === 'topship' && topshipCountries.length === 0) {
+      fetch('/api/topship-countries')
+        .then(res => res.json())
+        .then(data => setTopshipCountries(Array.isArray(data.countries) ? data.countries : []))
+        .catch(() => setTopshipCountries([]))
+    }
     if (bookingShipmentOrder) initShipmentForm(bookingShipmentOrder, provider)
   }
 
@@ -542,27 +558,35 @@ export default function OrdersTab({
     const rCity = detailsObj.receiverCity ?? receiverCity
     const rState = detailsObj.receiverState ?? receiverState
 
+    const isTopship = provider === 'topship'
+
     if (!store?.id) return
-    if (!sStreet || !sState) {
-      setBookingError('Vendor pickup address (street and state) is required to calculate rates.')
-      return
-    }
-    if (!rStreet || !rState) {
-      setBookingError('Receiver delivery address (street and state) is required to calculate rates.')
-      return
+    if (isTopship) {
+      if (!sCity || !rCity) {
+        setBookingError('Sender and receiver city are required to calculate rates.')
+        return
+      }
+    } else {
+      if (!sStreet || !sState) {
+        setBookingError('Vendor pickup address (street and state) is required to calculate rates.')
+        return
+      }
+      if (!rStreet || !rState) {
+        setBookingError('Receiver delivery address (street and state) is required to calculate rates.')
+        return
+      }
     }
 
     setLoadingRates(true)
     setBookingError('')
     setSendboxRates([])
     try {
-      const isTopship = provider === 'topship'
       const endpoint = isTopship ? '/api/topship-rates' : '/api/sendbox-rates'
       const body = isTopship
         ? {
             storeId: store.id,
-            senderDetails: { city: sCity, countryCode: 'NG' },
-            receiverDetails: { city: rCity, countryCode: 'NG' },
+            senderDetails: { city: sCity, countryCode: senderCountryCode || 'NG' },
+            receiverDetails: { city: rCity, countryCode: receiverCountryCode || 'NG' },
             weight: Number(weightVal) || 1,
           }
         : {
@@ -611,6 +635,81 @@ export default function OrdersTab({
     }
   }
 
+  // TEMPORARY (staging testing, logged in README.md "Topship Payment-First Booking —
+  // Temporarily Bypassed for Staging Testing"): books a Topship shipment directly,
+  // skipping Paystack entirely. Hard-gated server-side to non-production in
+  // topship-create-shipment.js — cannot fire once a production Topship key exists.
+  const bookTopshipDirect = async () => {
+    if (!bookingShipmentOrder || !store?.id) return
+    const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
+    if (!selectedRate) {
+      setBookingError('Selected rate not found. Please recalculate rates.')
+      return
+    }
+    setTopshipBookingDirect(true)
+    setBookingError('')
+    try {
+      const token = await user?.getIdToken()
+      const senderDetails = {
+        name: senderName || store?.businessName || '',
+        phone: senderPhone || store?.whatsappNumber || '',
+        email: senderEmail || store?.email || '',
+        address: senderStreet,
+        city: senderCity,
+        state: senderState,
+        country: senderCountryCode === 'NG' ? 'Nigeria' : (topshipCountries.find(c => c.code === senderCountryCode)?.name || senderCountryCode),
+        countryCode: senderCountryCode,
+        postalCode: senderPostalCode,
+      }
+      const receiverDetails = {
+        name: receiverName || '',
+        phone: receiverPhone || '',
+        email: receiverEmail || '',
+        address: receiverStreet,
+        city: receiverCity,
+        state: receiverState,
+        lga: receiverLga || '',
+        country: receiverCountryCode === 'NG' ? 'Nigeria' : (topshipCountries.find(c => c.code === receiverCountryCode)?.name || receiverCountryCode),
+        countryCode: receiverCountryCode,
+        postalCode: receiverPostalCode,
+      }
+      const res = await fetch('/api/topship-create-shipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          storeId: store.id,
+          orderId: bookingShipmentOrder.id,
+          pricingTier: selectedRate.pricing_tier,
+          shippingFee: Number(selectedRate.total_shipping_fee),
+          senderDetails,
+          receiverDetails,
+          weight: Number(packageWeight) || 1,
+          itemCategory,
+          insuranceType,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        await onUpdateOrder?.(bookingShipmentOrder.id, {
+          topshipTrackingId: data.trackingId || '',
+          topshipTrackingUrl: data.trackingUrl || '',
+          topshipShipmentId: data.shipmentId || '',
+          provider: 'topship',
+          status: 'dispatched',
+        })
+        setBookingShipmentOrder(null)
+        setShipmentPaymentResult({ success: true, trackingId: data.trackingId || '' })
+      } else {
+        setBookingError(data.error || 'Failed to book Topship shipment.')
+      }
+    } catch (err) {
+      console.error(err)
+      setBookingError('Could not connect to book the shipment. Please check your connection.')
+    } finally {
+      setTopshipBookingDirect(false)
+    }
+  }
+
   const initializeShipmentPayment = async () => {
     if (!bookingShipmentOrder || !store?.id) return
     if (!selectedCourierId) {
@@ -620,6 +719,11 @@ export default function OrdersTab({
     const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
     if (!selectedRate) {
       setBookingError('Selected rate not found. Please recalculate rates.')
+      return
+    }
+    if (selectedProvider === 'topship') {
+      // TEMPORARY: staging testing bypasses Paystack for Topship — see bookTopshipDirect above.
+      await bookTopshipDirect()
       return
     }
     setShowPaymentModal(true)
@@ -635,23 +739,48 @@ export default function OrdersTab({
     const isTopship = selectedProvider === 'topship'
     try {
       const token = await user?.getIdToken()
-      const senderDetails = {
-        name: senderName || store?.businessName || '',
-        phone: senderPhone || store?.whatsappNumber || '',
-        email: senderEmail || store?.email || '',
-        address: senderStreet,
-        city: senderCity,
-        state: senderState,
-      }
-      const receiverDetails = {
-        name: receiverName || '',
-        phone: receiverPhone || '',
-        email: receiverEmail || '',
-        address: receiverStreet,
-        city: receiverCity,
-        state: receiverState,
-        lga: receiverLga || '',
-      }
+      const senderDetails = isTopship
+        ? {
+            name: senderName || store?.businessName || '',
+            phone: senderPhone || store?.whatsappNumber || '',
+            email: senderEmail || store?.email || '',
+            address: senderStreet,
+            city: senderCity,
+            state: senderState,
+            country: senderCountryCode === 'NG' ? 'Nigeria' : (topshipCountries.find(c => c.code === senderCountryCode)?.name || senderCountryCode),
+            countryCode: senderCountryCode,
+            postalCode: senderPostalCode,
+          }
+        : {
+            name: senderName || store?.businessName || '',
+            phone: senderPhone || store?.whatsappNumber || '',
+            email: senderEmail || store?.email || '',
+            address: senderStreet,
+            city: senderCity,
+            state: senderState,
+          }
+      const receiverDetails = isTopship
+        ? {
+            name: receiverName || '',
+            phone: receiverPhone || '',
+            email: receiverEmail || '',
+            address: receiverStreet,
+            city: receiverCity,
+            state: receiverState,
+            lga: receiverLga || '',
+            country: receiverCountryCode === 'NG' ? 'Nigeria' : (topshipCountries.find(c => c.code === receiverCountryCode)?.name || receiverCountryCode),
+            countryCode: receiverCountryCode,
+            postalCode: receiverPostalCode,
+          }
+        : {
+            name: receiverName || '',
+            phone: receiverPhone || '',
+            email: receiverEmail || '',
+            address: receiverStreet,
+            city: receiverCity,
+            state: receiverState,
+            lga: receiverLga || '',
+          }
 
       const initEndpoint = isTopship ? '/api/topship-payment-initialize' : '/api/sendbox-payment-initialize'
       const initBody = isTopship
@@ -661,6 +790,7 @@ export default function OrdersTab({
             courierName: selectedRate.courier_name,
             shippingFee: Number(selectedRate.total_shipping_fee),
             courierId: selectedCourierId,
+            pricingTier: selectedRate.pricing_tier,
             senderDetails,
             receiverDetails,
             weight: Number(packageWeight) || 1,
@@ -694,6 +824,7 @@ export default function OrdersTab({
               storeId: store.id,
               orderId: bookingShipmentOrder.id,
               courierId: selectedCourierId,
+              pricingTier: selectedRate.pricing_tier,
               senderDetails,
               receiverDetails,
               weight: Number(packageWeight) || 1,
@@ -1686,6 +1817,34 @@ export default function OrdersTab({
                       className={INPUT_CLASS}
                     />
                   </div>
+                  {selectedProvider === 'topship' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Country</label>
+                        <select
+                          value={senderCountryCode}
+                          onChange={(e) => setSenderCountryCode(e.target.value)}
+                          className={INPUT_CLASS}
+                        >
+                          {topshipCountries.length === 0 && <option value="NG">Nigeria</option>}
+                          {topshipCountries.map(c => (
+                            <option key={c.code} value={c.code}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {senderCountryCode !== 'NG' && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Postal Code</label>
+                          <input
+                            type="text"
+                            value={senderPostalCode}
+                            onChange={(e) => setSenderPostalCode(e.target.value)}
+                            className={INPUT_CLASS}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1744,7 +1903,40 @@ export default function OrdersTab({
                       className={INPUT_CLASS}
                     />
                   </div>
+                  {selectedProvider === 'topship' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Country</label>
+                        <select
+                          value={receiverCountryCode}
+                          onChange={(e) => setReceiverCountryCode(e.target.value)}
+                          className={INPUT_CLASS}
+                        >
+                          {topshipCountries.length === 0 && <option value="NG">Nigeria</option>}
+                          {topshipCountries.map(c => (
+                            <option key={c.code} value={c.code}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {receiverCountryCode !== 'NG' && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">Postal Code</label>
+                          <input
+                            type="text"
+                            value={receiverPostalCode}
+                            onChange={(e) => setReceiverPostalCode(e.target.value)}
+                            className={INPUT_CLASS}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
+                {selectedProvider === 'topship' && (senderCountryCode !== 'NG' || receiverCountryCode !== 'NG') && (
+                  <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                    International shipment ({senderCountryCode} → {receiverCountryCode}). Rates and booking route to Topship's Export/Import handling — this corridor is untested on staging, verify the result carefully.
+                  </p>
+                )}
               </div>
 
               {/* Package Details & Courier List */}
@@ -1914,10 +2106,10 @@ export default function OrdersTab({
               <button
                 type="button"
                 onClick={initializeShipmentPayment}
-                disabled={bookingSubmitting || !selectedCourierId || loadingRates}
+                disabled={bookingSubmitting || topshipBookingDirect || !selectedCourierId || loadingRates}
                 className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-700 disabled:bg-green-400 active:scale-95"
               >
-                {bookingSubmitting ? (
+                {bookingSubmitting || topshipBookingDirect ? (
                   <>
                     <Loader2 size={13} className="animate-spin" />
                     Booking Shipment...
@@ -1925,7 +2117,7 @@ export default function OrdersTab({
                 ) : (
                   <>
                     <Check size={13} />
-                    Confirm & Book Shipment
+                    {selectedProvider === 'topship' ? 'Book Shipment (No Payment — Staging)' : 'Confirm & Book Shipment'}
                   </>
                 )}
               </button>

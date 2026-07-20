@@ -3898,3 +3898,44 @@ Added route cases: `topship-rates`, `topship-payment-initialize`, `topship-creat
 ### Build Status
 
 `npm run build` passed with zero errors (pre-existing chunk-size warning only, unrelated to this change). New/edited backend files also syntax-checked individually with `node --check`.
+
+---
+
+### [2026-07-20] Topship Follow-Up: pricingTier Bug Fix, Payment-First Bypassed (Staging), International Support
+
+Driven directly by the first real staging test — a screenshot of the booking modal showed one rate rendering its courier name as a raw UUID, prompting a deeper look that found a real correctness bug, not just a display issue.
+
+## ⚠️ Topship Payment-First Booking — TEMPORARILY BYPASSED FOR STAGING TESTING
+**What changed:** on staging, clicking "Book Shipment" → Topship → "Book Shipment (No Payment — Staging)" now books directly against Topship's sandbox (`save-shipment` → `pay-from-wallet`) without going through Paystack checkout first. The button label says so explicitly.
+
+**Why:** staging isn't real money — the ask was to validate the Topship booking flow itself first, independent of the payment flow (which already has a known pre-existing wrinkle — see the missing `sendbox-payment-verify.js` note in the previous entry).
+
+**Exactly what was bypassed:** `topship-create-shipment.js`'s `reference` parameter became optional. When present, behavior is 100% unchanged (Paystack verify → book). When absent, it skips straight to booking using a `shippingFee` passed directly in the request body instead of one read from verified Paystack metadata.
+
+**Why this is safe to leave in code:** the bypass is hard-gated — `if (!reference && isProduction) return 400`, where `isProduction` checks `TOPSHIP_ENV === 'production'`. Since production is already blocked (no `TOPSHIP_PRODUCTION_KEY` exists), this bypass **cannot function** even if forgotten. `OrdersTab.jsx`'s `proceedToPaystack` (the real Paystack path) was left fully intact, not deleted — `bookTopshipDirect()` is a new, separate function; the "Confirm & Book Shipment" button for Sendbox still goes through the untouched Paystack flow exactly as before.
+
+**How to fully re-enable payment-first for Topship:** in `OrdersTab.jsx`, change `initializeShipmentPayment` so the `selectedProvider === 'topship'` branch falls through to `setShowPaymentModal(true)` instead of calling `bookTopshipDirect()` — everything needed (the modal, `proceedToPaystack`'s Topship branch, `topship-payment-initialize.js`) is still there, wired, and unchanged.
+
+## Bug fix: `pricingTier` was never actually valid
+`/save-shipment` requires `pricingTier` to be one of Topship's enum (`Budget`/`Express`/`FedEx`/`Premium`/`LastMileBudget`). The original implementation passed the rate's `mode` field (a free-text display string — sometimes a courier partner name like "Chowdeck Shipping", sometimes a raw UUID, confirmed from a real staging screenshot) straight through as `pricingTier` on booking. That would have caused Topship to reject the booking.
+
+**Fix, in `topship-rates.js`:** the rate-quote response actually already includes a proper `pricingTier` field alongside `mode` — just wasn't being used. Rates now carry both: `pricing_tier` (the clean enum value, always used for the actual `/save-shipment` call) and `courier_name` (a UUID-safe display label — falls back to the tier name if `mode` looks like a UUID). `courier_id` is now a synthesized `topship_{index}_{tier}` string, no longer the raw `mode` value, so it's guaranteed unique and never leaks a UUID into the UI.
+
+**Threaded through every call site that books a Topship shipment:** `OrdersTab.jsx` (`proceedToPaystack`, `bookTopshipDirect`, the redirect `useEffect`), `topship-payment-initialize.js` (now requires `pricingTier` in the body, stores it in Paystack metadata), `topship-create-shipment.js` (requires `pricingTier`, no longer accepts `courierId` for booking), and the `paystack-webhook.js` Topship safety-net branch (reads `pricingTier` from metadata).
+
+## International support added (Export/Import routes)
+Previously hardcoded to `shipmentRoute: 'Domestic'` everywhere, sender/receiver always assumed Nigeria. Per the docs, Topship's API supports `Export`/`Import`/`Domestic` — this was working scope, not a bug, per the original plan's own note ("Topship is Nigeria-centric now, evaluate when expansion happens"). Extended now:
+
+- **`_lib/topship-booking.js`** — new `getTopshipCountries()` (`GET /get-countries`) and `resolveShipmentRoute(senderCountryCode, receiverCountryCode)`: `Domestic` if both NG, `Export` if sender NG/receiver not, `Import` if receiver NG/sender not. Neither-side-Nigeria routes (e.g. Ghana → Togo) aren't explicitly covered in Topship's docs — defaulted to `Export` as the closest fit, flagged in a code comment to verify against real staging behavior if that corridor is actually tested.
+- **New `src/api-handlers/topship-countries.js`** + route case — thin wrapper for the countries list.
+- **`topship-create-shipment.js`** and the webhook branch now compute `shipmentRoute` via `resolveShipmentRoute` instead of relying on the hardcoded default, and pass through `country`/`countryCode`/`postalCode` for both sender and receiver.
+- **`OrdersTab.jsx`** — Topship-only Country dropdowns (populated from `/api/topship-countries`, fetched once when Topship is selected) added next to both Sender and Receiver State fields, plus a Postal Code field that only appears once a non-Nigeria country is picked. `triggerFetchRates`'s Topship branch now sends the selected country codes instead of a hardcoded `'NG'`/`'NG'`, and the address-required validation was relaxed for Topship (city only, not street+state — international addresses don't always have a "state" in the Nigerian sense). An amber-blue notice appears in the form when either side isn't Nigeria, flagging the corridor as untested on staging.
+
+### What did NOT change
+- Sendbox — zero files touched in this pass either.
+- The core `bookTopshipShipment`/`splitAddress`/`trackTopshipShipment` functions in `_lib/topship-booking.js` — only new exports were added, existing ones untouched.
+- KOBO conversion and VAT math from the previous entry — unchanged.
+
+### Build Status
+
+`npm run build` passed with zero errors. All new/edited backend files individually syntax-checked with `node --check`.

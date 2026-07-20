@@ -42,6 +42,40 @@ export function splitAddress(address, maxLen = 45) {
 }
 
 /**
+ * Countries list — GET /get-countries. Used to populate sender/receiver country
+ * pickers for international (Export/Import) shipments.
+ */
+export async function getTopshipCountries() {
+  const { baseUrl, apiKey } = getTopshipConfig()
+  const res = await fetch(`${baseUrl}/get-countries`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  const data = await res.json()
+
+  if (!res.ok) {
+    console.error('[topship-booking] get-countries error:', data)
+    return { success: false, error: data?.message || 'Failed to fetch Topship countries', data }
+  }
+  return { success: true, data: Array.isArray(data) ? data : [] }
+}
+
+/**
+ * Resolves Topship's shipmentRoute enum (Domestic/Export/Import) from sender/receiver
+ * country codes. Sellapage vendors are Nigerian, so Nigeria is the reference point.
+ * Neither-side-Nigeria routes (e.g. Ghana -> Togo) aren't covered explicitly in
+ * Topship's docs — defaulted to 'Export' as the closest semantic fit. Verify against
+ * real staging behavior if that corridor is actually tested.
+ */
+export function resolveShipmentRoute(senderCountryCode = 'NG', receiverCountryCode = 'NG') {
+  const s = (senderCountryCode || 'NG').toUpperCase()
+  const r = (receiverCountryCode || 'NG').toUpperCase()
+  if (s === 'NG' && r === 'NG') return 'Domestic'
+  if (s === 'NG' && r !== 'NG') return 'Export'
+  if (s !== 'NG' && r === 'NG') return 'Import'
+  return 'Export'
+}
+
+/**
  * Rate quote — GET /get-shipment-rate
  */
 export async function getTopshipRates({ senderCity, senderCountryCode = 'NG', receiverCity, receiverCountryCode = 'NG', weight = 1 }) {

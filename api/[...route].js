@@ -71,6 +71,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/topship-tracking.js");
         return await handlerFunc(req, res);
       }
+      case "topship-countries": {
+        const { default: handlerFunc } = await import("../src/api-handlers/topship-countries.js");
+        return await handlerFunc(req, res);
+      }
       case "ai-describe": {
         const { default: handlerFunc } = await import("../src/api-handlers/ai-describe.js");
         return await handlerFunc(req, res);

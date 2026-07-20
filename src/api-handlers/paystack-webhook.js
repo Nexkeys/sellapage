@@ -503,11 +503,11 @@ export default async function handler(req, res) {
   // model as the Sendbox branch above.
   if (transactionType === "shipment" && data.metadata?.provider === "topship") {
     try {
-      const { bookTopshipShipment } = await import("./_lib/topship-booking.js")
+      const { bookTopshipShipment, resolveShipmentRoute } = await import("./_lib/topship-booking.js")
       const {
         storeId,
         orderId,
-        courierId,
+        pricingTier,
         senderDetails: senderDetailsRaw,
         receiverDetails: receiverDetailsRaw,
         weight,
@@ -516,7 +516,7 @@ export default async function handler(req, res) {
         insuranceType,
       } = data.metadata || {}
 
-      if (!storeId || !orderId || !courierId) {
+      if (!storeId || !orderId || !pricingTier) {
         return res.status(200).send("Missing shipment metadata, skipped")
       }
 
@@ -539,9 +539,10 @@ export default async function handler(req, res) {
           value: Math.round(shippingFeeNum * 100),
         }],
         itemCollectionMode: "PickUp",
-        pricingTier: courierId,
+        pricingTier,
         insuranceType: insuranceType || "None",
         shipmentChargeNaira: shippingFeeNum,
+        shipmentRoute: resolveShipmentRoute(senderDetails?.countryCode, receiverDetails?.countryCode),
         senderDetail: {
           name: senderDetails?.name,
           email: senderDetails?.email,
@@ -549,6 +550,9 @@ export default async function handler(req, res) {
           addressLine1: senderDetails?.address,
           state: senderDetails?.state,
           city: senderDetails?.city,
+          country: senderDetails?.country,
+          countryCode: senderDetails?.countryCode,
+          postalCode: senderDetails?.postalCode,
         },
         receiverDetail: {
           name: receiverDetails?.name,
@@ -557,6 +561,9 @@ export default async function handler(req, res) {
           addressLine1: receiverDetails?.address,
           state: receiverDetails?.state,
           city: receiverDetails?.city,
+          country: receiverDetails?.country,
+          countryCode: receiverDetails?.countryCode,
+          postalCode: receiverDetails?.postalCode,
         },
       })
 

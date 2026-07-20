@@ -1,8 +1,16 @@
 //src/api-handlers/topship-create-shipment.js
 // STAGING ONLY — see _lib/topship-booking.js header for the staging/production switch.
+//
+// TEMPORARY (2026-07-20): `reference` is optional. When absent, this handler skips the
+// Paystack verification step entirely and books directly, so staging testing doesn't
+// require completing a real Paystack checkout each time. This bypass is HARD-GATED to
+// non-production — see the `TOPSHIP_ENV === 'production'` check below — so it cannot
+// function even if this ships unmodified once a production key exists. See README.md
+// "Topship Payment-First Booking — Temporarily Bypassed for Staging Testing" for the
+// full log of what this replaced and how to fully re-enable payment-first booking.
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
-import { bookTopshipShipment } from './_lib/topship-booking.js'
+import { bookTopshipShipment, resolveShipmentRoute } from './_lib/topship-booking.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,8 +25,9 @@ export default async function handler(req, res) {
   const {
     storeId,
     orderId,
-    reference,
-    courierId, // Topship pricingTier, e.g. "Budget" / "Express" / "Premium"
+    reference, // optional during the staging bypass — see file header
+    pricingTier, // Topship enum: Budget / Express / FedEx / Premium / LastMileBudget
+    shippingFee, // Naira — required when `reference` is absent
     senderDetails,
     receiverDetails,
     weight = 1,
@@ -26,10 +35,18 @@ export default async function handler(req, res) {
     insuranceType = 'None',
   } = req.body
 
-  if (!storeId || !orderId || !reference || !courierId || !senderDetails || !receiverDetails) {
+  if (!storeId || !orderId || !pricingTier || !senderDetails || !receiverDetails) {
     return res.status(400).json({
-      error: 'Missing required fields: storeId, orderId, reference, courierId, senderDetails, receiverDetails',
+      error: 'Missing required fields: storeId, orderId, pricingTier, senderDetails, receiverDetails',
     })
+  }
+
+  const isProduction = (process.env.TOPSHIP_ENV || 'staging').toLowerCase() === 'production'
+  if (!reference && isProduction) {
+    return res.status(400).json({ error: 'Payment reference is required' })
+  }
+  if (!reference && !shippingFee) {
+    return res.status(400).json({ error: 'shippingFee is required when booking without a payment reference' })
   }
 
   try {
@@ -56,25 +73,32 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Order not found' })
     }
 
-    // Self-contained Paystack verification. Unlike the Sendbox redirect flow (which
-    // depends on a separate /api/sendbox-payment-verify call — a handler that doesn't
-    // currently exist in this codebase), this endpoint verifies the transaction itself
-    // before booking, so a crafted/incomplete reference can't trigger a real Topship
-    // wallet charge.
-    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
-    })
-    const verifyData = await verifyRes.json()
-    const txn = verifyData?.data
+    let resolvedShippingFee = Number(shippingFee) || 0
 
-    if (!verifyRes.ok || !verifyData?.status || txn?.status !== 'success') {
-      return res.status(402).json({ error: 'Payment could not be verified' })
-    }
-    if (txn?.metadata?.storeId !== storeId || txn?.metadata?.orderId !== orderId) {
-      return res.status(400).json({ error: 'Payment reference does not match this order' })
+    if (reference) {
+      // Self-contained Paystack verification. Unlike the Sendbox redirect flow (which
+      // depends on a separate /api/sendbox-payment-verify call — a handler that doesn't
+      // currently exist in this codebase), this endpoint verifies the transaction itself
+      // before booking, so a crafted/incomplete reference can't trigger a real Topship
+      // wallet charge.
+      const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+      })
+      const verifyData = await verifyRes.json()
+      const txn = verifyData?.data
+
+      if (!verifyRes.ok || !verifyData?.status || txn?.status !== 'success') {
+        return res.status(402).json({ error: 'Payment could not be verified' })
+      }
+      if (txn?.metadata?.storeId !== storeId || txn?.metadata?.orderId !== orderId) {
+        return res.status(400).json({ error: 'Payment reference does not match this order' })
+      }
+      resolvedShippingFee = Number(txn.metadata?.shippingFee) || resolvedShippingFee
+    } else {
+      console.warn(`[topship-create-shipment] Booking WITHOUT payment verification (staging bypass) — order ${orderId}`)
     }
 
-    const shippingFee = Number(txn.metadata?.shippingFee) || 0
+    const shipmentRoute = resolveShipmentRoute(senderDetails.countryCode, receiverDetails.countryCode)
 
     const result = await bookTopshipShipment({
       items: [{
@@ -82,12 +106,13 @@ export default async function handler(req, res) {
         description: 'Package',
         weight: Number(weight) || 1,
         quantity: 1,
-        value: Math.round(shippingFee * 100),
+        value: Math.round(resolvedShippingFee * 100),
       }],
       itemCollectionMode: 'PickUp',
-      pricingTier: courierId,
+      pricingTier,
       insuranceType,
-      shipmentChargeNaira: shippingFee,
+      shipmentChargeNaira: resolvedShippingFee,
+      shipmentRoute,
       senderDetail: {
         name: senderDetails.name,
         email: senderDetails.email,
@@ -95,6 +120,9 @@ export default async function handler(req, res) {
         addressLine1: senderDetails.address,
         state: senderDetails.state,
         city: senderDetails.city,
+        country: senderDetails.country,
+        countryCode: senderDetails.countryCode,
+        postalCode: senderDetails.postalCode,
       },
       receiverDetail: {
         name: receiverDetails.name,
@@ -103,6 +131,9 @@ export default async function handler(req, res) {
         addressLine1: receiverDetails.address,
         state: receiverDetails.state,
         city: receiverDetails.city,
+        country: receiverDetails.country,
+        countryCode: receiverDetails.countryCode,
+        postalCode: receiverDetails.postalCode,
       },
     })
 
@@ -120,6 +151,7 @@ export default async function handler(req, res) {
       topshipShipmentId: shipData?.id || '',
       topshipTrackingUrl: trackingUrl,
       topshipStatus: shipData?.shipmentStatus || 'Confirmed',
+      topshipPaymentBypassed: !reference,
       provider: 'topship',
       status: 'dispatched',
       updatedAt: now.toISOString(),
@@ -127,7 +159,7 @@ export default async function handler(req, res) {
         status: 'dispatched',
         changedAt: now.toISOString(),
         changedBy: 'system',
-        changedByLabel: 'Shipment Booked (Topship)',
+        changedByLabel: reference ? 'Shipment Booked (Topship)' : 'Shipment Booked (Topship, staging — payment bypassed)',
       }),
     })
 
