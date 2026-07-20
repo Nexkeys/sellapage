@@ -20,6 +20,22 @@ function getTopshipConfig() {
 }
 
 /**
+ * Topship's error responses aren't consistently shaped (plain {message}, or a
+ * GraphQL-style {message, locations, path}) — this pulls a readable string out of
+ * whatever comes back, and appends a hint when it looks like a permissions problem
+ * rather than a request problem, since that distinction isn't obvious from "Unauthorized"
+ * alone.
+ */
+function describeTopshipError(data, fallback) {
+  const raw = data?.message || data?.errors?.[0]?.message || fallback
+  const looksLikeAuthIssue = /unauthorized|forbidden|not\s*allowed/i.test(raw || '')
+  const hint = looksLikeAuthIssue
+    ? ' — this usually means the API key isn\'t enabled for this action on Topship\'s side (rate quotes can still work fine even when booking doesn\'t). Contact tech@topship.africa to confirm the staging key has write/booking access.'
+    : ''
+  return `${raw}${hint}`
+}
+
+/**
  * Splits a long address into Topship's addressLine1/2/3 (45-char max each) at word boundaries.
  */
 export function splitAddress(address, maxLen = 45) {
@@ -54,7 +70,7 @@ export async function getTopshipCountries() {
 
   if (!res.ok) {
     console.error('[topship-booking] get-countries error:', data)
-    return { success: false, error: data?.message || 'Failed to fetch Topship countries', data }
+    return { success: false, error: describeTopshipError(data, 'Failed to fetch Topship countries'), data }
   }
   return { success: true, data: Array.isArray(data) ? data : [] }
 }
@@ -94,7 +110,7 @@ export async function getTopshipRates({ senderCity, senderCountryCode = 'NG', re
 
   if (!res.ok) {
     console.error('[topship-booking] Rate quote error:', data)
-    return { success: false, error: data?.message || 'Failed to fetch Topship rates', data }
+    return { success: false, error: describeTopshipError(data, 'Failed to fetch Topship rates'), data }
   }
   return { success: true, data: Array.isArray(data) ? data : [] }
 }
@@ -185,7 +201,11 @@ export async function bookTopshipShipment({
   const bookData = await bookRes.json()
   if (!bookRes.ok) {
     console.error('[topship-booking] save-shipment error:', bookData)
-    return { success: false, error: bookData?.message || 'Failed to save Topship shipment draft', data: bookData }
+    return {
+      success: false,
+      error: `Topship rejected the booking request (save-shipment): ${describeTopshipError(bookData, 'Failed to save Topship shipment draft')}`,
+      data: bookData,
+    }
   }
 
   const shipmentId = bookData?.id
@@ -203,7 +223,11 @@ export async function bookTopshipShipment({
   const payData = await payRes.json()
   if (!payRes.ok) {
     console.error('[topship-booking] pay-from-wallet error:', payData)
-    return { success: false, error: payData?.message || 'Failed to pay for Topship shipment from wallet', data: payData }
+    return {
+      success: false,
+      error: `Topship rejected the wallet payment (pay-from-wallet): ${describeTopshipError(payData, 'Failed to pay for Topship shipment from wallet')}`,
+      data: payData,
+    }
   }
 
   return { success: true, data: payData }
@@ -221,7 +245,7 @@ export async function trackTopshipShipment(trackingId) {
 
   if (!res.ok) {
     console.error('[topship-booking] track-shipment error:', data)
-    return { success: false, error: data?.message || 'Failed to fetch Topship tracking status', data }
+    return { success: false, error: describeTopshipError(data, 'Failed to fetch Topship tracking status'), data }
   }
   return { success: true, data }
 }

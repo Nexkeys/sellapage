@@ -3939,3 +3939,20 @@ Previously hardcoded to `shipmentRoute: 'Domestic'` everywhere, sender/receiver 
 ### Build Status
 
 `npm run build` passed with zero errors. All new/edited backend files individually syntax-checked with `node --check`.
+
+---
+
+### [2026-07-20] Topship: Clearer Error Messages From First Real Staging Test
+
+First real staging booking attempt surfaced Topship rejecting `POST /save-shipment` with a bare `"Unauthorized"`, while `GET /get-shipment-rate` succeeded with the identical API key/auth code path moments earlier in the same session (confirmed via Vercel logs). That points to a Topship-side permission/activation gap on the booking endpoint specifically (staging keys are often quote-only by default until write/booking access is separately enabled) — **not a bug in this integration** — so no code fix was possible or attempted for the underlying issue. What shipped instead is a diagnostics improvement so this doesn't require a Vercel logs dive next time.
+
+#### `src/api-handlers/_lib/topship-booking.js`
+New `describeTopshipError(data, fallback)` helper — Topship's error responses aren't consistently shaped (sometimes plain `{message}`, sometimes GraphQL-style `{message, locations, path}`); this pulls a readable string out of whichever shape comes back, and appends a specific hint ("this usually means the API key isn't enabled for this action... contact tech@topship.africa") whenever the message looks auth/permission-shaped (`/unauthorized|forbidden|not allowed/i`). Applied to all four Topship API call sites: `getTopshipCountries`, `getTopshipRates`, `bookTopshipShipment` (both the `save-shipment` and `pay-from-wallet` steps — each now names which step failed), and `trackTopshipShipment`.
+
+#### What did NOT change
+- No attempt to work around or bypass the "Unauthorized" response itself — that requires Topship enabling write access on the staging key, which is on them, not fixable from this codebase.
+- No other Topship files touched.
+
+### Build Status
+
+`npm run build` passed with zero errors.
