@@ -79,24 +79,25 @@ export default async function handler(req, res) {
     let campaignResourceId = null
     let adGroupResourceId = null
     const accessToken = await getAccessToken(refreshToken)
+    const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID
     const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
     const budgetResourceName = await createBudget(accessToken, customerId, {
       name: `${campaignName} (Sellapage Managed)`,
       amountMicros: budgetMicros,
-    })
+    }, loginCustomerId)
     campaignResourceId = await createCampaign(accessToken, customerId, {
       name: `${campaignName} (Sellapage Managed)`,
       budgetResourceName,
       status: 'PAUSED',
       advertisingChannelType: campaignType || 'SEARCH',
-    })
+    }, loginCustomerId)
 
     if (campaignResourceId && campaignType === 'SEARCH' && targeting?.keywords?.length > 0) {
       try {
         adGroupResourceId = await createAdGroup(accessToken, customerId, {
           campaignResourceName: campaignResourceId,
           name: `${campaignName} Ad Group`,
-        })
+        }, loginCustomerId)
 
         if (adGroupResourceId) {
           if (targeting.headlines?.length > 0 && targeting.descriptions?.length > 0 && targeting.finalUrl) {
@@ -105,13 +106,13 @@ export default async function handler(req, res) {
               headlines: targeting.headlines,
               descriptions: targeting.descriptions,
               finalUrl: targeting.finalUrl,
-            })
+            }, loginCustomerId)
           }
 
           await addKeywords(accessToken, customerId, {
             adGroupResourceName: adGroupResourceId,
             keywords: targeting.keywords,
-          })
+          }, loginCustomerId)
         }
       } catch (adErr) {
         console.warn('[ads-payment-verify] Ad group/keyword creation failed (non-fatal):', adErr.message)

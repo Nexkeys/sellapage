@@ -819,10 +819,12 @@ New features:
 - Color-coded status badges
 Implementation: See "2026-07-20 — Orders Tab Full Overhaul Implementation" section below.
 
-### 6. Admin Panel
+### 6. Admin Panel — MOSTLY BUILT ✅ (status corrected 2026-07-21)
 Internal panel for Nex to manage the platform.
 Features: vendor list, plan management, Sendbox wallet balance monitoring, shipment usage tracking, revenue overview, support ticket management, feature flags, payouts tab accounts added for verification, cloudinary usage/bandwith, vendors details. well paginated and designed to feel like an actual admin panel and fine very fine and fully structured
 Auth: `ADMIN_SECRET_TOKEN` header (already in Vercel env).
+
+**Status note (2026-07-21):** Built and iterated across multiple changelog entries — see "[2026-07-16] Admin Panel — Role-Based Access System (Phase 1)", "[2026-07-17] Admin Panel — Role Debug Logging", "[2026-07-17] Admin Panel — Role Check Fix", "[2026-07-17] Admin Panel Overhaul — Health Fix, Vercel Labels, Mobile Nav, Admin Team Tab", "[2026-07-18] Admin Panel — Full Overhaul: 11 Tabs, New APIs, Bug Fixes, Mobile Responsive", "[2026-07-18] Admin Panel — Clipboard Fix + Build Pass", "[2026-07-20] Admin Panel Mobile Nav Restructure". Not yet confirmed built from the changelog: Cloudinary usage/bandwidth tracking and a dedicated payouts-verification accounts view — check before marking this fully DONE.
 
 **CAC Verification Admin Features (add to Admin Panel):**
 - Total CAC-verified stores count (cacVerified: true)
@@ -868,9 +870,11 @@ Self-managed or Sellapage-managed with 10% commission model.
 Requires Meta Business API approval.
 Plan gate: Premium only.
 
-### 13. Google Ads Integration
+### 13. Google Ads Integration — SUBSTANTIALLY BUILT ✅ (status corrected 2026-07-21)
 Same model as Meta.
 Plan gate: Premium only.
+
+**Status note (2026-07-21):** OAuth connect/disconnect, campaign CRUD, reports, and pause/resume are implemented (see "AdsTab", `google-ads-*` API handlers, and changelog entries "Google Ads — Disconnect/Reconnect Flow", "[2026-07-21] Google Ads — getCustomer Endpoint Fix + Campaign List from Google Ads API", "[2026-07-21] Google Ads — login-customer-id Header Fix + Firestore Composite Index"). Meta Ads (item 12 above) remains plan-only — no `meta-ads-*` handlers exist yet, still blocked on Meta Business verification + App Review.
 
 
 ### 14. User Session History And Logout — DONE ✅
@@ -4341,6 +4345,43 @@ Firestore requires composite indexes for queries that combine `where()` with `or
 
 **Firestore composite index:**
 - Created composite index on `googleAdsCampaigns` collection: `storeId` (Ascending) + `createdAt` (Descending) + `__name__` (Descending). Status: Enabled.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-21] Google Ads — login-customer-id Header Removed for Vendor Calls
+
+#### The bug
+Campaigns were not appearing in the Sellapage dashboard despite existing in the vendor's Google Ads account. The `listCampaigns` API call returned 200 but with empty results. Reports also showed zero data.
+
+#### Root cause
+Per Google's API docs: "You can skip providing the `login-customer-id` header if the user has direct access to the Google Ads account that you are making calls to." Our previous fix set `login-customer-id` to the vendor's own customer ID, but for direct access accounts this header should be **omitted entirely**. Sending it was interfering with the API's ability to determine the correct account scope.
+
+- `listAccessibleCustomers` works without `login-customer-id` — confirmed by the fact that it successfully returned the vendor's customer ID.
+- `getCustomer` (via `searchGoogleAds`) was also working without issues for the overview tab.
+- But `listCampaigns` and `getCampaignReport` were returning empty results because the `login-customer-id` header was scoping the query incorrectly.
+
+#### Fixes
+
+**`src/api-handlers/_lib/google-ads-client.js`:**
+- Added `buildHeaders(accessToken, loginCustomerId)` helper function that constructs the headers object.
+- `login-customer-id` is only included in the headers when `loginCustomerId` is explicitly passed (truthy). When not passed (vendor flow), the header is omitted entirely.
+- All 11 functions (`searchGoogleAds`, `mutateGoogleAds`, `createBudget`, `createCampaign`, `updateCampaignStatus`, `createAdGroup`, `createResponsiveSearchAd`, `addKeywords`, `listCampaigns`, `getCampaignReport`, `getCustomer`) now use `buildHeaders()`.
+
+**`src/api-handlers/ads-payment-verify.js`:**
+- Added `const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID` and passes it explicitly to all API calls (createBudget, createCampaign, createAdGroup, createResponsiveSearchAd, addKeywords).
+- Master account flow needs the header because it's making calls through the MCC, not direct access.
+
+**`src/api-handlers/paystack-webhook.js`:**
+- Same pattern — added `const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID` and passes it explicitly to all API calls.
+
+#### What did NOT change
+- Vendor-facing handlers (`google-ads-campaigns.js`, `google-ads-reports.js`, `google-ads-callback.js`) — none pass `loginCustomerId`, so the header is omitted for all vendor calls. Correct per Google's docs for direct access accounts.
+- No Vercel env var changes.
+- No Google Cloud Console changes.
 
 ### Build Status
 

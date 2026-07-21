@@ -652,23 +652,24 @@ export default async function handler(req, res) {
       try {
         const { getAccessToken, createBudget, createCampaign, createAdGroup, createResponsiveSearchAd, addKeywords } = await import("./_lib/google-ads-client.js")
         const accessToken = await getAccessToken(refreshToken)
+        const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID
         const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
         const budgetResourceName = await createBudget(accessToken, customerId, {
           name: `${campaignName} (Sellapage Managed)`,
           amountMicros: budgetMicros,
-        })
+        }, loginCustomerId)
         campaignResourceId = await createCampaign(accessToken, customerId, {
           name: `${campaignName} (Sellapage Managed)`,
           budgetResourceName,
           status: "PAUSED",
           advertisingChannelType: campaignType || "SEARCH",
-        })
+        }, loginCustomerId)
 
         if (campaignResourceId && campaignType === "SEARCH" && targeting?.keywords?.length > 0) {
           const adGroupResourceId = await createAdGroup(accessToken, customerId, {
             campaignResourceName: campaignResourceId,
             name: `${campaignName} Ad Group`,
-          })
+          }, loginCustomerId)
 
           if (adGroupResourceId) {
             if (targeting.headlines?.length > 0 && targeting.descriptions?.length > 0 && targeting.finalUrl) {
@@ -677,13 +678,13 @@ export default async function handler(req, res) {
                 headlines: targeting.headlines,
                 descriptions: targeting.descriptions,
                 finalUrl: targeting.finalUrl,
-              })
+              }, loginCustomerId)
             }
 
             await addKeywords(accessToken, customerId, {
               adGroupResourceName: adGroupResourceId,
               keywords: targeting.keywords,
-            })
+            }, loginCustomerId)
           }
         }
       } catch (apiErr) {
