@@ -93,7 +93,7 @@ export default async function handler(req, res) {
       dateRange: gaDateRange,
       reportRows: results.length,
       campaignListRows: campaignList.length,
-      firstMetricsKeys: results[0]?.metrics ? Object.keys(results[0].metrics) : null,
+      firstReportRow: results[0] ? JSON.stringify(results[0]) : null,
     })
 
     const campaignMetrics = []
@@ -136,26 +136,30 @@ export default async function handler(req, res) {
       if (cid) metricsById[cid] = r
     }
 
-    // Prefer the full campaign list (shows every campaign, even zero-activity ones); fall back to
-    // the report rows if the list call failed.
-    const sourceCampaigns = campaignList.length > 0
-      ? campaignList.map((r) => ({
-          id: String(r.campaign?.id || ''),
-          name: r.campaign?.name,
-          status: r.campaign?.status,
-        }))
-      : results.map((r) => ({
-          id: String(r.campaign?.id || ''),
-          name: r.campaign?.name,
-          status: r.campaign?.status,
-        }))
+    // Union of campaigns from the list (source of truth for existence/name/status) and the report
+    // rows (source of metrics; may also include a campaign the list omitted, e.g. a removed one).
+    // Iterating the union guarantees a metrics row is never dropped by a failed join.
+    const campaignInfoById = {}
+    for (const r of campaignList) {
+      const cid = String(r.campaign?.id || '')
+      if (cid && !campaignInfoById[cid]) {
+        campaignInfoById[cid] = { name: r.campaign?.name, status: r.campaign?.status }
+      }
+    }
+    for (const r of results) {
+      const cid = String(r.campaign?.id || '')
+      if (cid && !campaignInfoById[cid]) {
+        campaignInfoById[cid] = { name: r.campaign?.name, status: r.campaign?.status }
+      }
+    }
 
-    for (const c of sourceCampaigns) {
-      if (!c.id || seenCampaignIds.has(c.id)) continue
-      seenCampaignIds.add(c.id)
-      const match = metricsById[c.id]
+    for (const cid of Object.keys(campaignInfoById)) {
+      if (seenCampaignIds.has(cid)) continue
+      seenCampaignIds.add(cid)
+      const info = campaignInfoById[cid]
+      const match = metricsById[cid]
       campaignMetrics.push(
-        accumulateMetrics(c.id, match?.campaign?.name || c.name, match?.campaign?.status || c.status, match?.metrics || {})
+        accumulateMetrics(cid, match?.campaign?.name || info.name, match?.campaign?.status || info.status, match?.metrics || {})
       )
     }
 
