@@ -3,16 +3,26 @@
 // Renders as a MOVABLE floating action button that lives on every dashboard tab
 // (mounted once in DashboardLayout). Premium only. Chat memory persists across tab
 // switches and page refreshes via Firestore-backed sessions + a localStorage cursor.
+//
+// Design: a dark, premium, brand-green AI console — deliberately NOT a white support
+// widget. Every rendered control is functional; there are no placeholder buttons.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Sparkles, X, Send, History, Settings2, Plus, Check, Loader2,
-  ExternalLink, Trash2, Pencil, ArrowLeft, Gauge,
+  ExternalLink, Trash2, Pencil, ArrowLeft, TrendingUp, Star, Globe, Receipt,
 } from "lucide-react";
 import { auth } from "../../firebase/auth";
 
 const LS_SESSION = (sid) => `sellaai_session_${sid}`;
 const LS_FABPOS = "sellaai_fabpos";
+
+const CAPABILITIES = [
+  { icon: TrendingUp, label: "Sales this week", sub: "Read the numbers", prompt: "How are my sales doing this week?" },
+  { icon: Star, label: "Best seller", sub: "Spot the winners", prompt: "What's my best-selling item right now?" },
+  { icon: Globe, label: "Market research", sub: "Live web pricing", prompt: "What's a good market price for my products in Nigeria right now?" },
+  { icon: Receipt, label: "Log a sale", sub: "I'll ask to confirm", prompt: "Log a ₦5,000 sale" },
+];
 
 async function callSella(payload) {
   const user = auth.currentUser;
@@ -102,7 +112,7 @@ export default function SellaAI({ store }) {
     const ds = dragState.current;
     if (!ds.dragging) return;
     ds.moved = true;
-    const size = 56;
+    const size = 60;
     let x = e.clientX - ds.offX;
     let y = e.clientY - ds.offY;
     x = Math.max(8, Math.min(window.innerWidth - size - 8, x));
@@ -119,9 +129,9 @@ export default function SellaAI({ store }) {
     dragState.current.dragging = false;
   };
 
-  // ---- send a message ----
-  const send = async () => {
-    const text = input.trim();
+  // ---- send a message (optional override lets capability cards fire a prompt directly) ----
+  const send = async (override) => {
+    const text = String(override ?? input).trim();
     if (!text || sending) return;
     setError("");
     const sid = sessionId || Date.now().toString();
@@ -208,6 +218,7 @@ export default function SellaAI({ store }) {
   };
 
   const pct = useMemo(() => Math.min(100, Math.round((usage.used / usage.limit) * 100)), [usage]);
+  const meterColor = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-green-500";
 
   if (!isPremium || !storeId) return null;
 
@@ -215,82 +226,100 @@ export default function SellaAI({ store }) {
     ? { left: fabPos.x, top: fabPos.y, right: "auto", bottom: "auto" }
     : { right: 20, bottom: 20 };
 
+  const subtitle = view === "settings" ? "Settings" : view === "history" ? "Chat history" : "AI Business Partner";
+
   return (
     <>
-      {/* Floating action button (movable) */}
+      {/* Floating action button (movable) — an AI orb, not a help bubble */}
       {!open && (
         <button
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           style={fabStyle}
-          className="fixed z-[60] w-14 h-14 rounded-2xl bg-green-500 hover:bg-green-400 text-white shadow-xl shadow-green-500/30 flex items-center justify-center touch-none transition-colors active:scale-95"
+          className="fixed z-[60] w-[60px] h-[60px] rounded-2xl bg-gradient-to-br from-green-400 to-green-600 text-white shadow-xl shadow-green-500/40 ring-1 ring-white/20 flex items-center justify-center touch-none transition-transform active:scale-95 hover:scale-[1.03]"
           title={`Ask ${assistantName}`}
           aria-label={`Open ${assistantName}`}
         >
-          <Sparkles size={24} />
+          <span className="absolute inset-0 rounded-2xl bg-green-400/40 blur-md -z-10" />
+          <Sparkles size={26} strokeWidth={2} />
         </button>
       )}
 
-      {/* Chat panel */}
+      {/* Chat console */}
       {open && (
-        <div className="fixed inset-0 z-[70] sm:inset-auto sm:right-5 sm:bottom-5 flex sm:block items-end justify-center">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-end sm:justify-end sm:p-5">
           {/* mobile backdrop */}
-          <div className="absolute inset-0 bg-black/40 sm:hidden" onClick={() => setOpen(false)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm sm:hidden" onClick={() => setOpen(false)} />
 
-          <div className="relative w-full sm:w-[400px] h-[85vh] sm:h-[600px] max-h-[85vh] bg-white sm:rounded-3xl rounded-t-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+          <div className="relative w-full sm:w-[420px] h-[90vh] sm:h-[640px] sm:max-h-[86vh] bg-gray-950 text-gray-100 sm:rounded-[26px] rounded-t-[26px] shadow-2xl ring-1 ring-white/10 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+            {/* ambient brand glow */}
+            <div className="pointer-events-none absolute -top-24 -right-16 w-64 h-64 rounded-full bg-green-500/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 -left-20 w-64 h-64 rounded-full bg-emerald-600/10 blur-3xl" />
+
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-950 text-white flex-shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
+            <div className="relative flex items-center justify-between px-4 py-3.5 border-b border-white/10 flex-shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 {view !== "chat" && (
-                  <button onClick={() => setView("chat")} className="p-1 -ml-1 rounded-lg hover:bg-white/10">
-                    <ArrowLeft size={16} />
+                  <button onClick={() => setView("chat")} className="p-1 -ml-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+                    <ArrowLeft size={17} />
                   </button>
                 )}
-                <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={15} />
+                <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
+                  <Sparkles size={17} />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 ring-2 ring-gray-950" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold leading-tight truncate">{assistantName}</p>
-                  <p className="text-[10px] text-gray-400 leading-tight">
-                    {view === "settings" ? "Settings" : view === "history" ? "Chat history" : "Your AI Business Partner"}
-                  </p>
+                  <p className="text-[15px] font-bold leading-tight truncate">{assistantName}</p>
+                  <p className="text-[11px] text-green-400/80 leading-tight font-medium">{subtitle}</p>
                 </div>
               </div>
               <div className="flex items-center gap-0.5">
-                <button onClick={newChat} title="New chat" className="p-1.5 rounded-lg hover:bg-white/10"><Plus size={16} /></button>
-                <button onClick={openHistory} title="History" className="p-1.5 rounded-lg hover:bg-white/10"><History size={16} /></button>
-                <button onClick={() => setView("settings")} title="Settings" className="p-1.5 rounded-lg hover:bg-white/10"><Settings2 size={16} /></button>
-                <button onClick={() => setOpen(false)} title="Close" className="p-1.5 rounded-lg hover:bg-white/10"><X size={16} /></button>
+                <button onClick={newChat} title="New chat" className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"><Plus size={17} /></button>
+                <button onClick={openHistory} title="History" className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"><History size={16} /></button>
+                <button onClick={() => setView("settings")} title="Settings" className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"><Settings2 size={16} /></button>
+                <button onClick={() => setOpen(false)} title="Close" className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"><X size={17} /></button>
               </div>
             </div>
 
-            {/* Usage strip */}
-            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-2 flex-shrink-0">
-              <Gauge size={13} className="text-gray-400" />
-              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-green-500"}`} style={{ width: `${pct}%` }} />
+            {/* Usage meter — slim + tasteful */}
+            <div className="relative px-4 py-2 flex items-center gap-2.5 flex-shrink-0 border-b border-white/5">
+              <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${meterColor} transition-all`} style={{ width: `${pct}%` }} />
               </div>
-              <span className="text-[11px] font-semibold text-gray-500 tabular-nums">{usage.remaining}/{usage.limit} left today</span>
+              <span className="text-[10.5px] font-semibold text-gray-400 tabular-nums whitespace-nowrap">
+                {usage.remaining}/{usage.limit} today
+              </span>
             </div>
 
             {/* Body */}
             {view === "chat" && (
               <>
-                <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
+                <div ref={scrollRef} className="relative flex-1 overflow-y-auto px-3.5 py-4 space-y-3">
                   {messages.length === 0 && (
-                    <div className="text-center px-6 py-8">
-                      <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-3">
-                        <Sparkles size={22} className="text-green-500" />
+                    <div className="px-2 pt-4 pb-2">
+                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center mb-4 ring-1 ring-white/20">
+                        <span className="absolute inset-0 rounded-2xl bg-green-400/40 blur-lg -z-10" />
+                        <Sparkles size={26} />
                       </div>
-                      <p className="text-sm font-bold text-gray-800">Hi, I'm {assistantName} 👋</p>
-                      <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                        I can see your whole store — orders, products, ledger, customers and more.
-                        Ask me anything, or tell me to log a sale, add a product, or run the numbers.
+                      <h3 className="text-xl font-bold tracking-tight">Hi, I'm {assistantName}.</h3>
+                      <p className="text-[13px] text-gray-400 mt-1.5 leading-relaxed">
+                        I can see your whole store — orders, products, ledger, customers and more — do live
+                        market research, and make changes on your say-so. What are we working on?
                       </p>
-                      <div className="flex flex-wrap gap-1.5 justify-center mt-4">
-                        {["How are sales this week?", "What's my best seller?", "Log a ₦5,000 sale"].map((s) => (
-                          <button key={s} onClick={() => setInput(s)} className="text-[11px] px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700 transition-colors">{s}</button>
+                      <div className="grid grid-cols-2 gap-2 mt-5">
+                        {CAPABILITIES.map((c) => (
+                          <button
+                            key={c.label}
+                            onClick={() => send(c.prompt)}
+                            className="group text-left p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-green-500/40 transition-colors"
+                          >
+                            <span className="w-8 h-8 rounded-lg bg-green-500/15 text-green-400 flex items-center justify-center mb-2 group-hover:bg-green-500/25 transition-colors">
+                              <c.icon size={16} />
+                            </span>
+                            <p className="text-[12.5px] font-semibold text-gray-100 leading-tight">{c.label}</p>
+                            <p className="text-[10.5px] text-gray-500 mt-0.5">{c.sub}</p>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -298,19 +327,19 @@ export default function SellaAI({ store }) {
 
                   {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+                      <div className={`max-w-[86%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
                         m.role === "user"
-                          ? "bg-green-500 text-white rounded-br-md"
+                          ? "bg-gradient-to-br from-green-500 to-green-600 text-white rounded-br-md shadow-sm shadow-green-900/30"
                           : m.kind === "action-result"
-                            ? (m.ok ? "bg-green-50 text-green-800 border border-green-200" : "bg-gray-100 text-gray-600")
-                            : "bg-gray-100 text-gray-800 rounded-bl-md"
+                            ? (m.ok ? "bg-green-500/15 text-green-200 border border-green-500/30" : "bg-white/5 text-gray-400 border border-white/10")
+                            : "bg-white/[0.06] text-gray-100 border border-white/10 rounded-bl-md"
                       }`}>
                         {m.kind === "action-result" && m.ok && <Check size={13} className="inline mr-1 -mt-0.5" />}
                         {m.content}
                         {m.sources?.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {m.sources.map((s, j) => (
-                              <a key={j} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/70 text-gray-600 border border-gray-200 hover:border-green-300 hover:text-green-700">
+                              <a key={j} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-black/30 text-gray-300 border border-white/10 hover:border-green-400/50 hover:text-green-300 transition-colors">
                                 <ExternalLink size={9} /> {(s.title || s.url).slice(0, 28)}
                               </a>
                             ))}
@@ -322,11 +351,11 @@ export default function SellaAI({ store }) {
 
                   {sending && (
                     <div className="flex justify-start">
-                      <div className="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
+                      <div className="bg-white/[0.06] border border-white/10 rounded-2xl rounded-bl-md px-4 py-3">
                         <div className="flex gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce [animation-delay:-0.3s]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce [animation-delay:-0.15s]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce" />
                         </div>
                       </div>
                     </div>
@@ -334,50 +363,51 @@ export default function SellaAI({ store }) {
 
                   {/* Pending write confirmation */}
                   {pending && (
-                    <div className="mx-1 rounded-2xl border-2 border-green-200 bg-green-50/60 p-3">
-                      <p className="text-[11px] font-bold text-green-700 uppercase tracking-wide mb-1">Confirm this change</p>
-                      <p className="text-[13px] text-gray-700 mb-3">{describePending(pending)}</p>
+                    <div className="mx-0.5 rounded-2xl border border-green-500/40 bg-green-500/10 p-3.5">
+                      <p className="text-[10.5px] font-bold text-green-400 uppercase tracking-wider mb-1.5">Confirm this change</p>
+                      <p className="text-[13px] text-gray-100 mb-3 leading-relaxed">{describePending(pending)}</p>
                       <div className="flex gap-2">
-                        <button onClick={confirmAction} disabled={confirming} className="flex-1 py-2 rounded-xl bg-green-500 hover:bg-green-400 disabled:bg-green-300 text-white text-xs font-bold flex items-center justify-center gap-1">
-                          {confirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Confirm
+                        <button onClick={confirmAction} disabled={confirming} className="flex-1 py-2.5 rounded-xl bg-gradient-to-br from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 disabled:opacity-60 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+                          {confirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />} Confirm
                         </button>
-                        <button onClick={cancelAction} disabled={confirming} className="flex-1 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-50">Cancel</button>
+                        <button onClick={cancelAction} disabled={confirming} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-bold hover:bg-white/10 transition-colors">Cancel</button>
                       </div>
                     </div>
                   )}
 
-                  {error && <div className="mx-1 rounded-xl bg-red-50 border border-red-100 px-3 py-2 text-[12px] text-red-600">{error}</div>}
+                  {error && <div className="mx-0.5 rounded-xl bg-red-500/10 border border-red-500/30 px-3 py-2 text-[12px] text-red-300">{error}</div>}
                 </div>
 
                 {/* Composer */}
-                <div className="px-3 py-3 border-t border-gray-100 flex-shrink-0">
-                  <div className="flex items-end gap-2">
+                <div className="relative px-3.5 py-3 border-t border-white/10 flex-shrink-0">
+                  <div className="flex items-end gap-2 rounded-2xl bg-white/[0.06] border border-white/10 focus-within:border-green-500/50 focus-within:bg-white/[0.09] transition-colors px-2 py-1.5">
                     <textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                       rows={1}
-                      placeholder={`Message ${assistantName}...`}
-                      className="flex-1 resize-none max-h-28 px-3.5 py-2.5 rounded-2xl bg-gray-100 text-[13px] text-gray-800 outline-none focus:ring-2 focus:ring-green-400/40 placeholder:text-gray-400"
+                      placeholder={`Message ${assistantName}…`}
+                      className="flex-1 resize-none max-h-28 bg-transparent px-2 py-1.5 text-[13px] text-gray-100 outline-none placeholder:text-gray-500"
                     />
-                    <button onClick={send} disabled={!input.trim() || sending} className="w-10 h-10 rounded-2xl bg-green-500 hover:bg-green-400 disabled:bg-gray-200 disabled:text-gray-400 text-white flex items-center justify-center flex-shrink-0 transition-colors">
-                      <Send size={17} />
+                    <button onClick={() => send()} disabled={!input.trim() || sending} className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 disabled:opacity-40 disabled:from-gray-600 disabled:to-gray-600 text-white flex items-center justify-center flex-shrink-0 transition-colors">
+                      {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
                   </div>
+                  <p className="text-[10px] text-gray-600 text-center mt-1.5">{assistantName} can make changes — it always asks you to confirm first.</p>
                 </div>
               </>
             )}
 
             {/* History view */}
             {view === "history" && (
-              <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-                {sessions.length === 0 && <p className="text-center text-sm text-gray-400 py-10">No previous chats yet.</p>}
+              <div className="relative flex-1 overflow-y-auto p-3 space-y-1.5">
+                {sessions.length === 0 && <p className="text-center text-sm text-gray-500 py-12">No previous chats yet.</p>}
                 {sessions.map((s) => (
                   <div key={s.id} className="flex items-center gap-2 group">
-                    <button onClick={() => loadSession(s.id)} className={`flex-1 text-left px-3 py-2.5 rounded-xl text-[13px] transition-colors truncate ${s.id === sessionId ? "bg-green-50 text-green-700 font-semibold" : "text-gray-600 hover:bg-gray-50"}`}>
+                    <button onClick={() => loadSession(s.id)} className={`flex-1 text-left px-3 py-2.5 rounded-xl text-[13px] transition-colors truncate ${s.id === sessionId ? "bg-green-500/15 text-green-300 font-semibold border border-green-500/30" : "text-gray-300 hover:bg-white/5 border border-transparent"}`}>
                       {s.title || "Chat"}
                     </button>
-                    <button onClick={() => deleteSession(s.id)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
+                    <button onClick={() => deleteSession(s.id)} className="p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={15} /></button>
                   </div>
                 ))}
               </div>
@@ -385,34 +415,34 @@ export default function SellaAI({ store }) {
 
             {/* Settings view */}
             {view === "settings" && (
-              <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              <div className="relative flex-1 overflow-y-auto p-4 space-y-5">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Assistant name</label>
-                  <div className="flex gap-2 mt-1.5">
-                    <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} maxLength={40} className="flex-1 px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none focus:ring-2 focus:ring-green-400/40" placeholder="Sella AI" />
-                    <button onClick={saveName} className="px-3 py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-xs font-bold flex items-center gap-1"><Pencil size={12} /> Save</button>
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Assistant name</label>
+                  <div className="flex gap-2 mt-2">
+                    <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} maxLength={40} className="flex-1 px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-sm text-gray-100 outline-none focus:border-green-500/50 placeholder:text-gray-500" placeholder="Sella AI" />
+                    <button onClick={saveName} className="px-3.5 py-2.5 rounded-xl bg-gradient-to-br from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors"><Pencil size={12} /> Save</button>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1.5">Give your AI partner a name your team will recognise.</p>
+                  <p className="text-[11px] text-gray-500 mt-2">Give your AI partner a name you and your team will recognise.</p>
                 </div>
 
-                <div className="rounded-2xl border border-gray-100 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Daily usage</span>
-                    <span className="text-xs font-bold text-gray-700">{usage.used} / {usage.limit}</span>
+                <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Daily usage</span>
+                    <span className="text-xs font-bold text-gray-100 tabular-nums">{usage.used} / {usage.limit}</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-green-500"}`} style={{ width: `${pct}%` }} />
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${meterColor}`} style={{ width: `${pct}%` }} />
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-2">
-                    You have <span className="font-semibold text-gray-600">{usage.remaining}</span> requests left today.
+                  <p className="text-[11px] text-gray-500 mt-2.5 leading-relaxed">
+                    You have <span className="font-semibold text-gray-200">{usage.remaining}</span> requests left today.
                     Your limit resets at midnight (WAT). Confirming an action does not use a request.
                   </p>
                 </div>
 
-                <div className="rounded-2xl bg-green-50/60 border border-green-100 p-4">
-                  <p className="text-[12px] text-gray-600 leading-relaxed">
-                    <span className="font-bold text-green-700">{assistantName}</span> can read your entire dashboard and make changes on your request —
-                    but it always asks you to confirm before saving anything.
+                <div className="rounded-2xl bg-green-500/10 border border-green-500/25 p-4">
+                  <p className="text-[12px] text-gray-300 leading-relaxed">
+                    <span className="font-bold text-green-400">{assistantName}</span> can read your entire dashboard and make changes on your request —
+                    but it always shows you a confirmation before saving anything.
                   </p>
                 </div>
               </div>

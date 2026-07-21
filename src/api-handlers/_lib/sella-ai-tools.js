@@ -20,6 +20,8 @@ export async function webSearch(query) {
   if (!process.env.TAVILY_API_KEY) {
     return { ok: false, error: 'Web search is not configured.', results: [] }
   }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10000) // never let a slow search hang the tool loop
   try {
     const resp = await fetch('https://api.tavily.com/search', {
       method: 'POST',
@@ -31,6 +33,7 @@ export async function webSearch(query) {
         max_results: 5,
         include_answer: true,
       }),
+      signal: controller.signal,
     })
     if (!resp.ok) {
       const text = await resp.text()
@@ -48,8 +51,11 @@ export async function webSearch(query) {
       })),
     }
   } catch (err) {
-    console.error('[sella-ai] Tavily exception:', err?.message || err)
-    return { ok: false, error: 'Web search failed.', results: [] }
+    const reason = err?.name === 'AbortError' ? 'Web search timed out.' : 'Web search failed.'
+    console.error('[sella-ai] Tavily exception:', err?.name || err?.message || err)
+    return { ok: false, error: reason, results: [] }
+  } finally {
+    clearTimeout(timer)
   }
 }
 

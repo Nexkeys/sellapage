@@ -17,11 +17,19 @@ import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { buildStoreContext } from './_lib/sella-ai-context.js'
 import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-tools.js'
 
-const MODEL = 'meta/llama-3.3-70b-instruct' // single source of truth — swap here to change the model
+// Single source of truth — swap here to change the model.
+// 8b is proven fast on this NIM key (same model as ai-describe.js) and handles the
+// large whole-store context prompt with low latency. The 70B variant was too slow/queued
+// on this tier and blew the 60s function ceiling. With the AbortController timeout + loop
+// budget below, a heavier model (e.g. 'meta/llama-3.1-70b-instruct' + streaming) can be
+// trialed later safely — it can only degrade to a clean error, never a 60s 504.
+const MODEL = 'meta/llama-3.1-8b-instruct'
 const DAILY_LIMIT = 50
 const MAX_HISTORY = 50 // messages persisted per session
 const MAX_CONTEXT_TURNS = 16 // recent turns sent to the model
-const MAX_TOOL_LOOPS = 4
+const MAX_TOOL_LOOPS = 3
+const NIM_TIMEOUT_MS = 22000 // hard per-call ceiling so a slow provider can never hang to 60s
+const LOOP_BUDGET_MS = 45000 // stop starting new model calls past this; leaves headroom under 60s
 
 const getTodayKey = () =>
   new Intl.DateTimeFormat('en-CA', {
@@ -162,21 +170,36 @@ ${JSON.stringify(context)}`
 }
 
 async function callNim(messages) {
-  const resp = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.NVIDIA_AI_PARTNER_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      temperature: 0.6,
-      max_tokens: 700,
-      messages,
-      tools: TOOLS,
-      tool_choice: 'auto',
-    }),
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), NIM_TIMEOUT_MS)
+  let resp
+  try {
+    resp = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.NVIDIA_AI_PARTNER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.6,
+        max_tokens: 500,
+        messages,
+        tools: TOOLS,
+        tool_choice: 'auto',
+      }),
+      signal: controller.signal,
+    })
+  } catch (e) {
+    // AbortError (our timeout) or a network drop — surface as a provider error
+    // so the caller refunds quota and returns a clean 502 instead of hanging to 60s.
+    console.error('[sella-ai] NIM request failed:', e?.name || e)
+    const err = new Error(e?.name === 'AbortError' ? 'AI provider timed out' : 'AI provider unreachable')
+    err.status = e?.name === 'AbortError' ? 504 : 502
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
   if (!resp.ok) {
     const text = await resp.text()
     console.error('[sella-ai] NIM error:', resp.status, text.slice(0, 300))
@@ -334,8 +357,16 @@ export default async function handler(req, res) {
     let reply = ''
     let sources = []
     let pendingAction = null
+    const startedAt = Date.now()
 
     for (let i = 0; i < MAX_TOOL_LOOPS; i++) {
+      // Time-budget guard: never start a fresh model call that could push us past the
+      // function's 60s ceiling. Return the best-effort answer we already have instead.
+      if (i > 0 && Date.now() - startedAt > LOOP_BUDGET_MS) {
+        if (!reply) reply = "I dug into that but it's taking longer than expected — mind asking again, or narrowing it down a little?"
+        break
+      }
+
       let data
       try {
         data = await callNim(messages)

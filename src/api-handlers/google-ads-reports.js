@@ -2,7 +2,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
-import { getAccessToken, getCampaignReport, resolveCustomerId } from './_lib/google-ads-client.js'
+import { getAccessToken, getCampaignReport, listCampaigns, resolveCustomerId } from './_lib/google-ads-client.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -70,7 +70,11 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken(refreshToken)
     const gaDateRange = DATE_RANGES[dateRange] || 'LAST_30_DAYS'
 
+    // Source the campaign list separately (proven to work in the Campaigns tab), then attach
+    // metrics from the report query. A metrics query omits zero-impression campaigns, so relying
+    // on it alone would drop campaigns; the list is the source of truth for which campaigns exist.
     let results = []
+    let campaignList = []
     let selfManagedError = null
     try {
       results = await getCampaignReport(accessToken, customerId, gaDateRange)
@@ -78,6 +82,19 @@ export default async function handler(req, res) {
       selfManagedError = apiErr.message
       console.warn('[google-ads-reports] Self-managed report fetch failed:', apiErr.message)
     }
+    try {
+      campaignList = await listCampaigns(accessToken, customerId)
+    } catch (listErr) {
+      console.warn('[google-ads-reports] Self-managed campaign list failed:', listErr.message)
+    }
+
+    console.log('[google-ads-reports] self-managed:', {
+      customerId,
+      dateRange: gaDateRange,
+      reportRows: results.length,
+      campaignListRows: campaignList.length,
+      firstMetricsKeys: results[0]?.metrics ? Object.keys(results[0].metrics) : null,
+    })
 
     const campaignMetrics = []
     const seenCampaignIds = new Set()
@@ -112,10 +129,34 @@ export default async function handler(req, res) {
       }
     }
 
+    // Map metrics rows by campaign id so we can attach them to the full campaign list.
+    const metricsById = {}
     for (const r of results) {
       const cid = String(r.campaign?.id || '')
-      seenCampaignIds.add(cid)
-      campaignMetrics.push(accumulateMetrics(cid, r.campaign?.name, r.campaign?.status, r.metrics || {}))
+      if (cid) metricsById[cid] = r
+    }
+
+    // Prefer the full campaign list (shows every campaign, even zero-activity ones); fall back to
+    // the report rows if the list call failed.
+    const sourceCampaigns = campaignList.length > 0
+      ? campaignList.map((r) => ({
+          id: String(r.campaign?.id || ''),
+          name: r.campaign?.name,
+          status: r.campaign?.status,
+        }))
+      : results.map((r) => ({
+          id: String(r.campaign?.id || ''),
+          name: r.campaign?.name,
+          status: r.campaign?.status,
+        }))
+
+    for (const c of sourceCampaigns) {
+      if (!c.id || seenCampaignIds.has(c.id)) continue
+      seenCampaignIds.add(c.id)
+      const match = metricsById[c.id]
+      campaignMetrics.push(
+        accumulateMetrics(c.id, match?.campaign?.name || c.name, match?.campaign?.status || c.status, match?.metrics || {})
+      )
     }
 
     const sellapageSnap = await db

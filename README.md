@@ -4401,7 +4401,7 @@ Implements PENDING FEATURE #7. A Premium-only, full-context AI Business Partner 
 - `FIREBASE_SERVICE_ACCOUNT`, `ADMIN_SECRET_TOKEN` — existing, reused.
 
 ### New backend files
-- `src/api-handlers/sella-ai.js` — main handler. Verifies Firebase auth (uid === storeId), enforces Premium, runs the model + tool loop, persists chat. POST body actions: `send` (chat turn, consumes quota), `confirm` (execute a vendor-confirmed write, does NOT consume quota), `usage`, `sessions`, `session`, `rename`, `delete-session`. Model: `meta/llama-3.3-70b-instruct` (single `MODEL` const — swap to change; chosen over 3.1-8b for reliable agentic tool-calling). Uses NVIDIA NIM OpenAI-compatible tool-calling. Runs comfortably within `api/[...route].js`'s `maxDuration: 60`.
+- `src/api-handlers/sella-ai.js` — main handler. Verifies Firebase auth (uid === storeId), enforces Premium, runs the model + tool loop, persists chat. POST body actions: `send` (chat turn, consumes quota), `confirm` (execute a vendor-confirmed write, does NOT consume quota), `usage`, `sessions`, `session`, `rename`, `delete-session`. Model: `meta/llama-3.1-8b-instruct` (single `MODEL` const — swap to change). Uses NVIDIA NIM OpenAI-compatible tool-calling. Has a hard `AbortController` per-call timeout + loop time-budget so a slow provider degrades to a clean error, never a 60s function timeout. See the "504 Timeout Fix + Premium Redesign" entry below for why 3.3-70b was reverted.
 - `src/api-handlers/_lib/sella-ai-context.js` — `buildStoreContext()` reads the WHOLE store (products, services, orders, customers, discounts, ledger, leads, categories + the store doc's settings/CAC/delivery/ads/payout status) and returns compact aggregates + recent items (never raw dumps) to keep tokens/latency sane. Adding a new tab = add one block here.
 - `src/api-handlers/_lib/sella-ai-tools.js` — `webSearch()` (Tavily), `executeWriteAction()` (one `case` per writable surface), `describeAction()` (confirm-card text).
 - `src/api-handlers/admin-sella-ai.js` — super-admin usage aggregation via `collectionGroup('sellaAiUsage')`.
@@ -4451,6 +4451,36 @@ Full store read on every turn via the context builder — orders/revenue/status 
 - Super admin → Admin → Sella AI Usage tab shows totals and per-vendor table.
 
 `npm run build` passed with zero errors.
+
+---
+
+## 2026-07-21 — Sella AI: 504 Timeout Fix + Premium Redesign
+
+Commit/push keyword: `sella-ai-timeout-fix-and-redesign`
+
+Follow-up to the Sella AI launch. First live test returned **504 `FUNCTION_INVOCATION_TIMEOUT` (60s)** on every `POST /api/sella-ai` — even a plain "Hello".
+
+### Root cause
+`callNim()` in `sella-ai.js` did a `fetch` to NVIDIA NIM with **no timeout**, and the model had been swapped to `meta/llama-3.3-70b-instruct`, which is too slow/queued on this NIM tier — worsened because the system prompt embeds the whole-store context JSON (heavy for a 70B). A single call never returned and Vercel killed the function at its 60s ceiling. The context builder was ruled out (all reads are bounded `.limit().get()` under `Promise.all`/`safeGet`).
+
+### Fixes — `src/api-handlers/sella-ai.js`
+- Reverted `MODEL` to `meta/llama-3.1-8b-instruct` (proven fast on this exact NIM key; handles the large context prompt with low latency).
+- Added an `AbortController` **22s per-call timeout** in `callNim`; on abort/network drop it throws so the existing catch refunds the reserved quota and returns a clean `502` instead of a 60s hang.
+- Added an overall **loop time-budget (45s)** guard + reduced `MAX_TOOL_LOOPS` 4 → 3 and `max_tokens` 700 → 500.
+- **Future option:** with the timeout guard in place, a heavier model (e.g. `meta/llama-3.1-70b-instruct` + streaming) can be trialed safely later — it can only degrade to the clean error, never a 504. Not done now; shipped the reliable 8b path first.
+
+### Fixes — `src/api-handlers/_lib/sella-ai-tools.js`
+- Added a **10s `AbortController` timeout** to the Tavily `webSearch()` fetch so a slow search can't hang the tool loop.
+
+### Redesign — `src/components/dashboard/SellaAI.jsx`
+The panel read like a white support-ticket widget. Reworked into a **dark, premium, brand-green AI console** (logic/state/handlers/API contract unchanged — presentation only):
+- Deep gray-950 surface with ambient green glow, glassy borders, gradient FAB "orb".
+- Hero empty-state (assistant name + tagline) with a 2×2 grid of **functional capability cards** (Sales this week / Best seller / Market research / Log a sale) that fire real prompts — `send()` gained an optional override arg for this.
+- Refined message bubbles (gradient user bubble, elevated dark assistant bubble), premium action-result + source chips, gradient composer, slim tasteful usage meter (replacing the loud "47/50 left" strip), restyled History + Settings views.
+- Fully mobile-first (full-height sheet from the smallest widths, docked panel on `sm+`). **No placeholder/non-functional controls** — every button works.
+
+### Build Status
+`npm run build` passed with zero errors (only the pre-existing large-chunk warning).
 
 ---
 
@@ -4564,6 +4594,50 @@ stayed empty. Two compounding defects:
 - `login-customer-id` handling (correctly omitted for single direct-access accounts).
 - `customerNames[0]` account selection (fine for the confirmed single-account case; revisit if a
   vendor connects an MCC).
+
+#### Build Status
+`npm run build` passed — only the pre-existing ~3.2 MB chunk-size warning.
+
+---
+
+### [2026-07-21] Google Ads — Self-Managed Reports Zero Metrics (Phase 2)
+
+#### The bug
+After the searchStream parse fix (above), the Campaigns tab correctly showed a vendor's live
+self-managed campaign, but the **Reports tab showed all zeros** (summary + per-campaign breakdown)
+even though ads.google.com showed real impressions/clicks/spend for the same window. The
+`/api/google-ads-reports` call returned HTTP 200 with no error banner.
+
+#### Root cause
+`google-ads-reports.js` built the report **solely** from `getCampaignReport()` (a metrics query
+with `WHERE segments.date DURING <range>`). If that query returned zero rows or errored, the code
+swallowed it into `results = []` and the campaign/metrics never appeared — even though
+`listCampaigns()` (which the Campaigns tab uses successfully) would have returned the campaign.
+The self-managed error path also returned a non-fatal `warning` on a 200, but the frontend
+`fetchReports()` only read `data.error` on non-OK responses, so any real Google Ads metrics-query
+error was invisible — it just read as an empty (zero) report.
+
+#### Fixes
+**`src/api-handlers/google-ads-reports.js`:**
+- Now also calls `listCampaigns(accessToken, customerId)` and uses it as the source of truth for
+  which self-managed campaigns exist. Metrics from `getCampaignReport()` are keyed by campaign id
+  (`metricsById`) and attached per campaign; campaigns with no activity in the window show zeros
+  instead of vanishing. Falls back to the report rows if the list call fails. Keeps the existing
+  `seenCampaignIds` dedupe and the unchanged Sellapage-managed (master-account) branch.
+- Added a `console.log('[google-ads-reports] self-managed:', { customerId, dateRange, reportRows,
+  campaignListRows, firstMetricsKeys })` diagnostic so Vercel logs reveal whether the metrics
+  query returns rows-with-data, rows-with-zeros, empty, or throws.
+
+**`src/components/dashboard/GoogleAdsTab.jsx`:**
+- `fetchReports()` now surfaces `data.warning` to the error banner on a 200 response, so a
+  swallowed self-managed metrics-query error becomes visible instead of a silent zero report.
+
+#### To test / diagnose
+- If `getCampaignReport()` returns real metrics, the breakdown + summary now match ads.google.com.
+- If still zero, read the Vercel `google-ads-reports` log line `[google-ads-reports] self-managed:`
+  (plus any `[google-ads] search failed:` / `Self-managed report fetch failed:`) to see whether the
+  metrics query throws or returns zero rows, then apply a targeted follow-up. A red banner also now
+  shows the error text directly in the tab.
 
 #### Build Status
 `npm run build` passed — only the pre-existing ~3.2 MB chunk-size warning.

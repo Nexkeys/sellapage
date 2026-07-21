@@ -149,8 +149,12 @@ export default function GoogleAdsTab({ store, isPremium }) {
         body: JSON.stringify({ storeId: store.id, dateRange }),
       })
       const data = await res.json()
-      if (res.ok) setReports(data)
-      else setError(data.error || 'Failed to fetch reports')
+      if (res.ok) {
+        setReports(data)
+        if (data.warning) setError(data.warning)
+      } else {
+        setError(data.error || 'Failed to fetch reports')
+      }
     } catch (err) {
       setError('Failed to fetch reports')
     } finally {
