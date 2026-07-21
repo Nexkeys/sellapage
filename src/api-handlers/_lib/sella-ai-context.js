@@ -48,6 +48,7 @@ export async function buildStoreContext(db, storeId, store) {
     ledgerSnap,
     leadsSnap,
     categoriesSnap,
+    analyticsSnap,
   ] = await Promise.all([
     safeGet(storeRef.collection('products').limit(200).get(), { docs: [] }),
     safeGet(storeRef.collection('services').limit(200).get(), { docs: [] }),
@@ -57,6 +58,7 @@ export async function buildStoreContext(db, storeId, store) {
     safeGet(storeRef.collection('ledger').limit(300).get(), { docs: [] }),
     safeGet(storeRef.collection('leads').limit(300).get(), { docs: [] }),
     safeGet(storeRef.collection('categories').limit(100).get(), { docs: [] }),
+    safeGet(storeRef.collection('analytics').limit(500).get(), { docs: [] }),
   ])
 
   const products = productsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
@@ -67,6 +69,7 @@ export async function buildStoreContext(db, storeId, store) {
   const ledger = ledgerSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   const leads = leadsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   const categories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  const analyticsDocs = analyticsSnap.docs.map((d) => d.data())
 
   // ---- Orders aggregation ----
   const orderMillis = (o) => toMillis(o.createdAt) || toMillis(o.date) || 0
@@ -114,6 +117,32 @@ export async function buildStoreContext(db, storeId, store) {
   const ledgerThisMonth = ledger.filter((l) => ledgerMillis(l) >= monthAgo)
   const ledgerRevenueMonth = ledgerThisMonth.reduce((s, l) => s + Number(l.amount || 0), 0)
   const ledgerPending = ledger.filter((l) => (l.status || '').toLowerCase() === 'pending').length
+
+  // ---- Reviews aggregation (products & services carry avgRating + reviewCount) ----
+  const rateable = [...products, ...services]
+  const reviewCountTotal = rateable.reduce((s, p) => s + Number(p.reviewCount || 0), 0)
+  const rated = rateable.filter((p) => Number(p.reviewCount || 0) > 0)
+  const avgRatingOverall = rated.length
+    ? Number((rated.reduce((s, p) => s + Number(p.avgRating || 0), 0) / rated.length).toFixed(2))
+    : 0
+  const topRated = [...rated]
+    .sort((a, b) => Number(b.avgRating || 0) - Number(a.avgRating || 0))
+    .slice(0, 6)
+    .map((p) => ({ name: p.name, rating: Number(p.avgRating || 0), reviews: Number(p.reviewCount || 0) }))
+
+  // ---- Analytics aggregation (store views / clicks / engagement) ----
+  const analytics = analyticsDocs.reduce(
+    (acc, d) => {
+      acc.totalViews += Number(d.totalViews || 0)
+      acc.totalClicks += Number(d.totalClicks || 0)
+      acc.engagedViews += Number(d.engagedViews || 0)
+      return acc
+    },
+    { totalViews: 0, totalClicks: 0, engagedViews: 0 },
+  )
+  analytics.engagementRate = analytics.totalViews > 0
+    ? Math.round((analytics.engagedViews / analytics.totalViews) * 100)
+    : 0
 
   return {
     // Store profile / plan / trust / integrations status — the "Settings / Business / CAC / Ads" tabs at a glance
@@ -193,6 +222,28 @@ export async function buildStoreContext(db, storeId, store) {
     leads: {
       total: leads.length,
       recent: [...leads].slice(0, 8).map((l) => ({ name: l.name || l.fullName, contact: l.phone || l.email || null })),
+    },
+    reviews: {
+      totalReviews: reviewCountTotal,
+      averageRating: avgRatingOverall,
+      ratedItems: rated.length,
+      topRated,
+    },
+    analytics: {
+      storeViews: analytics.totalViews,
+      linkClicks: analytics.totalClicks,
+      engagedViews: analytics.engagedViews,
+      engagementRate: analytics.engagementRate,
+    },
+    payouts: {
+      // Sellapage settles gross paid-order revenue via Paystack subaccount; balance itself
+      // is not stored in Firestore, so we surface the settlement setup + gross revenue.
+      verified: !!store.payoutsVerified,
+      bankName: store.payoutBankName || null,
+      accountMasked: store.payoutAccountNumberMasked || null,
+      subaccountConnected: !!store.subaccountCode,
+      grossPaidRevenueAllTime: revenueAll,
+      grossPaidRevenueAllTimeLabel: money(revenueAll),
     },
   }
 }

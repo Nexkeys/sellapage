@@ -18,18 +18,17 @@ import { buildStoreContext } from './_lib/sella-ai-context.js'
 import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-tools.js'
 
 // Single source of truth — swap here to change the model.
-// 8b is proven fast on this NIM key (same model as ai-describe.js) and handles the
-// large whole-store context prompt with low latency. The 70B variant was too slow/queued
-// on this tier and blew the 60s function ceiling. With the AbortController timeout + loop
-// budget below, a heavier model (e.g. 'meta/llama-3.1-70b-instruct' + streaming) can be
-// trialed later safely — it can only degrade to a clean error, never a 60s 504.
-const MODEL = 'meta/llama-3.1-8b-instruct'
+// 70B gives the reasoning needed to feel like a real partner (read the store data, pick the
+// right tool, follow the rules) — an 8B model was too weak and behaved generically. Latency
+// is handled by STREAMING the final answer (see streamFinalAnswer) plus the AbortController
+// timeout + loop budget below, so a slow provider degrades to a clean error, never a 60s 504.
+const MODEL = 'meta/llama-3.1-70b-instruct'
 const DAILY_LIMIT = 50
 const MAX_HISTORY = 50 // messages persisted per session
 const MAX_CONTEXT_TURNS = 16 // recent turns sent to the model
 const MAX_TOOL_LOOPS = 3
-const NIM_TIMEOUT_MS = 22000 // hard per-call ceiling so a slow provider can never hang to 60s
-const LOOP_BUDGET_MS = 45000 // stop starting new model calls past this; leaves headroom under 60s
+const NIM_TIMEOUT_MS = 28000 // hard per-call ceiling for the non-streamed tool-decision rounds
+const LOOP_BUDGET_MS = 40000 // stop starting new tool rounds past this; leaves headroom under 60s
 
 const getTodayKey = () =>
   new Intl.DateTimeFormat('en-CA', {
@@ -47,7 +46,7 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'web_search',
-      description: 'Search the live web for market prices, trends, competitor info, or any general/current question the store data cannot answer.',
+      description: 'Search the live EXTERNAL web ONLY for outside-world info: market/competitor prices, industry trends, suppliers, or current events. NEVER use this for anything about the vendor\'s own store (their sales, orders, products, reviews, customers, payouts, analytics) — all of that is already in the store context and must be answered from there.',
       parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
     },
   },
@@ -156,14 +155,19 @@ const TOOLS = [
 ]
 
 function systemPrompt(assistantName, context) {
-  return `You are ${assistantName}, an AI Business Partner built into the Sellapage dashboard for a Nigerian SME vendor. You are warm, sharp, and practical — you can speak plain English and a little Nigerian Pidgin when it fits. You are NOT a command-only bot: chat naturally, give real business advice, and do live web research when useful.
+  return `You are ${assistantName}, the AI Business Partner built into the Sellapage dashboard for a Nigerian SME vendor. Talk like a real, capable partner — warm, sharp, and natural, the way ChatGPT or a smart co-founder would. Plain English with a little Nigerian Pidgin when it fits. You are a full conversational assistant: chat about anything, give real business advice, brainstorm, and help run the store. You are NOT a command-only or menu bot, and you must NEVER talk about "functions", "tools", or "available functions" to the vendor — that is internal plumbing they should never hear about.
 
-You can SEE this vendor's entire store (below) and you can TAKE ACTIONS on their behalf — but you must follow these rules exactly:
-- Only perform a write action (add product/service, log ledger sale, create discount, change order status, edit delivery/settings) when the vendor clearly asks you to.
-- When you decide an action is appropriate, CALL THE MATCHING TOOL. The system will pause and ask the vendor to confirm before anything is saved — so you never accidentally change their store.
-- Never invent order IDs, product names, prices, or figures. Use the real data below. If you don't have something, say so or use web_search.
-- Amounts are in Nigerian Naira (₦). Keep answers concise and mobile-friendly.
-- For anything you cannot directly edit, tell the vendor which dashboard tab to use.
+YOU CAN SEE THE VENDOR'S ENTIRE STORE. The JSON snapshot at the end holds their real, live data: store profile & settings, plan, products, services, categories, orders (counts, revenue, recent, top sellers, statuses), ledger, customers, discounts, leads, reviews (ratings & counts), analytics (views/clicks/engagement), delivery setup, CAC/domain/ads status, and payouts setup. This is the source of truth.
+
+HOW TO ANSWER — read this carefully:
+1. STORE QUESTIONS ARE ANSWERED FROM THE DATA BELOW. Sales, revenue, orders, best sellers, products, services, stock, customers, reviews, ratings, discounts, leads, analytics/views, payouts, delivery, plan — ALL of it is in the snapshot. Read it and answer directly with real figures. NEVER use web search for anything about this vendor's own store. If a specific number genuinely isn't in the snapshot, say so plainly and tell them which tab holds it — do not guess and do not web-search it.
+2. WEB SEARCH IS ONLY FOR THE OUTSIDE WORLD — market prices, competitor/industry info, trends, suppliers, "what's happening" type questions, anything current and external the store data cannot contain. Only then call web_search. A question like "how are my sales?" is NEVER a web search.
+3. TAKING ACTIONS (writes): you can add products/services, log ledger sales, create discounts, change order status, and edit delivery/settings. Rules:
+   - Only act when the vendor clearly asks you to change something.
+   - NEVER invent the details. If the vendor says "add a product" but hasn't given the name, price, etc., ASK them for the specifics in a friendly way and WAIT for their reply. Do not call the tool with made-up values like "Smartphone" or a random price — that is a serious mistake.
+   - Once you actually have the real details the vendor gave you, call the matching tool. The system then shows the vendor a confirm/cancel card before anything is saved, so nothing changes without their final yes.
+   - For products/services: after it's created, the vendor can upload the photo right here in the chat — mention that.
+4. Money is in Nigerian Naira (₦). Keep replies concise and mobile-friendly, but human — not robotic. Never expose IDs, raw JSON, or internal wording.
 
 CURRENT STORE CONTEXT (live snapshot):
 ${JSON.stringify(context)}`
@@ -208,6 +212,89 @@ async function callNim(messages) {
     throw err
   }
   return resp.json()
+}
+
+// Streamed NIM call. Forwards text deltas to onToken() live and assembles any tool_calls.
+// Returns { content, toolCalls } once the stream finishes. Same timeout/abort semantics.
+async function streamNim(messages, onToken) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), NIM_TIMEOUT_MS)
+  let resp
+  try {
+    resp = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.NVIDIA_AI_PARTNER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.6,
+        max_tokens: 700,
+        messages,
+        tools: TOOLS,
+        tool_choice: 'auto',
+        stream: true,
+      }),
+      signal: controller.signal,
+    })
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '')
+      console.error('[sella-ai] NIM stream error:', resp.status, text.slice(0, 300))
+      const err = new Error('AI provider error')
+      err.status = resp.status
+      throw err
+    }
+
+    let content = ''
+    const toolAcc = [] // [{ id, name, arguments }] assembled by index
+    let buffer = ''
+    const decoder = new TextDecoder()
+    const reader = resp.body.getReader()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let nl
+      while ((nl = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, nl).trim()
+        buffer = buffer.slice(nl + 1)
+        if (!line.startsWith('data:')) continue
+        const payload = line.slice(5).trim()
+        if (payload === '[DONE]') continue
+        let json
+        try { json = JSON.parse(payload) } catch { continue }
+        const delta = json.choices?.[0]?.delta || {}
+        if (delta.content) {
+          content += delta.content
+          onToken(delta.content)
+        }
+        if (Array.isArray(delta.tool_calls)) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0
+            if (!toolAcc[idx]) toolAcc[idx] = { id: tc.id || `call_${idx}`, name: '', arguments: '' }
+            if (tc.id) toolAcc[idx].id = tc.id
+            if (tc.function?.name) toolAcc[idx].name = tc.function.name
+            if (tc.function?.arguments) toolAcc[idx].arguments += tc.function.arguments
+          }
+        }
+      }
+    }
+
+    const toolCalls = toolAcc
+      .filter(Boolean)
+      .map((t) => ({ id: t.id, function: { name: t.name, arguments: t.arguments } }))
+    return { content, toolCalls }
+  } catch (e) {
+    if (e.status) throw e
+    console.error('[sella-ai] NIM stream request failed:', e?.name || e)
+    const err = new Error(e?.name === 'AbortError' ? 'AI provider timed out' : 'AI provider unreachable')
+    err.status = e?.name === 'AbortError' ? 504 : 502
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export default async function handler(req, res) {
@@ -289,6 +376,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
+    // ---------- attach an uploaded image to an AI-created product/service ----------
+    if (action === 'attach-image') {
+      const target = body.target || {}
+      const imageUrl = String(body.imageUrl || '').trim()
+      const coll = target.collection === 'services' ? 'services' : target.collection === 'products' ? 'products' : null
+      if (!coll || !target.id || !imageUrl) {
+        return res.status(400).json({ error: 'Missing image target or URL.' })
+      }
+      const docRef = storeRef.collection(coll).doc(String(target.id))
+      const snap = await docRef.get()
+      if (!snap.exists) return res.status(404).json({ error: 'That listing was not found.' })
+      const existing = Array.isArray(snap.data().imageUrls) ? snap.data().imageUrls : []
+      const imageUrls = [...existing, imageUrl].slice(0, 50)
+      await docRef.update({ imageUrls, imageUrl: imageUrls[0] || imageUrl, updatedAt: new Date() })
+      return res.status(200).json({ ok: true, imageUrl })
+    }
+
     // ---------- confirmed write (does NOT consume a daily request) ----------
     if (action === 'confirm') {
       const pending = body.pendingAction
@@ -310,14 +414,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ result })
     }
 
-    // ---------- main chat turn (consumes one daily request) ----------
+    // ---------- main chat turn (consumes one daily request) — STREAMED (SSE) ----------
     if (action !== 'send') return res.status(400).json({ error: 'Unknown action' })
 
     const userMessage = String(body.message || '').trim()
     if (!userMessage) return res.status(400).json({ error: 'Message is empty.' })
     const sessionId = String(body.sessionId || Date.now().toString())
 
-    // Reserve quota atomically.
+    // Reserve quota atomically (plain JSON errors here — SSE has not started yet).
     const usage = await db.runTransaction(async (tx) => {
       const doc = await tx.get(usageRef)
       const count = doc.exists ? (doc.data().count || 0) : 0
@@ -335,12 +439,11 @@ export default async function handler(req, res) {
       })
     }
 
-    // Load prior transcript.
+    // Load prior transcript + build the live store context and model message stack.
     const chatRef = storeRef.collection('sellaAiChats').doc(sessionId)
     const chatSnap = await chatRef.get()
     const history = chatSnap.exists ? (chatSnap.data().messages || []) : []
 
-    // Build the live store context and the model message stack.
     const context = await buildStoreContext(db, storeId, store)
     const priorTurns = history
       .filter((m) => m.role === 'user' || (m.role === 'assistant' && m.content))
@@ -353,75 +456,73 @@ export default async function handler(req, res) {
       { role: 'user', content: userMessage },
     ]
 
-    // Tool loop: auto-run web_search; intercept write tools as pending confirmations.
+    // ---- open the SSE stream ----
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
+    res.flushHeaders?.()
+    const sse = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+    sse('meta', { sessionId })
+
     let reply = ''
     let sources = []
     let pendingAction = null
     const startedAt = Date.now()
 
-    for (let i = 0; i < MAX_TOOL_LOOPS; i++) {
-      // Time-budget guard: never start a fresh model call that could push us past the
-      // function's 60s ceiling. Return the best-effort answer we already have instead.
-      if (i > 0 && Date.now() - startedAt > LOOP_BUDGET_MS) {
-        if (!reply) reply = "I dug into that but it's taking longer than expected — mind asking again, or narrowing it down a little?"
-        break
-      }
+    try {
+      for (let i = 0; i < MAX_TOOL_LOOPS; i++) {
+        if (i > 0 && Date.now() - startedAt > LOOP_BUDGET_MS) {
+          if (!reply) { reply = "That's taking longer than expected — mind asking again, or narrowing it down a little?"; sse('token', { t: reply }) }
+          break
+        }
 
-      let data
-      try {
-        data = await callNim(messages)
-      } catch (err) {
-        // Refund the reserved request on provider failure.
-        await usageRef.set({ count: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() }, { merge: true })
-        return res.status(502).json({ error: 'Sella AI is briefly unavailable. Please try again in a moment.' })
-      }
+        // Stream this round; text deltas go straight to the client.
+        const { content, toolCalls } = await streamNim(messages, (t) => { reply += t; sse('token', { t }) })
 
-      const choice = data.choices?.[0]
-      const msg = choice?.message || {}
-      const toolCalls = msg.tool_calls || []
+        if (!toolCalls.length) break // plain answer — already streamed
 
-      if (toolCalls.length === 0) {
-        reply = (msg.content || '').trim()
-        break
-      }
+        // A write tool -> stop and ask the vendor to confirm (never auto-execute).
+        const writeCall = toolCalls.find((t) => WRITE_ACTIONS.has(t.function?.name))
+        if (writeCall) {
+          let args = {}
+          try { args = JSON.parse(writeCall.function.arguments || '{}') } catch { /* keep {} */ }
+          pendingAction = { type: writeCall.function.name, args }
+          if (!reply.trim()) {
+            reply = `Here's what I'll do — please confirm:\n\n${describeAction(pendingAction)}`
+            sse('token', { t: reply })
+          }
+          break
+        }
 
-      // A write tool -> stop and ask the vendor to confirm (never auto-execute).
-      const writeCall = toolCalls.find((t) => WRITE_ACTIONS.has(t.function?.name))
-      if (writeCall) {
-        let args = {}
-        try { args = JSON.parse(writeCall.function.arguments || '{}') } catch { /* keep {} */ }
-        pendingAction = { type: writeCall.function.name, args }
-        reply = (msg.content || '').trim() || `Here's what I'll do — please confirm:\n\n${describeAction(pendingAction)}`
-        break
-      }
-
-      // Otherwise: run read/search tools inline and feed results back.
-      messages.push({ role: 'assistant', content: msg.content || '', tool_calls: toolCalls })
-      for (const call of toolCalls) {
-        if (call.function?.name === 'web_search') {
-          let q = ''
-          try { q = JSON.parse(call.function.arguments || '{}').query } catch { /* */ }
-          const searchRes = await webSearch(q)
-          if (searchRes.ok) sources = searchRes.results.map((r) => ({ title: r.title, url: r.url }))
-          messages.push({
-            role: 'tool', tool_call_id: call.id, name: 'web_search',
-            content: JSON.stringify(searchRes),
-          })
-        } else {
-          messages.push({
-            role: 'tool', tool_call_id: call.id, name: call.function?.name || 'tool',
-            content: JSON.stringify({ error: 'unhandled tool' }),
-          })
+        // Otherwise run read/search tools inline and feed the results back for the next round.
+        messages.push({ role: 'assistant', content, tool_calls: toolCalls })
+        for (const call of toolCalls) {
+          if (call.function?.name === 'web_search') {
+            let q = ''
+            try { q = JSON.parse(call.function.arguments || '{}').query } catch { /* */ }
+            const searchRes = await webSearch(q)
+            if (searchRes.ok) sources = searchRes.results.map((r) => ({ title: r.title, url: r.url }))
+            messages.push({ role: 'tool', tool_call_id: call.id, name: 'web_search', content: JSON.stringify(searchRes) })
+          } else {
+            messages.push({ role: 'tool', tool_call_id: call.id, name: call.function?.name || 'tool', content: JSON.stringify({ error: 'unhandled tool' }) })
+          }
         }
       }
+    } catch (err) {
+      // Provider failure mid-stream — refund the reserved request and tell the client cleanly.
+      await usageRef.set({ count: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+      sse('error', { error: 'Sella AI is briefly unavailable. Please try again in a moment.' })
+      return res.end()
     }
 
+    reply = reply.trim()
     if (!reply && !pendingAction) {
       reply = "I couldn't quite generate a response there — mind rephrasing?"
+      sse('token', { t: reply })
     }
 
-    // Persist the turn (rolling window). Store pendingAction alongside the assistant msg
-    // so the transcript records that a confirmation was offered.
+    // Persist the turn (rolling window).
     const nowIso = new Date().toISOString()
     const newMessages = [
       ...history,
@@ -438,15 +539,14 @@ export default async function handler(req, res) {
       createdAt: chatSnap.exists ? (chatSnap.data().createdAt || nowIso) : nowIso,
     }, { merge: true })
 
-    return res.status(200).json({
-      reply,
-      sources,
-      pendingAction,
-      sessionId,
-      usage: { used: usage.used, limit: DAILY_LIMIT, remaining: Math.max(DAILY_LIMIT - usage.used, 0) },
-    })
+    if (sources.length) sse('sources', { sources })
+    if (pendingAction) sse('pending', { pendingAction })
+    sse('usage', { used: usage.used, limit: DAILY_LIMIT, remaining: Math.max(DAILY_LIMIT - usage.used, 0) })
+    sse('done', {})
+    return res.end()
   } catch (err) {
     console.error('[sella-ai] handler error:', err)
+    if (res.headersSent) { try { res.write(`event: error\ndata: ${JSON.stringify({ error: 'Something went wrong. Please try again.' })}\n\n`) } catch { /* */ } return res.end() }
     return res.status(500).json({ error: 'Something went wrong. Please try again.' })
   }
 }

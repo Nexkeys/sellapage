@@ -113,7 +113,11 @@ export async function executeWriteAction(db, storeId, action) {
         createdAt: new Date(),
       })
       await storeRef.set({ productCount: FieldValue.increment(1) }, { merge: true })
-      return { ok: true, message: `Added "${args.name}" (${money(args.price)}) to your Products. Add photos from the Products tab when ready.` }
+      return {
+        ok: true,
+        message: `Added "${args.name}" (${money(args.price)}) to your Products. Want to add a photo? Upload it right here.`,
+        imageTarget: { collection: 'products', id: ref.id, name: String(args.name).trim() },
+      }
     }
 
     // ------------------------------------------------------------- SERVICES
@@ -133,7 +137,11 @@ export async function executeWriteAction(db, storeId, action) {
         imageUrl: '',
         createdAt: new Date(),
       })
-      return { ok: true, message: `Added service "${args.name}" (${money(args.price)}) to your Services.` }
+      return {
+        ok: true,
+        message: `Added service "${args.name}" (${money(args.price)}) to your Services. Want to add a photo? Upload it right here.`,
+        imageTarget: { collection: 'services', id: ref.id, name: String(args.name).trim() },
+      }
     }
 
     // ------------------------------------------------------------- DISCOUNTS

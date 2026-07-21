@@ -4401,7 +4401,7 @@ Implements PENDING FEATURE #7. A Premium-only, full-context AI Business Partner 
 - `FIREBASE_SERVICE_ACCOUNT`, `ADMIN_SECRET_TOKEN` — existing, reused.
 
 ### New backend files
-- `src/api-handlers/sella-ai.js` — main handler. Verifies Firebase auth (uid === storeId), enforces Premium, runs the model + tool loop, persists chat. POST body actions: `send` (chat turn, consumes quota), `confirm` (execute a vendor-confirmed write, does NOT consume quota), `usage`, `sessions`, `session`, `rename`, `delete-session`. Model: `meta/llama-3.1-8b-instruct` (single `MODEL` const — swap to change). Uses NVIDIA NIM OpenAI-compatible tool-calling. Has a hard `AbortController` per-call timeout + loop time-budget so a slow provider degrades to a clean error, never a 60s function timeout. See the "504 Timeout Fix + Premium Redesign" entry below for why 3.3-70b was reverted.
+- `src/api-handlers/sella-ai.js` — main handler. Verifies Firebase auth (uid === storeId), enforces Premium, runs the model + tool loop, persists chat. POST body actions: `send` (chat turn, consumes quota), `confirm` (execute a vendor-confirmed write, does NOT consume quota), `usage`, `sessions`, `session`, `rename`, `delete-session`. Model: `meta/llama-3.1-70b-instruct` (single `MODEL` const — swap to change). Uses NVIDIA NIM OpenAI-compatible tool-calling, **streamed** (SSE) so latency never trips the 60s function ceiling. Hard `AbortController` per-call timeout + loop time-budget mean a slow provider degrades to a clean error, never a 504. See the "Intelligence Upgrade" entry below for the model/streaming rationale.
 - `src/api-handlers/_lib/sella-ai-context.js` — `buildStoreContext()` reads the WHOLE store (products, services, orders, customers, discounts, ledger, leads, categories + the store doc's settings/CAC/delivery/ads/payout status) and returns compact aggregates + recent items (never raw dumps) to keep tokens/latency sane. Adding a new tab = add one block here.
 - `src/api-handlers/_lib/sella-ai-tools.js` — `webSearch()` (Tavily), `executeWriteAction()` (one `case` per writable surface), `describeAction()` (confirm-card text).
 - `src/api-handlers/admin-sella-ai.js` — super-admin usage aggregation via `collectionGroup('sellaAiUsage')`.
@@ -4481,6 +4481,41 @@ The panel read like a white support-ticket widget. Reworked into a **dark, premi
 
 ### Build Status
 `npm run build` passed with zero errors (only the pre-existing large-chunk warning).
+
+---
+
+## 2026-07-21 — Sella AI: Intelligence Upgrade (70B + Streaming, Full Context, Ask-Before-Write, In-Chat Image Upload)
+
+Commit/push keyword: `sella-ai-intelligence-upgrade`
+
+Live testing exposed that Sella AI felt **generic and hardcoded**: it answered store questions ("how are my sales?") with web results, said "no function for that" on reviews/analytics/payouts, and **invented product details** ("Smartphone / ₦250,000") instead of asking. Root cause: the 8B model (adopted only to escape the earlier 504) is too weak for context-heavy agentic reasoning. Fixed by moving to a strong model + streaming and rebuilding the prompt/context — **not** by fine-tuning (wrong tool for this).
+
+### Model + Streaming — `src/api-handlers/sella-ai.js`
+- `MODEL` → `meta/llama-3.1-70b-instruct` for real reasoning (read data → pick the right tool → follow rules).
+- Latency solved with **SSE streaming**: the `send` action now streams the answer token-by-token (`streamNim()` parses NIM's streamed `content` + `tool_calls` deltas). Tool-decision rounds run inside the stream; a detected write breaks to a confirm card, `web_search` runs inline then the follow-up answer streams. Pre-stream checks (auth/premium/quota) still return plain JSON; everything after opens `text/event-stream` with `meta`/`token`/`sources`/`pending`/`usage`/`done`/`error` events. `AbortController` timeout + loop budget retained → clean error, never a 504.
+
+### Prompt rebuilt (data-first, ask-before-write) — `src/api-handlers/sella-ai.js`
+- System prompt now mandates: answer store questions **from the context snapshot**, **never** web-search internal questions (sales/orders/reviews/customers/payouts/analytics); web_search is fenced to genuinely external/market questions (tool description reinforces this).
+- **Never invent write values** — if the vendor says "add a product" without details, the AI must ask for them and wait; only call the write tool with real vendor-supplied values. No more "function" talk to the user; conversational like ChatGPT.
+
+### Fuller context — `src/api-handlers/_lib/sella-ai-context.js`
+- Added **reviews** (total reviews, average rating, top-rated items — aggregated from products'/services' `avgRating`/`reviewCount`, no extra reads), **analytics** (store views/clicks/engagement from the `analytics` collection), and **payouts** (settlement setup + gross paid revenue). So "how many reviews", "my analytics", "my payout" now answer from data.
+
+### In-chat image upload — `sella-ai.js` + `_lib/sella-ai-tools.js` + `SellaAI.jsx` + `firebase/products.js`
+- `add_product`/`add_service` now return an `imageTarget { collection, id, name }`. After the vendor confirms creation, an **Upload photo** control appears on that chat message; it uploads to Cloudinary via the existing `uploadSingleImage()` (unsigned preset) and calls the new **`attach-image`** action, which patches `imageUrls`/`imageUrl` on that exact doc. Vendor supplies the photo — the AI never fabricates one.
+
+### Frontend — `src/components/dashboard/SellaAI.jsx`
+- `send()` rewritten to read the SSE stream: a placeholder assistant bubble fills in live (typing dots while empty), then `sources`/`pending`/`usage` events land. Confirm/usage/history/rename/attach-image still use plain JSON. Capability cards, drag FAB, memory, dark premium theme all retained.
+
+### What did NOT change
+- Confirm-before-write is still enforced for every write; write executor still maps to each tab's real Firestore shape.
+- Quota (50/day), admin usage tab, Premium gating, Firestore rules — unchanged. No new env vars (still `NVIDIA_AI_PARTNER_API_KEY` + `TAVILY_API_KEY`).
+
+### Build Status
+`npm run build` passed with zero errors (only the pre-existing large-chunk warning).
+
+### Needs live testing (can't be verified at build time)
+- NIM streamed tool-calling on the 70B model end-to-end; the SSE parser on both ends; first-token latency staying within 60s under real load.
 
 ---
 

@@ -10,9 +10,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Sparkles, X, Send, History, Settings2, Plus, Check, Loader2,
-  ExternalLink, Trash2, Pencil, ArrowLeft, TrendingUp, Star, Globe, Receipt,
+  ExternalLink, Trash2, Pencil, ArrowLeft, TrendingUp, Star, Globe, Receipt, ImagePlus,
 } from "lucide-react";
 import { auth } from "../../firebase/auth";
+import { uploadSingleImage } from "../../firebase/products";
 
 const LS_SESSION = (sid) => `sellaai_session_${sid}`;
 const LS_FABPOS = "sellaai_fabpos";
@@ -129,7 +130,18 @@ export default function SellaAI({ store }) {
     dragState.current.dragging = false;
   };
 
-  // ---- send a message (optional override lets capability cards fire a prompt directly) ----
+  // Update the last (assistant) message immutably.
+  const patchLast = (patch) => setMessages((m) => {
+    const copy = [...m];
+    for (let i = copy.length - 1; i >= 0; i--) {
+      if (copy[i].role === "assistant") { copy[i] = typeof patch === "function" ? patch(copy[i]) : { ...copy[i], ...patch }; break; }
+    }
+    return copy;
+  });
+  const dropStreamingPlaceholder = () =>
+    setMessages((m) => m.filter((x, i) => !(i === m.length - 1 && x.streaming && !x.content)));
+
+  // ---- send a message (streamed via SSE; optional override lets capability cards fire a prompt) ----
   const send = async (override) => {
     const text = String(override ?? input).trim();
     if (!text || sending) return;
@@ -137,26 +149,74 @@ export default function SellaAI({ store }) {
     const sid = sessionId || Date.now().toString();
     if (!sessionId) { setSessionId(sid); localStorage.setItem(LS_SESSION(storeId), sid); }
 
-    setMessages((m) => [...m, { role: "user", content: text }]);
+    setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "", streaming: true }]);
     setInput("");
     setPending(null);
     setSending(true);
+
     try {
-      const d = await callSella({ storeId, action: "send", message: text, sessionId: sid });
-      setMessages((m) => [...m, {
-        role: "assistant", content: d.reply,
-        ...(d.sources?.length ? { sources: d.sources } : {}),
-        ...(d.pendingAction ? { pendingAction: d.pendingAction } : {}),
-      }]);
-      if (d.pendingAction) setPending({ ...d.pendingAction, sessionId: sid });
-      if (d.usage) setUsage(d.usage);
-    } catch (err) {
-      if (err.status === 429) {
-        setError(err.data?.error || "Daily limit reached.");
-        if (err.data?.limit) setUsage({ used: err.data.used, limit: err.data.limit, remaining: 0 });
-      } else {
-        setError(err.data?.error || err.message || "Something went wrong.");
+      const user = auth.currentUser;
+      if (!user) throw new Error("Please sign in again.");
+      const token = await user.getIdToken();
+      const res = await fetch("/api/sella-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ storeId, action: "send", message: text, sessionId: sid }),
+      });
+
+      // Non-stream error (auth / quota / premium) comes back as JSON.
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        dropStreamingPlaceholder();
+        if (res.status === 429) {
+          setError(data.error || "Daily limit reached.");
+          if (data.limit) setUsage({ used: data.used, limit: data.limit, remaining: 0 });
+        } else {
+          setError(data.error || "Something went wrong.");
+        }
+        return;
       }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamError = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) !== -1) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          let event = "message", dataStr = "";
+          for (const line of raw.split("\n")) {
+            if (line.startsWith("event:")) event = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          let data; try { data = JSON.parse(dataStr); } catch { continue; }
+          if (event === "token") {
+            patchLast((last) => ({ ...last, content: (last.content || "") + (data.t || "") }));
+          } else if (event === "sources") {
+            patchLast({ sources: data.sources });
+          } else if (event === "pending") {
+            setPending({ ...data.pendingAction, sessionId: sid });
+            patchLast({ pendingAction: data.pendingAction });
+          } else if (event === "usage") {
+            setUsage(data);
+          } else if (event === "error") {
+            streamError = data.error || "Something went wrong.";
+          }
+        }
+      }
+
+      if (streamError) { dropStreamingPlaceholder(); setError(streamError); }
+      else patchLast({ streaming: false });
+    } catch (err) {
+      dropStreamingPlaceholder();
+      setError(err.message || "Something went wrong.");
     } finally {
       setSending(false);
     }
@@ -170,12 +230,33 @@ export default function SellaAI({ store }) {
       const d = await callSella({
         storeId, action: "confirm", pendingAction: { type: pending.type, args: pending.args }, sessionId: pending.sessionId,
       });
-      setMessages((m) => [...m, { role: "assistant", content: d.result?.message || "Done.", kind: "action-result", ok: d.result?.ok }]);
+      setMessages((m) => [...m, {
+        role: "assistant", content: d.result?.message || "Done.", kind: "action-result", ok: d.result?.ok,
+        ...(d.result?.imageTarget ? { imageTarget: d.result.imageTarget } : {}),
+      }]);
       setPending(null);
     } catch (err) {
       setError(err.data?.error || "Could not complete that action.");
     } finally {
       setConfirming(false);
+    }
+  };
+
+  // ---- upload an image for an AI-created product/service, straight into its doc ----
+  const [uploadingFor, setUploadingFor] = useState(null); // message index being uploaded
+  const uploadImageFor = async (msgIndex, target, file) => {
+    if (!file || uploadingFor !== null) return;
+    setUploadingFor(msgIndex);
+    setError("");
+    try {
+      const folder = target.collection === "services" ? "sellapage/services" : "sellapage/products";
+      const url = await uploadSingleImage(file, folder);
+      await callSella({ storeId, action: "attach-image", target: { collection: target.collection, id: target.id }, imageUrl: url });
+      setMessages((m) => m.map((x, i) => (i === msgIndex ? { ...x, imageUploaded: url, imageTarget: undefined } : x)));
+    } catch (err) {
+      setError(err?.data?.error || err?.message || "Image upload failed. Try again.");
+    } finally {
+      setUploadingFor(null);
     }
   };
   const cancelAction = () => {
@@ -334,32 +415,46 @@ export default function SellaAI({ store }) {
                             ? (m.ok ? "bg-green-500/15 text-green-200 border border-green-500/30" : "bg-white/5 text-gray-400 border border-white/10")
                             : "bg-white/[0.06] text-gray-100 border border-white/10 rounded-bl-md"
                       }`}>
-                        {m.kind === "action-result" && m.ok && <Check size={13} className="inline mr-1 -mt-0.5" />}
-                        {m.content}
-                        {m.sources?.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {m.sources.map((s, j) => (
-                              <a key={j} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-black/30 text-gray-300 border border-white/10 hover:border-green-400/50 hover:text-green-300 transition-colors">
-                                <ExternalLink size={9} /> {(s.title || s.url).slice(0, 28)}
-                              </a>
-                            ))}
+                        {m.role === "assistant" && m.streaming && !m.content ? (
+                          <div className="flex gap-1 py-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce [animation-delay:-0.3s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce [animation-delay:-0.15s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce" />
                           </div>
+                        ) : (
+                          <>
+                            {m.kind === "action-result" && m.ok && <Check size={13} className="inline mr-1 -mt-0.5" />}
+                            {m.content}
+                            {m.sources?.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {m.sources.map((s, j) => (
+                                  <a key={j} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-black/30 text-gray-300 border border-white/10 hover:border-green-400/50 hover:text-green-300 transition-colors">
+                                    <ExternalLink size={9} /> {(s.title || s.url).slice(0, 28)}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            {m.imageTarget && (
+                              <div className="mt-2.5">
+                                <label className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-green-500/20 text-green-300 border border-green-500/30 transition-colors ${uploadingFor !== null ? "opacity-60 cursor-default" : "hover:bg-green-500/30 cursor-pointer"}`}>
+                                  {uploadingFor === i ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
+                                  {uploadingFor === i ? "Uploading…" : "Upload photo"}
+                                  <input type="file" accept="image/*" className="hidden" disabled={uploadingFor !== null}
+                                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImageFor(i, m.imageTarget, f); e.target.value = ""; }} />
+                                </label>
+                              </div>
+                            )}
+                            {m.imageUploaded && (
+                              <div className="mt-2.5 flex items-center gap-2">
+                                <img src={m.imageUploaded} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/10" />
+                                <span className="text-[11px] text-green-300 inline-flex items-center gap-1"><Check size={12} /> Photo added</span>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
                   ))}
-
-                  {sending && (
-                    <div className="flex justify-start">
-                      <div className="bg-white/[0.06] border border-white/10 rounded-2xl rounded-bl-md px-4 py-3">
-                        <div className="flex gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce [animation-delay:-0.3s]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce [animation-delay:-0.15s]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 animate-bounce" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Pending write confirmation */}
                   {pending && (
