@@ -69,32 +69,39 @@ export default async function handler(req, res) {
 
     const accessToken = await getAccessToken(refreshToken)
     const gaDateRange = DATE_RANGES[dateRange] || 'LAST_30_DAYS'
-    const results = await getCampaignReport(accessToken, customerId, gaDateRange)
 
+    let results = []
+    let selfManagedError = null
+    try {
+      results = await getCampaignReport(accessToken, customerId, gaDateRange)
+    } catch (apiErr) {
+      selfManagedError = apiErr.message
+      console.warn('[google-ads-reports] Self-managed report fetch failed:', apiErr.message)
+    }
+
+    const campaignMetrics = []
+    const seenCampaignIds = new Set()
     let totalImpressions = 0
     let totalClicks = 0
     let totalCostMicros = 0
     let totalConversions = 0
     let totalConversionValue = 0
 
-    const campaignMetrics = results.map((r) => {
-      const m = r.metrics || {}
+    function accumulateMetrics(campaignId, campaignName, status, m) {
       const impressions = Number(m.impressions) || 0
       const clicks = Number(m.clicks) || 0
       const costMicros = Number(m.costMicros) || 0
       const conversions = Number(m.conversions) || 0
       const conversionValue = Number(m.conversionsValue) || 0
-
       totalImpressions += impressions
       totalClicks += clicks
       totalCostMicros += costMicros
       totalConversions += conversions
       totalConversionValue += conversionValue
-
       return {
-        campaignId: r.campaign?.id,
-        campaignName: r.campaign?.name,
-        status: r.campaign?.status,
+        campaignId,
+        campaignName,
+        status,
         impressions,
         clicks,
         ctr: impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : '0',
@@ -103,9 +110,72 @@ export default async function handler(req, res) {
         conversions,
         conversionValue,
       }
-    })
+    }
+
+    for (const r of results) {
+      const cid = String(r.campaign?.id || '')
+      seenCampaignIds.add(cid)
+      campaignMetrics.push(accumulateMetrics(cid, r.campaign?.name, r.campaign?.status, r.metrics || {}))
+    }
+
+    const sellapageSnap = await db
+      .collection('googleAdsCampaigns')
+      .where('storeId', '==', storeId)
+      .where('managementMode', '==', 'sellapage')
+      .get()
+
+    if (!sellapageSnap.empty) {
+      const masterDoc = await db.collection('platformSettings').doc('googleAdsMaster').get()
+      if (masterDoc.exists) {
+        const { refreshToken: masterRefresh, customerId: masterId } = masterDoc.data()
+        if (masterRefresh && masterId) {
+          try {
+            const masterToken = await getAccessToken(masterRefresh)
+            const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID
+            const masterResults = await getCampaignReport(masterToken, masterId, gaDateRange, loginCustomerId)
+            const masterCampaignMap = {}
+            for (const r of masterResults) {
+              const cid = String(r.campaign?.id || '')
+              masterCampaignMap[cid] = r
+            }
+
+            for (const doc of sellapageSnap.docs) {
+              const sd = doc.data()
+              const cid = String(sd.providerCampaignId || '')
+              if (!cid || seenCampaignIds.has(cid)) continue
+              seenCampaignIds.add(cid)
+              const match = masterCampaignMap[cid]
+              campaignMetrics.push(
+                accumulateMetrics(cid, sd.name || 'Sellapage Campaign', sd.status || 'PAUSED', match?.metrics || {})
+              )
+            }
+          } catch (masterErr) {
+            console.warn('[google-ads-reports] Master account report fetch failed:', masterErr.message)
+            for (const doc of sellapageSnap.docs) {
+              const sd = doc.data()
+              const cid = String(sd.providerCampaignId || '')
+              if (!cid || seenCampaignIds.has(cid)) continue
+              seenCampaignIds.add(cid)
+              campaignMetrics.push(accumulateMetrics(cid, sd.name || 'Sellapage Campaign', sd.status || 'PAUSED', {
+                impressions: sd.impressions || 0,
+                clicks: sd.clicks || 0,
+                costMicros: (sd.spendToDate || 0) * 1000000,
+                conversions: sd.conversions || 0,
+                conversionsValue: 0,
+              }))
+            }
+          }
+        }
+      }
+    }
 
     const totalSpendNaira = totalCostMicros / 1000000
+
+    // Surface a real reason when the vendor's own account fetch failed and produced nothing,
+    // instead of returning a clean-but-empty 200 that looks like "no campaigns".
+    if (selfManagedError && campaignMetrics.length === 0) {
+      return res.status(502).json({ error: `Could not load Google Ads data: ${selfManagedError}` })
+    }
 
     return res.status(200).json({
       summary: {
@@ -117,6 +187,7 @@ export default async function handler(req, res) {
         conversionValue: totalConversionValue,
       },
       campaigns: campaignMetrics,
+      ...(selfManagedError ? { warning: selfManagedError } : {}),
     })
   } catch (err) {
     console.error('[google-ads-reports] Error:', err)

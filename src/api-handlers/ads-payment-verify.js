@@ -136,7 +136,7 @@ export default async function handler(req, res) {
       ctr: 0,
       conversions: 0,
       targeting: targeting || {},
-      providerCampaignId: campaignResourceId || null,
+      providerCampaignId: campaignResourceId ? campaignResourceId.split('/').pop() : null,
       paystackReference: reference,
       createdAt: new Date().toISOString(),
       lastSyncAt: null,

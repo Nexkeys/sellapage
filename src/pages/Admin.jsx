@@ -20,6 +20,7 @@ const ADMIN_TABS = [
   { id: 'tickets', label: 'Support Tickets', icon: LifeBuoy, short: 'Tickets' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, short: 'Analytics' },
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
+  { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
@@ -29,7 +30,7 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
-  { label: 'Engagement', ids: ['announcements', 'tickets'] },
+  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai'] },
   { label: 'Team', ids: ['admins'] },
 ];
 
@@ -116,6 +117,10 @@ export default function Admin() {
   const [revenueError, setRevenueError] = useState('');
   const [revenueTab, setRevenueTab] = useState('platform');
   const [revenuePage, setRevenuePage] = useState(1);
+
+  const [sellaData, setSellaData] = useState(null);
+  const [sellaLoading, setSellaLoading] = useState(false);
+  const [sellaError, setSellaError] = useState('');
 
   const fetchHealth = useCallback(async () => {
     setHealthLoading(true); setHealthError('');
@@ -301,6 +306,15 @@ export default function Admin() {
     } catch { setRevenueError('Failed.'); } finally { setRevenueLoading(false); }
   }, []);
 
+  const fetchSella = useCallback(async () => {
+    setSellaLoading(true); setSellaError('');
+    try {
+      const r = await fetch('/api/admin-sella-ai?action=usage', { headers: H });
+      if (!r.ok) throw new Error('Failed');
+      setSellaData(await r.json());
+    } catch { setSellaError('Failed to load Sella AI usage.'); } finally { setSellaLoading(false); }
+  }, []);
+
   useEffect(() => {
     if (!user) { setRoleLoading(false); return; }
     getAdminRole(user.uid).then(role => {
@@ -323,6 +337,7 @@ export default function Admin() {
       tickets: () => fetchTickets(),
       analytics: () => fetchAnalytics(),
       revenue: () => fetchRevenue(),
+      'sella-ai': () => fetchSella(),
     };
     m[activeTab]?.();
   }, [user, activeTab, adminRole]);
@@ -554,6 +569,26 @@ export default function Admin() {
                 <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50 bg-gray-50/80"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Orders</th><th className="px-4 py-2 text-right">Revenue</th></tr></thead><tbody className="divide-y divide-gray-50">{storeRevenues.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[120px]">{s.storeName||'Unnamed'}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[100px]">{s.email||'—'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline">WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalOrders}</td><td className="px-4 py-2 text-right font-bold text-green-600">{s.totalRevenueFormatted}</td></tr>)}</tbody></table></div>
               </>}
             </div>}
+          </>}
+        </div>}
+
+        {/* SELLA AI USAGE */}
+        {activeTab === 'sella-ai' && <div className="space-y-4 animate-in fade-in duration-200">
+          {sellaError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{sellaError}</div>}
+          <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Sella AI — Business Partner Usage</h2><button onClick={fetchSella} disabled={sellaLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{sellaLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>
+          {sellaLoading?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:sellaData&&<>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[
+              {l:'Requests Today',v:sellaData.summary?.todayTotal,c:'text-green-600'},
+              {l:'All-Time Requests',v:sellaData.summary?.allTimeTotal,c:'text-gray-900'},
+              {l:'Active Vendors Today',v:sellaData.summary?.activeVendorsToday,c:'text-blue-600'},
+              {l:'Vendors Ever Used',v:sellaData.summary?.vendorsEverUsed,c:'text-purple-600'},
+            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{s.v?.toLocaleString?.()??s.v??'—'}</p></div>)}</div>
+            <p className="text-[11px] text-gray-400">Daily limit per vendor: <span className="font-bold text-gray-600">{sellaData.dailyLimit}</span> requests.</p>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Per-Vendor Usage (Top {sellaData.stores?.length||0})</h3></div>
+              {(!sellaData.stores||sellaData.stores.length===0)?<div className="p-6 text-center text-gray-400 text-sm">No Sella AI usage recorded yet.</div>:
+              <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50 bg-gray-50/80"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2 text-right">Today</th><th className="px-4 py-2 text-right">Left Today</th><th className="px-4 py-2 text-right">All-Time</th></tr></thead><tbody className="divide-y divide-gray-50">{sellaData.stores.map((s,i)=><tr key={s.storeId} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[160px]">{s.businessName}</p><p className="text-[9px] text-gray-400 font-mono truncate max-w-[160px]">{s.storeId}</p></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.today}</td><td className="px-4 py-2 text-right"><span className={`font-bold ${s.remainingToday<=5?'text-red-600':s.remainingToday<=15?'text-amber-600':'text-green-600'}`}>{s.remainingToday}</span></td><td className="px-4 py-2 text-right text-gray-600">{s.allTime.toLocaleString()}</td></tr>)}</tbody></table></div>}
+            </div>
           </>}
         </div>}
 

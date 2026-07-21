@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
+import SellaAI from "./SellaAI";
 import { sendHeartbeat } from "../../utils/sessionTracking";
 
 const NAV_ITEMS = [
@@ -490,6 +491,9 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Sella AI — movable Business Partner, persistent across every tab (Premium only) */}
+      <SellaAI store={store} />
     </div>
   );
 }

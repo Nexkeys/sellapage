@@ -837,14 +837,14 @@ Auth: `ADMIN_SECRET_TOKEN` header (already in Vercel env).
 - Export CAC verification data as CSV
 - Bulk email to unverified vendors encouraging CAC verification
 
-### 7. AI Business Partner
+### 7. AI Business Partner (Sella AI) — DONE ✅ (2026-07-21)
 Context-aware chat assistant inside the dashboard.
 Access: reads entire vendor dashboard context (orders, ledger, analytics, gproducts, services, customers, discount, reviews, delivery, ads, marketing, Business page, payouts tab, settings, support, leads, categories, Dashboard, Business automation, CAC, Multi User Tab).
 Write access: can log ledger entries, update order statuses, add products,services — only on vendor's explicit request.
-Daily cap: 30 requests/day per vendor.
-API: NVIDIA NIM (OpenAI-compatible, free tier credits).
+Daily cap: 50 requests/day per vendor (raised from 30).
+API: NVIDIA NIM (OpenAI-compatible) via its own `NVIDIA_AI_PARTNER_API_KEY` + Tavily live web search.
 Plan gate: Premium only.
-Full feature spec mapping required before implementation.
+Implementation: See "2026-07-21 — Sella AI Business Partner (Full-Context AI FAB)" section below.
 
 ### 8. WhatsApp Business API Automation
 Broadcast manager, order notifications via WhatsApp.
@@ -4386,3 +4386,184 @@ Per Google's API docs: "You can skip providing the `login-customer-id` header if
 ### Build Status
 
 `npm run build` passed with zero errors.
+
+---
+
+## 2026-07-21 — Sella AI Business Partner (Full-Context AI FAB)
+
+Commit/push keyword: `sella-ai-business-partner-v1`
+
+Implements PENDING FEATURE #7. A Premium-only, full-context AI Business Partner ("Sella AI", vendor-renameable) that lives as a **movable floating action button** persistent across every dashboard tab — not a tab of its own. It can read the vendor's entire store, do live web research, chat freely, and make changes on request with a confirm-before-write guard. Entirely separate logic from `ai-describe.js` (own handler, own quota, own key).
+
+### Environment variables used (already provisioned by vendor)
+- `NVIDIA_AI_PARTNER_API_KEY` — dedicated NVIDIA NIM key for Sella AI (NOT the `NVIDIA_API_KEY` used by ai-describe).
+- `TAVILY_API_KEY` — live web search.
+- `FIREBASE_SERVICE_ACCOUNT`, `ADMIN_SECRET_TOKEN` — existing, reused.
+
+### New backend files
+- `src/api-handlers/sella-ai.js` — main handler. Verifies Firebase auth (uid === storeId), enforces Premium, runs the model + tool loop, persists chat. POST body actions: `send` (chat turn, consumes quota), `confirm` (execute a vendor-confirmed write, does NOT consume quota), `usage`, `sessions`, `session`, `rename`, `delete-session`. Model: `meta/llama-3.3-70b-instruct` (single `MODEL` const — swap to change; chosen over 3.1-8b for reliable agentic tool-calling). Uses NVIDIA NIM OpenAI-compatible tool-calling. Runs comfortably within `api/[...route].js`'s `maxDuration: 60`.
+- `src/api-handlers/_lib/sella-ai-context.js` — `buildStoreContext()` reads the WHOLE store (products, services, orders, customers, discounts, ledger, leads, categories + the store doc's settings/CAC/delivery/ads/payout status) and returns compact aggregates + recent items (never raw dumps) to keep tokens/latency sane. Adding a new tab = add one block here.
+- `src/api-handlers/_lib/sella-ai-tools.js` — `webSearch()` (Tavily), `executeWriteAction()` (one `case` per writable surface), `describeAction()` (confirm-card text).
+- `src/api-handlers/admin-sella-ai.js` — super-admin usage aggregation via `collectionGroup('sellaAiUsage')`.
+
+### Quota & memory (own logic, separate collections)
+- Daily cap: **50 requests/vendor/day** at `stores/{storeId}/sellaAiUsage/{YYYY-MM-DD}` (Africa/Lagos key), reserved in a Firestore transaction and refunded if the AI provider call fails. Confirming a write does not consume a request.
+- Chat memory: `stores/{storeId}/sellaAiChats/{sessionId}` holds `{ title, messages[] }`, rolling last-50-messages window. Survives tab switches and refresh (localStorage keeps the active `sessionId` per store). History drawer lists past sessions to reopen/continue or delete.
+- Custom name saved to `stores/{storeId}.sellaAiName` (defaults to "Sella AI").
+
+### Writes — always confirmation-gated
+When the model calls a write tool it is **intercepted, never auto-run**: the handler returns a `pendingAction`, the UI shows a Confirm/Cancel card, and only on Confirm does `executeWriteAction()` run. Supported v1 write surfaces (reuse existing collections/shapes): ledger entry (matches LedgerTab shape), add product (mirrors `firebase/products.js` addProduct incl. `productCount` increment), add service, create discount (mirrors DiscountsTab shape, dedupes code), update order status (mirrors `update-order-status.js` statusLog + delivered reviewToken + best-effort customer email), update delivery pickup address, update whitelisted store settings. Unsupported/new tabs fail closed with a helpful "make this from the X tab" message — architecture is extensible (add a `case`).
+
+### Read access
+Full store read on every turn via the context builder — orders/revenue/status counts/top sellers, catalog + low stock, ledger totals, customers, discounts, leads, and store profile/plan/CAC/delivery/ads status.
+
+### New frontend
+- `src/components/dashboard/SellaAI.jsx` — the movable FAB + chat panel. Draggable FAB (position saved to localStorage; tap-vs-drag distinguished by movement). Panel is a bottom sheet on mobile / floating card on desktop, mobile-first from the smallest screens. Views: Chat (bubbles, typing indicator, source link chips, confirm/cancel cards), History (session list, open/delete), Settings (rename assistant + live daily-usage meter with remaining count). Auth token via `auth.currentUser.getIdToken()`.
+- Mounted once in `src/components/dashboard/DashboardLayout.jsx` so it persists across all tabs; renders only for Premium (`store.hasPremiumFeatures ?? plan === 'premium'`).
+
+### Admin panel
+- New "Sella AI Usage" tab (super-admin only) in `src/pages/Admin.jsx` + role entry `'sella-ai'` in `src/utils/adminRoles.js`. Shows requests today, all-time, active vendors today, vendors ever used, and a per-vendor usage table (today / left today / all-time) from `/api/admin-sella-ai?action=usage`.
+
+### Router
+- `api/[...route].js`: added `sella-ai` and `admin-sella-ai` cases (existing dynamic-import pattern).
+
+### What did NOT change
+- `ai-describe.js` and its `NVIDIA_API_KEY`/`aiUsage` quota — untouched, fully separate.
+- `update-order-status.js`, `LedgerTab.jsx`, `firebase/products.js|services.js`, DiscountsTab — not modified; Sella AI writes reuse their existing collection shapes.
+- No Paystack/Sendbox/Topship/Google Ads handler changes.
+
+### Firestore note
+`admin-sella-ai` uses a `collectionGroup('sellaAiUsage')` query. If Firebase requests a single-field collection-group index on first admin load, enable it in the console (one click). The vendor-facing handler uses only single-doc reads/writes plus `sellaAiChats` ordered by `updatedAt` (single-field, auto-indexed).
+
+### Build Status
+
+`npm run build` passed with zero errors (only the pre-existing 3.2 MB chunk-size warning and pre-existing CAC dynamic-import notices).
+
+### Manual verification checklist
+- As a Premium vendor: FAB appears on every tab, drags and stays put, opens the chat.
+- Ask "how are sales this week?" → answers from real store data.
+- Ask a market/pricing question → web_search fires, source chips shown.
+- "Log a ₦5,000 sale to Ada for 2 wigs" → Confirm card appears; on Confirm the ledger doc is written (matches LedgerTab shape); on Cancel nothing is written.
+- Refresh the page → previous conversation still loads; History lists past chats.
+- Settings shows the 50/day meter and remaining count; rename persists.
+- 51st send in a day is blocked with a clear reset message.
+- Non-Premium vendor: FAB does not render; API returns 403 premiumRequired.
+- Super admin → Admin → Sella AI Usage tab shows totals and per-vendor table.
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-21] Google Ads — searchStream REST Response Format Fix + Reports Master Account Query
+
+#### The bug
+Campaigns still not appearing despite the `login-customer-id` fix. `searchStream` API returned 200 but `results` array was empty or contained unusable objects. Reports also showed zero data for Sellapage-managed campaigns.
+
+#### Root cause (two issues)
+
+**1. `searchStream` REST API returns nested results:**
+The REST `searchStream` endpoint returns:
+```json
+{ "results": [{ "results": [{ "campaign": {...} }], "fieldMask": "..." }] }
+```
+But `searchGoogleAds` did `data.results || []` which returns the outer `SearchStreamResult` array, not the inner `GoogleAdsRow` array. So every `r.campaign` in the map was `undefined`.
+
+**2. Sellapage-managed campaign `providerCampaignId` mismatch:**
+`ads-payment-verify.js` saved `providerCampaignId: campaignResourceId` (full resource name like `customers/5897875835/campaigns/123`), but `google-ads-campaigns.js` API results extract `providerCampaignId: String(c.id)` (just `"123"`). These never matched in the merge map.
+
+**3. Reports only queried vendor's own account:**
+`getCampaignReport` queried the vendor's Google Ads account. Sellapage-managed campaigns live on the master account (`5897875835`), so they were invisible to reports.
+
+#### Fixes
+
+**`src/api-handlers/_lib/google-ads-client.js`:**
+- `searchGoogleAds` now flattens nested `searchStream` results: `batches.flatMap((batch) => batch.results || [])`. Handles both `searchStream` (nested) and `search` (flat) formats.
+
+**`src/api-handlers/ads-payment-verify.js`:**
+- `providerCampaignId` now extracts just the numeric ID: `campaignResourceId.split('/').pop()` instead of storing the full resource name.
+
+**`src/api-handlers/paystack-webhook.js`:**
+- Same fix in the ads-payment safety net branch.
+
+**`src/api-handlers/google-ads-reports.js`:**
+- After fetching self-managed campaign reports, queries Firestore for `managementMode === "sellapage"` campaigns.
+- Reads master account credentials from `platformSettings/googleAdsMaster`.
+- Queries master account for Sellapage-managed campaign metrics via `getCampaignReport`.
+- Falls back to Firestore-stored metrics if master account query fails.
+- Combines both self-managed and Sellapage-managed metrics into unified summary.
+
+#### What did NOT change
+- `listCampaigns` handler — Sellapage-managed campaigns already appear via `firestoreOnly` fallback (correct behavior since they're on the master account, not the vendor's account).
+- No Vercel env var changes.
+- No Google Cloud Console changes.
+
+#### To test
+After deploy, the vendor dashboard should:
+1. **Overview**: Show account info, stats, and campaign summary (if campaigns exist)
+2. **Campaigns tab**: List self-managed campaigns from Google Ads API + Sellapage-managed campaigns from Firestore
+3. **Reports tab**: Show combined metrics from both self-managed and Sellapage-managed campaigns
+
+Note: The vendor's self-managed account (`1428925595`) may genuinely have no campaigns if they only use Sellapage-managed ads. That's expected — the "No campaigns yet" empty state is correct in that case. Sellapage-managed campaigns will appear in the campaigns list via Firestore.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-21] Google Ads — searchStream Top-Level Array Parse Fix + Error Surfacing
+
+#### The bug
+Self-managed vendors connected their (single, non-MCC) Google Ads account successfully — green
+"Connected" badge, refresh token + customer ID saved — but the Campaigns list, Overview stats,
+and Reports were all empty/zero, on healthy accounts with real campaigns, and with **no error
+shown**. Confirmed conditions: single ad account (not a manager), developer token Basic/Standard
+approved. That isolated the fault to response parsing + swallowed errors, not OAuth/permissions.
+
+#### Root cause
+`searchGoogleAds()` in `src/api-handlers/_lib/google-ads-client.js` calls the
+`googleAds:searchStream` REST endpoint, which returns a **top-level JSON array** of chunks
+(`[{ results: [...] }, ...]`). The code read `data.results` — but `data` is an array, so
+`data.results` is `undefined`, and the function returned `[]` on **every** call (campaigns,
+reports, `getCustomer`). The prior "searchStream nested results" fix guessed the shape was
+`{ results: [{ results: [...] }] }`, which never matched the real bare-array response, so results
+stayed empty. Two compounding defects:
+1. Error extraction used `data.error?.message`, but searchStream errors also return an array
+   (`[{ error: {...} }]`), so real API errors became the generic "Google Ads search failed".
+2. `google-ads-reports.js` and `google-ads-campaigns.js` caught the failure, `console.warn`ed,
+   and returned empty data with **HTTP 200** — so the UI showed a healthy "Connected" state with
+   zero data and no explanation.
+3. Separate UX bug: `GoogleAdsTab.jsx` only fetched reports on the Reports tab, so Overview stat
+   cards always read 0 on load.
+
+#### Fixes
+**`src/api-handlers/_lib/google-ads-client.js` — `searchGoogleAds()`:**
+- Normalizes both shapes: `const chunks = Array.isArray(data) ? data : (data.results ? [data] : [])`,
+  then `chunks.flatMap((chunk) => Array.isArray(chunk.results) ? chunk.results : [])`.
+- Array-aware error extraction (`Array.isArray(data) ? data[0]?.error : data.error`) so real API
+  error messages propagate.
+- On failure, logs `res.status` + a shape descriptor (`isArray`, keys) for Vercel-log diagnosis.
+
+**`src/api-handlers/google-ads-reports.js`:**
+- Captures the self-managed fetch error. If it failed and no campaign metrics were produced,
+  returns `502` with `error: "Could not load Google Ads data: <reason>"` instead of an empty 200.
+  On partial success, includes a non-fatal `warning` field.
+
+**`src/api-handlers/google-ads-campaigns.js`:**
+- Captures the API list error. If the API failed and the merged (API + Firestore) list is empty,
+  returns `502` with a real `error`; otherwise includes a non-fatal `warning`.
+
+**`src/components/dashboard/GoogleAdsTab.jsx`:**
+- Campaigns fetch now surfaces `data.error` / `data.warning` to the error banner instead of
+  swallowing failures.
+- Reports are now fetched when `activeView` is `overview` **or** `reports`, so Overview stat cards
+  populate on load.
+
+#### What did NOT change
+- OAuth connect/callback flow (token + customerId save is correct).
+- `login-customer-id` handling (correctly omitted for single direct-access accounts).
+- `customerNames[0]` account selection (fine for the confirmed single-account case; revisit if a
+  vendor connects an MCC).
+
+#### Build Status
+`npm run build` passed — only the pre-existing ~3.2 MB chunk-size warning.

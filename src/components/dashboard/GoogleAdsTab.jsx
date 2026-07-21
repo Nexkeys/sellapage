@@ -47,9 +47,15 @@ export default function GoogleAdsTab({ store, isPremium }) {
           body: JSON.stringify({ storeId: store.id, action: 'list' }),
         })
         const data = await res.json()
-        if (res.ok) setCampaigns(data.campaigns || [])
+        if (res.ok) {
+          setCampaigns(data.campaigns || [])
+          if (data.warning) setError(data.warning)
+        } else {
+          setError(data.error || 'Failed to load campaigns')
+        }
       } catch (err) {
         console.error('Failed to fetch campaigns:', err)
+        setError('Failed to load campaigns')
       }
     }
 
@@ -153,7 +159,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
   }, [store?.id])
 
   useEffect(() => {
-    if (isConnected && activeView === 'reports') {
+    if (isConnected && (activeView === 'reports' || activeView === 'overview')) {
       fetchReports()
     }
   }, [isConnected, activeView, fetchReports])

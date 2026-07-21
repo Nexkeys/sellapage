@@ -22,6 +22,7 @@ const TAB_ACCESS = {
   tickets: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.SUPPORT],
   analytics: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
   revenue: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.FINANCE],
+  'sella-ai': [ADMIN_ROLES.SUPER_ADMIN],
 }
 
 export async function getAdminRole(uid) {

@@ -79,6 +79,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/ai-describe.js");
         return await handlerFunc(req, res);
       }
+      case "sella-ai": {
+        const { default: handlerFunc } = await import("../src/api-handlers/sella-ai.js");
+        return await handlerFunc(req, res);
+      }
       case "checkout-initialize": {
         const { default: handlerFunc } = await import("../src/api-handlers/checkout-initialize.js");
         return await handlerFunc(req, res);
@@ -266,6 +270,10 @@ export default async function handler(req, res) {
       }
       case "admin-revenue": {
         const { default: handler } = await import("../src/api-handlers/admin-revenue.js")
+        return handler(req, res)
+      }
+      case "admin-sella-ai": {
+        const { default: handler } = await import("../src/api-handlers/admin-sella-ai.js")
         return handler(req, res)
       }
 

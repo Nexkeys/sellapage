@@ -69,8 +69,16 @@ export async function searchGoogleAds(accessToken, customerId, query, loginCusto
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Google Ads search failed')
-  return data.results || []
+  if (!res.ok) {
+    // searchStream errors come back as an array ([{ error: {...} }]); search as an object.
+    const errObj = Array.isArray(data) ? data[0]?.error : data.error
+    console.error('[google-ads] search failed:', res.status, 'isArray:', Array.isArray(data), 'keys:', Array.isArray(data) ? 'array' : Object.keys(data || {}).join(','))
+    throw new Error(errObj?.message || 'Google Ads search failed')
+  }
+  // searchStream returns a top-level array of chunks: [{ results: [...] }, ...].
+  // Non-streaming search returns a single object: { results: [...] }.
+  const chunks = Array.isArray(data) ? data : (data.results ? [data] : [])
+  return chunks.flatMap((chunk) => (Array.isArray(chunk.results) ? chunk.results : []))
 }
 
 export async function mutateGoogleAds(accessToken, customerId, query, operations, loginCustomerId) {

@@ -71,6 +71,7 @@ export default async function handler(req, res) {
 
     if (action === 'list') {
       let apiCampaigns = []
+      let apiListError = null
       try {
         const results = await listCampaigns(accessToken, customerId)
         apiCampaigns = results.map((r) => {
@@ -90,6 +91,7 @@ export default async function handler(req, res) {
           }
         })
       } catch (apiErr) {
+        apiListError = apiErr.message
         console.warn('[google-ads-campaigns] Google Ads API list failed, falling back to Firestore:', apiErr.message)
       }
 
@@ -129,7 +131,18 @@ export default async function handler(req, res) {
         .map((doc) => ({ id: doc.id, ...doc.data() }))
         .filter((f) => !apiCampaigns.some((a) => a.providerCampaignId === f.providerCampaignId))
 
-      return res.status(200).json({ campaigns: [...campaigns, ...firestoreOnly] })
+      const merged = [...campaigns, ...firestoreOnly]
+
+      // If the Google Ads API call errored AND there's nothing to show, surface the real reason
+      // instead of a clean-but-empty 200 that reads as "no campaigns yet".
+      if (apiListError && merged.length === 0) {
+        return res.status(502).json({ error: `Could not load Google Ads campaigns: ${apiListError}` })
+      }
+
+      return res.status(200).json({
+        campaigns: merged,
+        ...(apiListError ? { warning: apiListError } : {}),
+      })
     }
 
     if (action === 'create') {
