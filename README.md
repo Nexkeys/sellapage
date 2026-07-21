@@ -4065,6 +4065,40 @@ Retrying "Express" (after the array-unwrap fix) got past `save-shipment` cleanly
 
 ---
 
+### [2026-07-21] Topship: Root Cause of "Invalid Pickup Charge" Found + Raw Errors Now Friendly + Country Search
+
+#### What happened
+After the timeout fix, Nex retested Glovo, Chowdeck, an interstate Express booking, and an international (US) booking. Local Lagos→Lagos Glovo/Chowdeck still hit courier-specific "weigh-bill" errors. But a new failure showed up across three different couriers/tiers/routes (Chowdeck interstate, Express interstate, LastMileBudget international): **"Topship rejected the booking request (save-shipment): Invalid Pickup Charge! Expecting NGN 2,000.00."** Nex also asked directly: is the Bearer token actually being sent as Topship's support email said, are both booking endpoints (save-shipment + pay-from-wallet) actually being called, and why are raw technical strings (weigh-bill errors, validation messages) reaching the vendor UI unfiltered. Also requested: alphabetically sorted, searchable country dropdown.
+
+#### Answering the 3 direct questions
+1. **Bearer token** — already correct. All 5 Topship fetch calls in `_lib/topship-booking.js` send `Authorization: Bearer ${apiKey}`, matching Topship's docs and support email exactly. Nothing was wrong here.
+2. **Both booking endpoints** — already correct. Topship's docs describe exactly this two-step flow (`/save-shipment` draft → `/pay-from-wallet` pay), and `bookTopshipShipment` already calls both in the right order. Nothing missing.
+3. **Raw errors reaching vendors** — confirmed real, fixed below. `describeTopshipError()`'s output (written for our own debugging, including a "contact tech@topship.africa" hint) was flowing straight into the JSON response the dashboard shows verbatim.
+
+#### Root cause of "Invalid Pickup Charge"
+Re-reading `Topship-DOCS.txt` in full surfaced a fourth Topship endpoint we never called: `GET /get-pickup-rates`. Its job is to return the real cost of Topship's rider network collecting a shipment from the sender's address on a given date — response: `[{ pickupCharge, deliveryLocation, pickupId, partner }]`, the exact four fields `/save-shipment` needs and validates against. `_lib/topship-booking.js` was hardcoding `pickupCharge: 0`, `deliveryLocation: ''`, `pickupId: ''`, and guessing `pickupPartner: 'Standard'` — nothing ever called the real endpoint. This explains the evidence precisely: local Lagos→Lagos Glovo/Chowdeck bookings get past this check (intra-city pickup is apparently free, so `pickupCharge: 0` is accepted) and fail later for a genuine, separate, courier-side reason (weigh-bill errors). Interstate/international bookings need Topship's own rider network, which has a real non-zero fee that must be fetched, not guessed — a fabricated `0` gets rejected with exactly the error seen. Same category as the earlier VAT-rounding and array-unwrap bugs: a genuine bug on our side, evidence-diagnosed and fixed, not a Topship-side limitation.
+
+**Open unknown, logged rather than silently assumed:** whether `/get-pickup-rates`' `pickupCharge` is already in KOBO (assumed yes, matching `/get-shipment-rate`'s confirmed-KOBO `cost` field — same convention Topship uses everywhere) or in Naira. Implemented using it directly as KOBO with no `×100`, and added a `console.error` logging the raw response so the next real booking attempt's Vercel logs confirm or correct this in one line — same "log it, retest, confirm" pattern that resolved the VAT and array-unwrap bugs.
+
+#### Fix — four parts
+1. **`src/api-handlers/_lib/topship-booking.js`** — added `getTopshipPickupRates({ senderDetail, pickupDate })` (`GET /get-pickup-rates`, same timeout/friendly-error pattern as the other booking calls). `bookTopshipShipment` now calls it before `/save-shipment` whenever `itemCollectionMode === 'PickUp'` (always true today), and uses the real `pickupCharge`/`deliveryLocation`/`pickupId`/`pickupPartner` instead of the old hardcoded/guessed values. If no pickup partner is available, fails early with a clear message instead of sending a value already known to be rejected. Also added a `friendlyTopshipError()` classifier used everywhere a Topship error reaches a client response: weigh-bill/"not taking orders" errors → *"This courier isn't available for this delivery right now. Please select a different courier and try again."*; already-clear business-rule messages (e.g. the Sea Export 100KG minimum) pass through unchanged; Unauthorized/Forbidden gets a generic actionable message with the `tech@topship.africa` debugging hint stripped (stays in `console.error` only); anything unrecognized gets a safe generic fallback. Full technical detail keeps going to Vercel logs exactly as before — only the client-facing string changed.
+2. **`src/api-handlers/topship-create-shipment.js`** — now reads `pickupDate` from the request body (previously not destructured at all) and passes it through.
+3. **`src/api-handlers/paystack-webhook.js`** — Topship branch now destructures `pickupDate` from the Paystack metadata and passes it through too (was already present in `topship-payment-initialize.js`'s metadata, just never read back out on this side) — mirrors the pattern the Sendbox branch right above it already uses.
+4. **`src/components/dashboard/OrdersTab.jsx`** — `bookTopshipDirect` (the staging-bypass path actually being tested) now sends `pickupDate` in its request — was omitted entirely, so the live-tested path had no date to work with even once the backend supported it. Also replaced the two plain country `<select>` dropdowns (sender + receiver) with a new `CountrySelect` combobox component: text input, type-to-filter, click to select. Backing list now sorted alphabetically at the source.
+5. **`src/api-handlers/topship-countries.js`** — sorts the country list alphabetically by name before returning, so every consumer gets an ordered list for free.
+
+#### What did NOT change
+- No Sendbox file touched.
+- The staging Paystack-bypass mechanism and its production hard-gate — untouched.
+- The two-endpoint `save-shipment` → `pay-from-wallet` flow itself — confirmed correct, not restructured, just fed a real `pickupCharge` now.
+- `vercel.json` / the previous timeout fix — untouched.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
 ### [2026-07-20] Google Ads OAuth — Vendor Callback Redirect URI Bug Fixed
 
 #### The bug

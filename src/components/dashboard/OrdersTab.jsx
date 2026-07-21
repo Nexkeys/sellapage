@@ -175,6 +175,64 @@ function PaymentMethodLabel({ method }) {
   return getOption(PAYMENT_METHOD_OPTIONS, normalizePaymentMethod(method), 'bank_transfer').label
 }
 
+// Searchable country picker for Topship international shipments — the plain <select> this
+// replaces had no search and rendered countries in whatever order Topship's /get-countries
+// returns them in (not alphabetical), which made finding one painful with 150+ countries.
+function CountrySelect({ value, onChange, countries }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const selected = countries.find(c => c.code === value)
+  const filtered = query
+    ? countries.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
+    : countries
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setQuery('') }}
+        className={`${INPUT_CLASS} flex items-center justify-between text-left`}
+      >
+        <span className="truncate">{selected?.name || 'Select country'}</span>
+        <ChevronDown size={14} className="shrink-0 text-gray-400" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg">
+            <div className="flex items-center gap-1.5 border-b border-gray-100 px-3 py-2">
+              <Search size={13} className="shrink-0 text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search country..."
+                className="w-full text-sm outline-none placeholder:text-gray-300"
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto py-1">
+              {filtered.length === 0 && (
+                <p className="px-3 py-2 text-xs text-gray-400">No countries match.</p>
+              )}
+              {filtered.map(c => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => { onChange(c.code); setOpen(false); setQuery('') }}
+                  className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-green-50 ${c.code === value ? 'bg-green-50 font-semibold text-green-700' : 'text-gray-700'}`}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function OrdersTab({
   store,
   user,
@@ -686,6 +744,7 @@ export default function OrdersTab({
           weight: Number(packageWeight) || 1,
           itemCategory,
           insuranceType,
+          pickupDate,
         }),
       })
       let data
@@ -1834,16 +1893,11 @@ export default function OrdersTab({
                     <>
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Country</label>
-                        <select
+                        <CountrySelect
                           value={senderCountryCode}
-                          onChange={(e) => setSenderCountryCode(e.target.value)}
-                          className={INPUT_CLASS}
-                        >
-                          {topshipCountries.length === 0 && <option value="NG">Nigeria</option>}
-                          {topshipCountries.map(c => (
-                            <option key={c.code} value={c.code}>{c.name}</option>
-                          ))}
-                        </select>
+                          onChange={setSenderCountryCode}
+                          countries={topshipCountries.length > 0 ? topshipCountries : [{ code: 'NG', name: 'Nigeria' }]}
+                        />
                       </div>
                       {senderCountryCode !== 'NG' && (
                         <div>
@@ -1920,16 +1974,11 @@ export default function OrdersTab({
                     <>
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Country</label>
-                        <select
+                        <CountrySelect
                           value={receiverCountryCode}
-                          onChange={(e) => setReceiverCountryCode(e.target.value)}
-                          className={INPUT_CLASS}
-                        >
-                          {topshipCountries.length === 0 && <option value="NG">Nigeria</option>}
-                          {topshipCountries.map(c => (
-                            <option key={c.code} value={c.code}>{c.name}</option>
-                          ))}
-                        </select>
+                          onChange={setReceiverCountryCode}
+                          countries={topshipCountries.length > 0 ? topshipCountries : [{ code: 'NG', name: 'Nigeria' }]}
+                        />
                       </div>
                       {receiverCountryCode !== 'NG' && (
                         <div>

@@ -12,7 +12,10 @@ export default async function handler(req, res) {
     if (!result.success) {
       return res.status(502).json({ error: result.error })
     }
-    return res.status(200).json({ countries: result.data })
+    // Topship's /get-countries returns them in no particular order — sort alphabetically
+    // so the (now-searchable) country picker is actually easy to scan.
+    const sorted = [...result.data].sort((a, b) => (a?.name || '').localeCompare(b?.name || ''))
+    return res.status(200).json({ countries: sorted })
   } catch (err) {
     console.error('[topship-countries] Unexpected error:', err)
     return res.status(500).json({ error: 'Internal server error' })

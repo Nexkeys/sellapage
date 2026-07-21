@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     weight = 1,
     itemCategory = 'Others',
     insuranceType = 'None',
+    pickupDate,
   } = req.body
 
   if (!storeId || !orderId || !pricingTier || !senderDetails || !receiverDetails) {
@@ -112,6 +113,7 @@ export default async function handler(req, res) {
       pricingTier,
       insuranceType,
       shipmentChargeNaira: resolvedShippingFee,
+      pickupDate: pickupDate || new Date().toISOString().split('T')[0],
       shipmentRoute,
       senderDetail: {
         name: senderDetails.name,

@@ -514,6 +514,7 @@ export default async function handler(req, res) {
         shippingFee,
         itemCategory,
         insuranceType,
+        pickupDate,
       } = data.metadata || {}
 
       if (!storeId || !orderId || !pricingTier) {
@@ -542,6 +543,7 @@ export default async function handler(req, res) {
         pricingTier,
         insuranceType: insuranceType || "None",
         shipmentChargeNaira: shippingFeeNum,
+        pickupDate: pickupDate || new Date().toISOString().split("T")[0],
         shipmentRoute: resolveShipmentRoute(senderDetails?.countryCode, receiverDetails?.countryCode),
         senderDetail: {
           name: senderDetails?.name,

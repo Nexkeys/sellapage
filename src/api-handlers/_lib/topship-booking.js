@@ -47,6 +47,40 @@ function describeTopshipError(data, fallback) {
 }
 
 /**
+ * Translates a technical Topship error (from describeTopshipError, which is meant for our
+ * own server logs) into a message a non-technical vendor can act on. Never lets a raw
+ * Topship string (weigh-bill internals, validation field names, dev-only hints like
+ * "contact tech@topship.africa") reach the dashboard UI — full technical detail still goes
+ * to console.error at the call site, unchanged.
+ */
+function friendlyTopshipError(technicalMessage) {
+  const msg = technicalMessage || ''
+
+  // The specific courier partner (Glovo, Chowdeck, etc.) rejected or can't service this
+  // job right now — confirmed via real staging tests to be genuinely courier-side, not a
+  // bug in our request. Nothing to fix on our end for these; the vendor's actual next step
+  // is simply "pick a different courier."
+  if (/weigh-?bill|could not get shipment from|not taking orders/i.test(msg)) {
+    return "This courier isn't available for this delivery right now. Please select a different courier and try again."
+  }
+
+  // Already plain-language, already actionable business rules (e.g. a minimum weight for
+  // Sea Export) — pass through unchanged rather than replacing useful detail with a
+  // generic message.
+  if (/only (supported|available) for shipments (above|below|between)/i.test(msg)) {
+    return technicalMessage
+  }
+
+  if (/unauthorized|forbidden/i.test(msg)) {
+    return 'We couldn\'t process this booking due to an account setup issue with our shipping partner. Please try again shortly — if this continues, contact support.'
+  }
+
+  // Anything else unrecognized (e.g. a validation error on our side we don't have a
+  // specific translation for yet) — never show Topship's raw technical string to a vendor.
+  return 'We couldn\'t complete this booking due to a temporary issue with our shipping partner. Please try again, or choose a different courier.'
+}
+
+/**
  * Splits a long address into Topship's addressLine1/2/3 (45-char max each) at word boundaries.
  */
 export function splitAddress(address, maxLen = 45) {
@@ -81,7 +115,7 @@ export async function getTopshipCountries() {
 
   if (!res.ok) {
     console.error('[topship-booking] get-countries error:', data)
-    return { success: false, error: describeTopshipError(data, 'Failed to fetch Topship countries'), data }
+    return { success: false, error: friendlyTopshipError(describeTopshipError(data, 'Failed to fetch Topship countries')), data }
   }
   return { success: true, data: Array.isArray(data) ? data : [] }
 }
@@ -121,9 +155,70 @@ export async function getTopshipRates({ senderCity, senderCountryCode = 'NG', re
 
   if (!res.ok) {
     console.error('[topship-booking] Rate quote error:', data)
-    return { success: false, error: describeTopshipError(data, 'Failed to fetch Topship rates'), data }
+    return { success: false, error: friendlyTopshipError(describeTopshipError(data, 'Failed to fetch Topship rates')), data }
   }
   return { success: true, data: Array.isArray(data) ? data : [] }
+}
+
+/**
+ * Pickup rate — GET /get-pickup-rates. Returns what Topship's own rider network charges to
+ * collect a shipment from the sender's address on a given date, plus the pickupId/partner
+ * that must be echoed back into /save-shipment. This is a REQUIRED prior step for any
+ * itemCollectionMode: 'PickUp' booking — /save-shipment validates pickupCharge against what
+ * this endpoint would have returned, and rejects a fabricated/zero value with "Invalid
+ * Pickup Charge! Expecting NGN X" (confirmed via real staging bookings on interstate and
+ * international routes — local intra-city courier pickup is apparently free, which is why
+ * that specific error never showed up for Lagos->Lagos bookings).
+ *
+ * Response's pickupCharge unit is assumed to already be KOBO, matching /get-shipment-rate's
+ * confirmed-KOBO `cost` field (same "charge" convention across Topship's API). Not yet
+ * confirmed against a real response — logged verbatim below so that's a one-line fix if
+ * this assumption turns out wrong.
+ */
+export async function getTopshipPickupRates({ senderDetail, pickupDate }) {
+  const { baseUrl, apiKey } = getTopshipConfig()
+  const senderSplit = splitAddress(senderDetail?.addressLine1 || senderDetail?.address || '')
+  const input = {
+    senderDetail: {
+      addressLine1: senderSplit.line1,
+      addressLine2: senderSplit.line2,
+      country: senderDetail?.country || 'Nigeria',
+      countryCode: senderDetail?.countryCode || 'NG',
+      state: senderDetail?.state || '',
+      city: senderDetail?.city || '',
+    },
+    pickupDate: pickupDate ? new Date(pickupDate).toISOString() : new Date().toISOString(),
+  }
+
+  let res
+  try {
+    res = await fetch(`${baseUrl}/get-pickup-rates?input=${encodeURIComponent(JSON.stringify(input))}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(TOPSHIP_CALL_TIMEOUT_MS),
+    })
+  } catch (err) {
+    if (isTimeoutError(err)) {
+      console.error(`[topship-booking] get-pickup-rates timed out after ${TOPSHIP_CALL_TIMEOUT_MS}ms`)
+      return { success: false, error: "Topship's pickup-rate service didn't respond in time. Please try again shortly." }
+    }
+    throw err
+  }
+
+  const data = await res.json()
+  // TEMP DEBUG LOGGING (2026-07-21): logs the raw pickup-rate response so the KOBO-vs-Naira
+  // assumption above can be confirmed or corrected from real staging evidence. Safe to
+  // remove once confirmed — see README.md changelog for context.
+  console.error('[topship-booking] get-pickup-rates raw response:', JSON.stringify(data))
+
+  if (!res.ok) {
+    console.error('[topship-booking] get-pickup-rates error:', data)
+    return { success: false, error: friendlyTopshipError(describeTopshipError(data, 'Failed to fetch Topship pickup rate')), data }
+  }
+  const options = Array.isArray(data) ? data : (data ? [data] : [])
+  if (options.length === 0) {
+    return { success: false, error: 'No Topship pickup partner is available for this address right now. Please try a different pickup date or address.' }
+  }
+  return { success: true, data: options[0] }
 }
 
 /**
@@ -140,7 +235,7 @@ export async function bookTopshipShipment({
   pricingTier = 'Budget',
   insuranceType = 'None',
   shipmentChargeNaira = 0,
-  pickupChargeNaira = 0,
+  pickupDate,
   senderDetail,
   receiverDetail,
   shipmentRoute = 'Domestic',
@@ -148,7 +243,29 @@ export async function bookTopshipShipment({
   const { baseUrl, apiKey } = getTopshipConfig()
 
   const shipmentCharge = Math.round((Number(shipmentChargeNaira) || 0) * 100)
-  const pickupCharge = Math.round((Number(pickupChargeNaira) || 0) * 100)
+
+  // /save-shipment validates pickupCharge/deliveryLocation/pickupId/pickupPartner against
+  // what /get-pickup-rates would have returned for this address+date — a fabricated value
+  // gets rejected with "Invalid Pickup Charge! Expecting NGN X" (confirmed via real staging
+  // bookings). Fetch the real values rather than guessing. Drop-off shipments skip this —
+  // there's no rider pickup leg to price. Sellapage has no drop-off UI today, so this runs
+  // on every current booking.
+  let pickupCharge = 0
+  let deliveryLocation = ''
+  let pickupId = ''
+  let pickupPartner = ''
+  if (itemCollectionMode === 'PickUp') {
+    const pickupRateResult = await getTopshipPickupRates({ senderDetail, pickupDate })
+    if (!pickupRateResult.success) {
+      return { success: false, error: pickupRateResult.error }
+    }
+    const rate = pickupRateResult.data
+    pickupCharge = Number(rate?.pickupCharge) || 0
+    deliveryLocation = rate?.deliveryLocation || ''
+    pickupId = rate?.pickupId || ''
+    pickupPartner = rate?.partner || 'Standard'
+  }
+
   const insuranceCharge = 0
   // Topship rejects VAT computed with standard rounding (confirmed via a real staging
   // response: "Invalid Value Added Tax Charge!, Got 38598, Expecting 38599" for a
@@ -179,9 +296,9 @@ export async function bookTopshipShipment({
       shipmentRoute,
       shipmentCharge,
       pickupCharge,
-      deliveryLocation: '',
-      pickupId: '',
-      pickupPartner: itemCollectionMode === 'PickUp' ? 'Standard' : '',
+      deliveryLocation,
+      pickupId,
+      pickupPartner,
       valueAddedTaxCharge,
       senderDetail: {
         name: senderDetail?.name || '',
@@ -239,9 +356,11 @@ export async function bookTopshipShipment({
     // that's resolved — see README.md changelog for context.
     console.error('[topship-booking] save-shipment error:', bookData)
     console.error('[topship-booking] save-shipment request payload was:', JSON.stringify(saveShipmentPayload, null, 2))
+    const technicalDetail = describeTopshipError(bookData, 'Failed to save Topship shipment draft')
+    console.error('[topship-booking] save-shipment technical detail (for support/logs only):', technicalDetail)
     return {
       success: false,
-      error: `Topship rejected the booking request (save-shipment): ${describeTopshipError(bookData, 'Failed to save Topship shipment draft')}`,
+      error: friendlyTopshipError(technicalDetail),
       data: bookData,
     }
   }
@@ -255,7 +374,7 @@ export async function bookTopshipShipment({
   const shipmentId = bookRecord?.id
   if (!shipmentId) {
     console.error('[topship-booking] save-shipment returned no id:', bookData)
-    return { success: false, error: 'Topship did not return a shipment id', data: bookRecord }
+    return { success: false, error: friendlyTopshipError('Topship did not return a shipment id'), data: bookRecord }
   }
 
   const payFromWalletPayload = { detail: { shipmentId } }
@@ -284,9 +403,11 @@ export async function bookTopshipShipment({
     // failure branch above — same reasoning, same removal plan.
     console.error('[topship-booking] pay-from-wallet error:', payDataRaw)
     console.error('[topship-booking] pay-from-wallet request payload was:', JSON.stringify(payFromWalletPayload, null, 2))
+    const technicalDetail = describeTopshipError(payDataRaw, 'Failed to pay for Topship shipment from wallet')
+    console.error('[topship-booking] pay-from-wallet technical detail (for support/logs only):', technicalDetail)
     return {
       success: false,
-      error: `Topship rejected the wallet payment (pay-from-wallet): ${describeTopshipError(payDataRaw, 'Failed to pay for Topship shipment from wallet')}`,
+      error: friendlyTopshipError(technicalDetail),
       data: payDataRaw,
     }
   }
@@ -310,7 +431,7 @@ export async function trackTopshipShipment(trackingId) {
 
   if (!res.ok) {
     console.error('[topship-booking] track-shipment error:', data)
-    return { success: false, error: describeTopshipError(data, 'Failed to fetch Topship tracking status'), data }
+    return { success: false, error: friendlyTopshipError(describeTopshipError(data, 'Failed to fetch Topship tracking status')), data }
   }
   return { success: true, data }
 }
