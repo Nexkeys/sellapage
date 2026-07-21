@@ -42,8 +42,9 @@ export async function listAccessibleCustomers(accessToken) {
   return data.resourceNames || []
 }
 
-export async function getCustomer(accessToken, customerId) {
+export async function getCustomer(accessToken, customerId, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const res = await fetch(
     `${BASE_URL}/customers/${cleanId}/customerClient:findRichResults`,
     {
@@ -51,7 +52,7 @@ export async function getCustomer(accessToken, customerId) {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-        'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+        'login-customer-id': loginId,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -65,14 +66,15 @@ export async function getCustomer(accessToken, customerId) {
   return data.results?.[0]?.customerClient || null
 }
 
-export async function searchGoogleAds(accessToken, customerId, query) {
+export async function searchGoogleAds(accessToken, customerId, query, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/googleAds:searchStream`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ query }),
@@ -83,14 +85,15 @@ export async function searchGoogleAds(accessToken, customerId, query) {
   return data.results || []
 }
 
-export async function mutateGoogleAds(accessToken, customerId, query, operations) {
+export async function mutateGoogleAds(accessToken, customerId, query, operations, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/googleAds:mutate`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ query, operations }),
@@ -101,14 +104,15 @@ export async function mutateGoogleAds(accessToken, customerId, query, operations
   return data
 }
 
-export async function createBudget(accessToken, customerId, { name, amountMicros }) {
+export async function createBudget(accessToken, customerId, { name, amountMicros }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/campaignBudgets:mutate`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -137,8 +141,9 @@ export async function createCampaign(accessToken, customerId, {
   status,
   advertisingChannelType,
   campaignBidStrategy,
-}) {
+}, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const campaign = {
     resourceName: `customers/${cleanId}/campaigns/-1`,
     name,
@@ -156,7 +161,7 @@ export async function createCampaign(accessToken, customerId, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -169,14 +174,15 @@ export async function createCampaign(accessToken, customerId, {
   return data.results?.[0]?.resourceName || null
 }
 
-export async function updateCampaignStatus(accessToken, customerId, campaignResourceName, status) {
+export async function updateCampaignStatus(accessToken, customerId, campaignResourceName, status, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/campaigns:mutate`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -197,24 +203,25 @@ export async function updateCampaignStatus(accessToken, customerId, campaignReso
   return data
 }
 
-export async function listCampaigns(accessToken, customerId) {
+export async function listCampaigns(accessToken, customerId, loginCustomerId) {
   const query = `SELECT campaign.id, campaign.name, campaign.status, campaign.campaign_budget, campaign.advertising_channel_type, campaign_budget.amount_micros, campaign_budget.explicitly_shared FROM campaign ORDER BY campaign.id DESC`
-  return searchGoogleAds(accessToken, customerId, query)
+  return searchGoogleAds(accessToken, customerId, query, loginCustomerId)
 }
 
-export async function getCampaignReport(accessToken, customerId, dateRange = 'LAST_30_DAYS') {
+export async function getCampaignReport(accessToken, customerId, dateRange = 'LAST_30_DAYS', loginCustomerId) {
   const query = `SELECT campaign.id, campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date DURING ${dateRange} ORDER BY metrics.cost_micros DESC`
-  return searchGoogleAds(accessToken, customerId, query)
+  return searchGoogleAds(accessToken, customerId, query, loginCustomerId)
 }
 
-export async function createAdGroup(accessToken, customerId, { campaignResourceName, name }) {
+export async function createAdGroup(accessToken, customerId, { campaignResourceName, name }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroups:mutate`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -237,8 +244,9 @@ export async function createAdGroup(accessToken, customerId, { campaignResourceN
   return data.results?.[0]?.resourceName || null
 }
 
-export async function createResponsiveSearchAd(accessToken, customerId, { adGroupResourceName, headlines, descriptions, finalUrl }) {
+export async function createResponsiveSearchAd(accessToken, customerId, { adGroupResourceName, headlines, descriptions, finalUrl }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const ad = {
     resourceName: `customers/${cleanId}/ads/-1`,
     finalUrls: [finalUrl],
@@ -254,7 +262,7 @@ export async function createResponsiveSearchAd(accessToken, customerId, { adGrou
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -275,8 +283,9 @@ export async function createResponsiveSearchAd(accessToken, customerId, { adGrou
   return data.results?.[0]?.resourceName || null
 }
 
-export async function addKeywords(accessToken, customerId, { adGroupResourceName, keywords }) {
+export async function addKeywords(accessToken, customerId, { adGroupResourceName, keywords }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
   const operations = keywords.map((keyword) => ({
     create: {
       resourceName: `customers/${cleanId}/adGroupCriteria/-1`,
@@ -293,7 +302,7 @@ export async function addKeywords(accessToken, customerId, { adGroupResourceName
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-      'login-customer-id': process.env.GOOGLE_ADS_MCC_ID,
+      'login-customer-id': loginId,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ operations }),

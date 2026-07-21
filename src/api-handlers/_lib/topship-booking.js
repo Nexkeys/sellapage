@@ -7,10 +7,27 @@
 
 // save-shipment and pay-from-wallet are real booking/payment operations (not quote
 // lookups), so they get a longer per-call budget than e.g. the geolocation timeout
-// used elsewhere in this codebase. Kept comfortably under the 30s function-level
+// used elsewhere in this codebase. Kept comfortably under the 60s function-level
 // maxDuration (vercel.json) so a slow Topship response is caught here, as a clean
 // JSON error, instead of the whole function getting hard-killed by the platform.
 const TOPSHIP_CALL_TIMEOUT_MS = 12000
+
+// pay-from-wallet gets its own, longer budget: a real staging booking (2026-07-21) passed
+// save-shipment and then blew through the 12s cap on the wallet payment alone. Topship's
+// staging wallet op is just slow — confirmed by their support AI as a staging-environment
+// characteristic, not a request problem. 25s still fits the 60s function maxDuration
+// (vercel.json) alongside the pickup-rates + save-shipment calls.
+const TOPSHIP_PAYMENT_TIMEOUT_MS = 25000
+
+// Topship's documented pricingTier enum — bookings on these tiers are collected by
+// Topship's own rider network, so /save-shipment expects the REAL pickup values from
+// /get-pickup-rates (confirmed: an Express booking with real Fez pickup values + VAT
+// including pickup passed save-shipment on 2026-07-21). Staging also returns
+// courier-partner names as tiers (e.g. 'Glovo', 'Chowdeck') for intra-city deliveries —
+// those couriers do their own pickup, and Topship expects pickupCharge 0 and VAT on the
+// shipment charge alone for them (confirmed: "Invalid Value Added Tax Charge!, Got 55304,
+// Expecting 38599" where 38599 = ceil(shipmentCharge×0.075) with pickup excluded).
+const STANDARD_PICKUP_TIERS = ['Budget', 'Express', 'FedEx', 'Premium', 'LastMileBudget', 'SeaExport']
 
 function isTimeoutError(err) {
   return err?.name === 'TimeoutError' || err?.name === 'AbortError'
@@ -244,17 +261,17 @@ export async function bookTopshipShipment({
 
   const shipmentCharge = Math.round((Number(shipmentChargeNaira) || 0) * 100)
 
-  // /save-shipment validates pickupCharge/deliveryLocation/pickupId/pickupPartner against
-  // what /get-pickup-rates would have returned for this address+date — a fabricated value
-  // gets rejected with "Invalid Pickup Charge! Expecting NGN X" (confirmed via real staging
-  // bookings). Fetch the real values rather than guessing. Drop-off shipments skip this —
-  // there's no rider pickup leg to price. Sellapage has no drop-off UI today, so this runs
-  // on every current booking.
+  // Pickup handling is TIER-DEPENDENT (see STANDARD_PICKUP_TIERS above). Standard
+  // long-haul tiers need the real /get-pickup-rates values — a fabricated 0 gets rejected
+  // with "Invalid Pickup Charge! Expecting NGN X". Intra-city courier tiers (Glovo,
+  // Chowdeck, ...) do their own pickup: Topship expects pickupCharge 0 there, and sending
+  // a real rider rate breaks their VAT validation instead. Both behaviors confirmed via
+  // real staging bookings on 2026-07-21.
   let pickupCharge = 0
   let deliveryLocation = ''
   let pickupId = ''
-  let pickupPartner = ''
-  if (itemCollectionMode === 'PickUp') {
+  let pickupPartner = itemCollectionMode === 'PickUp' ? 'Standard' : ''
+  if (itemCollectionMode === 'PickUp' && STANDARD_PICKUP_TIERS.includes(pricingTier)) {
     const pickupRateResult = await getTopshipPickupRates({ senderDetail, pickupDate })
     if (!pickupRateResult.success) {
       return { success: false, error: pickupRateResult.error }
@@ -384,11 +401,11 @@ export async function bookTopshipShipment({
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify(payFromWalletPayload),
-      signal: AbortSignal.timeout(TOPSHIP_CALL_TIMEOUT_MS),
+      signal: AbortSignal.timeout(TOPSHIP_PAYMENT_TIMEOUT_MS),
     })
   } catch (err) {
     if (isTimeoutError(err)) {
-      console.error(`[topship-booking] pay-from-wallet timed out after ${TOPSHIP_CALL_TIMEOUT_MS}ms`)
+      console.error(`[topship-booking] pay-from-wallet timed out after ${TOPSHIP_PAYMENT_TIMEOUT_MS}ms`)
       return {
         success: false,
         error: "Topship's payment service didn't respond in time — the shipment draft was created but payment could not be confirmed. Try again shortly before booking a new one.",

@@ -4099,6 +4099,38 @@ Re-reading `Topship-DOCS.txt` in full surfaced a fourth Topship endpoint we neve
 
 ---
 
+### [2026-07-21] Topship: Pickup Charge Is Tier-Dependent — Intra-City Couriers Want 0, Long-Haul Tiers Want the Real Rate
+
+#### What happened
+Retesting after the `/get-pickup-rates` fix produced three decisive log samples:
+1. **Glovo local (intra-city)** — the new code sent Fez's real pickup values (`pickupCharge: 222740`) plus VAT including pickup (`55304`). Topship rejected: *"Invalid Value Added Tax Charge!, Got 55304, Expecting 38599"* — and `38599 = ceil(514642×0.075)`, i.e. **VAT on the shipment charge alone**. For intra-city courier tiers, Topship expects `pickupCharge: 0` (the courier does its own pickup) — which is exactly why yesterday's hardcoded-0 payloads always passed this stage for local bookings.
+2. **Express (long-haul)** — same code, same real Fez pickup values, VAT including pickup — **`save-shipment` PASSED for the first time ever on this tier.** The `/get-pickup-rates` fix was correct for long-haul; the booking then died only because `pay-from-wallet` exceeded its 12s timeout (Topship's staging wallet op is slow — their own support AI confirmed this is a staging-environment characteristic).
+3. **SeaExport at 3kg** — *"Sea Export shipments are only supported for shipments above or equal to 100KG."* Legit business rule, correctly passed through verbatim by the new error classifier — but the UI shouldn't offer a rate the entered weight makes impossible.
+
+Also confirmed from these logs: `/get-pickup-rates` returns `pickupCharge` in KOBO as assumed (Fez `222740` = ₦2,227.40 — sane for a Lagos rider pickup; a Naira reading would mean ₦222,740, absurd). That open question from the previous entry is now closed — assumption confirmed correct.
+
+#### Root cause
+Topship runs **two different pickup models keyed off the pricing tier**, which nothing in their docs states:
+- **Intra-city courier tiers** (staging returns the partner name as the tier: `Glovo`, `Chowdeck`, …): courier collects the package itself → expected `pickupCharge: 0`, no pickupId, VAT = 7.5% of shipmentCharge only.
+- **Standard long-haul tiers** (the documented enum: `Budget`, `Express`, `FedEx`, `Premium`, `LastMileBudget`, plus `SeaExport`): Topship's rider network collects → expected the real `/get-pickup-rates` values, VAT = 7.5% of (shipmentCharge + pickupCharge).
+
+Yesterday's fix applied the pickup fetch to *every* booking — fixing long-haul but breaking intra-city VAT in the process.
+
+#### Fix — three parts
+1. **`src/api-handlers/_lib/topship-booking.js`** — added `STANDARD_PICKUP_TIERS` (`Budget`/`Express`/`FedEx`/`Premium`/`LastMileBudget`/`SeaExport`). `bookTopshipShipment` now only calls `/get-pickup-rates` when the tier is in that list; courier-partner tiers get the original `pickupCharge: 0` / `pickupPartner: 'Standard'` payload back (byte-identical to what previously passed validation for them). The single VAT formula `ceil((shipmentCharge + pickupCharge + insuranceCharge) × 0.075)` now naturally produces the right value for both cases, since pickupCharge is 0 for intra-city. Also added `TOPSHIP_PAYMENT_TIMEOUT_MS = 25000` used only by `pay-from-wallet` (other calls keep 12s).
+2. **`vercel.json`** — `maxDuration` raised `30 → 60` (Vercel Hobby's ceiling) so the full worst-case chain (pickup-rates + save-shipment + 25s wallet payment + auth overhead ≈ 40s) fits with headroom.
+3. **`src/api-handlers/topship-rates.js`** — SeaExport rates are filtered out of the quote list whenever the entered weight is under 100kg, so vendors can never select a rate Topship will categorically reject. (At ≥100kg it stays listed.)
+
+#### What did NOT change
+- No Sendbox file touched. Staging bypass + production gate untouched. The `friendlyTopshipError` classifier untouched — both its behaviors observed in this round (verbatim pass-through of the SeaExport rule, "This courier isn't available..." wrap of the weigh-bill error) worked exactly as designed.
+- Pickup partner selection stays `options[0]` from `/get-pickup-rates` — that exact combination (Fez, first option) is the one Topship accepted; not changing a proven-valid choice while still stabilizing. Choosing the cheapest partner is a possible later optimization.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
 ### [2026-07-20] Google Ads OAuth — Vendor Callback Redirect URI Bug Fixed
 
 #### The bug
@@ -4194,6 +4226,48 @@ After the previous fix (customerId fallback), vendors who connected before the f
 
 #### User flow
 Vendor clicks "Disconnect" → confirmation dialog → account disconnected → page reloads → "Connect Your Account" card appears → vendor reconnects → new callback saves `customerId` properly → campaigns and reports work.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
+### [2026-07-21] Google Ads — login-customer-id Header Fix + Firestore Composite Index
+
+#### The bugs
+
+**Bug 1 — Google Ads API returning HTML error pages instead of JSON:**
+All Google Ads API calls (campaigns, reports, callback's getCustomer) were failing with `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`. Google was returning HTML error pages, not JSON. The Vercel log for the callback showed: `getCustomer failed, saving raw customerId: Unexpected token '<'`.
+
+**Bug 2 — Firestore composite index missing:**
+The campaigns list query `.where('storeId', '==', storeId).orderBy('createdAt', 'desc')` failed with `FAILED_PRECONDITION: The query requires an index`. Firebase needed a composite index on the `googleAdsCampaigns` collection.
+
+#### Root cause — Bug 1
+Every function in `google-ads-client.js` had `'login-customer-id': process.env.GOOGLE_ADS_MCC_ID` hardcoded. The MCC ID (5897875835) is Sellapage's master account, but **vendor accounts are NOT sub-accounts under this MCC**. When the API receives a `login-customer-id` for an account that doesn't manage the target customer, Google returns a 403 HTML error page instead of JSON.
+
+Evidence: The callback's `getCustomer` call failed with `Unexpected token '<'` — an HTML error page, not a JSON API response. Same error in campaigns and reports endpoints.
+
+#### Root cause — Bug 2
+Firestore requires composite indexes for queries that combine `where()` with `orderBy()` on different fields. The `googleAdsCampaigns` collection had no composite index for `storeId` + `createdAt`.
+
+#### Fixes
+
+**`src/api-handlers/_lib/google-ads-client.js` — login-customer-id fix:**
+- Added optional `loginCustomerId` parameter to every function that sends the `login-customer-id` header: `getCustomer`, `searchGoogleAds`, `mutateGoogleAds`, `createBudget`, `createCampaign`, `updateCampaignStatus`, `createAdGroup`, `createResponsiveSearchAd`, `addKeywords`, `listCampaigns`, `getCampaignReport`.
+- Default: `loginCustomerId` falls back to the `customerId` parameter (the vendor's own account ID). This is correct for self-managed vendor accounts.
+- Master account flow (ads-payment-verify.js, paystack-webhook.js): Already passes `customerId = "5897875835"` (the MCC ID), so the default fallback gives the correct MCC ID for `login-customer-id`. No changes needed in those files.
+
+**Firestore composite index:**
+- Created composite index on `googleAdsCampaigns` collection: `storeId` (Ascending) + `createdAt` (Descending) + `__name__` (Descending). Status: Enabled.
+
+#### What did NOT change
+- `ads-payment-verify.js` — no changes needed, already passes MCC ID as `customerId`.
+- `paystack-webhook.js` — no changes needed, same reason.
+- `google-ads-callback.js` — calls `getCustomer(accessToken, customerId)` without the optional `loginCustomerId` parameter, so it defaults to the vendor's own ID. Correct.
+- `google-ads-campaigns.js` / `google-ads-reports.js` — call `searchGoogleAds` / `getCampaignReport` without the optional parameter, so they default to the vendor's own ID. Correct.
+- No Vercel env var changes.
+- No Google Cloud Console changes.
 
 ### Build Status
 

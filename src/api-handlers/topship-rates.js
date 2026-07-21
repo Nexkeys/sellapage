@@ -39,7 +39,13 @@ export default async function handler(req, res) {
     // booking call; always book with `pricing_tier`.
     const isUuidLike = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str || '')
 
-    const rates = result.data.map((r, index) => {
+    // Topship rejects SeaExport bookings under 100kg outright ("Sea Export shipments are
+    // only supported for shipments above or equal to 100KG" — confirmed via a real staging
+    // booking), so don't offer that rate for lighter packages in the first place.
+    const weightNum = Number(weight) || 1
+    const eligible = result.data.filter(r => r.pricingTier !== 'SeaExport' || weightNum >= 100)
+
+    const rates = eligible.map((r, index) => {
       const pricingTier = r.pricingTier || 'Budget'
       const modeLabel = isUuidLike(r.mode) ? '' : (r.mode || '')
       return {
