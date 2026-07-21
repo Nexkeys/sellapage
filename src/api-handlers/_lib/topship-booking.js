@@ -19,16 +19,6 @@ const TOPSHIP_CALL_TIMEOUT_MS = 12000
 // (vercel.json) alongside the pickup-rates + save-shipment calls.
 const TOPSHIP_PAYMENT_TIMEOUT_MS = 25000
 
-// Topship's documented pricingTier enum — bookings on these tiers are collected by
-// Topship's own rider network, so /save-shipment expects the REAL pickup values from
-// /get-pickup-rates (confirmed: an Express booking with real Fez pickup values + VAT
-// including pickup passed save-shipment on 2026-07-21). Staging also returns
-// courier-partner names as tiers (e.g. 'Glovo', 'Chowdeck') for intra-city deliveries —
-// those couriers do their own pickup, and Topship expects pickupCharge 0 and VAT on the
-// shipment charge alone for them (confirmed: "Invalid Value Added Tax Charge!, Got 55304,
-// Expecting 38599" where 38599 = ceil(shipmentCharge×0.075) with pickup excluded).
-const STANDARD_PICKUP_TIERS = ['Budget', 'Express', 'FedEx', 'Premium', 'LastMileBudget', 'SeaExport']
-
 function isTimeoutError(err) {
   return err?.name === 'TimeoutError' || err?.name === 'AbortError'
 }
@@ -90,6 +80,15 @@ function friendlyTopshipError(technicalMessage) {
 
   if (/unauthorized|forbidden/i.test(msg)) {
     return 'We couldn\'t process this booking due to an account setup issue with our shipping partner. Please try again shortly — if this continues, contact support.'
+  }
+
+  // Topship's pay-from-wallet debits Sellapage's own prepaid Topship wallet (the vendor's
+  // Paystack payment reimburses Sellapage separately). An empty wallet is a Sellapage-ops
+  // issue, NOT the vendor's fault — the message must never imply the vendor underpaid or
+  // must pay again. The distinct log line below is greppable for ops top-up alerting.
+  if (/insufficient.*(wallet|balance)/i.test(msg)) {
+    console.error('[topship-booking] WALLET BALANCE LOW — Topship wallet needs funding')
+    return 'This shipment couldn\'t be completed right now due to an issue on our courier partner\'s side. Please try again shortly, or contact support if it continues.'
   }
 
   // Anything else unrecognized (e.g. a validation error on our side we don't have a
@@ -261,17 +260,26 @@ export async function bookTopshipShipment({
 
   const shipmentCharge = Math.round((Number(shipmentChargeNaira) || 0) * 100)
 
-  // Pickup handling is TIER-DEPENDENT (see STANDARD_PICKUP_TIERS above). Standard
-  // long-haul tiers need the real /get-pickup-rates values — a fabricated 0 gets rejected
-  // with "Invalid Pickup Charge! Expecting NGN X". Intra-city courier tiers (Glovo,
-  // Chowdeck, ...) do their own pickup: Topship expects pickupCharge 0 there, and sending
-  // a real rider rate breaks their VAT validation instead. Both behaviors confirmed via
-  // real staging bookings on 2026-07-21.
+  // Pickup handling is ROUTE-DEPENDENT, not tier-dependent (an earlier tier-based guess was
+  // disproved by an inter-state Chowdeck booking that still demanded a real pickup charge).
+  // Confirmed against every staging sample on 2026-07-21:
+  //   - Domestic + same state (e.g. Lagos->Lagos): the delivery courier collects directly,
+  //     so Topship expects pickupCharge 0 and VAT on the shipment charge alone. Sending a
+  //     real rider rate here instead breaks their VAT validation.
+  //   - Anything else (inter-state, Export, Import): Topship's rider network handles pickup,
+  //     so /save-shipment requires the REAL /get-pickup-rates values — a fabricated 0 is
+  //     rejected with "Invalid Pickup Charge! Expecting NGN X".
+  // pickupPartner (pickup leg) and pricingTier (delivery leg) are independent in Topship's
+  // model, so using the /get-pickup-rates named partner (e.g. Fez) alongside any delivery
+  // tier is valid — that exact combination is what passed save-shipment on staging.
+  const sameState = (senderDetail?.state || '').trim().toLowerCase() === (receiverDetail?.state || '').trim().toLowerCase()
+  const localSameStatePickup = shipmentRoute === 'Domestic' && sameState
+
   let pickupCharge = 0
   let deliveryLocation = ''
   let pickupId = ''
   let pickupPartner = itemCollectionMode === 'PickUp' ? 'Standard' : ''
-  if (itemCollectionMode === 'PickUp' && STANDARD_PICKUP_TIERS.includes(pricingTier)) {
+  if (itemCollectionMode === 'PickUp' && !localSameStatePickup) {
     const pickupRateResult = await getTopshipPickupRates({ senderDetail, pickupDate })
     if (!pickupRateResult.success) {
       return { success: false, error: pickupRateResult.error }

@@ -43,27 +43,9 @@ export async function listAccessibleCustomers(accessToken) {
 }
 
 export async function getCustomer(accessToken, customerId, loginCustomerId) {
-  const cleanId = customerId.replace(/-/g, '')
-  const loginId = (loginCustomerId || customerId).replace(/-/g, '')
-  const res = await fetch(
-    `${BASE_URL}/customers/${cleanId}/customerClient:findRichResults`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-        'login-customer-id': loginId,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: `SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone FROM customer_client WHERE customer_client.id = ${cleanId}`,
-      }),
-    }
-  )
-
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to get customer')
-  return data.results?.[0]?.customerClient || null
+  const query = `SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone FROM customer_client WHERE customer_client.id = ${customerId.replace(/-/g, '')}`
+  const results = await searchGoogleAds(accessToken, customerId, query, loginCustomerId)
+  return results?.[0]?.customerClient || null
 }
 
 export async function searchGoogleAds(accessToken, customerId, query, loginCustomerId) {

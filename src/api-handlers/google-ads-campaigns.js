@@ -70,18 +70,66 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken(refreshToken)
 
     if (action === 'list') {
-      const campaignsSnap = await db
+      let apiCampaigns = []
+      try {
+        const results = await listCampaigns(accessToken, customerId)
+        apiCampaigns = results.map((r) => {
+          const c = r.campaign || {}
+          const budget = r.campaignBudget || {}
+          const cleanId = String(c.id || '')
+          return {
+            id: cleanId,
+            providerCampaignId: cleanId,
+            name: c.name || 'Untitled',
+            status: c.status || 'UNKNOWN',
+            type: c.advertisingChannelType || 'SEARCH',
+            budgetMicros: Number(budget.amountMicros) || 0,
+            budgetAmount: (Number(budget.amountMicros) || 0) / 1000000,
+            resourceCampaignId: c.resourceName || `customers/${customerId}/campaigns/${cleanId}`,
+            source: 'google',
+          }
+        })
+      } catch (apiErr) {
+        console.warn('[google-ads-campaigns] Google Ads API list failed, falling back to Firestore:', apiErr.message)
+      }
+
+      const firestoreSnap = await db
         .collection('googleAdsCampaigns')
         .where('storeId', '==', storeId)
         .orderBy('createdAt', 'desc')
         .get()
 
-      const campaigns = campaignsSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
+      const firestoreMap = {}
+      firestoreSnap.docs.forEach((doc) => {
+        const data = doc.data()
+        if (data.providerCampaignId) {
+          firestoreMap[data.providerCampaignId] = { id: doc.id, ...data }
+        }
+      })
 
-      return res.status(200).json({ campaigns })
+      const campaigns = apiCampaigns.map((api) => {
+        const firestore = firestoreMap[api.providerCampaignId] || {}
+        return {
+          ...api,
+          ...firestore,
+          id: firestore.id || api.id,
+          budgetAmount: firestore.budgetAmount || api.budgetAmount,
+          spendToDate: firestore.spendToDate || 0,
+          currency: firestore.currency || storeDoc.data().googleAdsCurrency || 'NGN',
+          impressions: firestore.impressions || 0,
+          clicks: firestore.clicks || 0,
+          ctr: firestore.ctr || 0,
+          conversions: firestore.conversions || 0,
+          targeting: firestore.targeting || {},
+          createdAt: firestore.createdAt || null,
+        }
+      })
+
+      const firestoreOnly = firestoreSnap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((f) => !apiCampaigns.some((a) => a.providerCampaignId === f.providerCampaignId))
+
+      return res.status(200).json({ campaigns: [...campaigns, ...firestoreOnly] })
     }
 
     if (action === 'create') {
@@ -143,26 +191,21 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing campaignId' })
       }
 
-      const campaignDoc = await db.collection('googleAdsCampaigns').doc(campaignId).get()
-      if (!campaignDoc.exists) {
-        return res.status(404).json({ error: 'Campaign not found' })
-      }
-      if (campaignDoc.data().storeId !== storeId) {
-        return res.status(403).json({ error: 'Forbidden' })
-      }
-
       const newStatus = action === 'pause' ? 'PAUSED' : 'ENABLED'
-      await updateCampaignStatus(
-        accessToken,
-        customerId,
-        campaignDoc.data().campaignResourceName,
-        newStatus
-      )
+      let campaignResourceName = null
 
-      await db.collection('googleAdsCampaigns').doc(campaignId).update({
-        status: newStatus,
-        updatedAt: new Date().toISOString(),
-      })
+      const campaignDoc = await db.collection('googleAdsCampaigns').doc(campaignId).get()
+      if (campaignDoc.exists && campaignDoc.data().storeId === storeId) {
+        campaignResourceName = campaignDoc.data().campaignResourceName
+        await updateCampaignStatus(accessToken, customerId, campaignResourceName, newStatus)
+        await db.collection('googleAdsCampaigns').doc(campaignId).update({
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+        })
+      } else {
+        campaignResourceName = `customers/${customerId.replace(/-/g, '')}/campaigns/${campaignId}`
+        await updateCampaignStatus(accessToken, customerId, campaignResourceName, newStatus)
+      }
 
       return res.status(200).json({ campaignId, status: newStatus })
     }

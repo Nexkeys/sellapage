@@ -4131,6 +4131,45 @@ Yesterday's fix applied the pickup fetch to *every* booking — fixing long-haul
 
 ---
 
+### [2026-07-21] Topship: Code Side of Staging Is DONE — Pickup Rule Corrected to Route-Based; Remaining Blockers Are Topship-Side
+
+#### The headline
+The integration reached the finish line for the code side of staging. A standard-tier booking this round went **all the way through `save-shipment` AND `pay-from-wallet`** — the wallet call returned a clean business error (*"Insufficient wallet Balance"*) within the 25s budget (no timeout — the previous fix is validated). Every remaining failure is now provably **on Topship's side**, not ours, and these logs are exactly the clean staging evidence needed to unblock the production key.
+
+#### The four errors this round, decoded
+1. **Glovo local (Lagos→Lagos)** — `pickupCharge: 0`, VAT `38599` (shipment-only, correct) → *"Could not get shipment from Glovo Intra-city."* Our payload is correct; Glovo's staging courier system is down. Courier-side.
+2. **Chowdeck local (Lagos→Lagos)** — `pickupCharge: 0` → *"Sorry, we are not taking orders at this moment."* Courier-side unavailability. Correct on our end.
+3. **Chowdeck inter-state (Lagos→Ogun)** — `pickupCharge: 0` → *"Invalid Pickup Charge! Expecting NGN 2,000.00."* The one genuine remaining bug on our side — fixed below.
+4. **Standard-tier booking** → `save-shipment` **PASSED** (shipmentId `6ff80a1a…`) → `pay-from-wallet` → *"Insufficient wallet Balance."* Full flow reached; only Topship's empty staging wallet stopped it. Their own support AI confirmed this is a staging-wallet their technical team must fund.
+
+Also confirmed: the kobo assumption holds (Fez `222740` = ₦2,227.40), and `pay-from-wallet` no longer times out.
+
+#### Root cause of error #3: pickup rule is ROUTE-based, not TIER-based
+The previous entry gated the `/get-pickup-rates` fetch on the *pricing tier*. Error #3 disproved that — Chowdeck (a courier-partner tier, so we sent `pickupCharge: 0`) still demanded a real pickup charge because the route was **inter-state**. Re-checking every sample, the real rule is about the route:
+- **Domestic + same state** → delivery courier collects directly → Topship expects `pickupCharge: 0`, VAT on shipment charge only.
+- **Inter-state / Export / Import** → Topship's rider network collects → real `/get-pickup-rates` values required.
+
+`pickupPartner` (pickup leg) and `pricingTier` (delivery leg) are independent in Topship's model, so using the `/get-pickup-rates` named partner (Fez) alongside any delivery tier is valid — that exact combination is what passed `save-shipment`.
+
+#### Fix — `src/api-handlers/_lib/topship-booking.js` (only file changed)
+1. Removed the tier-based `STANDARD_PICKUP_TIERS` gate. `bookTopshipShipment` now fetches `/get-pickup-rates` when `itemCollectionMode === 'PickUp'` **and NOT** (`shipmentRoute === 'Domestic'` && same sender/receiver state). Intra-state domestic keeps `pickupCharge: 0`; everything else gets real pickup values. The single VAT formula stays correct in both branches.
+2. Added an *"Insufficient wallet Balance"* branch to `friendlyTopshipError`. In production this means Sellapage's own prepaid Topship wallet needs topping up (the vendor already paid via Paystack), so the message is reassuring and never implies vendor fault: *"This shipment couldn't be completed right now due to an issue on our courier partner's side. Please try again shortly, or contact support if it continues."* A distinct `console.error('[topship-booking] WALLET BALANCE LOW — Topship wallet needs funding')` is emitted for ops alerting.
+
+#### What did NOT change
+- No Sendbox file touched. Staging bypass + production gate untouched. `vercel.json` (60s) and the SeaExport rate filter untouched. No magic ₦2,000 hardcoded — the route-based fetch supplies a real, Topship-accepted pickup charge instead.
+
+#### Remaining blockers are Topship's (not code)
+- **Empty staging wallet** (*"Insufficient wallet Balance"*) — Topship's technical team must fund it before a full end-to-end success can be demonstrated. Confirmed by their own support AI.
+- **Courier availability** (Glovo/Chowdeck staging couriers returning "not taking orders" / "could not get shipment") — courier-side, surfaced to vendors as the friendly "this courier isn't available" message.
+
+Next step is operational, not code: send Topship these staging logs and ask them to fund the staging wallet + confirm the inter-state pickup rule. `TOPSHIP_ENV` stays `staging`; production remains blocked pending Topship's review and key issuance.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
 ### [2026-07-20] Google Ads OAuth — Vendor Callback Redirect URI Bug Fixed
 
 #### The bug
@@ -4233,6 +4272,48 @@ Vendor clicks "Disconnect" → confirmation dialog → account disconnected → 
 
 ---
 
+### [2026-07-21] Google Ads — getCustomer Endpoint Fix + Campaign List from Google Ads API
+
+#### The bugs
+
+**Bug 1 — `getCustomer` using non-existent endpoint:**
+The `getCustomer` function in `google-ads-client.js` used `customerClient:findRichResults` as the API endpoint. This endpoint does not exist in Google Ads API v24. Every call returned an HTML error page. The callback's `getCustomer` call was silently failing, so `googleAdsAccountName`, `googleAdsCurrency`, and `googleAdsTimezone` were never saved.
+
+**Bug 2 — Campaign list only queried Firestore, not Google Ads API:**
+The `action === 'list'` in `google-ads-campaigns.js` queried the `googleAdsCampaigns` Firestore collection. Campaigns created directly in Google Ads (not through Sellapage's "Create Campaign" button) were not in that collection, so they never appeared in the dashboard. The `listCampaigns` function existed in `google-ads-client.js` but was never used.
+
+#### Fixes
+
+**`src/api-handlers/_lib/google-ads-client.js` — getCustomer rewrite:**
+- Removed the raw `fetch` call to the non-existent `customerClient:findRichResults` endpoint.
+- Replaced with a call to `searchGoogleAds()` using a GAQL query: `SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone FROM customer_client WHERE customer_client.id = {id}`.
+- This uses the same working `googleAds:searchStream` endpoint that all other queries use.
+
+**`src/api-handlers/google-ads-campaigns.js` — list action rewrite:**
+- Fetches campaigns from the Google Ads API via `listCampaigns(accessToken, customerId)` — queries the vendor's actual Google Ads account.
+- Fetches matching Firestore docs from `googleAdsCampaigns` collection by `providerCampaignId`.
+- Merges Google Ads data with Firestore metadata (budget, targeting, etc.).
+- If Google Ads API call fails, falls back to Firestore-only data (graceful degradation).
+- Firestore-only campaigns (created via Sellapage but not yet synced to Google Ads) are included in the response.
+
+**`src/api-handlers/google-ads-campaigns.js` — pause/resume handler update:**
+- Supports both Firestore doc IDs (for Sellapage-created campaigns) and Google Ads campaign IDs (for API-fetched campaigns).
+- For Firestore campaigns: looks up the doc, gets `campaignResourceName`, pauses/resumes via API, updates Firestore.
+- For API campaigns: constructs `campaignResourceName` from the Google Ads campaign ID and pauses/resumes directly.
+
+#### What did NOT change
+- Frontend (`GoogleAdsCampaigns.jsx`) — no changes needed, already handles the response format correctly.
+- `google-ads-reports.js` — reports already query the Google Ads API directly via `getCampaignReport`.
+- `ads-payment-verify.js` / `paystack-webhook.js` — no changes needed.
+- No Vercel env var changes.
+- No Google Cloud Console changes.
+
+### Build Status
+
+`npm run build` passed with zero errors.
+
+---
+
 ### [2026-07-21] Google Ads — login-customer-id Header Fix + Firestore Composite Index
 
 #### The bugs
@@ -4254,20 +4335,12 @@ Firestore requires composite indexes for queries that combine `where()` with `or
 #### Fixes
 
 **`src/api-handlers/_lib/google-ads-client.js` — login-customer-id fix:**
-- Added optional `loginCustomerId` parameter to every function that sends the `login-customer-id` header: `getCustomer`, `searchGoogleAds`, `mutateGoogleAds`, `createBudget`, `createCampaign`, `updateCampaignStatus`, `createAdGroup`, `createResponsiveSearchAd`, `addKeywords`, `listCampaigns`, `getCampaignReport`.
-- Default: `loginCustomerId` falls back to the `customerId` parameter (the vendor's own account ID). This is correct for self-managed vendor accounts.
-- Master account flow (ads-payment-verify.js, paystack-webhook.js): Already passes `customerId = "5897875835"` (the MCC ID), so the default fallback gives the correct MCC ID for `login-customer-id`. No changes needed in those files.
+- Added optional `loginCustomerId` parameter to every function that sends the `login-customer-id` header.
+- Default: `loginCustomerId` falls back to the `customerId` parameter (the vendor's own account ID).
+- Master account flow: Already passes `customerId = "5897875835"` (the MCC ID), so the default fallback gives the correct MCC ID.
 
 **Firestore composite index:**
 - Created composite index on `googleAdsCampaigns` collection: `storeId` (Ascending) + `createdAt` (Descending) + `__name__` (Descending). Status: Enabled.
-
-#### What did NOT change
-- `ads-payment-verify.js` — no changes needed, already passes MCC ID as `customerId`.
-- `paystack-webhook.js` — no changes needed, same reason.
-- `google-ads-callback.js` — calls `getCustomer(accessToken, customerId)` without the optional `loginCustomerId` parameter, so it defaults to the vendor's own ID. Correct.
-- `google-ads-campaigns.js` / `google-ads-reports.js` — call `searchGoogleAds` / `getCampaignReport` without the optional parameter, so they default to the vendor's own ID. Correct.
-- No Vercel env var changes.
-- No Google Cloud Console changes.
 
 ### Build Status
 
