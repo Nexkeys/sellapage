@@ -4635,7 +4635,44 @@ stayed empty. Two compounding defects:
 
 ---
 
-### [2026-07-21] Google Ads — Self-Managed Reports Zero Metrics (Phase 2)
+### [2026-07-22] Privacy Policy Update — Google OAuth Verification Compliance
+
+#### What changed
+Updated `src/pages/PrivacyPolicy.jsx` to satisfy Google's OAuth app verification requirements. Google's Trust & Safety team flagged two missing disclosures:
+
+**New section: "How We Share Your Data"**
+- Payment processing: Paystack (transaction details)
+- Order fulfillment: Sendbox and Topship (delivery addresses, names, phone numbers)
+- Advertising: Google Ads API and Meta Marketing API (campaign data)
+- Business verification: Meta (CAC documents for ad account verification)
+- Legal compliance: disclosures when required by law
+- Explicit statement: We do NOT sell personal data to third parties
+
+**New section: "How We Protect Your Data"**
+- TLS/SSL encryption in transit
+- Firebase Firestore server-side encryption at rest
+- API keys, OAuth tokens, and payment credentials stored server-side only (never exposed to browsers)
+- Firebase Authentication for identity verification (no raw passwords stored)
+- Store data access restricted to authenticated account only
+- Regular security monitoring
+
+**Updated**: `LAST_UPDATED` changed from `'April 2026'` to `'July 2026'`
+
+#### What did NOT change
+- No backend changes
+- No API changes
+- No Firebase/Firestore changes
+- Existing sections unchanged
+
+#### For Google verification reply
+After deploy, reply to Google's email with:
+1. Link to updated privacy policy: `https://www.sellapage.com.ng/privacy-policy`
+2. Demo video link (use Loom, Google Drive, or Vimeo — YouTube keeps taking it down)
+3. Test credentials: a pre-configured vendor account with store + product + Google Ads connected
+
+### Build Status
+
+`npm run build` passed with zero errors.
 
 #### The bug
 After the searchStream parse fix (above), the Campaigns tab correctly showed a vendor's live

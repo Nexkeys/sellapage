@@ -3,7 +3,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
 
-const LAST_UPDATED = 'April 2026'
+const LAST_UPDATED = 'July 2026'
 
 const sections = [
   {
@@ -23,6 +23,28 @@ const sections = [
       'To connect customers with your business when they place an order or submit an enquiry.',
       'To improve Sellapage based on how it is being used.',
       'We do NOT sell your data to anyone. Ever.',
+    ],
+  },
+  {
+    title: 'How We Share Your Data',
+    content: [
+      'Payment processing: We share transaction details with Paystack (our payment processor) to process payments. Paystack has its own privacy policy governing how they handle your financial data.',
+      'Order fulfillment: We share delivery addresses, recipient names, and phone numbers with Sendbox and Topship (our logistics partners) to deliver orders to your customers.',
+      'Advertising: When you connect a Google Ads account, we communicate with the Google Ads API to create and manage campaigns on your behalf. Campaign data (names, budgets, performance metrics) is shared with Google for this purpose. When you connect a Meta/Facebook Ads account, we communicate with the Meta Marketing API for the same purpose.',
+      'Business verification: If you use our advertising features, we may share business verification documents (such as CAC registration) with Meta for advertising account verification.',
+      'Legal compliance: We may disclose data if required by law, court order, or to protect the rights and safety of Sellapage and its users.',
+      'We do NOT sell your personal data to third parties.',
+    ],
+  },
+  {
+    title: 'How We Protect Your Data',
+    content: [
+      'All data is encrypted in transit using TLS/SSL encryption between your device and our servers.',
+      'All data at rest is stored in Firebase Firestore with server-side encryption managed by Google Cloud.',
+      'API keys, OAuth refresh tokens, and payment credentials are stored server-side only and are never exposed to browsers or client-side code.',
+      'Firebase Authentication handles all identity verification — we do not store raw passwords.',
+      'Access to your store data is restricted to your authenticated account only. No other vendor or user can access your data.',
+      'We perform regular security monitoring and follow industry best practices for web application security.',
     ],
   },
   {
