@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Eye, MousePointerClick, IndianRupee, Target, TrendingUp, Loader2, RefreshCw } from 'lucide-react'
+import { Eye, MousePointerClick, DollarSign, Target, TrendingUp, Loader2, RefreshCw } from 'lucide-react'
 
-function formatNaira(amount) {
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount || 0)
+function formatCurrency(amount, currencyCode) {
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode || 'USD', minimumFractionDigits: 0 }).format(amount || 0)
 }
 
 function formatNumber(num) {
@@ -28,7 +28,8 @@ const STAT_CONFIG = {
   teal: { bg: 'bg-teal-50', text: 'text-teal-500', border: 'border-teal-100' },
 }
 
-export default function GoogleAdsReports({ reports, loading, onRefresh }) {
+export default function GoogleAdsReports({ store, reports, loading, onRefresh }) {
+  const currencyCode = store?.googleAdsCurrency || 'USD'
   const [dateRange, setDateRange] = useState('30d')
   const summary = reports?.summary || {}
   const campaigns = reports?.campaigns || []
@@ -72,9 +73,9 @@ export default function GoogleAdsReports({ reports, loading, onRefresh }) {
               { label: 'Impressions', value: formatNumber(summary.impressions), icon: Eye, color: 'blue' },
               { label: 'Clicks', value: formatNumber(summary.clicks), icon: MousePointerClick, color: 'green' },
               { label: 'CTR', value: `${summary.ctr || 0}%`, icon: TrendingUp, color: 'purple' },
-              { label: 'Total Spend', value: formatNaira(summary.spend), icon: IndianRupee, color: 'orange' },
+              { label: 'Total Spend', value: formatCurrency(summary.spend, currencyCode), icon: DollarSign, color: 'orange' },
               { label: 'Conversions', value: String(summary.conversions || 0), icon: Target, color: 'red' },
-              { label: 'Cost/Click', value: summary.clicks > 0 ? formatNaira((summary.spend || 0) / summary.clicks) : '₦0', icon: IndianRupee, color: 'teal' },
+              { label: 'Cost/Click', value: summary.clicks > 0 ? formatCurrency((summary.spend || 0) / summary.clicks, currencyCode) : formatCurrency(0, currencyCode), icon: DollarSign, color: 'teal' },
             ].map((stat, i) => {
               const colors = STAT_CONFIG[stat.color]
               return (
@@ -120,7 +121,7 @@ export default function GoogleAdsReports({ reports, loading, onRefresh }) {
                       </div>
                       <div>
                         <p className="text-[10px] text-gray-400">Spend</p>
-                        <p className="text-xs font-semibold text-gray-900">{formatNaira(c.spendNaira)}</p>
+                        <p className="text-xs font-semibold text-gray-900">{formatCurrency(c.spendNaira, currencyCode)}</p>
                       </div>
                     </div>
                   </div>

@@ -29,6 +29,7 @@ import Pricing from './pages/Pricing'
 import LiveStoresPage from './pages/LiveStoresPage'
 import OfferNameLab from './pages/OfferNameLab'
 import PolicyGenerator from './pages/PolicyGenerator'
+import ReportStore from './pages/ReportStore'
 
 
 export default function App() {
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/pricing"        element={<Pricing />} />
           <Route path="/tools/offer-name-lab" element={<OfferNameLab />} />
           <Route path="/tools/policy-generator" element={<PolicyGenerator />} />
+          <Route path="/report-store" element={<ReportStore />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/live-stores" element={<LiveStoresPage />} />

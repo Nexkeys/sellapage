@@ -60,7 +60,7 @@ export default async function handler(req, res) {
         accounts.push({
           id: customerId,
           name: info?.descriptiveName || customerId,
-          currency: info?.currencyCode || 'NGN',
+          currency: info?.currencyCode || 'USD',
           timezone: info?.timeZone || 'Africa/Lagos',
         })
       } catch {

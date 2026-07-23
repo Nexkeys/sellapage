@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3,
-  Wallet, Menu, X, ExternalLink, CircleDot
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 
@@ -21,6 +21,7 @@ const ADMIN_TABS = [
   { id: 'analytics', label: 'Analytics', icon: BarChart3, short: 'Analytics' },
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
   { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
+  { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
@@ -30,7 +31,7 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
-  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai'] },
+  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports'] },
   { label: 'Team', ids: ['admins'] },
 ];
 
@@ -121,6 +122,16 @@ export default function Admin() {
   const [sellaData, setSellaData] = useState(null);
   const [sellaLoading, setSellaLoading] = useState(false);
   const [sellaError, setSellaError] = useState('');
+
+  const [reportsData, setReportsData] = useState(null);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState('');
+  const [reportsStatusFilter, setReportsStatusFilter] = useState('all');
+  const [reportsOffenseFilter, setReportsOffenseFilter] = useState('all');
+  const [reportsPage, setReportsPage] = useState(1);
+  const [expandedReport, setExpandedReport] = useState(null);
+  const [reportNotes, setReportNotes] = useState('');
+  const [updatingReport, setUpdatingReport] = useState(null);
 
   const fetchHealth = useCallback(async () => {
     setHealthLoading(true); setHealthError('');
@@ -315,6 +326,27 @@ export default function Admin() {
     } catch { setSellaError('Failed to load Sella AI usage.'); } finally { setSellaLoading(false); }
   }, []);
 
+  const fetchReports = useCallback(async (p = 1, status = 'all', offense = 'all') => {
+    setReportsLoading(true); setReportsError('');
+    try {
+      const r = await fetch(`/api/admin-reports?action=list&page=${p}&limit=20&status=${status}&offense=${offense}`, { headers: H });
+      if (!r.ok) throw new Error('Failed');
+      setReportsData(await r.json());
+    } catch { setReportsError('Failed to load reports.'); } finally { setReportsLoading(false); }
+  }, []);
+
+  const updateReportStatus = useCallback(async (reportId, status, adminNotes = '') => {
+    setUpdatingReport(reportId);
+    try {
+      await fetch('/api/admin-reports?action=update', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        body: JSON.stringify({ reportId, status, adminNotes }),
+      });
+      fetchReports(reportsPage, reportsStatusFilter, reportsOffenseFilter);
+      setExpandedReport(null);
+    } finally { setUpdatingReport(null); }
+  }, [reportsPage, reportsStatusFilter, reportsOffenseFilter, fetchReports]);
+
   useEffect(() => {
     if (!user) { setRoleLoading(false); return; }
     getAdminRole(user.uid).then(role => {
@@ -338,6 +370,7 @@ export default function Admin() {
       analytics: () => fetchAnalytics(),
       revenue: () => fetchRevenue(),
       'sella-ai': () => fetchSella(),
+      reports: () => fetchReports(reportsPage, reportsStatusFilter, reportsOffenseFilter),
     };
     m[activeTab]?.();
   }, [user, activeTab, adminRole]);
@@ -590,6 +623,58 @@ export default function Admin() {
               <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50 bg-gray-50/80"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2 text-right">Today</th><th className="px-4 py-2 text-right">Left Today</th><th className="px-4 py-2 text-right">All-Time</th></tr></thead><tbody className="divide-y divide-gray-50">{sellaData.stores.map((s,i)=><tr key={s.storeId} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[160px]">{s.businessName}</p><p className="text-[9px] text-gray-400 font-mono truncate max-w-[160px]">{s.storeId}</p></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.today}</td><td className="px-4 py-2 text-right"><span className={`font-bold ${s.remainingToday<=5?'text-red-600':s.remainingToday<=15?'text-amber-600':'text-green-600'}`}>{s.remainingToday}</span></td><td className="px-4 py-2 text-right text-gray-600">{s.allTime.toLocaleString()}</td></tr>)}</tbody></table></div>}
             </div>
           </>}
+        </div>}
+
+        {/* STORE REPORTS */}
+        {activeTab === 'reports' && <div className="space-y-4 animate-in fade-in duration-200">
+          {reportsError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{reportsError}</div>}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><h2 className="font-bold text-gray-800">Store Reports</h2><div className="flex gap-1.5 overflow-x-auto pb-1">{['all','pending','reviewed','resolved','dismissed'].map(f=><button key={f} onClick={()=>{setReportsStatusFilter(f);setReportsPage(1);fetchReports(1,f,reportsOffenseFilter);}} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${reportsStatusFilter===f?'bg-gray-900 text-white':'bg-gray-100 text-gray-600'}`}>{f[0].toUpperCase()+f.slice(1)}</button>)}</div></div>
+          {reportsData?.stats&&<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">{[
+            {l:'Total',v:reportsData.stats.total,c:'text-gray-900'},
+            {l:'Pending',v:reportsData.stats.pending,c:'text-amber-600'},
+            {l:'Reviewed',v:reportsData.stats.reviewed,c:'text-blue-600'},
+            {l:'Resolved',v:reportsData.stats.resolved,c:'text-green-600'},
+            {l:'Scam',v:reportsData.stats.scam,c:'text-red-600'},
+            {l:'Non-Delivery',v:reportsData.stats.non_delivery,c:'text-orange-600'},
+          ].map(s=><div key={s.l} className="bg-white rounded-lg border border-gray-100 p-2.5 text-center"><p className="text-[9px] text-gray-400 font-bold uppercase">{s.l}</p><p className={`text-lg font-black mt-0.5 ${s.c}`}>{s.value||s.v}</p></div>)}</div>}
+          <div className="flex gap-1.5 overflow-x-auto pb-1">{[{v:'all',l:'All Types'},{v:'scam',l:'Scam'},{v:'fake_products',l:'Fake Products'},{v:'non_delivery',l:'Non-Delivery'},{v:'identity_theft',l:'Identity Theft'},{v:'counterfeit',l:'Counterfeit'},{v:'other',l:'Other'}].map(f=><button key={f.v} onClick={()=>{setReportsOffenseFilter(f.v);setReportsPage(1);fetchReports(1,reportsStatusFilter,f.v);}} className={`px-2 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap ${reportsOffenseFilter===f.v?'bg-green-600 text-white':'bg-gray-100 text-gray-600'}`}>{f.l}</button>)}</div>
+          {reportsLoading?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+            <div className="divide-y divide-gray-50">{(reportsData?.reports||[]).length===0?<div className="p-6 text-center text-gray-400 text-sm">No reports found.</div>:reportsData.reports.map(r=><div key={r.id} className="px-4 py-3 hover:bg-gray-50/50">
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{r.storeUrl}</p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
+                    <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border ${r.offenseType==='scam'?'bg-red-50 text-red-600 border-red-200':r.offenseType==='fake_products'?'bg-amber-50 text-amber-600 border-amber-200':r.offenseType==='non_delivery'?'bg-orange-50 text-orange-600 border-orange-200':r.offenseType==='identity_theft'?'bg-purple-50 text-purple-600 border-purple-200':r.offenseType==='counterfeit'?'bg-pink-50 text-pink-600 border-pink-200':'bg-gray-100 text-gray-600 border-gray-200'}`}>{r.offenseType.replace(/_/g,' ')}</span>
+                    <span className="text-[10px] font-bold text-gray-500">by {r.reporterName}</span>
+                    <span className="text-[10px] text-gray-400">via {r.whereMet?.replace(/_/g,' ')}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${r.status==='pending'?'bg-amber-50 text-amber-600 border-amber-200':r.status==='reviewed'?'bg-blue-50 text-blue-600 border-blue-200':r.status==='resolved'?'bg-green-50 text-green-600 border-green-200':'bg-gray-100 text-gray-500 border-gray-200'}`}>{r.status}</span>
+                  <button onClick={()=>{setExpandedReport(expandedReport===r.id?null:r.id);setReportNotes(r.adminNotes||'');}} className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-lg hover:bg-gray-200">{expandedReport===r.id?'Close':'View'}</button>
+                </div>
+              </div>
+              <p className="text-[9px] text-gray-400">{r.createdAt?new Date(r.createdAt).toLocaleString('en-NG'):''}</p>
+              {expandedReport===r.id&&<div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div><span className="font-bold text-gray-500">Reporter:</span> <span className="text-gray-900">{r.reporterName}</span></div>
+                  <div><span className="font-bold text-gray-500">Email:</span> <span className="text-gray-900">{r.reporterEmail}</span></div>
+                  <div><span className="font-bold text-gray-500">Phone:</span> <span className="text-gray-900">{r.reporterPhone}</span></div>
+                  <div><span className="font-bold text-gray-500">Met via:</span> <span className="text-gray-900 capitalize">{r.whereMet?.replace(/_/g,' ')}</span></div>
+                </div>
+                <div><span className="text-[10px] font-bold text-gray-500 uppercase">Description</span><p className="text-xs text-gray-700 mt-0.5 whitespace-pre-wrap">{r.description}</p></div>
+                {r.screenshotUrls?.length>0&&<div><span className="text-[10px] font-bold text-gray-500 uppercase mb-1.5 block">Screenshots</span><div className="flex gap-2 flex-wrap">{r.screenshotUrls.map((url,i)=><a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-gray-200 hover:border-green-400 transition-colors"><img src={url} alt={`Proof ${i+1}`} className="w-full h-full object-cover" /></a>)}</div></div>}
+                <div><label className="text-[10px] font-bold text-gray-500 uppercase">Admin Notes</label><textarea value={reportNotes} onChange={e=>setReportNotes(e.target.value)} placeholder="Add notes about this report..." rows={2} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 resize-none" /></div>
+                <div className="flex flex-wrap gap-2">{[
+                  {s:'reviewed',l:'Mark Reviewed',c:'bg-blue-600 hover:bg-blue-700 text-white'},
+                  {s:'resolved',l:'Mark Resolved',c:'bg-green-600 hover:bg-green-700 text-white'},
+                  {s:'dismissed',l:'Dismiss',c:'bg-gray-200 hover:bg-gray-300 text-gray-700'},
+                  {s:'pending',l:'Reopen',c:'bg-amber-100 hover:bg-amber-200 text-amber-700'},
+                ].map(b=><button key={b.s} onClick={()=>updateReportStatus(r.id,b.s,reportNotes)} disabled={updatingReport===r.id} className={`text-[10px] font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 ${b.c}`}>{updatingReport===r.id?'...':b.l}</button>)}</div>
+              </div>}
+            </div>)}</div>
+            {reportsData?.total>20&&<div className="bg-gray-50/80 px-3 py-2 border-t border-gray-100 flex items-center justify-between"><button onClick={()=>{const p=Math.max(1,reportsPage-1);setReportsPage(p);fetchReports(p,reportsStatusFilter,reportsOffenseFilter);}} disabled={reportsPage===1} className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50"><ChevronLeft size={12} /> Prev</button><span className="text-[10px] font-semibold text-gray-500">{reportsPage}/{Math.ceil(reportsData.total/20)}</span><button onClick={()=>{const p=reportsPage+1;setReportsPage(p);fetchReports(p,reportsStatusFilter,reportsOffenseFilter);}} disabled={reportsPage*20>=reportsData.total} className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50">Next <ChevronRight size={12} /></button></div>}
+          </div>}
         </div>}
 
         {/* TEAM */}

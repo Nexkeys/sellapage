@@ -9,13 +9,13 @@ import {
   Loader2,
   Eye,
   MousePointerClick,
-  IndianRupee,
+  DollarSign,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
 
-function formatNaira(amount) {
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount || 0)
+function formatCurrency(amount, currencyCode) {
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode || 'USD', minimumFractionDigits: 0 }).format(amount || 0)
 }
 
 const TYPE_CONFIG = {
@@ -33,6 +33,7 @@ const STATUS_STYLES = {
 }
 
 export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onError, onSuccess }) {
+  const currencyCode = store?.googleAdsCurrency || 'USD'
   const [showCreate, setShowCreate] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
@@ -130,7 +131,7 @@ export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onE
                     <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${typeInfo.bg} ${typeInfo.text} ${typeInfo.border} border`}>
                       {typeInfo.label}
                     </span>
-                    <span>Budget: {formatNaira(campaign.budgetAmount)}/{campaign.budgetType === 'daily' ? 'day' : 'total'}</span>
+                    <span>Budget: {formatCurrency(campaign.budgetAmount, currencyCode)}/{campaign.budgetType === 'daily' ? 'day' : 'total'}</span>
                   </div>
                 </div>
 
@@ -172,8 +173,8 @@ export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onE
                   <span className="text-[11px] text-gray-500">{campaign.clicks || 0}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <IndianRupee size={11} className="text-gray-400" />
-                  <span className="text-[11px] text-gray-500">{formatNaira(campaign.spendToDate)}</span>
+                  <DollarSign size={11} className="text-gray-400" />
+                  <span className="text-[11px] text-gray-500">{formatCurrency(campaign.spendToDate, currencyCode)}</span>
                 </div>
               </div>
             </div>

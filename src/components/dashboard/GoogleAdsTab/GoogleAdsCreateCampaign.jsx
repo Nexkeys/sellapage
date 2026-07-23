@@ -2,6 +2,11 @@ import { useState } from 'react'
 import { auth } from '../../../firebase/config'
 import { ArrowLeft, Loader2, Target, Eye, ShoppingCart, Zap } from 'lucide-react'
 
+function getCurrencySymbol(currencyCode) {
+  const parts = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode || 'USD' }).formatToParts(0)
+  return parts.find((p) => p.type === 'currency')?.value || '$'
+}
+
 const CAMPAIGN_TYPES = [
   { id: 'SEARCH', label: 'Search', desc: 'Text ads on Google search results', icon: Target, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', activeBg: 'bg-blue-50', activeBorder: 'border-blue-400' },
   { id: 'DISPLAY', label: 'Display', desc: 'Visual ads across Google websites', icon: Eye, bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200', activeBg: 'bg-purple-50', activeBorder: 'border-purple-400' },
@@ -10,6 +15,7 @@ const CAMPAIGN_TYPES = [
 ]
 
 export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onError }) {
+  const currencySymbol = getCurrencySymbol(store?.googleAdsCurrency)
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
@@ -60,6 +66,7 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      if (data.warning) onError(data.warning)
 
       onCreated({
         id: data.campaignId,
@@ -169,7 +176,7 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
               </div>
             </div>
             <div>
-              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Budget Amount (₦)</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Budget Amount ({currencySymbol})</label>
               <input
                 type="number"
                 value={form.budgetAmount}
@@ -204,6 +211,11 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
       {step === 3 && form.type === 'SEARCH' && (
         <div className="space-y-3">
           <h4 className="text-xs font-semibold text-gray-900">Keywords & Ad Copy</h4>
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+            <p className="text-[11px] text-amber-700">
+              Fill in at least 3 headlines, 2 descriptions, and your final URL below — Google requires an ad group and an ad before a campaign can serve. Without these, the campaign is created but won't run until you finish setup directly in Google Ads.
+            </p>
+          </div>
           <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
             <div>
               <label className="text-[11px] text-gray-500 font-medium mb-1 block">Keywords (one per line)</label>
@@ -277,7 +289,7 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Budget</span>
-              <span className="font-medium text-gray-900">₦{Number(form.budgetAmount).toLocaleString()}/{form.budgetType === 'daily' ? 'day' : 'total'}</span>
+              <span className="font-medium text-gray-900">{currencySymbol}{Number(form.budgetAmount).toLocaleString()}/{form.budgetType === 'daily' ? 'day' : 'total'}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Final URL</span>

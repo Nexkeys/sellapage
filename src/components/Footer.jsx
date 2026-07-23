@@ -96,6 +96,7 @@ export default function Footer() {
                 { label: 'Privacy Policy', to: '/privacy-policy' },
                 { label: 'Terms of Service', to: '/terms' },
                 { label: 'Contact Us', to: '/contact' },
+                { label: 'Report Store', to: '/report-store' },
               ].map(item => (
                 <li key={item.label}>
                   <Link to={item.to} className="text-gray-500 hover:text-gray-200 text-xs transition-colors">

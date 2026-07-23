@@ -9,6 +9,9 @@ import {
   updateCampaignStatus,
   listCampaigns,
   resolveCustomerId,
+  createAdGroup,
+  createResponsiveSearchAd,
+  addKeywords,
 } from './_lib/google-ads-client.js'
 
 if (!getApps().length) {
@@ -117,7 +120,7 @@ export default async function handler(req, res) {
           id: firestore.id || api.id,
           budgetAmount: firestore.budgetAmount || api.budgetAmount,
           spendToDate: firestore.spendToDate || 0,
-          currency: firestore.currency || storeDoc.data().googleAdsCurrency || 'NGN',
+          currency: firestore.currency || storeDoc.data().googleAdsCurrency || 'USD',
           impressions: firestore.impressions || 0,
           clicks: firestore.clicks || 0,
           ctr: firestore.ctr || 0,
@@ -174,18 +177,53 @@ export default async function handler(req, res) {
 
       const providerCampaignId = campaignResourceName.split('/').pop()
 
+      // A campaign with no ad group/ad/keywords can never serve — Google requires all three.
+      // Best-effort: campaign + budget already exist by this point, so a failure here shouldn't
+      // undo them. Surface it as a warning so the vendor knows to finish setup themselves.
+      let adGroupResourceName = null
+      let adSetupWarning = null
+      const hasSearchAdCopy = targeting?.headlines?.length >= 3 && targeting?.descriptions?.length >= 2 && targeting?.finalUrl
+      if (channelType === 'SEARCH' && hasSearchAdCopy) {
+        try {
+          adGroupResourceName = await createAdGroup(accessToken, customerId, {
+            campaignResourceName,
+            name: `${name} Ad Group`,
+          })
+          if (adGroupResourceName) {
+            await createResponsiveSearchAd(accessToken, customerId, {
+              adGroupResourceName,
+              headlines: targeting.headlines,
+              descriptions: targeting.descriptions,
+              finalUrl: targeting.finalUrl,
+            })
+            if (targeting.keywords?.length > 0) {
+              await addKeywords(accessToken, customerId, {
+                adGroupResourceName,
+                keywords: targeting.keywords,
+              })
+            }
+          }
+        } catch (adErr) {
+          console.warn('[google-ads-campaigns] Ad group/ad/keyword creation failed (non-fatal):', adErr.message)
+          adSetupWarning = `Campaign created, but ad setup failed: ${adErr.message}. Finish adding your ad group, ad, and keywords directly in Google Ads.`
+        }
+      } else if (channelType === 'SEARCH') {
+        adSetupWarning = 'Campaign created with no ad group yet — add at least 3 headlines, 2 descriptions, and a final URL, or finish setup directly in Google Ads, before it can serve.'
+      }
+
       const docRef = await db.collection('googleAdsCampaigns').add({
         storeId,
         providerCampaignId,
         campaignResourceName,
         budgetResourceName,
+        adGroupResourceName,
         name,
         type: channelType,
         status: 'PAUSED',
         budgetType: budgetType || 'daily',
         budgetAmount: Number(budgetAmount),
         spendToDate: 0,
-        currency: storeDoc.data().googleAdsCurrency || 'NGN',
+        currency: storeDoc.data().googleAdsCurrency || 'USD',
         impressions: 0,
         clicks: 0,
         ctr: 0,
@@ -202,6 +240,7 @@ export default async function handler(req, res) {
         providerCampaignId,
         name,
         status: 'PAUSED',
+        ...(adSetupWarning ? { warning: adSetupWarning } : {}),
       })
     }
 

@@ -277,6 +277,15 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "submit-report": {
+        const { default: handler } = await import("../src/api-handlers/submit-report.js")
+        return handler(req, res)
+      }
+      case "admin-reports": {
+        const { default: handler } = await import("../src/api-handlers/admin-reports.js")
+        return handler(req, res)
+      }
+
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
     }
