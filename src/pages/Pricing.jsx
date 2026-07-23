@@ -1,5 +1,5 @@
 //src/pages/Pricing.jsx/
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ArrowRight, X, HelpCircle, TrendingDown } from 'lucide-react'
 import Navbar from '../components/Navbar'
@@ -194,23 +194,164 @@ const FAQS = [
   },
 ]
 
+function PlanCard({ plan, selectedPeriod, user, navigate }) {
+  const isStarter = plan.id === 'starter'
+  const price = isStarter ? null : PLAN_PRICES[plan.id]?.[selectedPeriod]
+  const monthlyEquiv = isStarter ? null : getMonthlyEquivalent(plan.id, selectedPeriod)
+  const periodObj = isStarter ? null : PLAN_PERIODS.find(p => p.id === selectedPeriod)
+
+  return (
+    <div className={`rounded-3xl border p-5 sm:p-6 md:p-8 flex flex-col transition-all min-w-[85vw] sm:min-w-0 snap-start shrink-0 ${
+      plan.popular 
+        ? 'border-brand-500 shadow-2xl shadow-brand-100/60 relative' 
+        : 'border-gray-200 shadow-sm hover:shadow-lg'
+    }`}>
+      {plan.popular && (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-500 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1 sm:px-4 sm:py-1.5 rounded-full">
+          Most Popular
+        </div>
+      )}
+      <h3 className="font-display text-xl sm:text-2xl font-bold text-gray-900 mb-1.5 sm:mb-2">{plan.name}</h3>
+      <p className="text-gray-500 text-xs sm:text-sm mb-4 sm:mb-6 leading-relaxed">{plan.description}</p>
+      <div className="mb-4 sm:mb-6">
+        {isStarter ? (
+          <span className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">Free</span>
+        ) : (
+          <>
+            <span className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">{formatPrice(price)}</span>
+            <span className="text-gray-500 text-xs sm:text-sm font-medium ml-1">/{periodObj?.shortLabel}</span>
+            {selectedPeriod !== 'monthly' && (
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                {formatPrice(monthlyEquiv)}/mo equivalent
+              </p>
+            )}
+          </>
+        )}
+      </div>
+      <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 flex-1" role="list">
+        {plan.features.map((feat, i) => (
+          <li key={i} className="flex items-start gap-2.5 sm:gap-3 text-xs sm:text-sm text-gray-600">
+            <Check size={14} className="text-brand-500 flex-shrink-0 mt-0.5 sm:hidden" />
+            <Check size={16} className="text-brand-500 flex-shrink-0 mt-0.5 hidden sm:block" />
+            <span>{feat}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        onClick={() => navigate(plan.contactOnly ? '/contact' : user ? '/dashboard' : '/login')}
+        className={`w-full py-3 sm:py-4 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+          plan.popular
+            ? 'bg-brand-600 text-white hover:bg-brand-700 shadow-lg shadow-brand-200/50'
+            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+        }`}
+      >
+        {plan.cta}
+        <ArrowRight size={14} className="sm:hidden" />
+        <ArrowRight size={16} className="hidden sm:block" />
+      </button>
+    </div>
+  )
+}
+
+function ComparisonCard({ section }) {
+  const renderValue = (val) => {
+    if (typeof val === 'boolean') {
+      return val 
+        ? <Check size={13} className="mx-auto text-brand-500" />
+        : <X size={13} className="mx-auto text-gray-300" />
+    }
+    return <span className="text-gray-600 text-[10px] leading-tight">{val}</span>
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 min-w-[92vw] sm:min-w-[46vw] snap-start shrink-0 overflow-hidden">
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+        <h3 className="font-display font-bold text-gray-900 text-sm">{section.category}</h3>
+      </div>
+      <div className="p-3">
+        <table className="w-full" role="table">
+          <thead>
+            <tr className="border-b border-gray-100">
+              <th className="text-left pb-2 font-medium text-gray-500 text-[10px] w-[34%]">Feature</th>
+              <th className="text-center pb-2 font-medium text-gray-500 text-[10px]">Start</th>
+              <th className="text-center pb-2 font-medium text-brand-600 text-[10px]">Grow</th>
+              <th className="text-center pb-2 font-medium text-gray-900 text-[10px]">Pro</th>
+              <th className="text-center pb-2 font-medium text-gray-900 text-[10px]">Prem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {section.items.map((item, itemIndex) => (
+              <tr key={itemIndex} className={`border-b border-gray-50 last:border-0 ${itemIndex % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
+                <td className="py-2 text-gray-700 font-medium text-[11px] pr-1 leading-tight">{item.label}</td>
+                <td className="text-center py-2">{renderValue(item.starter)}</td>
+                <td className="text-center py-2">{renderValue(item.growth)}</td>
+                <td className="text-center py-2">{renderValue(item.pro)}</td>
+                <td className="text-center py-2">{renderValue(item.premium)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 export default function Pricing() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [selectedPeriod, setSelectedPeriod] = useState('monthly')
+  const [activeCard, setActiveCard] = useState(0)
+  const [activeCompCard, setActiveCompCard] = useState(0)
+  const cardRef = useRef(null)
+  const compRef = useRef(null)
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const onScroll = () => {
+      const first = el.firstElementChild
+      if (!first) return
+      const w = first.offsetWidth + 16
+      setActiveCard(Math.round(el.scrollLeft / w))
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const el = compRef.current
+    if (!el) return
+    const onScroll = () => {
+      const first = el.firstElementChild
+      if (!first) return
+      const w = first.offsetWidth + 16
+      setActiveCompCard(Math.round(el.scrollLeft / w))
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const scrollToCard = (idx, ref) => {
+    const el = ref.current
+    if (!el || !el.firstElementChild) return
+    const w = el.firstElementChild.offsetWidth + 16
+    el.scrollTo({ left: w * idx, behavior: 'smooth' })
+  }
+
+  const periodObj = PLAN_PERIODS.find(p => p.id === selectedPeriod)
 
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-brand-50 via-white to-emerald-50 pt-28 pb-16 px-4">
+      <section className="bg-gradient-to-br from-brand-50 via-white to-emerald-50 pt-24 pb-8 px-4 sm:pt-28 sm:pb-16">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Pricing</span>
-          <h1 className="font-display text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 block sm:mb-3">Pricing</span>
+          <h1 className="font-display text-[28px] sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-3 sm:mb-5">
             Start free. Upgrade when you're ready.
           </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-gray-500 text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed">
             Simple, transparent pricing built for Nigerians.
             Manage your store, customers, payments, orders and growth tools from one live workspace.
           </p>
@@ -218,9 +359,9 @@ export default function Pricing() {
       </section>
 
       {/* Period Toggle */}
-      <section className="py-8 px-4 bg-white">
+      <section className="py-4 sm:py-8 px-4 bg-white sticky top-0 z-10 border-b border-gray-100 sm:border-0 sm:static">
         <div className="max-w-7xl mx-auto flex justify-center">
-          <div className="inline-flex items-center gap-1 bg-gray-100 p-1 rounded-2xl">
+          <div className="inline-flex items-center gap-0.5 sm:gap-1 bg-gray-100 p-1 rounded-2xl overflow-x-auto no-scrollbar">
             {PLAN_PERIODS.map(period => {
               const isActive = selectedPeriod === period.id
               const savings = getSavingsPercent('growth', period.id)
@@ -228,7 +369,7 @@ export default function Pricing() {
                 <button
                   key={period.id}
                   onClick={() => setSelectedPeriod(period.id)}
-                  className={`relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  className={`relative px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${
                     isActive
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
@@ -236,8 +377,9 @@ export default function Pricing() {
                 >
                   {period.label}
                   {savings > 0 && (
-                    <span className="absolute -top-2 -right-3 bg-brand-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                      <TrendingDown size={9} />
+                    <span className="absolute -top-2 -right-2 sm:-top-2.5 sm:-right-3 bg-brand-500 text-white text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                      <TrendingDown size={8} className="sm:hidden" />
+                      <TrendingDown size={9} className="hidden sm:block" />
                       {savings}%
                     </span>
                   )}
@@ -249,128 +391,119 @@ export default function Pricing() {
       </section>
 
       {/* Plan Cards */}
-      <section className="py-16 px-4 bg-white">
-        <div className="max-w-7xl mx-auto grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          {PLANS.map((planItem) => {
-            const isStarter = planItem.id === 'starter'
-            const price = isStarter ? null : PLAN_PRICES[planItem.id]?.[selectedPeriod]
-            const monthlyEquiv = isStarter ? null : getMonthlyEquivalent(planItem.id, selectedPeriod)
-            const periodObj = isStarter ? null : PLAN_PERIODS.find(p => p.id === selectedPeriod)
+      <section className="py-8 sm:py-16 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          {/* Mobile Carousel */}
+          <div
+            ref={cardRef}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 sm:hidden no-scrollbar"
+          >
+            {PLANS.map(p => (
+              <PlanCard key={p.id} plan={p} selectedPeriod={selectedPeriod} user={user} navigate={navigate} />
+            ))}
+          </div>
 
-            return (
-              <div key={planItem.id} className={`rounded-3xl border p-8 flex flex-col transition-all hover:-translate-y-1 ${planItem.popular ? 'border-brand-500 shadow-2xl shadow-brand-100/60 relative' : 'border-gray-200 shadow-sm hover:shadow-lg'}`}>
-                {planItem.popular && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full">
-                    Most Popular
-                  </div>
-                )}
-                <h3 className="font-display text-2xl font-bold text-gray-900 mb-2">{planItem.name}</h3>
-                <p className="text-gray-500 text-sm mb-6">{planItem.description}</p>
-                <div className="mb-6">
-                  {isStarter ? (
-                    <span className="font-display text-4xl font-extrabold text-gray-900">Free</span>
-                  ) : (
-                    <>
-                      <span className="font-display text-4xl font-extrabold text-gray-900">{formatPrice(price)}</span>
-                      <span className="text-gray-500 text-sm font-medium ml-1">/{periodObj?.shortLabel}</span>
-                      {selectedPeriod !== 'monthly' && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          {formatPrice(monthlyEquiv)}/mo equivalent
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                <ul className="space-y-3 mb-8 flex-1" role="list">
-                  {planItem.features.map((feat, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
-                      <Check size={16} className="text-brand-500 flex-shrink-0 mt-0.5" />
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => navigate(planItem.contactOnly ? '/contact' : user ? '/dashboard' : '/login')}
-                  className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                    planItem.popular
-                      ? 'bg-brand-600 text-white hover:bg-brand-700 shadow-lg shadow-brand-200/50'
-                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {planItem.cta}
-                  <ArrowRight size={16} />
-                </button>
-              </div>
-            )
-          })}
+          {/* Mobile Dots */}
+          <div className="flex justify-center gap-2 mt-4 sm:hidden">
+            {PLANS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => scrollToCard(i, cardRef)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  activeCard === i ? 'bg-brand-500 w-6' : 'bg-gray-300 w-2'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Tablet 2-col */}
+          <div className="hidden sm:grid sm:grid-cols-2 lg:hidden gap-6">
+            {PLANS.map(p => (
+              <PlanCard key={p.id} plan={p} selectedPeriod={selectedPeriod} user={user} navigate={navigate} />
+            ))}
+          </div>
+
+          {/* Desktop 4-col */}
+          <div className="hidden lg:grid lg:grid-cols-4 gap-6">
+            {PLANS.map(p => (
+              <PlanCard key={p.id} plan={p} selectedPeriod={selectedPeriod} user={user} navigate={navigate} />
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Comparison Table */}
-      <section className="py-16 px-4 bg-gray-50">
+      {/* Comparison */}
+      <section className="py-8 sm:py-16 px-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Detailed Comparison</span>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+          <div className="text-center mb-6 sm:mb-12">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 block sm:mb-3">Detailed Comparison</span>
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 sm:mb-4">
               See every feature side by side
             </h2>
-            <p className="text-gray-500 text-base max-w-2xl mx-auto">
+            <p className="text-gray-500 text-xs sm:text-base max-w-2xl mx-auto">
               Compare all capabilities across plans. Starter is free forever. Growth, Pro, and Premium unlock the full commerce workspace progressively.
             </p>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Carousel */}
+          <div
+            ref={compRef}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 sm:hidden no-scrollbar"
+          >
+            {COMPARISON_ROWS.map((section, i) => (
+              <ComparisonCard key={i} section={section} />
+            ))}
+          </div>
+
+          {/* Mobile Dots */}
+          <div className="flex justify-center gap-2 mt-4 sm:hidden">
+            {COMPARISON_ROWS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => scrollToCard(i, compRef)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  activeCompCard === i ? 'bg-brand-500 w-6' : 'bg-gray-300 w-2'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden sm:block">
             {COMPARISON_ROWS.map((section, sectionIndex) => (
               <div key={sectionIndex} className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
                 <div className="bg-gray-50 px-6 py-3 border-b border-gray-100">
                   <h3 className="font-display font-bold text-gray-900 text-sm">{section.category}</h3>
                 </div>
-                <table className="w-full text-sm" role="table">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="text-left px-6 py-3 font-medium text-gray-500 w-72">Feature</th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-500">Starter<br /><span className="text-xs font-normal text-gray-400">Free</span></th>
-                      <th className="text-center px-4 py-3 font-medium text-brand-600">Growth<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.growth[selectedPeriod])}/{PLAN_PERIODS.find(p => p.id === selectedPeriod)?.shortLabel}</span></th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-900">Pro<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.pro[selectedPeriod])}/{PLAN_PERIODS.find(p => p.id === selectedPeriod)?.shortLabel}</span></th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-900">Premium<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.premium[selectedPeriod])}/{PLAN_PERIODS.find(p => p.id === selectedPeriod)?.shortLabel}</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {section.items.map((item, itemIndex) => (
-                      <tr key={itemIndex} className={`border-b border-gray-100 last:border-0 ${itemIndex % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
-                        <td className="px-6 py-3 text-gray-700 font-medium">{item.label}</td>
-                        <td className="text-center px-4 py-3">
-                          {typeof item.starter === 'boolean' ? (
-                            item.starter ? <Check size={18} className="mx-auto text-brand-500" /> : <X size={18} className="mx-auto text-gray-300" />
-                          ) : (
-                            <span className="text-gray-600">{item.starter}</span>
-                          )}
-                        </td>
-                        <td className="text-center px-4 py-3">
-                          {typeof item.growth === 'boolean' ? (
-                            item.growth ? <Check size={18} className="mx-auto text-brand-500" /> : <X size={18} className="mx-auto text-gray-300" />
-                          ) : (
-                            <span className="text-gray-600">{item.growth}</span>
-                          )}
-                        </td>
-                        <td className="text-center px-4 py-3">
-                          {typeof item.pro === 'boolean' ? (
-                            item.pro ? <Check size={18} className="mx-auto text-brand-500" /> : <X size={18} className="mx-auto text-gray-300" />
-                          ) : (
-                            <span className="text-gray-600">{item.pro}</span>
-                          )}
-                        </td>
-                        <td className="text-center px-4 py-3">
-                          {typeof item.premium === 'boolean' ? (
-                            item.premium ? <Check size={18} className="mx-auto text-brand-500" /> : <X size={18} className="mx-auto text-gray-300" />
-                          ) : (
-                            <span className="text-gray-600">{item.premium}</span>
-                          )}
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" role="table">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="text-left px-6 py-3 font-medium text-gray-500 min-w-[160px]">Feature</th>
+                        <th className="text-center px-3 py-3 font-medium text-gray-500 min-w-[80px]">Starter<br /><span className="text-xs font-normal text-gray-400">Free</span></th>
+                        <th className="text-center px-3 py-3 font-medium text-brand-600 min-w-[80px]">Growth<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.growth[selectedPeriod])}/{periodObj?.shortLabel}</span></th>
+                        <th className="text-center px-3 py-3 font-medium text-gray-900 min-w-[80px]">Pro<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.pro[selectedPeriod])}/{periodObj?.shortLabel}</span></th>
+                        <th className="text-center px-3 py-3 font-medium text-gray-900 min-w-[80px]">Premium<br /><span className="text-xs font-normal text-gray-400">{formatPrice(PLAN_PRICES.premium[selectedPeriod])}/{periodObj?.shortLabel}</span></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {section.items.map((item, itemIndex) => (
+                        <tr key={itemIndex} className={`border-b border-gray-100 last:border-0 ${itemIndex % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
+                          <td className="px-6 py-3 text-gray-700 font-medium">{item.label}</td>
+                          {['starter', 'growth', 'pro', 'premium'].map(key => (
+                            <td key={key} className="text-center px-3 py-3">
+                              {typeof item[key] === 'boolean' ? (
+                                item[key] ? <Check size={18} className="mx-auto text-brand-500" /> : <X size={18} className="mx-auto text-gray-300" />
+                              ) : (
+                                <span className="text-gray-600">{item[key]}</span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ))}
           </div>
@@ -378,23 +511,23 @@ export default function Pricing() {
       </section>
 
       {/* FAQ */}
-      <section className="py-16 px-4 bg-white">
+      <section className="py-10 sm:py-16 px-4 bg-white">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">FAQ</span>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
+          <div className="text-center mb-8 sm:mb-12">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 block sm:mb-3">FAQ</span>
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900">
               Pricing Questions
             </h2>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {FAQS.map((faq, i) => (
               <details key={i} className="group border border-gray-100 rounded-2xl bg-white shadow-sm shadow-gray-100/60">
-                <summary className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer list-none hover:bg-gray-50 transition-colors">
-                  <span className="font-display font-semibold text-gray-900 text-sm">{faq.q}</span>
-                  <HelpCircle size={20} className="text-gray-400 flex-shrink-0 group-open:text-brand-500 transition-colors" />
+                <summary className="w-full flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 sm:py-4 text-left cursor-pointer list-none hover:bg-gray-50 transition-colors">
+                  <span className="font-display font-semibold text-gray-900 text-[13px] sm:text-sm leading-snug">{faq.q}</span>
+                  <HelpCircle size={18} className="text-gray-400 flex-shrink-0 group-open:text-brand-500 transition-colors" />
                 </summary>
-                <div className="px-5 pb-5 pt-0 border-t border-gray-100">
-                  <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
+                <div className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5 border-t border-gray-100">
+                  <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{faq.a}</p>
                 </div>
               </details>
             ))}
@@ -403,20 +536,20 @@ export default function Pricing() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 px-4 bg-brand-600">
+      <section className="py-14 sm:py-20 px-4 bg-brand-600">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-4">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-3 sm:mb-4">
             Ready to run your business from one dashboard?
           </h2>
-          <p className="text-brand-100 text-base mb-8 max-w-xl mx-auto">
+          <p className="text-brand-100 text-sm sm:text-base mb-6 sm:mb-8 max-w-xl mx-auto">
             Start free on Starter. Upgrade to Growth, Pro, or Premium when you need more power. No lock-in. Cancel anytime.
           </p>
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login')}
-            className="inline-flex items-center gap-2 bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 bg-white text-brand-600 px-6 py-3.5 sm:px-8 sm:py-4 rounded-2xl font-bold text-sm sm:text-base hover:bg-brand-50 transition-all shadow-xl hover:-translate-y-0.5"
           >
             {user ? 'Open Your Dashboard' : 'Create Free Account'}
-            <ArrowRight size={18} />
+            <ArrowRight size={16} />
           </button>
         </div>
       </section>

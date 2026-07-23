@@ -22,6 +22,7 @@ const WHERE_MET_OPTIONS = [
   { value: 'in_person', label: 'In-Person' },
   { value: 'phone', label: 'Phone Call' },
   { value: 'other', label: 'Other' },
+  { value: 'unknown', label: 'Sellapage Live Stores' },
 ]
 
 export default function ReportStore() {

@@ -405,7 +405,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                 }`}
               >
                 {themeSaved && <Check size={14} strokeWidth={2.5} />}
-                {themeSaved ? 'Branding Matrix Saved!' : 'Save Theme'}
+                {themeSaved ? 'Theme Saved!' : 'Save Theme'}
               </button>
             </div>
           </div>
