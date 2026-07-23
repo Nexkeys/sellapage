@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID
     const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
     const budgetResourceName = await createBudget(accessToken, customerId, {
-      name: `${campaignName} (Sellapage Managed)`,
+      name: `${campaignName} (Sellapage Managed) ${Date.now()}`,
       amountMicros: budgetMicros,
     }, loginCustomerId)
     campaignResourceId = await createCampaign(accessToken, customerId, {

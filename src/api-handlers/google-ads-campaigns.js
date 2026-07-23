@@ -161,7 +161,7 @@ export default async function handler(req, res) {
       const amountMicros = Math.round(Number(budgetAmount) * 1000000)
 
       const budgetResourceName = await createBudget(accessToken, customerId, {
-        name: `${name} Budget`,
+        name: `${name} Budget ${Date.now()}`,
         amountMicros,
       })
 
