@@ -2,6 +2,19 @@
 const API_VERSION = process.env.GOOGLE_ADS_API_VERSION || 'v24'
 const BASE_URL = `https://googleads.googleapis.com/${API_VERSION}`
 
+function formatGoogleAdsError(data, fallback) {
+  const errObj = Array.isArray(data) ? data[0]?.error : data?.error
+  const detail = errObj?.details?.[0]?.errors?.[0]
+  if (detail) {
+    const code = detail.errorCode ? Object.entries(detail.errorCode)[0]?.join(':') : null
+    const field = detail.location?.fieldPathElements?.map((f) => f.fieldName).join('.') || null
+    console.error('[google-ads] detailed error:', JSON.stringify(errObj))
+    return [detail.message, code && `(${code})`, field && `[field: ${field}]`].filter(Boolean).join(' ')
+  }
+  if (errObj) console.error('[google-ads] error (no detail array):', JSON.stringify(errObj))
+  return errObj?.message || fallback
+}
+
 function buildHeaders(accessToken, loginCustomerId) {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
@@ -50,7 +63,7 @@ export async function listAccessibleCustomers(accessToken) {
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to list customers')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to list customers'))
   return data.resourceNames || []
 }
 
@@ -71,9 +84,8 @@ export async function searchGoogleAds(accessToken, customerId, query, loginCusto
   const data = await res.json()
   if (!res.ok) {
     // searchStream errors come back as an array ([{ error: {...} }]); search as an object.
-    const errObj = Array.isArray(data) ? data[0]?.error : data.error
     console.error('[google-ads] search failed:', res.status, 'isArray:', Array.isArray(data), 'keys:', Array.isArray(data) ? 'array' : Object.keys(data || {}).join(','))
-    throw new Error(errObj?.message || 'Google Ads search failed')
+    throw new Error(formatGoogleAdsError(data, 'Google Ads search failed'))
   }
   // searchStream returns a top-level array of chunks: [{ results: [...] }, ...].
   // Non-streaming search returns a single object: { results: [...] }.
@@ -90,7 +102,7 @@ export async function mutateGoogleAds(accessToken, customerId, query, operations
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Google Ads mutate failed')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Google Ads mutate failed'))
   return data
 }
 
@@ -115,7 +127,7 @@ export async function createBudget(accessToken, customerId, { name, amountMicros
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to create budget')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to create budget'))
   return data.results?.[0]?.resourceName || null
 }
 
@@ -148,7 +160,7 @@ export async function createCampaign(accessToken, customerId, {
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to create campaign')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to create campaign'))
   return data.results?.[0]?.resourceName || null
 }
 
@@ -171,7 +183,7 @@ export async function updateCampaignStatus(accessToken, customerId, campaignReso
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to update campaign')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to update campaign'))
   return data
 }
 
@@ -206,7 +218,7 @@ export async function createAdGroup(accessToken, customerId, { campaignResourceN
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to create ad group')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to create ad group'))
   return data.results?.[0]?.resourceName || null
 }
 
@@ -239,7 +251,7 @@ export async function createResponsiveSearchAd(accessToken, customerId, { adGrou
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to create ad')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to create ad'))
   return data.results?.[0]?.resourceName || null
 }
 
@@ -263,6 +275,6 @@ export async function addKeywords(accessToken, customerId, { adGroupResourceName
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message || 'Failed to add keywords')
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to add keywords'))
   return data.results || []
 }
