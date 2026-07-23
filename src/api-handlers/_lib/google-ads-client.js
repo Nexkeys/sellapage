@@ -136,7 +136,7 @@ export async function createCampaign(accessToken, customerId, {
   budgetResourceName,
   status,
   advertisingChannelType,
-  campaignBidStrategy,
+  biddingStrategy,
 }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
   const campaign = {
@@ -145,10 +145,9 @@ export async function createCampaign(accessToken, customerId, {
     status: status || 'PAUSED',
     advertisingChannelType: advertisingChannelType || 'SEARCH',
     campaignBudget: budgetResourceName,
-  }
-
-  if (campaignBidStrategy) {
-    campaign.campaignBidStrategy = campaignBidStrategy
+    // Campaign.campaign_bidding_strategy is a required oneof — set via one of its member
+    // fields (manualCpc, targetSpend, etc.) directly, not a field named campaignBidStrategy.
+    ...(biddingStrategy || { manualCpc: {} }),
   }
 
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/campaigns:mutate`, {
