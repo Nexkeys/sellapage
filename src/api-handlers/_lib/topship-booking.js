@@ -455,7 +455,7 @@ export async function trackTopshipShipment(trackingId) {
   const data = await res.json()
 
   if (!res.ok) {
-    console.error('[topship-booking] track-shipment error:', data)
+    console.error(`[topship-booking] track-shipment error for trackingId ${trackingId}:`, data)
     return { success: false, error: friendlyTopshipError(describeTopshipError(data, 'Failed to fetch Topship tracking status')), data }
   }
   return { success: true, data }

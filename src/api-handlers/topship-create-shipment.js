@@ -144,6 +144,9 @@ export default async function handler(req, res) {
     }
 
     const shipData = result.data
+    // Confirms exactly what Topship put in each field on a real success (trackingUrl in
+    // particular — see README.md 2026-07-22 entry re: the Track-link 404 investigation).
+    console.log('[topship-create-shipment] booked shipment record:', JSON.stringify(shipData))
     const trackingId = shipData?.trackingId || shipData?.thirdPartyTrackingId || ''
     const trackingUrl = shipData?.trackingUrl || ''
     const now = new Date()

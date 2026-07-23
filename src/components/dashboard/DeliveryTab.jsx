@@ -23,6 +23,63 @@ import { updateStore } from '../../firebase/auth'
 const DELIVERY_ZONES_PER_PAGE = 5
 const SHIPMENTS_PER_PAGE = 5
 
+const SHIPMENT_STAGES = ['Booked', 'Picked Up', 'In Transit', 'Delivered']
+
+// Keyword-bucket classifier, not an exhaustive enum table — Topship's /track-shipment
+// `status` field is documented only as a free-text string (unlike the enumerated
+// `shipmentStatus` field from a different endpoint), and Sendbox has its own status
+// vocabulary too. Matching on substrings lets one function serve both providers without
+// guessing at every possible value either one might return.
+function classifyShipmentStage(rawStatus) {
+  const s = (rawStatus || '').toLowerCase()
+  if (/cancel|fail/.test(s)) return 'failed'
+  if (/deliver/.test(s)) return 3
+  if (/transit|hub|processing|nigeria/.test(s)) return 2
+  if (/pickup|pick-up|pick up|assigned|rider/.test(s)) return 1
+  return 0
+}
+
+function ShipmentStatusBar({ rawStatus }) {
+  const stage = classifyShipmentStage(rawStatus)
+
+  if (stage === 'failed') {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2">
+        <AlertCircle size={13} className="text-red-500 flex-shrink-0" />
+        <span className="text-[11px] font-bold text-red-600">{rawStatus || 'Cancelled / Failed'}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center">
+      {SHIPMENT_STAGES.map((label, idx) => {
+        const reached = idx <= stage
+        const isLast = idx === SHIPMENT_STAGES.length - 1
+        return (
+          <div key={label} className={`flex items-center ${isLast ? '' : 'flex-1'}`}>
+            <div className="flex flex-col items-center gap-1">
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-white ${
+                  reached ? 'bg-green-500' : 'bg-gray-200'
+                }`}
+              >
+                {reached && <Check size={9} className="text-white" strokeWidth={3} />}
+              </span>
+              <span className={`text-[9px] font-bold whitespace-nowrap ${reached ? 'text-gray-700' : 'text-gray-400'}`}>
+                {label}
+              </span>
+            </div>
+            {!isLast && (
+              <div className={`h-0.5 flex-1 mx-1 mb-3.5 rounded-full ${idx < stage ? 'bg-green-500' : 'bg-gray-200'}`} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function DeliveryTab({
   store,
   user,
@@ -532,7 +589,7 @@ export default function DeliveryTab({
                         )}
                         Refresh
                       </button>
-                      {isTopship && order.topshipTrackingUrl && (
+                      {isTopship && /^https?:\/\//i.test(order.topshipTrackingUrl || '') && (
                         <a
                           href={order.topshipTrackingUrl}
                           target="_blank"
@@ -575,7 +632,8 @@ export default function DeliveryTab({
                   )}
 
                   {tracking && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
+                      <ShipmentStatusBar rawStatus={tracking.status} />
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-100">
                           {tracking.status}
@@ -601,9 +659,12 @@ export default function DeliveryTab({
                   )}
 
                   {!tracking && !error && (
-                    <p className="text-[11px] text-gray-400">
-                      Status: {isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')} - Click Refresh for live update
-                    </p>
+                    <div className="space-y-3">
+                      <ShipmentStatusBar rawStatus={isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')} />
+                      <p className="text-[11px] text-gray-400">
+                        Status: {isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')} - Click Refresh for live update
+                      </p>
+                    </div>
                   )}
                 </div>
               )

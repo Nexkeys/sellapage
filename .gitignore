@@ -12,9 +12,13 @@ README.md
 Topship-DOCS.txt
 Vercel API DOC.txt
 Sendbox-DOCS.txt
-
+Changelog-README.md
+ai-business-partner-cursor-prompt.md
+PAYSTACK_API_DOC.txt
+KWIK_API_DOC.md
 
 # Local Vercel folder
 .aider*
 .vercel
 .env*
+

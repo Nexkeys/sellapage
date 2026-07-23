@@ -151,6 +151,13 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing campaign name or budget' })
       }
 
+      const channelType = (type || 'SEARCH').toUpperCase()
+      if (channelType === 'SHOPPING' || channelType === 'PERFORMANCE_MAX') {
+        return res.status(400).json({
+          error: 'Shopping and Performance Max campaigns require a linked Google Merchant Center account, which is not yet supported. Please choose Search or Display.',
+        })
+      }
+
       const amountMicros = Math.round(Number(budgetAmount) * 1000000)
 
       const budgetResourceName = await createBudget(accessToken, customerId, {
@@ -158,7 +165,6 @@ export default async function handler(req, res) {
         amountMicros,
       })
 
-      const channelType = (type || 'SEARCH').toUpperCase()
       const campaignResourceName = await createCampaign(accessToken, customerId, {
         name,
         budgetResourceName,
