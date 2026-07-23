@@ -119,7 +119,6 @@ export async function createBudget(accessToken, customerId, { name, amountMicros
             name,
             deliveryMethod: 'STANDARD',
             amountMicros: String(amountMicros),
-            explicitlyShared: true,
           },
         },
       ],
@@ -139,15 +138,30 @@ export async function createCampaign(accessToken, customerId, {
   biddingStrategy,
 }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  const channelType = advertisingChannelType || 'SEARCH'
   const campaign = {
     resourceName: `customers/${cleanId}/campaigns/-1`,
     name,
     status: status || 'PAUSED',
-    advertisingChannelType: advertisingChannelType || 'SEARCH',
+    advertisingChannelType: channelType,
     campaignBudget: budgetResourceName,
     // Campaign.campaign_bidding_strategy is a required oneof — set via one of its member
     // fields (manualCpc, targetSpend, etc.) directly, not a field named campaignBidStrategy.
     ...(biddingStrategy || { manualCpc: {} }),
+    // Required declaration (EU political-ad transparency regulation) on every campaign create.
+    containsEuPoliticalAdvertising: 'DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING',
+  }
+
+  // NetworkSettings is a Search-specific concept — Display/PMax don't use it the same way.
+  // targetContentNetwork stays false so a vendor's "Search" pick doesn't silently spend on
+  // Display placements (that's the separate opt-in "Display Expansion on Search" feature).
+  if (channelType === 'SEARCH') {
+    campaign.networkSettings = {
+      targetGoogleSearch: true,
+      targetSearchNetwork: true,
+      targetContentNetwork: false,
+      targetPartnerSearchNetwork: false,
+    }
   }
 
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/campaigns:mutate`, {
@@ -223,17 +237,17 @@ export async function createAdGroup(accessToken, customerId, { campaignResourceN
 
 export async function createResponsiveSearchAd(accessToken, customerId, { adGroupResourceName, headlines, descriptions, finalUrl }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
+  // Attaching an ad to an ad group is a distinct resource (AdGroupAd) from the ad group itself —
+  // it must go through AdGroupAdService (adGroupAds:mutate), not AdGroupService (adGroups:mutate).
   const ad = {
-    resourceName: `customers/${cleanId}/ads/-1`,
     finalUrls: [finalUrl],
     responsiveSearchAd: {
       headlines: headlines.map((h) => ({ text: h })),
       descriptions: descriptions.map((d) => ({ text: d })),
     },
-    status: 'ENABLED',
   }
 
-  const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroups:mutate`, {
+  const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroupAds:mutate`, {
     method: 'POST',
     headers: buildHeaders(accessToken, loginCustomerId),
     body: JSON.stringify({
