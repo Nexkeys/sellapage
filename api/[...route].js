@@ -238,24 +238,6 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
-      case "google-ads-master-auth": {
-        const { default: handler } = await import("../src/api-handlers/google-ads-master-auth.js")
-        return handler(req, res)
-      }
-      case "google-ads-master-callback": {
-        const { default: handler } = await import("../src/api-handlers/google-ads-master-callback.js")
-        return handler(req, res)
-      }
-
-      case "ads-payment-initialize": {
-        const { default: handler } = await import("../src/api-handlers/ads-payment-initialize.js")
-        return handler(req, res)
-      }
-      case "ads-payment-verify": {
-        const { default: handler } = await import("../src/api-handlers/ads-payment-verify.js")
-        return handler(req, res)
-      }
-
       case "admin-cac": {
         const { default: handler } = await import("../src/api-handlers/admin-cac.js")
         return handler(req, res)
@@ -282,14 +264,6 @@ export default async function handler(req, res) {
       }
       case "admin-revenue": {
         const { default: handler } = await import("../src/api-handlers/admin-revenue.js")
-        return handler(req, res)
-      }
-      case "admin-ads-settings": {
-        const { default: handler } = await import("../src/api-handlers/admin-ads-settings.js")
-        return handler(req, res)
-      }
-      case "admin-ads-review": {
-        const { default: handler } = await import("../src/api-handlers/admin-ads-review.js")
         return handler(req, res)
       }
       case "admin-sella-ai": {

@@ -99,7 +99,7 @@ const PLANS = [
       'Abandoned Cart Recovery via WhatsApp',
       'Multi-staff account access with role controls',
       'Meta Ads integration (self-managed or Sellapage-managed)',
-      'Google Ads integration (self-managed or Sellapage-managed)',
+      'Google Ads integration (self-managed)',
       'Custom Domain Engine with SSL',
       'Advanced integrations & premium positioning',
       'Unlimited job listings',

@@ -10,7 +10,6 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
-  Sparkles,
   Unlink,
 } from 'lucide-react'
 
@@ -18,8 +17,6 @@ import GoogleAdsConnect from './GoogleAdsTab/GoogleAdsConnect'
 import GoogleAdsOverview from './GoogleAdsTab/GoogleAdsOverview'
 import GoogleAdsCampaigns from './GoogleAdsTab/GoogleAdsCampaigns'
 import GoogleAdsReports from './GoogleAdsTab/GoogleAdsReports'
-import SellapageAdsForm from './GoogleAdsTab/SellapageAdsForm'
-import SellapageManagedCampaigns from './GoogleAdsTab/SellapageManagedCampaigns'
 
 export default function GoogleAdsTab({ store, isPremium }) {
   const [activeView, setActiveView] = useState('overview')
@@ -28,13 +25,12 @@ export default function GoogleAdsTab({ store, isPremium }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [showSellapageForm, setShowSellapageForm] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
 
   const isConnected = store?.googleAdsConnected || false
 
   useEffect(() => {
-    if (!store?.id) return
+    if (!store?.id || !isConnected) return
 
     const fetchCampaigns = async () => {
       try {
@@ -66,7 +62,6 @@ export default function GoogleAdsTab({ store, isPremium }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const googleAdsStatus = params.get('google-ads')
-    const adsPayment = params.get('ads-payment')
 
     if (googleAdsStatus === 'connected') {
       setSuccess('Google Ads account connected successfully!')
@@ -75,37 +70,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
       setError(params.get('message') || 'Failed to connect Google Ads')
       window.history.replaceState({}, '', '/dashboard?tab=google-ads')
     }
-
-    if (adsPayment === 'pending') {
-      const reference = params.get('reference')
-      if (reference) {
-        handleAdsPaymentVerify(reference)
-      }
-      window.history.replaceState({}, '', '/dashboard?tab=google-ads')
-    }
   }, [])
-
-  const handleAdsPaymentVerify = async (reference) => {
-    try {
-      const token = await auth.currentUser?.getIdToken()
-      const res = await fetch('/api/ads-payment-verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reference, storeId: store.id }),
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setSuccess(data.message || 'Payment confirmed! Your campaign is pending review.')
-      } else {
-        setError(data.error || 'Failed to verify payment')
-      }
-    } catch (err) {
-      setError('Failed to verify payment. Please refresh the page.')
-    }
-  }
 
   const handleDisconnect = async () => {
     if (!confirm('Disconnect your Google Ads account? You can reconnect anytime.')) return
@@ -210,7 +175,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
             Google Ads
           </h1>
           <p className="text-gray-400 text-xs mt-0.5">
-            {isConnected ? 'Manage campaigns and track performance' : 'Connect your account or let us run ads for you'}
+            {isConnected ? 'Manage campaigns and track performance' : 'Connect your Google Ads account'}
           </p>
         </div>
         {isConnected && (
@@ -247,26 +212,15 @@ export default function GoogleAdsTab({ store, isPremium }) {
         </div>
       )}
 
-      {!showSellapageForm && <SellapageManagedCampaigns campaigns={campaigns} />}
-
-      {!isConnected && !showSellapageForm && (
+      {!isConnected && (
         <GoogleAdsConnect
           store={store}
           onError={setError}
           onSuccess={setSuccess}
-          onSellapageManaged={() => setShowSellapageForm(true)}
         />
       )}
 
-      {showSellapageForm && (
-        <SellapageAdsForm
-          store={store}
-          onBack={() => setShowSellapageForm(false)}
-          onError={setError}
-        />
-      )}
-
-      {isConnected && !showSellapageForm && (
+      {isConnected && (
         <>
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
             {[

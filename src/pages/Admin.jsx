@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Target
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
@@ -21,7 +21,6 @@ const ADMIN_TABS = [
   { id: 'tickets', label: 'Support Tickets', icon: LifeBuoy, short: 'Tickets' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, short: 'Analytics' },
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
-  { id: 'ads-review', label: 'Ads Review', icon: Target, short: 'Ads' },
   { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
   { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
   { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },
@@ -33,7 +32,7 @@ const ADMIN_TABS = [
 // ADMIN_TABS, role filtering (canAccessTab), or any tab's content/logic.
 const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
-  { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue', 'ads-review'] },
+  { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
   { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog'] },
   { label: 'Team', ids: ['admins'] },
@@ -122,18 +121,6 @@ export default function Admin() {
   const [revenueError, setRevenueError] = useState('');
   const [revenueTab, setRevenueTab] = useState('platform');
   const [revenuePage, setRevenuePage] = useState(1);
-
-  const [adsRate, setAdsRate] = useState(null);
-  const [adsRateInput, setAdsRateInput] = useState('');
-  const [adsRateLoading, setAdsRateLoading] = useState(false);
-  const [adsRateSaving, setAdsRateSaving] = useState(false);
-  const [adsRateMsg, setAdsRateMsg] = useState('');
-
-  const [adsSubmissions, setAdsSubmissions] = useState([]);
-  const [adsReviewLoading, setAdsReviewLoading] = useState(false);
-  const [adsReviewError, setAdsReviewError] = useState('');
-  const [adsReviewActionId, setAdsReviewActionId] = useState(null);
-  const [rejectReasons, setRejectReasons] = useState({});
 
   const [sellaData, setSellaData] = useState(null);
   const [sellaLoading, setSellaLoading] = useState(false);
@@ -342,67 +329,6 @@ export default function Admin() {
     } catch { setRevenueError('Failed.'); } finally { setRevenueLoading(false); }
   }, []);
 
-  const fetchAdsRate = useCallback(async () => {
-    setAdsRateLoading(true);
-    try {
-      const r = await fetch('/api/admin-ads-settings?action=get', { headers: H });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed');
-      setAdsRate(data);
-      setAdsRateInput(String(data.ngnUsdRate));
-    } catch { setAdsRateMsg('Failed to load rate.'); } finally { setAdsRateLoading(false); }
-  }, []);
-
-  const saveAdsRate = useCallback(async () => {
-    setAdsRateSaving(true); setAdsRateMsg('');
-    try {
-      const r = await fetch('/api/admin-ads-settings?action=update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
-        body: JSON.stringify({ ngnUsdRate: Number(adsRateInput) }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed');
-      setAdsRateMsg('Saved.');
-      fetchAdsRate();
-    } catch (err) { setAdsRateMsg(err.message || 'Failed to save.'); } finally { setAdsRateSaving(false); }
-  }, [adsRateInput, fetchAdsRate]);
-
-  const fetchAdsSubmissions = useCallback(async () => {
-    setAdsReviewLoading(true); setAdsReviewError('');
-    try {
-      const r = await fetch('/api/admin-ads-review?action=list', { headers: H });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed');
-      setAdsSubmissions(data.submissions || []);
-    } catch { setAdsReviewError('Failed to load submissions.'); } finally { setAdsReviewLoading(false); }
-  }, []);
-
-  const approveAdSubmission = useCallback(async (campaignId) => {
-    setAdsReviewActionId(campaignId);
-    try {
-      const r = await fetch('/api/admin-ads-review?action=approve', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
-        body: JSON.stringify({ campaignId, adminName: user?.email || 'admin' }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed');
-      fetchAdsSubmissions();
-    } catch (err) { setAdsReviewError(err.message || 'Failed to approve.'); } finally { setAdsReviewActionId(null); }
-  }, [fetchAdsSubmissions, user]);
-
-  const rejectAdSubmission = useCallback(async (campaignId) => {
-    setAdsReviewActionId(campaignId);
-    try {
-      const r = await fetch('/api/admin-ads-review?action=reject', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
-        body: JSON.stringify({ campaignId, reason: rejectReasons[campaignId] || '', adminName: user?.email || 'admin' }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Failed');
-      fetchAdsSubmissions();
-    } catch (err) { setAdsReviewError(err.message || 'Failed to reject.'); } finally { setAdsReviewActionId(null); }
-  }, [fetchAdsSubmissions, rejectReasons, user]);
-
   const fetchSella = useCallback(async () => {
     setSellaLoading(true); setSellaError('');
     try {
@@ -475,11 +401,10 @@ export default function Admin() {
       announcements: () => fetchAnnouncements(),
       tickets: () => fetchTickets(),
       analytics: () => fetchAnalytics(),
-      revenue: () => { fetchRevenue(); fetchAdsRate(); },
+      revenue: () => fetchRevenue(),
       'sella-ai': () => fetchSella(),
       reports: () => fetchReports(reportsPage, reportsStatusFilter, reportsOffenseFilter),
       jobs: () => fetchJobs(jobsStatusFilter),
-      'ads-review': () => fetchAdsSubmissions(),
     };
     m[activeTab]?.();
   }, [user, activeTab, adminRole]);
@@ -712,83 +637,6 @@ export default function Admin() {
               </>}
             </div>}
           </>}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4 space-y-2">
-            <h3 className="font-bold text-xs text-gray-800">Sellapage-Managed Ads: NGN/USD Rate</h3>
-            <p className="text-[10px] text-gray-400">Used to convert a vendor's Naira ad budget into the master Google Ads account's USD budget when a submission is approved. Update this when Naira moves.</p>
-            {adsRateLoading ? <Loader2 size={16} className="animate-spin text-green-600" /> : <>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-gray-400">₦</span>
-                <input type="number" value={adsRateInput} onChange={(e) => setAdsRateInput(e.target.value)} className="w-28 px-2 py-1.5 border border-gray-200 rounded-lg text-xs" />
-                <span className="text-[10px] text-gray-400">per $1</span>
-                <button onClick={saveAdsRate} disabled={adsRateSaving} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold disabled:bg-gray-200">
-                  {adsRateSaving ? <Loader2 size={12} className="animate-spin" /> : null} Save
-                </button>
-              </div>
-              {adsRateMsg && <p className="text-[10px] text-gray-500">{adsRateMsg}</p>}
-              {adsRate?.ngnUsdRateUpdatedAt && <p className="text-[9px] text-gray-400">Last updated: {new Date(adsRate.ngnUsdRateUpdatedAt).toLocaleString()}</p>}
-            </>}
-          </div>
-        </div>}
-
-        {/* ADS REVIEW */}
-        {activeTab === 'ads-review' && <div className="space-y-4 animate-in fade-in duration-200">
-          {adsReviewError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{adsReviewError}</div>}
-          <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Sellapage-Managed Ads — Pending Review</h2><button onClick={fetchAdsSubmissions} disabled={adsReviewLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{adsReviewLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Refresh</button></div>
-          {adsReviewLoading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div> : (
-            adsSubmissions.length === 0 ? <div className="p-6 text-center text-gray-400 text-sm bg-white rounded-xl border border-gray-100">No submissions pending review.</div> : (
-              <div className="space-y-3">
-                {adsSubmissions.map((s) => (
-                  <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-xs p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-bold text-gray-900 text-sm">{s.name}</p>
-                        <p className="text-[10px] text-gray-400">{s.type} · Store: {s.storeId} · ₦{Number(s.budgetAmount).toLocaleString()}/day + ₦{Number(s.serviceCharge).toLocaleString()} service charge</p>
-                        {s.targetLocation && <p className="text-[10px] text-gray-400">Location: {s.targetLocation}</p>}
-                        {s.businessName && <p className="text-[10px] text-gray-400">Business: {s.businessName}</p>}
-                      </div>
-                      <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200 shrink-0">Pending Review</span>
-                    </div>
-                    {s.targeting?.finalUrl && <p className="text-[10px] text-gray-500">Final URL: <a href={s.targeting.finalUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{s.targeting.finalUrl}</a></p>}
-                    {s.targeting?.headlines?.length > 0 && <p className="text-[10px] text-gray-500">Headlines: {s.targeting.headlines.join(' · ')}</p>}
-                    {s.targeting?.descriptions?.length > 0 && <p className="text-[10px] text-gray-500">Descriptions: {s.targeting.descriptions.join(' · ')}</p>}
-                    {s.targeting?.keywords?.length > 0 && <p className="text-[10px] text-gray-500">Keywords: {s.targeting.keywords.join(', ')}</p>}
-                    {s.images?.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {s.images.map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 block">
-                            <img src={url} alt={`Ad image ${i + 1}`} className="w-full h-full object-cover" />
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
-                      <input
-                        type="text"
-                        placeholder="Rejection reason (optional)"
-                        value={rejectReasons[s.id] || ''}
-                        onChange={(e) => setRejectReasons((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                        className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs"
-                      />
-                      <button
-                        onClick={() => rejectAdSubmission(s.id)}
-                        disabled={adsReviewActionId === s.id}
-                        className="inline-flex items-center gap-1.5 bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50"
-                      >
-                        {adsReviewActionId === s.id ? <Loader2 size={12} className="animate-spin" /> : null} Reject
-                      </button>
-                      <button
-                        onClick={() => approveAdSubmission(s.id)}
-                        disabled={adsReviewActionId === s.id}
-                        className="inline-flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50"
-                      >
-                        {adsReviewActionId === s.id ? <Loader2 size={12} className="animate-spin" /> : null} Approve
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          )}
         </div>}
 
         {/* SELLA AI USAGE */}

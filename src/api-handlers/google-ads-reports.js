@@ -163,57 +163,6 @@ export default async function handler(req, res) {
       )
     }
 
-    const sellapageSnap = await db
-      .collection('googleAdsCampaigns')
-      .where('storeId', '==', storeId)
-      .where('managementMode', '==', 'sellapage')
-      .get()
-
-    if (!sellapageSnap.empty) {
-      const masterDoc = await db.collection('platformSettings').doc('googleAdsMaster').get()
-      if (masterDoc.exists) {
-        const { refreshToken: masterRefresh, customerId: masterId } = masterDoc.data()
-        if (masterRefresh && masterId) {
-          try {
-            const masterToken = await getAccessToken(masterRefresh)
-            const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID
-            const masterResults = await getCampaignReport(masterToken, masterId, gaDateRange, loginCustomerId)
-            const masterCampaignMap = {}
-            for (const r of masterResults) {
-              const cid = String(r.campaign?.id || '')
-              masterCampaignMap[cid] = r
-            }
-
-            for (const doc of sellapageSnap.docs) {
-              const sd = doc.data()
-              const cid = String(sd.providerCampaignId || '')
-              if (!cid || seenCampaignIds.has(cid)) continue
-              seenCampaignIds.add(cid)
-              const match = masterCampaignMap[cid]
-              campaignMetrics.push(
-                accumulateMetrics(cid, sd.name || 'Sellapage Campaign', sd.status || 'PAUSED', match?.metrics || {})
-              )
-            }
-          } catch (masterErr) {
-            console.warn('[google-ads-reports] Master account report fetch failed:', masterErr.message)
-            for (const doc of sellapageSnap.docs) {
-              const sd = doc.data()
-              const cid = String(sd.providerCampaignId || '')
-              if (!cid || seenCampaignIds.has(cid)) continue
-              seenCampaignIds.add(cid)
-              campaignMetrics.push(accumulateMetrics(cid, sd.name || 'Sellapage Campaign', sd.status || 'PAUSED', {
-                impressions: sd.impressions || 0,
-                clicks: sd.clicks || 0,
-                costMicros: (sd.spendToDate || 0) * 1000000,
-                conversions: sd.conversions || 0,
-                conversionsValue: 0,
-              }))
-            }
-          }
-        }
-      }
-    }
-
     const totalSpendNaira = totalCostMicros / 1000000
 
     // Surface a real reason when the vendor's own account fetch failed and produced nothing,

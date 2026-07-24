@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Link2, Loader2, ExternalLink, Shield, Target, BarChart3, Wallet, Sparkles } from 'lucide-react'
+import { Link2, Loader2, ExternalLink, Shield, Target, BarChart3, Wallet } from 'lucide-react'
 
-export default function GoogleAdsConnect({ store, onError, onSuccess, onSellapageManaged }) {
+export default function GoogleAdsConnect({ store, onError, onSuccess }) {
   const [loading, setLoading] = useState(null)
 
   const handleConnectOwn = () => {
@@ -10,16 +10,9 @@ export default function GoogleAdsConnect({ store, onError, onSuccess, onSellapag
     window.location.href = `/api/google-ads-auth?storeId=${store.id}`
   }
 
-  const handleSellapageManaged = () => {
-    if (!store?.id) return
-    setLoading('sellapage')
-    onSellapageManaged?.()
-  }
-
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Card 1: Connect Your Own Account */}
+      <div className="max-w-md">
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
           <div className="p-5">
             <div className="flex items-center gap-3 mb-4">
@@ -71,58 +64,6 @@ export default function GoogleAdsConnect({ store, onError, onSuccess, onSellapag
                   <Link2 size={14} />
                   Connect Google Ads
                   <ExternalLink size={10} className="opacity-50" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Card 2: Run Ads with Sellapage */}
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center">
-                <Sparkles size={18} className="text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">Run Ads with Sellapage</h3>
-                <p className="text-[11px] text-gray-400">We manage it for you</p>
-              </div>
-            </div>
-
-            <div className="space-y-2.5 mb-4">
-              {[
-                { icon: Target, text: 'We create and manage your Google Ads campaigns' },
-                { icon: BarChart3, text: 'Performance dashboard — track impressions, clicks, spend' },
-                { icon: Wallet, text: 'Pay via Paystack — ad spend + 10% service charge' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <item.icon size={12} className="text-emerald-500 mt-0.5 shrink-0" />
-                  <p className="text-[11px] text-gray-500 leading-relaxed">{item.text}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2.5 mb-4">
-              <div className="flex items-start gap-2">
-                <Sparkles size={12} className="text-emerald-600 mt-0.5 shrink-0" />
-                <p className="text-[10px] text-emerald-700 leading-relaxed">
-                  No Google Ads account needed. Just set your budget and we handle the rest.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleSellapageManaged}
-              disabled={loading !== null}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading === 'sellapage' ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <>
-                  <Sparkles size={14} />
-                  Create Ad Campaign
                 </>
               )}
             </button>
