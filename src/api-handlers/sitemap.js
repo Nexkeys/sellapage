@@ -10,6 +10,7 @@ const STATIC_PAGES = [
   { path: '/live-stores', changefreq: 'weekly', priority: '0.7' },
   { path: '/jobs', changefreq: 'weekly', priority: '0.8' },
   { path: '/blog', changefreq: 'weekly', priority: '0.8' },
+  { path: '/report-store', changefreq: 'yearly', priority: '0.4' },
   { path: '/tools/offer-name-lab', changefreq: 'monthly', priority: '0.6' },
   { path: '/tools/policy-generator', changefreq: 'monthly', priority: '0.6' },
   { path: '/compare/vs-shopify', changefreq: 'monthly', priority: '0.7' },
@@ -73,10 +74,15 @@ export default async function handler(req, res) {
       console.error('[sitemap] blog fetch error:', err.message)
     }
 
-    // Fetch approved job listings
+    // Fetch approved, active job listings
+    // NOTE: collection is `jobListings`, not `jobs` — the previous version of
+    // this query targeted a nonexistent collection and always returned zero
+    // results silently (no error), so individual job URLs were never actually
+    // in the sitemap despite the code appearing to handle them.
     try {
-      const jobsSnapshot = await db.collection('jobs')
+      const jobsSnapshot = await db.collection('jobListings')
         .where('status', '==', 'approved')
+        .where('isActive', '==', true)
         .limit(500)
         .get()
 
@@ -92,6 +98,37 @@ export default async function handler(req, res) {
       })
     } catch (err) {
       console.error('[sitemap] jobs fetch error:', err.message)
+    }
+
+    // Fetch live merchant storefronts — previously entirely absent from the
+    // sitemap despite being the highest-volume public pages on the site.
+    try {
+      const storesSnapshot = await db.collection('stores')
+        .where('isActive', '==', true)
+        .limit(1000)
+        .get()
+
+      storesSnapshot.forEach(doc => {
+        const data = doc.data()
+        if (!data.storeName) return
+        const lastmod = formatDate(data.updatedAt || data.createdAt)
+        urlEntries.push(`  <url>
+    <loc>${SITE_URL}/${escapeXml(data.storeName)}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`)
+        if (data.vendorType === 'services' || data.vendorType === 'both') {
+          urlEntries.push(`  <url>
+    <loc>${SITE_URL}/${escapeXml(data.storeName)}/services</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>`)
+        }
+      })
+    } catch (err) {
+      console.error('[sitemap] stores fetch error:', err.message)
     }
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>

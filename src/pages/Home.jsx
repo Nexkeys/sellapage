@@ -5,6 +5,7 @@ import {
   Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
   Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift,
   Grid, Users, Truck, CreditCard, Tag, Download, Globe, Shield,
+  Briefcase, BookOpen,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -94,7 +95,7 @@ const features = [
   },
   {
     icon: Truck,
-    title: 'Sendbox Delivery Integration (Pro+)',
+    title: 'Sendbox & Topship Delivery Integration (Pro+)',
     description: 'Show live delivery rates at checkout, book shipments, and share tracking links with customers from your dashboard.',
   },
   {
@@ -131,6 +132,21 @@ const features = [
     icon: Shield,
     title: 'CAC Verification (Pro+)',
     description: 'Verify your business with Corporate Affairs Commission for added trust and credibility.',
+  },
+  {
+    icon: Briefcase,
+    title: 'Job Listings (All Plans)',
+    description: 'Post job openings from your dashboard on any plan. Approved listings go live on the public Sellapage Jobs board.',
+  },
+  {
+    icon: BookOpen,
+    title: 'Sellapage Blog',
+    description: 'Guides, tips, and stories to help you sell more — read and comment on the public blog.',
+  },
+  {
+    icon: Gift,
+    title: 'Referral Program (All Plans)',
+    description: 'Share your referral code and earn cash when the businesses you refer upgrade to a paid plan.',
   },
 ]
 
@@ -249,6 +265,11 @@ const plans = [
     ],
   },
 ]
+// Note: this `plans` array is currently unused (no .map() over it anywhere in
+// this file) — Home links out to /pricing for full plan details rather than
+// rendering cards inline. Left at 3 tiers matching that inactive state;
+// Premium-tier capabilities are instead surfaced in `platformFeatures` below,
+// which IS rendered.
 
 const trustBadges = [
   { icon: Zap, label: 'No Coding Required', sub: 'Set up in minutes' },
@@ -259,7 +280,7 @@ const trustBadges = [
 ]
 
 const stats = [
-  { value: '100+', label: 'Active Nigerian Stores' },
+  { value: '200+', label: 'Active Nigerian Stores' },
   { value: '₦0', label: 'To Get Started' },
   { value: '< 2 min', label: 'To Go Live' },
   { value: '24/7', label: 'Always Online' },
@@ -298,7 +319,7 @@ const storeExamples = [
 const platformFeatures = [
   { icon: Settings, title: 'Structured Checkout', desc: 'Give customers a clear path from browsing to payment confirmation and order follow-up.' },
   { icon: CreditCard, title: 'In-App Paystack Checkout', desc: 'Accept card, bank transfer, and USSD payments directly on your store. Orders create automatically.' },
-  { icon: Truck, title: 'Sendbox Delivery Integration', desc: 'Show live delivery rates at checkout, book shipments, and share tracking links from your dashboard.' },
+  { icon: Truck, title: 'Sendbox & Topship Delivery Integration', desc: 'Show live delivery rates at checkout, book shipments, and share tracking links from your dashboard.' },
   { icon: CreditCard, title: 'Payouts & Bank Settlement', desc: 'Connect your bank via Paystack subaccount. View earnings KPIs, transaction history, and get paid on your schedule.' },
   { icon: Users, title: 'Customer CRM', desc: 'Auto-built from confirmed orders. Expandable profiles, WhatsApp direct links, sort by spend, orders, or recency.' },
   { icon: Star, title: 'Verified Reviews & Ratings', desc: 'Buyers leave star ratings and reviews after delivery. Aggregate scores show on product and service cards.' },
@@ -308,6 +329,11 @@ const platformFeatures = [
   { icon: Globe, title: 'Custom Domain', desc: 'Use your own domain (yourbrand.com) for a fully branded store experience.' },
   { icon: Shield, title: 'CAC Verification', desc: 'Verify your business with Corporate Affairs Commission for added trust and credibility.' },
   { icon: MessageCircle, title: 'Business Messaging', desc: 'Automate order confirmations and customer support from the same commerce flow.' },
+  { icon: Briefcase, title: 'Job Listings', desc: 'Post job openings from your dashboard on any plan. Approved listings go live on the public Sellapage Jobs board.' },
+  { icon: BookOpen, title: 'Sellapage Blog', desc: 'Guides, tips, and stories to help you sell more — read and comment on the public blog.' },
+  { icon: Gift, title: 'Referral Program', desc: 'Share your referral code and earn cash when the businesses you refer upgrade to a paid plan.' },
+  { icon: Sparkles, title: 'AI Business Partner (Premium)', desc: 'A context-aware assistant that reads your whole dashboard and helps you run your business, hands-free.' },
+  { icon: BarChart2, title: 'Google Ads Integration (Premium)', desc: 'Run and track Google Ads campaigns yourself, or let Sellapage manage them for you.' },
 ]
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -396,7 +422,7 @@ export default function Home() {
                     <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
                   <span className="text-sm font-semibold text-gray-700 ml-1">5.0</span>
-                  <span className="text-sm text-gray-400 ml-1">Trusted by 100+ Nigerian businesses</span>
+                  <span className="text-sm text-gray-400 ml-1">Trusted by 200+ Nigerian businesses</span>
                 </div>
               </div>
             </div>
@@ -469,7 +495,7 @@ export default function Home() {
               { icon: Store, title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
               { icon: Package, title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
               { icon: CreditCard, title: 'Accept Payments (Pro+)', desc: 'In-app Paystack checkout for card, transfer, and USSD. Orders create automatically in your dashboard.' },
-              { icon: Truck, title: 'Manage Delivery (Pro+)', desc: 'Sendbox integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
+              { icon: Truck, title: 'Manage Delivery (Pro+)', desc: 'Sendbox & Topship integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
               { icon: Users, title: 'Customer CRM (Pro+)', desc: 'Auto-built from confirmed orders. Profiles, WhatsApp links, sort by spend, orders, or recency.' },
               { icon: Star, title: 'Reviews & Ratings (Pro+)', desc: 'Verified buyer reviews with aggregate stars on product and service cards.' },
               { icon: Tag, title: 'Discounts & Promos (Pro+)', desc: 'Percentage or flat discounts, usage limits, expiry dates. Applied automatically at checkout.' },
@@ -509,7 +535,7 @@ export default function Home() {
                   'Orders come in structured, not buried in chats',
                   'Manage products, services, leads and analytics from one dashboard',
                   'Supports products, services and bookings',
-                  'In-app Paystack checkout and Sendbox delivery (Pro+)',
+                  'In-app Paystack checkout and Sendbox &amp; Topship delivery (Pro+)',
                   'Customer CRM, verified reviews, and discounts (Pro+)',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
@@ -890,7 +916,7 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <span className="text-brand-100 text-xs">100+ active Nigerian stores use Sellapage</span>
+                <span className="text-brand-100 text-xs">200+ active Nigerian stores use Sellapage</span>
               </div>
             </div>
           </div>

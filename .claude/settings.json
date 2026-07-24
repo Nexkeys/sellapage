@@ -5,7 +5,9 @@
       "Bash(npm run *)",
       "Bash(git check-ignore *)",
       "Bash(grep -o '.\\\\{300\\\\}jsx\\(SEO,' dist/assets/index-BA0KYd9l.js)",
-      "Bash(rm -f dist/assets/index-*.js)"
+      "Bash(rm -f dist/assets/index-*.js)",
+      "Bash(node -e ' *)",
+      "Bash(node --check src/api-handlers/sitemap.js)"
     ]
   }
 }

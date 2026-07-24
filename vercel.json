@@ -10,6 +10,10 @@
   ],
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/[...route]"
     },

@@ -77,7 +77,7 @@ export default function About() {
                 'Category filters and search for easy browsing',
                 'WhatsApp cart for Growth users; in-app Paystack checkout for Pro/Premium',
                 'Lead capture form on every store page',
-                'Sendbox Delivery delivery rates at checkout; booking and tracking from dashboard',
+                'Sendbox & Topship delivery rates at checkout; booking and tracking from dashboard',
                 'PDF receipt download after checkout',
                 'Star ratings on products and services; verified buyer reviews (Pro+)',
                 'Custom store footer with business text',
@@ -91,6 +91,9 @@ export default function About() {
                 'Discounts & promo codes with usage limits and expiry (Pro+)',
                 'Product export to PDF, CSV, Excel, and downloadable files (Pro+)',
                 'Custom domain usage and CAC verification (Pro+)',
+                'Job Listings board — post openings on any plan (5/25/50/unlimited by tier); public applicants apply via WhatsApp or email',
+                'Sellapage Blog with public reader comments',
+                'Referral Program — earn cash when businesses you refer upgrade to a paid plan',
               ].map((capability, i) => (
                 <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
                   <p className="text-gray-700 text-sm leading-relaxed flex items-start gap-2">
@@ -104,7 +107,7 @@ export default function About() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { value: '10000+',     label: 'Active Nigerian Stores' },
+              { value: '200+',     label: 'Active Nigerian Stores' },
               { value: '2026', label: 'Launched' },
               { value: '₦0',       label: 'To Get Started' },
             ].map((stat) => (
