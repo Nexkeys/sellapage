@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ShieldAlert, Upload, X, Loader2, CheckCircle2, ArrowLeft, Image as ImageIcon } from 'lucide-react'
+import SEO from '../components/SEO'
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
@@ -164,6 +165,12 @@ export default function ReportStore() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title="Report a Store"
+        description="Report a scam or fraudulent store on Sellapage. Help us keep the marketplace safe."
+        url="/report-store"
+        noIndex
+      />
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center gap-3">

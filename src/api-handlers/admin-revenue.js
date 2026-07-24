@@ -120,6 +120,18 @@ export default async function handler(req, res) {
           })
         } catch {}
 
+        try {
+          const bookingsSnap = await db.collection('stores').doc(doc.id).collection('bookings')
+            .where('status', 'in', ['completed'])
+            .limit(500)
+            .get()
+          bookingsSnap.docs.forEach(b => {
+            const bd = b.data()
+            totalRevenue += bd.grandTotal || 0
+            totalOrders++
+          })
+        } catch {}
+
         if (totalOrders > 0) {
           storeRevenues.push({
             id: doc.id,

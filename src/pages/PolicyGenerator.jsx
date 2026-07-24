@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Copy, FileText, ShieldCheck, CheckCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 export default function PolicyGenerator() {
   // Structured Business Profile States
@@ -134,6 +135,12 @@ _By proceeding with payment verification, you validate this operational contract
 
   return (
     <div className="min-h-screen bg-[#f7fbf6] text-gray-950">
+      <SEO
+        title="Policy Generator"
+        description="Generate professional store policies for your business. Create return, shipping, and privacy policies in minutes."
+        url="/tools/policy-generator"
+        keywords="store policy generator, return policy generator, privacy policy generator nigeria"
+      />
       <Navbar />
       <main className="pt-10">
         <section className="px-4 py-14">

@@ -28,6 +28,7 @@ import CartDrawer from "../components/CartDrawer";
 import ProductDetailOverlay from "../components/ProductDetailOverlay";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
+import SEO from '../components/SEO';
 
 const EMPTY_CHECKOUT_FORM = {
   customerName: "",
@@ -1119,6 +1120,28 @@ export default function StorePage() {
         fontFamily: bodyFont,
       }}
     >
+      <SEO
+        title={store.storeName || store.name}
+        description={store.description || `${store.storeName || store.name} — products, services, and more on Sellapage.`}
+        url={`/${store.slug || store.storeName}`}
+        image={store.logo || store.coverImage}
+        jsonLd={store.id ? {
+          '@context': 'https://schema.org',
+          '@type': 'Store',
+          name: store.storeName || store.name,
+          description: store.description,
+          url: `https://sellapage.com.ng/${store.slug || store.storeName}`,
+          logo: store.logo,
+          image: store.coverImage || store.logo,
+          address: store.pickupAddress ? {
+            '@type': 'PostalAddress',
+            streetAddress: store.pickupAddress.streetAddress,
+            addressLocality: store.pickupAddress.city,
+            addressRegion: store.pickupAddress.state,
+            addressCountry: 'NG',
+          } : undefined,
+        } : null}
+      />
       <StoreNavbar
         store={store}
         search={search}

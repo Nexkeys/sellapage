@@ -20,7 +20,7 @@ import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
-import { generateOrderReceipt } from "../utils/generateReceipt";
+import { generateBookingReceipt } from "../utils/generateReceipt";
 
 const getInitials = (name = "") => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -265,7 +265,7 @@ export default function ServiceStorePage() {
     try {
       const parsed = JSON.parse(stored);
       if (parsed.transactionType === "checkout") {
-        setCompletedBooking(parsed.order);
+        setCompletedBooking(parsed.booking);
         setSuccessModalOpen(true);
         sessionStorage.removeItem(`sellapage_checkout_${ref}`);
       }
@@ -399,13 +399,6 @@ export default function ServiceStorePage() {
     setBookingSubmitting(true);
     setBookingError("");
 
-    const combinedNotes = [
-      `Date: ${bookingDate}`,
-      `Time: ${bookingTime}`,
-      locationPref ? `Location Preference: ${locationPref}` : "",
-      bookingNotes.trim() ? `Notes: ${bookingNotes.trim()}` : "",
-    ].filter(Boolean).join("\n");
-
     const analyticsRef = doc(
       db,
       "stores",
@@ -431,18 +424,15 @@ export default function ServiceStorePage() {
             customerName: bookingName.trim(),
             customerEmail: bookingEmail.trim(),
             customerPhone: bookingPhone.trim(),
-            cartItems: [
-              {
-                id: selectedBookingService.id,
-                name: selectedBookingService.name,
-                price: Number(selectedBookingService.price),
-                quantity: 1,
-              },
-            ],
-            deliveryFee: 0,
-            deliveryAddress: {},
-            notes: combinedNotes,
             orderType: "booking",
+            bookingDate,
+            bookingTime,
+            serviceId: selectedBookingService.id,
+            serviceName: selectedBookingService.name,
+            servicePrice: Number(selectedBookingService.price),
+            locationType: selectedBookingService.locationType || "",
+            locationPref,
+            customerNotes: bookingNotes.trim(),
           }),
         });
 
@@ -460,19 +450,16 @@ export default function ServiceStorePage() {
         const processingFee = calcProcessingFee(subtotal);
         const grandTotal = subtotal + processingFee;
 
-        const orderSnapshot = {
+        const bookingSnapshot = {
           reference: data.reference,
           customerName: bookingName.trim(),
           customerEmail: bookingEmail.trim(),
           customerPhone: bookingPhone.trim(),
-          cartItems: [
-            {
-              name: selectedBookingService.name,
-              price: Number(selectedBookingService.price),
-              quantity: 1,
-            },
-          ],
-          deliveryFee: 0,
+          serviceName: selectedBookingService.name,
+          servicePrice: subtotal,
+          bookingDate,
+          bookingTime,
+          locationPref,
           processingFee,
           grandTotal,
           createdAt: new Date().toISOString(),
@@ -484,7 +471,7 @@ export default function ServiceStorePage() {
             transactionType: "checkout",
             storeName: store.storeName,
             storeId: store.id,
-            order: orderSnapshot,
+            booking: bookingSnapshot,
           }),
         );
 
@@ -529,7 +516,7 @@ export default function ServiceStorePage() {
     if (!completedBooking || !store) return;
     setReceiptDownloading(true);
     try {
-      const blobUrl = await generateOrderReceipt(completedBooking, store);
+      const blobUrl = await generateBookingReceipt(completedBooking, store);
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = `receipt_${completedBooking.reference || completedBooking.id || "booking"}.pdf`;
@@ -1133,7 +1120,7 @@ export default function ServiceStorePage() {
               <div>
                 <span className="text-stone-400 font-medium">Service:</span>{" "}
                 <span className="text-stone-900 font-semibold">
-                  {(completedBooking.cartItems && completedBooking.cartItems[0]?.name) || "Service Booking"}
+                  {completedBooking.serviceName || "Service Booking"}
                 </span>
               </div>
               <div>

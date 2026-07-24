@@ -69,6 +69,7 @@ const SAFE_SETTINGS_FIELDS = [
 ]
 
 const VALID_ORDER_STATUSES = ['pending', 'confirmed', 'dispatched', 'delivered', 'cancelled']
+const VALID_BOOKING_STATUSES = ['pending', 'confirmed', 'in_progress', 'rescheduled', 'completed', 'cancelled', 'no_show', 'refunded']
 
 export async function executeWriteAction(db, storeId, action) {
   const type = action?.type
@@ -222,6 +223,65 @@ export async function executeWriteAction(db, storeId, action) {
       return { ok: true, message: `Order marked as ${newStatus}.` }
     }
 
+    // ------------------------------------------------------------- BOOKING STATUS
+    case 'update_booking_status': {
+      const { bookingId, newStatus, newBookingDate, newBookingTime } = args
+      if (!bookingId || !VALID_BOOKING_STATUSES.includes(newStatus)) {
+        return { ok: false, message: 'Provide a valid booking and status.' }
+      }
+      if (newStatus === 'rescheduled' && (!newBookingDate || !newBookingTime)) {
+        return { ok: false, message: 'Rescheduling needs a new date and time.' }
+      }
+      const bookingRef = storeRef.collection('bookings').doc(String(bookingId))
+      const snap = await bookingRef.get()
+      if (!snap.exists) return { ok: false, message: 'That booking was not found.' }
+      const booking = snap.data()
+      // No hard status lock, unlike orders — service bookings allow post-hoc correction.
+      const changedAtIso = new Date().toISOString()
+      const statusLogEntry = {
+        status: newStatus, changedAt: changedAtIso, changedBy: storeId, changedByLabel: 'Sella AI',
+      }
+      const payload = { status: newStatus, updatedAt: changedAtIso }
+      if (newStatus === 'rescheduled') {
+        statusLogEntry.previousDate = booking.bookingDate || ''
+        statusLogEntry.previousTime = booking.bookingTime || ''
+        statusLogEntry.newDate = newBookingDate
+        statusLogEntry.newTime = newBookingTime
+        payload.bookingDate = newBookingDate
+        payload.bookingTime = newBookingTime
+      }
+      payload.statusLog = FieldValue.arrayUnion(statusLogEntry)
+      let reviewToken = booking.reviewToken || null
+      if (newStatus === 'completed') {
+        reviewToken = crypto.randomUUID()
+        payload.reviewToken = reviewToken
+        payload.reviewTokenUsed = false
+        payload.reviewSubmitted = false
+        payload.completedAt = changedAtIso
+      }
+      await bookingRef.update(payload)
+      // Best-effort customer notification (never blocks the write).
+      if (booking.customerEmail) {
+        try {
+          const storeSnap = await storeRef.get()
+          const storeName = storeSnap.data()?.businessName || 'the store'
+          await sendEmail(
+            booking.customerEmail,
+            `Update on your booking with ${storeName}`,
+            `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
+              <h2 style="color:#111827">Booking update</h2>
+              <p style="color:#374151">Hi ${booking.customerName || 'there'}, your booking status is now <strong>${newStatus}</strong>.</p>
+              ${newStatus === 'completed' && reviewToken ? `<p><a href="https://sellapage.com.ng/review?token=${reviewToken}" style="background:#16a34a;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Leave a Review</a></p>` : ''}
+              <p style="color:#9ca3af;font-size:12px">Powered by Sellapage</p>
+            </div>`
+          )
+        } catch (e) {
+          console.error('[sella-ai] booking status email failed:', e?.message || e)
+        }
+      }
+      return { ok: true, message: `Booking marked as ${newStatus}.` }
+    }
+
     // ------------------------------------------------------------- DELIVERY (pickup address)
     case 'update_delivery_pickup': {
       const { streetAddress, city, state } = args
@@ -276,6 +336,10 @@ export function describeAction(action) {
       return `Create promo code ${String(a.code || '').toUpperCase()} (${a.type === 'flat' ? money2(a.value) + ' off' : a.value + '% off'}).`
     case 'update_order_status':
       return `Change order ${a.orderId} status to "${a.newStatus}".`
+    case 'update_booking_status':
+      return a.newStatus === 'rescheduled'
+        ? `Reschedule booking ${a.bookingId} to ${a.newBookingDate} at ${a.newBookingTime}.`
+        : `Change booking ${a.bookingId} status to "${a.newStatus}".`
     case 'update_delivery_pickup':
       return `Update pickup address to ${[a.streetAddress, a.city, a.state].filter(Boolean).join(', ')}.`
     case 'update_store_settings':

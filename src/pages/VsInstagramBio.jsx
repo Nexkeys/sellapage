@@ -3,6 +3,7 @@ import { Check, X, ArrowRight } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
+import SEO from '../components/SEO'
 
 
 const FEATURES = [
@@ -39,6 +40,12 @@ export default function VsInstagramBio() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Sellapage vs Instagram Bio"
+        description="Compare Sellapage and Instagram bio links. See why Sellapage gives you a full commerce page with products, checkout, and orders."
+        url="/compare/vs-instagram-bio"
+        keywords="sellapage vs instagram bio, instagram link alternative, bio link alternative nigeria"
+      />
       <Navbar />
 
       {/* Hero */}

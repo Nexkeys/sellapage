@@ -38,7 +38,7 @@ const getTodayKey = () =>
 // Names the model can call. Writes are intercepted (never auto-run); web_search runs inline.
 const WRITE_ACTIONS = new Set([
   'add_ledger_entry', 'add_product', 'add_service', 'create_discount',
-  'update_order_status', 'update_delivery_pickup', 'update_store_settings',
+  'update_order_status', 'update_booking_status', 'update_delivery_pickup', 'update_store_settings',
 ])
 
 const TOOLS = [
@@ -115,7 +115,7 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'update_order_status',
-      description: 'Change an order status. Only when the vendor asks. Use an order id from the store context.',
+      description: 'Change a PRODUCT order status. Only when the vendor asks. Use an order id from the store context. Never use this for service bookings — use update_booking_status instead.',
       parameters: {
         type: 'object',
         properties: {
@@ -123,6 +123,23 @@ const TOOLS = [
           newStatus: { type: 'string', enum: ['pending', 'confirmed', 'dispatched', 'delivered', 'cancelled'] },
         },
         required: ['orderId', 'newStatus'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_booking_status',
+      description: 'Change a SERVICE booking status, or reschedule it. Only when the vendor asks. Use a booking id from the store context. Never use this for product orders — use update_order_status instead. When rescheduling (newStatus "rescheduled"), also provide newBookingDate and newBookingTime.',
+      parameters: {
+        type: 'object',
+        properties: {
+          bookingId: { type: 'string' },
+          newStatus: { type: 'string', enum: ['pending', 'confirmed', 'in_progress', 'rescheduled', 'completed', 'cancelled', 'no_show', 'refunded'] },
+          newBookingDate: { type: 'string', description: 'YYYY-MM-DD, required only when newStatus is "rescheduled"' },
+          newBookingTime: { type: 'string', description: 'HH:MM, required only when newStatus is "rescheduled"' },
+        },
+        required: ['bookingId', 'newStatus'],
       },
     },
   },

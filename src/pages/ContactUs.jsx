@@ -3,6 +3,7 @@ import { HelpCircle, ArrowRight, Mail, MessageCircle, ExternalLink } from 'lucid
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
+import SEO from '../components/SEO'
 
 
 export default function ContactUs() {
@@ -11,6 +12,12 @@ export default function ContactUs() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Contact Us"
+        description="Get in touch with the Sellapage team. We're here to help you grow your business."
+        url="/contact"
+        keywords="contact sellapage, sellapage support, get help sellapage"
+      />
       <Navbar />
 
       {/* Header */}

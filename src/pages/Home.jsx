@@ -9,6 +9,7 @@ import {
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
+import SEO from '../components/SEO'
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -319,6 +320,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white font-body text-gray-900 antialiased">
+      <SEO
+        title={null}
+        description="Sellapage is the all-in-one commerce platform for Nigerian businesses. Run products, services, checkout, delivery, customers, analytics, and growth from one dashboard. Free to start."
+        url="/"
+        keywords="nigerian ecommerce platform, online store nigeria, sell products online nigeria, business page nigeria, sellapage"
+      />
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}

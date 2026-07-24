@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 
 const LAST_UPDATED = 'April 2026'
@@ -80,6 +81,12 @@ const sections = [
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Terms of Service"
+        description="Sellapage terms of service. Read the rules and guidelines for using our platform."
+        url="/terms"
+        noIndex
+      />
       <Navbar />
 
       {/* Header */}

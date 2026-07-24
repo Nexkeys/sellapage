@@ -3,10 +3,17 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, ExternalLink } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 export default function About() {
   return (
     <div className="min-h-screen bg-white font-body">
+      <SEO
+        title="About"
+        description="Learn about Sellapage, the all-in-one commerce platform built for Nigerian merchants, service providers, and freelancers."
+        url="/about"
+        keywords="sellapage about, nigerian ecommerce platform, about sellapage, online business nigeria"
+      />
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}

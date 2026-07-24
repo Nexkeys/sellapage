@@ -25,6 +25,7 @@ const TAB_ACCESS = {
   'sella-ai': [ADMIN_ROLES.SUPER_ADMIN],
   reports: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.SUPPORT],
   jobs: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.OPERATIONS],
+  blog: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
 }
 
 export async function getAdminRole(uid) {

@@ -51,6 +51,7 @@ import LeadsTab from "../components/dashboard/LeadsTab";
 import SettingsTab from "../components/dashboard/Settings";
 import SupportTab from "../components/dashboard/SupportTab";
 import OrdersTab from "../components/dashboard/OrdersTab";
+import BookingsTab from "../components/dashboard/BookingsTab";
 import CustomersTab from "../components/dashboard/CustomersTab";
 import CategoriesTab from "../components/dashboard/CategoriesTab";
 import ReviewsTab from "../components/dashboard/ReviewsTab";
@@ -188,6 +189,10 @@ export default function Dashboard() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersSynced, setOrdersSynced] = useState(false);
 
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [bookingsSynced, setBookingsSynced] = useState(false);
+
   // Analytics — lifted here so Overview and AnalyticsTab share the same data
   const [analyticsData, setAnalyticsData] = useState({
     totalViews: 0,
@@ -254,7 +259,10 @@ export default function Dashboard() {
   }, [activeTab]);
 
   useEffect(() => {
-    if ((activeTab === "orders" || activeTab === "delivery") && !isGrowthOrPro)
+    if (
+      (activeTab === "orders" || activeTab === "delivery" || activeTab === "bookings") &&
+      !isGrowthOrPro
+    )
       setActiveTab("overview");
   }, [activeTab, isGrowthOrPro]);
 
@@ -266,6 +274,16 @@ export default function Dashboard() {
   useEffect(() => {
     setOrdersSynced(false);
     setOrders([]);
+  }, [store?.id]);
+
+  useEffect(() => {
+    if (activeTab === "bookings" && store?.id && isGrowthOrPro && !bookingsSynced)
+      fetchBookings();
+  }, [activeTab, store?.id, isGrowthOrPro, bookingsSynced]);
+
+  useEffect(() => {
+    setBookingsSynced(false);
+    setBookings([]);
   }, [store?.id]);
 
   // Analytics real-time listener — only for Growth/Pro, lives at Dashboard level
@@ -543,6 +561,82 @@ export default function Dashboard() {
         if (prev.some((order) => order.id === orderId)) return prev;
         const next = [...prev];
         next.splice(Math.max(deletedIndex, 0), 0, deletedOrder);
+        return next;
+      });
+      throw err;
+    }
+  };
+
+  const fetchBookings = async () => {
+    setBookingsLoading(true);
+    try {
+      const q = query(
+        collection(db, "stores", store.id, "bookings"),
+        orderBy("createdAt", "desc"),
+      );
+      const snap = await getDocs(q);
+      setBookings(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setBookingsSynced(true);
+    } catch (err) {
+      console.error("Failed to fetch bookings", err);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const handleUpdateBooking = async (bookingId, updates) => {
+    if (!store?.id || !isGrowthOrPro) return;
+    const previousBooking = bookings.find((booking) => booking.id === bookingId);
+    if (!previousBooking) return;
+
+    const normalizedUpdates =
+      typeof updates === "string" ? { status: updates } : { ...updates };
+    const updatedAt = new Date();
+    const nextBooking = { ...previousBooking, ...normalizedUpdates, updatedAt };
+
+    setBookings((prev) =>
+      prev.map((booking) =>
+        booking.id === bookingId
+          ? { ...booking, ...normalizedUpdates, updatedAt }
+          : booking,
+      ),
+    );
+
+    try {
+      await updateDoc(doc(db, "stores", store.id, "bookings", bookingId), {
+        ...normalizedUpdates,
+        updatedAt,
+      });
+    } catch (err) {
+      console.error("Failed to update booking", err);
+      setBookings((prev) =>
+        prev.map((booking) => (booking.id === bookingId ? previousBooking : booking)),
+      );
+      throw err;
+    }
+
+    return nextBooking;
+  };
+
+  const handleDeleteBooking = async (bookingId) => {
+    if (!store?.id || !isGrowthOrPro) return;
+    const deletedBooking = bookings.find((booking) => booking.id === bookingId);
+    const deletedIndex = bookings.findIndex((booking) => booking.id === bookingId);
+    if (!deletedBooking) return;
+    if (deletedBooking.status === "completed") {
+      throw new Error("This booking is completed and locked — it can no longer be deleted.");
+    }
+
+    setBookings((prev) => prev.filter((booking) => booking.id !== bookingId));
+
+    try {
+      await deleteDoc(doc(db, "stores", store.id, "bookings", bookingId));
+    } catch (err) {
+      console.error("Failed to delete booking", err);
+      setBookings((prev) => {
+        if (prev.some((booking) => booking.id === bookingId)) return prev;
+        const next = [...prev];
+        next.splice(Math.max(deletedIndex, 0), 0, deletedBooking);
         return next;
       });
       throw err;
@@ -1714,6 +1808,19 @@ export default function Dashboard() {
           ordersLoading={ordersLoading}
           onUpdateOrder={handleUpdateOrder}
           onDeleteOrder={handleDeleteOrder}
+          isGrowthOrPro={isGrowthOrPro}
+          isPro={isPro}
+          navigateTo={setActiveTab}
+        />
+      )}
+      {activeTab === "bookings" && (
+        <BookingsTab
+          store={store}
+          user={user}
+          bookings={bookings}
+          bookingsLoading={bookingsLoading}
+          onUpdateBooking={handleUpdateBooking}
+          onDeleteBooking={handleDeleteBooking}
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
           navigateTo={setActiveTab}

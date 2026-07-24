@@ -29,6 +29,7 @@ import {
   Target,
   Share2,
   Briefcase,
+  CalendarDays,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -43,6 +44,7 @@ const NAV_ITEMS = [
   { id: "categories", label: "Categories", icon: Tag },
   { id: "ledger", label: "Ledger", icon: BookOpen },
   { id: "orders", label: "Orders", icon: ShoppingCart },
+  { id: "bookings", label: "Bookings", icon: CalendarDays },
   { id: "delivery", label: "Delivery", icon: Truck },
   { id: "customers", label: "Customers", icon: Users },
   { id: "leads", label: "Leads", icon: Users },
@@ -163,6 +165,7 @@ export default function DashboardLayout({
     () =>
       ALL_TABS.filter((item) => {
         if (item.id === 'orders' && !effectiveIsPro) return false;
+        if (item.id === 'bookings' && !effectiveIsPro) return false;
         if (item.id === 'delivery' && !effectiveIsPro) return false;
         if (item.id === 'payouts' && !effectiveIsPro) return false;
         if (item.id === 'customers' && !effectiveIsPro) return false;
@@ -171,6 +174,8 @@ export default function DashboardLayout({
         if (item.id === 'analytics' && !isGrowthOrAbove) return false;
         if (item.id === 'products' && vendorType === 'services') return false;
         if (item.id === 'services' && vendorType === 'products') return false;
+        if (item.id === 'orders' && vendorType === 'services') return false;
+        if (item.id === 'bookings' && vendorType === 'products') return false;
         return true;
       }),
     [isGrowthOrAbove, vendorType, effectiveIsPro],
@@ -243,6 +248,7 @@ export default function DashboardLayout({
           }
           const { id, label, icon: Icon } = item;
           if (id === 'orders' && !effectiveIsPro) return null;
+          if (id === 'bookings' && !effectiveIsPro) return null;
           if (id === 'delivery' && !effectiveIsPro) return null;
           if (id === 'payouts' && !effectiveIsPro) return null;
           if (id === 'customers' && !effectiveIsPro) return null;
@@ -253,6 +259,8 @@ export default function DashboardLayout({
           if (id === 'analytics' && !isGrowthOrAbove) return null;
           if (id === 'products' && vendorType === 'services') return null;
           if (id === 'services' && vendorType === 'products') return null;
+          if (id === 'orders' && vendorType === 'services') return null;
+          if (id === 'bookings' && vendorType === 'products') return null;
           const active = activeTab === id;
           return (
             <button

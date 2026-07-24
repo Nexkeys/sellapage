@@ -8,6 +8,7 @@ import { Search, Briefcase, MapPin, ArrowRight, Loader2, Store } from 'lucide-re
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { JOB_CATEGORIES, JOB_TYPES, JOB_TYPE_BADGE, getCategoryLabel, getJobTypeLabel } from '../utils/jobCategories'
+import SEO from '../components/SEO'
 
 const PAGE_SIZE = 20
 
@@ -67,6 +68,12 @@ export default function JobsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
+      <SEO
+        title="Jobs & Opportunities"
+        description="Find job openings and opportunities from Nigerian businesses. Apply directly via WhatsApp or email."
+        url="/jobs"
+        keywords="nigeria jobs, job openings nigeria, hiring nigeria, job opportunities, sellapage jobs"
+      />
       <Navbar />
 
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-green-400">

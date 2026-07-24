@@ -13,8 +13,3 @@ Disallow: /billing
 Disallow: /login
 Disallow: /reset-password
 Disallow: /review
-Disallow: /:storeName/
-Disallow: /:storeName/services
-
-# Crawl-delay for respectful crawling
-Crawl-delay: 10

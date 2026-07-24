@@ -39,13 +39,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Review token is required' })
     }
 
-    // Find order by review token using collectionGroup
+    // Find the order or booking by review token — orders and bookings live in
+    // separate collections, so a token could belong to either.
+    let orderDoc = null
     const ordersQuery = await db.collectionGroup('orders').where('reviewToken', '==', token).limit(1).get()
-    if (ordersQuery.empty) {
+    if (!ordersQuery.empty) {
+      orderDoc = ordersQuery.docs[0]
+    } else {
+      const bookingsQuery = await db.collectionGroup('bookings').where('reviewToken', '==', token).limit(1).get()
+      if (!bookingsQuery.empty) {
+        orderDoc = bookingsQuery.docs[0]
+      }
+    }
+
+    if (!orderDoc) {
       return res.status(404).json({ error: 'Invalid or expired review link' })
     }
 
-    const orderDoc = ordersQuery.docs[0]
     const orderData = orderDoc.data() || {}
 
     if (orderData.reviewTokenUsed === true) {

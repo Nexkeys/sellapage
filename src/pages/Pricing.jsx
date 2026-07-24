@@ -12,6 +12,7 @@ import {
   getMonthlyEquivalent,
   getSavingsPercent,
 } from '../utils/billingPlans'
+import SEO from '../components/SEO'
 
 const PLANS = [
   {
@@ -342,6 +343,12 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Pricing"
+        description="Simple, transparent pricing for Nigerian businesses. Start free on Starter, upgrade to Growth, Pro, or Premium when you need more power. No lock-in."
+        url="/pricing"
+        keywords="sellapage pricing, nigerian business platform cost, ecommerce pricing nigeria, online store pricing"
+      />
       <Navbar />
 
       {/* Hero */}

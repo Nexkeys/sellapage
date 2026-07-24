@@ -11,6 +11,7 @@ import {
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { JOB_TYPE_BADGE, getCategoryLabel, getJobTypeLabel } from '../utils/jobCategories'
+import SEO from '../components/SEO'
 
 export default function JobDetailPage() {
   const { jobId } = useParams()
@@ -112,6 +113,38 @@ export default function JobDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
+      <SEO
+        title={job.title || 'Job Details'}
+        description={job.description || `Apply for ${job.title || 'this position'} via Sellapage Jobs.`}
+        url={`/jobs/${job.id}`}
+        type="article"
+        jsonLd={job.id ? {
+          '@context': 'https://schema.org',
+          '@type': 'JobPosting',
+          title: job.title,
+          description: job.description,
+          datePosted: job.createdAt || job.postedAt,
+          validThrough: job.deadline || job.validThrough,
+          employmentType: job.type || 'FULL_TIME',
+          hiringOrganization: {
+            '@type': 'Organization',
+            name: job.storeName || job.businessName || 'Sellapage Merchant',
+          },
+          jobLocation: {
+            '@type': 'Place',
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: job.location || job.city || '',
+              addressRegion: job.state || '',
+              addressCountry: 'NG',
+            },
+          },
+          applicantLocationRequirements: {
+            '@type': 'Country',
+            name: 'NG',
+          },
+        } : null}
+      />
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">

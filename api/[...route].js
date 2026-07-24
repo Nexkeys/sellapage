@@ -132,6 +132,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/update-order-status.js")
         return handler(req, res)
       }
+      case "update-booking-status": {
+        const { default: handler } = await import("../src/api-handlers/update-booking-status.js")
+        return handler(req, res)
+      }
       case "add-custom-domain": {
         const { default: handler } = await import("../src/api-handlers/add-custom-domain.js")
         return handler(req, res)
@@ -296,6 +300,20 @@ export default async function handler(req, res) {
       }
       case "admin-jobs": {
         const { default: handler } = await import("../src/api-handlers/admin-jobs.js")
+        return handler(req, res)
+      }
+
+      case "blog-admin": {
+        const { default: handler } = await import("../src/api-handlers/blog-admin.js")
+        return handler(req, res)
+      }
+      case "blog-public": {
+        const { default: handler } = await import("../src/api-handlers/blog-public.js")
+        return handler(req, res)
+      }
+
+      case "sitemap": {
+        const { default: handler } = await import("../src/api-handlers/sitemap.js")
         return handler(req, res)
       }
 

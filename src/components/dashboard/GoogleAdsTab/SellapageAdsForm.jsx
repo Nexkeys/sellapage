@@ -5,8 +5,8 @@ import { ArrowLeft, Loader2, Target, Eye, ShoppingCart, Zap } from 'lucide-react
 const CAMPAIGN_TYPES = [
   { id: 'SEARCH', label: 'Search', desc: 'Text ads on Google search results', icon: Target, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', activeBg: 'bg-blue-50', activeBorder: 'border-blue-400' },
   { id: 'DISPLAY', label: 'Display', desc: 'Visual ads across Google websites', icon: Eye, bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200', activeBg: 'bg-purple-50', activeBorder: 'border-purple-400' },
-  { id: 'SHOPPING', label: 'Shopping', desc: 'Product ads for e-commerce', icon: ShoppingCart, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-400' },
-  { id: 'PERFORMANCE_MAX', label: 'Performance Max', desc: 'AI-optimized across all channels', icon: Zap, bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200', activeBg: 'bg-orange-50', activeBorder: 'border-orange-400' },
+  { id: 'SHOPPING', label: 'Shopping', desc: 'Coming soon — requires Google Merchant Center', icon: ShoppingCart, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-400', disabled: true },
+  { id: 'PERFORMANCE_MAX', label: 'Performance Max', desc: 'Coming soon — requires Google Merchant Center', icon: Zap, bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200', activeBg: 'bg-orange-50', activeBorder: 'border-orange-400', disabled: true },
 ]
 
 function formatNaira(amount) {
@@ -102,15 +102,18 @@ export default function SellapageAdsForm({ store, onBack, onError }) {
             {CAMPAIGN_TYPES.map((type) => (
               <button
                 key={type.id}
-                onClick={() => update('type', type.id)}
+                onClick={() => !type.disabled && update('type', type.id)}
+                disabled={type.disabled}
                 className={`p-3.5 rounded-xl border-2 text-left transition-all ${
-                  form.type === type.id
+                  type.disabled
+                    ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                    : form.type === type.id
                     ? `${type.activeBg} ${type.activeBorder}`
                     : 'border-gray-100 hover:border-gray-200 bg-white'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <type.icon size={14} className={form.type === type.id ? type.text : 'text-gray-400'} />
+                  <type.icon size={14} className={form.type === type.id && !type.disabled ? type.text : 'text-gray-400'} />
                   <span className="text-xs font-semibold text-gray-900">{type.label}</span>
                 </div>
                 <p className="text-[10px] text-gray-400">{type.desc}</p>

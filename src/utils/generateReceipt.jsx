@@ -93,18 +93,35 @@ function formatDate(date) {
   })
 }
 
+function ReceiptHeader({ store, subtitle }) {
+  return (
+    <>
+      {store.logoUrl ? (
+        <Image src={store.logoUrl} style={styles.logo} />
+      ) : null}
+
+      <Text style={styles.heading}>{store.businessName}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    </>
+  )
+}
+
+function ReceiptFooter({ store }) {
+  return (
+    <Text style={styles.footer}>
+      Thank you for shopping{'\n'}
+      WhatsApp: {store.whatsappNumber || '—'}
+    </Text>
+  )
+}
+
 function ReceiptDocument({ order, store }) {
   const items = order.cartItems || order.items || []
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {store.logoUrl ? (
-          <Image src={store.logoUrl} style={styles.logo} />
-        ) : null}
-
-        <Text style={styles.heading}>{store.businessName}</Text>
-        <Text style={styles.subtitle}>Order Receipt</Text>
+        <ReceiptHeader store={store} subtitle="Order Receipt" />
 
         <View style={styles.rule} />
 
@@ -157,10 +174,71 @@ function ReceiptDocument({ order, store }) {
           <Text>{formatNaira(order.grandTotal)}</Text>
         </View>
 
-        <Text style={styles.footer}>
-          Thank you for shopping{'\n'}
-          WhatsApp: {store.whatsappNumber || '—'}
-        </Text>
+        <ReceiptFooter store={store} />
+      </Page>
+    </Document>
+  )
+}
+
+function BookingReceiptDocument({ booking, store }) {
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <ReceiptHeader store={store} subtitle="Booking Receipt" />
+
+        <View style={styles.rule} />
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Customer</Text>
+          <Text>{booking.customerName}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Email</Text>
+          <Text>{booking.customerEmail}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Booking ID</Text>
+          <Text>{booking.paystackReference || booking.reference || booking.id || '—'}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Date</Text>
+          <Text>{formatDate(booking.createdAt)}</Text>
+        </View>
+
+        <View style={[styles.rule, { marginTop: 16 }]} />
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Service</Text>
+          <Text>{booking.serviceName}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Scheduled for</Text>
+          <Text>{booking.bookingDate} {booking.bookingTime}</Text>
+        </View>
+        {booking.locationPref ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Location</Text>
+            <Text>{booking.locationPref}</Text>
+          </View>
+        ) : null}
+
+        <View style={[styles.rule, { marginTop: 16 }]} />
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Service fee</Text>
+          <Text>{formatNaira(booking.servicePrice)}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Processing fee</Text>
+          <Text>{formatNaira(booking.processingFee)}</Text>
+        </View>
+
+        <View style={styles.totalRow}>
+          <Text>Grand total</Text>
+          <Text>{formatNaira(booking.grandTotal)}</Text>
+        </View>
+
+        <ReceiptFooter store={store} />
       </Page>
     </Document>
   )
@@ -168,5 +246,10 @@ function ReceiptDocument({ order, store }) {
 
 export async function generateOrderReceipt(order, store) {
   const blob = await pdf(<ReceiptDocument order={order} store={store} />).toBlob()
+  return URL.createObjectURL(blob)
+}
+
+export async function generateBookingReceipt(booking, store) {
+  const blob = await pdf(<BookingReceiptDocument booking={booking} store={store} />).toBlob()
   return URL.createObjectURL(blob)
 }

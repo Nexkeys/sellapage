@@ -300,7 +300,6 @@ export default function OrdersTab({
   const [filterSearch, setFilterSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPayment, setFilterPayment] = useState('all')
-  const [filterOrderType, setFilterOrderType] = useState('all')
   const [filterSort, setFilterSort] = useState('newest')
 
   // Pagination + inline status-timeline expand state
@@ -944,12 +943,6 @@ export default function OrdersTab({
       if (filterPayment !== 'all' && normalizePaymentStatus(order.paymentStatus) !== filterPayment) {
         return false
       }
-      // 4. Order Type
-      if (filterOrderType !== 'all') {
-        const isService = order.orderType === 'service'
-        if (filterOrderType === 'products' && isService) return false
-        if (filterOrderType === 'service_bookings' && !isService) return false
-      }
       return true
     }).sort((a, b) => {
       // 5. Date Sorting
@@ -957,11 +950,11 @@ export default function OrdersTab({
       const dateB = typeof b.createdAt?.toDate === 'function' ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime()
       return filterSort === 'oldest' ? dateA - dateB : dateB - dateA
     })
-  }, [orders, filterSearch, filterStatus, filterPayment, filterOrderType, filterSort])
+  }, [orders, filterSearch, filterStatus, filterPayment, filterSort])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterSearch, filterStatus, filterPayment, filterOrderType, filterSort])
+  }, [filterSearch, filterStatus, filterPayment, filterSort])
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE))
   const safeCurrentPage = Math.min(currentPage, totalPages)
@@ -1049,19 +1042,19 @@ export default function OrdersTab({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">
-            Orders & Bookings
+            Product Orders
           </p>
           <h1 className="text-xl font-bold tracking-tight text-gray-900">
             Order Ledger
           </h1>
           <p className="mt-0.5 text-xs text-gray-400">
-            Track product orders and service bookings in one place. WhatsApp orders can be logged manually in the ledger tab.
+            Track product orders here. Service bookings live in the Bookings tab. WhatsApp orders can be logged manually in the ledger tab.
           </p>
         </div>
       </div>
 
       {/* Operational Filter Strip */}
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5 bg-white p-3.5 rounded-2xl border border-gray-100">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 bg-white p-3.5 rounded-2xl border border-gray-100">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={14} className="text-gray-400" />
@@ -1097,18 +1090,6 @@ export default function OrdersTab({
             {PAYMENT_STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
-          </select>
-          <ChevronDown size={13} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-        </div>
-        <div className="relative">
-          <select
-            value={filterOrderType}
-            onChange={(e) => setFilterOrderType(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-xs font-semibold text-gray-700 outline-none transition-all focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:bg-white"
-          >
-            <option value="all">All Orders</option>
-            <option value="products">Products</option>
-            <option value="service_bookings">Service Bookings</option>
           </select>
           <ChevronDown size={13} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
@@ -1189,7 +1170,6 @@ export default function OrdersTab({
               setFilterSearch('');
               setFilterStatus('all');
               setFilterPayment('all');
-              setFilterOrderType('all');
               setFilterSort('newest');
             }} 
             className="mt-4 text-xs font-bold text-green-600 hover:text-green-700 underline underline-offset-2"
@@ -1235,8 +1215,8 @@ export default function OrdersTab({
                             {order.customerName || '-'}
                           </p>
                           {order.orderType && (
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${order.orderType === 'service' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                              {order.orderType === 'service' ? 'Booking' : 'Order'}
+                            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold bg-green-50 text-green-700 border-green-200">
+                              Order
                             </span>
                           )}
                           <p className="text-[11px] text-gray-400">
@@ -1257,18 +1237,13 @@ export default function OrdersTab({
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <div className="flex flex-col gap-1">
                           <p className="max-w-[200px] whitespace-pre-line text-xs leading-relaxed text-gray-700">
-                            {order.orderType === 'service' ? (order.serviceName || order.items || '-') : (order.items || '-')}
+                            {order.items || '-'}
                           </p>
-                          {order.orderType === 'service' && order.bookingDate && order.bookingTime && (
-                            <p className="text-xs font-semibold text-gray-500">
-                              Scheduled: {order.bookingDate} at {order.bookingTime}
-                            </p>
-                          )}
                         </div>
                       </td>
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <span className="whitespace-nowrap text-xs font-bold text-green-700">
-                          {formatTotal(order.orderType === 'service' ? (order.servicePrice ?? order.total) : order.total)}
+                          {formatTotal(order.total)}
                         </span>
                       </td>
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
@@ -1378,8 +1353,8 @@ export default function OrdersTab({
                         {order.customerName || 'Unknown customer'}
                       </p>
                       {order.orderType && (
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${order.orderType === 'service' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                          {order.orderType === 'service' ? 'Booking' : 'Order'}
+                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold bg-green-50 text-green-700 border-green-200">
+                          Order
                         </span>
                       )}
                     </div>
@@ -1411,16 +1386,11 @@ export default function OrdersTab({
                 <div className="mb-3 rounded-xl bg-gray-50 p-3">
                   <p className="mb-1.5 flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
                     <FileText size={11} />
-                    {order.orderType === 'service' ? 'Service' : 'Items'}
+                    Items
                   </p>
                   <p className="whitespace-pre-line text-xs leading-relaxed text-gray-700">
-                    {order.orderType === 'service' ? (order.serviceName || order.items || '-') : (order.items || '-')}
+                    {order.items || '-'}
                   </p>
-                  {order.orderType === 'service' && order.bookingDate && order.bookingTime && (
-                    <p className="mt-1 text-xs font-semibold text-gray-500">
-                      Scheduled: {order.bookingDate} at {order.bookingTime}
-                    </p>
-                  )}
                 </div>
 
                 <div className="mb-3 grid grid-cols-2 gap-2">
@@ -1429,7 +1399,7 @@ export default function OrdersTab({
                       Total
                     </p>
                     <p className="text-xs font-bold text-green-700">
-                      {formatTotal(order.orderType === 'service' ? (order.servicePrice ?? order.total) : order.total)}
+                      {formatTotal(order.total)}
                     </p>
                   </div>
                   <div className="rounded-xl bg-gray-50 p-3">

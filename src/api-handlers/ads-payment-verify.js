@@ -62,10 +62,44 @@ export default async function handler(req, res) {
     } = metadata
 
     const targeting = typeof targetingRaw === 'string' ? JSON.parse(targetingRaw) : targetingRaw
+    const normalizedType = (campaignType || 'SEARCH').toUpperCase()
+
+    // Paystack has already confirmed a successful charge by this point in every branch below —
+    // any failure from here on means the vendor paid and got nothing. Record it so it can be
+    // manually found and refunded/retried instead of vanishing except in Vercel logs.
+    const recordFailedAttempt = async (errorMessage) => {
+      try {
+        await db.collection('googleAdsCampaigns').add({
+          storeId,
+          provider: 'google',
+          managementMode: 'sellapage',
+          name: campaignName,
+          type: normalizedType,
+          status: 'FAILED',
+          budgetAmount: Number(budgetAmount),
+          serviceCharge: Math.round(Number(budgetAmount) * 0.10),
+          totalPaid: Number(budgetAmount) + Math.round(Number(budgetAmount) * 0.10),
+          paystackReference: reference,
+          error: errorMessage,
+          targeting: targeting || {},
+          createdAt: new Date().toISOString(),
+        })
+      } catch (recordErr) {
+        console.error('[ads-payment-verify] Failed to record failed attempt:', recordErr)
+      }
+    }
+
+    if (normalizedType === 'SHOPPING' || normalizedType === 'PERFORMANCE_MAX') {
+      const msg = 'Shopping and Performance Max campaigns require a linked Google Merchant Center account, which is not yet supported. Your payment was received — contact support for a refund.'
+      await recordFailedAttempt(msg)
+      return res.status(400).json({ error: msg })
+    }
 
     const masterDoc = await db.collection('platformSettings').doc('googleAdsMaster').get()
     if (!masterDoc.exists) {
-      return res.status(500).json({ error: 'Master Google Ads account not connected. Please contact support.' })
+      const msg = 'Master Google Ads account not connected. Your payment was received — contact support.'
+      await recordFailedAttempt(msg)
+      return res.status(500).json({ error: msg })
     }
 
     const masterData = masterDoc.data()
@@ -73,7 +107,9 @@ export default async function handler(req, res) {
     const customerId = masterData.customerId
 
     if (!refreshToken || !customerId) {
-      return res.status(500).json({ error: 'Master Google Ads account not configured. Please contact support.' })
+      const msg = 'Master Google Ads account not configured. Your payment was received — contact support.'
+      await recordFailedAttempt(msg)
+      return res.status(500).json({ error: msg })
     }
 
     let campaignResourceId = null
@@ -81,18 +117,26 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken(refreshToken)
     const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID
     const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
-    const budgetResourceName = await createBudget(accessToken, customerId, {
-      name: `${campaignName} (Sellapage Managed) ${Date.now()}`,
-      amountMicros: budgetMicros,
-    }, loginCustomerId)
-    campaignResourceId = await createCampaign(accessToken, customerId, {
-      name: `${campaignName} (Sellapage Managed)`,
-      budgetResourceName,
-      status: 'PAUSED',
-      advertisingChannelType: campaignType || 'SEARCH',
-    }, loginCustomerId)
 
-    if (campaignResourceId && campaignType === 'SEARCH' && targeting?.keywords?.length > 0) {
+    try {
+      const budgetResourceName = await createBudget(accessToken, customerId, {
+        name: `${campaignName} (Sellapage Managed) ${Date.now()}`,
+        amountMicros: budgetMicros,
+      }, loginCustomerId)
+      campaignResourceId = await createCampaign(accessToken, customerId, {
+        name: `${campaignName} (Sellapage Managed)`,
+        budgetResourceName,
+        status: 'PAUSED',
+        advertisingChannelType: normalizedType,
+      }, loginCustomerId)
+    } catch (err) {
+      const msg = `Payment received, but campaign creation failed: ${err.message || 'Unknown error'}. Contact support.`
+      console.error('[ads-payment-verify] Campaign creation failed after payment:', err)
+      await recordFailedAttempt(msg)
+      return res.status(500).json({ error: msg })
+    }
+
+    if (campaignResourceId && normalizedType === 'SEARCH' && targeting?.keywords?.length > 0) {
       try {
         adGroupResourceId = await createAdGroup(accessToken, customerId, {
           campaignResourceName: campaignResourceId,
@@ -124,7 +168,7 @@ export default async function handler(req, res) {
       provider: 'google',
       managementMode: 'sellapage',
       name: campaignName,
-      type: campaignType || 'SEARCH',
+      type: normalizedType,
       status: 'PAUSED',
       budgetType: 'daily',
       budgetAmount: Number(budgetAmount),
@@ -149,6 +193,6 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('[ads-payment-verify] Unexpected error:', err)
-    return res.status(500).json({ error: 'Internal server error' })
+    return res.status(500).json({ error: err.message || 'Internal server error' })
   }
 }

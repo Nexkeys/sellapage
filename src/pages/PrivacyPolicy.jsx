@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 
 const LAST_UPDATED = 'July 2026'
@@ -93,6 +94,12 @@ const sections = [
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Privacy Policy"
+        description="Sellapage privacy policy. Learn how we collect, use, and protect your personal information."
+        url="/privacy-policy"
+        noIndex
+      />
       <Navbar />
 
       {/* Header */}

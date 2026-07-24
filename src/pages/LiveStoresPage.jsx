@@ -13,6 +13,7 @@ import {
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { getActiveStores } from '../firebase/products'
+import SEO from '../components/SEO'
 
 const PAGE_SIZE = 20
 
@@ -86,6 +87,12 @@ export default function LiveStoresPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
+      <SEO
+        title="Live Stores"
+        description="Browse live stores powered by Sellapage. Discover products and services from Nigerian businesses."
+        url="/live-stores"
+        keywords="live stores nigeria, sellapage stores, online stores nigeria, browse stores"
+      />
       <Navbar />
 
       {/* Hero */}

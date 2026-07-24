@@ -104,6 +104,12 @@ export default async function handler(req, res) {
       batch.delete(doc.ref)
     })
 
+    // Delete all bookings
+    const bookingsSnap = await db.collection('stores').doc(uid).collection('bookings').get()
+    bookingsSnap.docs.forEach(doc => {
+      batch.delete(doc.ref)
+    })
+
     // Delete analytics
     const analyticsSnap = await db.collection('stores').doc(uid).collection('analytics').get()
     analyticsSnap.docs.forEach(doc => {

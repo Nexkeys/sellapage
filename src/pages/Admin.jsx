@@ -5,9 +5,10 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
+import BlogAdmin from '../components/admin/BlogAdmin';
 
 const ADMIN_TABS = [
   { id: 'health', label: 'System Health', icon: Database, short: 'Health' },
@@ -23,18 +24,17 @@ const ADMIN_TABS = [
   { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
   { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
   { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },
+  { id: 'blog', label: 'Blog', icon: BookOpen, short: 'Blog' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
 // Grouping used only by the mobile nav drawer — purely presentational, does not affect
 // ADMIN_TABS, role filtering (canAccessTab), or any tab's content/logic.
-// 'jobs' is the clean extension point for the future Blog moderation tab (Phase 2)
-// to sit beside in this same "Engagement" group.
 const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
-  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs'] },
+  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog'] },
   { label: 'Team', ids: ['admins'] },
 ];
 
@@ -768,6 +768,9 @@ export default function Admin() {
             </div>)}</div>
           </div>}
         </div>}
+
+        {/* BLOG */}
+        {activeTab === 'blog' && <BlogAdmin token={token} adminUid={user?.uid} />}
 
         {/* TEAM */}
         {activeTab === 'admins' && <div className="space-y-4 animate-in fade-in duration-200">

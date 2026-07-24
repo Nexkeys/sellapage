@@ -3,6 +3,7 @@ import { Check, X, ArrowRight } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
+import SEO from '../components/SEO'
 
 
 const FEATURES = [
@@ -40,6 +41,12 @@ export default function VsLinktree() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Sellapage vs Linktree"
+        description="Compare Sellapage and Linktree. See why Sellapage is the better choice for Nigerian businesses that need a full commerce page, not just a link list."
+        url="/compare/vs-linktree"
+        keywords="sellapage vs linktree, linktree alternative nigeria, link in bio alternative"
+      />
       <Navbar />
 
       {/* Hero */}

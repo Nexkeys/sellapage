@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { ArrowRight, Copy, Sparkles, Wand2 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 const STYLE_POOLS = {
   minimalist: {
@@ -101,6 +102,12 @@ export default function OfferNameLab() {
 
   return (
     <div className="min-h-screen bg-[#fffaf2] text-gray-950">
+      <SEO
+        title="Offer & Name Lab"
+        description="Generate catchy product names, service names, and offer descriptions for your business. Free AI-powered naming tool."
+        url="/tools/offer-name-lab"
+        keywords="business name generator, product name generator, offer name lab, business naming tool"
+      />
       <Navbar />
       <main className="pt-10">
         <section className="px-4 py-14">

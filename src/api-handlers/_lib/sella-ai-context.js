@@ -43,6 +43,7 @@ export async function buildStoreContext(db, storeId, store) {
     productsSnap,
     servicesSnap,
     ordersSnap,
+    bookingsSnap,
     customersSnap,
     discountsSnap,
     ledgerSnap,
@@ -53,6 +54,7 @@ export async function buildStoreContext(db, storeId, store) {
     safeGet(storeRef.collection('products').limit(200).get(), { docs: [] }),
     safeGet(storeRef.collection('services').limit(200).get(), { docs: [] }),
     safeGet(storeRef.collection('orders').limit(300).get(), { docs: [] }),
+    safeGet(storeRef.collection('bookings').limit(300).get(), { docs: [] }),
     safeGet(storeRef.collection('customers').limit(500).get(), { docs: [] }),
     safeGet(storeRef.collection('discounts').limit(100).get(), { docs: [] }),
     safeGet(storeRef.collection('ledger').limit(300).get(), { docs: [] }),
@@ -64,6 +66,7 @@ export async function buildStoreContext(db, storeId, store) {
   const products = productsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   const services = servicesSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   const orders = ordersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  const bookings = bookingsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   const customers = customersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   const discounts = discountsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   const ledger = ledgerSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
@@ -94,6 +97,44 @@ export async function buildStoreContext(db, storeId, store) {
       item: o.itemName || o.items || '—',
       total: Number(o.grandTotal || o.total || 0),
       status: o.status || 'pending',
+    }))
+
+  // ---- Bookings aggregation (separate collection/domain from orders) ----
+  const today = new Date().toISOString().split('T')[0]
+  const bookingMillis = (b) => toMillis(b.createdAt) || 0
+  const paidBookings = bookings.filter((b) => (b.status || '').toLowerCase() !== 'cancelled')
+  const bookingRevenueAll = paidBookings.reduce((s, b) => s + Number(b.grandTotal || 0), 0)
+  const bookingsThisWeek = bookings.filter((b) => bookingMillis(b) >= weekAgo)
+  const bookingsThisMonth = bookings.filter((b) => bookingMillis(b) >= monthAgo)
+  const bookingRevenueThisMonth = bookingsThisMonth
+    .filter((b) => (b.status || '').toLowerCase() !== 'cancelled')
+    .reduce((s, b) => s + Number(b.grandTotal || 0), 0)
+  const bookingStatusCounts = bookings.reduce((acc, b) => {
+    const s = (b.status || 'pending').toLowerCase()
+    acc[s] = (acc[s] || 0) + 1
+    return acc
+  }, {})
+  const recentBookings = [...bookings]
+    .sort((a, b) => bookingMillis(b) - bookingMillis(a))
+    .slice(0, 10)
+    .map((b) => ({
+      id: b.id,
+      customer: b.customerName || 'Unknown',
+      service: b.serviceName || '—',
+      total: Number(b.grandTotal || 0),
+      status: b.status || 'pending',
+      scheduledFor: b.bookingDate ? `${b.bookingDate} ${b.bookingTime || ''}`.trim() : null,
+    }))
+  const upcomingBookings = bookings
+    .filter((b) => b.bookingDate >= today && ['pending', 'confirmed', 'rescheduled'].includes((b.status || '').toLowerCase()))
+    .sort((a, b) => (a.bookingDate || '').localeCompare(b.bookingDate || ''))
+    .slice(0, 10)
+    .map((b) => ({
+      id: b.id,
+      customer: b.customerName || 'Unknown',
+      service: b.serviceName || '—',
+      scheduledFor: `${b.bookingDate} ${b.bookingTime || ''}`.trim(),
+      status: b.status || 'pending',
     }))
 
   // ---- Product / service best sellers (best-effort via order line item names) ----
@@ -170,6 +211,7 @@ export async function buildStoreContext(db, storeId, store) {
       products: products.length,
       services: services.length,
       orders: orders.length,
+      bookings: bookings.length,
       customers: customers.length,
       discounts: discounts.length,
       ledgerEntries: ledger.length,
@@ -186,6 +228,17 @@ export async function buildStoreContext(db, storeId, store) {
       statusCounts,
       recent: recentOrders,
       topSellers,
+    },
+    bookings: {
+      thisWeek: bookingsThisWeek.length,
+      thisMonth: bookingsThisMonth.length,
+      revenueAllTime: bookingRevenueAll,
+      revenueAllTimeLabel: money(bookingRevenueAll),
+      revenueThisMonth: bookingRevenueThisMonth,
+      revenueThisMonthLabel: money(bookingRevenueThisMonth),
+      statusCounts: bookingStatusCounts,
+      recent: recentBookings,
+      upcoming: upcomingBookings,
     },
     catalog: {
       categories: categories.map((c) => c.name).filter(Boolean),

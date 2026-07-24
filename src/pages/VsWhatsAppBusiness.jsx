@@ -3,6 +3,7 @@ import { Check, X, ArrowRight } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
+import SEO from '../components/SEO'
 
 
 const FEATURES = [
@@ -41,6 +42,12 @@ export default function VsWhatsAppBusiness() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Sellapage vs WhatsApp Business"
+        description="Compare Sellapage and WhatsApp Business. See why Sellapage gives you a proper online store with checkout, delivery, and analytics beyond WhatsApp."
+        url="/compare/vs-whatsapp-business"
+        keywords="sellapage vs whatsapp business, whatsapp store alternative, online store nigeria"
+      />
       <Navbar />
 
       {/* Hero */}

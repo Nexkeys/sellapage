@@ -4,6 +4,7 @@ import { Check, X, ArrowRight, AlertCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useAuth } from '../hooks/useAuth'
+import SEO from '../components/SEO'
 
 
 const FEATURES = [
@@ -31,6 +32,12 @@ export default function VsShopify() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Sellapage vs Shopify"
+        description="Compare Sellapage and Shopify. See why Sellapage is built specifically for Nigerian businesses with local payments, delivery, and pricing."
+        url="/compare/vs-shopify"
+        keywords="sellapage vs shopify, shopify alternative nigeria, ecommerce platform nigeria"
+      />
       <Navbar />
 
       {/* Hero */}

@@ -52,6 +52,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Store has no email address on file' })
     }
 
+    const normalizedType = (campaignType || 'SEARCH').toUpperCase()
+    if (normalizedType === 'SHOPPING' || normalizedType === 'PERFORMANCE_MAX') {
+      return res.status(400).json({
+        error: 'Shopping and Performance Max campaigns require a linked Google Merchant Center account, which is not yet supported. Please choose Search or Display.',
+      })
+    }
+
     const budget = Number(budgetAmount)
     if (isNaN(budget) || budget < 100) {
       return res.status(400).json({ error: 'Budget must be at least ₦100' })

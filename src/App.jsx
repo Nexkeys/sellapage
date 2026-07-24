@@ -32,6 +32,8 @@ import PolicyGenerator from './pages/PolicyGenerator'
 import ReportStore from './pages/ReportStore'
 import JobsPage from './pages/JobsPage'
 import JobDetailPage from './pages/JobDetailPage'
+import BlogPage from './pages/BlogPage'
+import BlogPostPage from './pages/BlogPostPage'
 
 
 export default function App() {
@@ -66,6 +68,8 @@ export default function App() {
           <Route path="/report-store" element={<ReportStore />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:jobId" element={<JobDetailPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/live-stores" element={<LiveStoresPage />} />
