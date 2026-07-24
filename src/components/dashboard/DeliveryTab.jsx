@@ -52,31 +52,67 @@ function ShipmentStatusBar({ rawStatus }) {
   }
 
   return (
-    <div className="flex items-center">
-      {SHIPMENT_STAGES.map((label, idx) => {
-        const reached = idx <= stage
-        const isLast = idx === SHIPMENT_STAGES.length - 1
-        return (
-          <div key={label} className={`flex items-center ${isLast ? '' : 'flex-1'}`}>
-            <div className="flex flex-col items-center gap-1">
-              <span
-                className={`flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-white ${
+    <>
+      {/* Mobile: Vertical stepper */}
+      <div className="sm:hidden">
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+            stage === 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+          }`}>
+            {stage === 3 ? <Check size={11} /> : <Loader2 size={11} className="animate-spin" />}
+            {SHIPMENT_STAGES[stage]}
+          </span>
+        </div>
+        <div className="flex items-stretch gap-0 ml-1">
+          {SHIPMENT_STAGES.map((label, idx) => {
+            const reached = idx <= stage
+            const isLast = idx === SHIPMENT_STAGES.length - 1
+            return (
+              <div key={label} className="flex flex-col items-center">
+                <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-full ${
                   reached ? 'bg-green-500' : 'bg-gray-200'
-                }`}
-              >
-                {reached && <Check size={9} className="text-white" strokeWidth={3} />}
-              </span>
-              <span className={`text-[9px] font-bold whitespace-nowrap ${reached ? 'text-gray-700' : 'text-gray-400'}`}>
-                {label}
-              </span>
+                }`}>
+                  {reached && <Check size={8} className="text-white" strokeWidth={3} />}
+                </span>
+                <span className={`text-[8px] font-bold mt-1 ${reached ? 'text-gray-700' : 'text-gray-400'}`}>
+                  {label}
+                </span>
+                {!isLast && (
+                  <div className={`w-12 h-0.5 mt-[-14px] ml-0.5 rounded-full ${idx < stage ? 'bg-green-500' : 'bg-gray-200'}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Desktop: Horizontal layout */}
+      <div className="hidden sm:flex items-center">
+        {SHIPMENT_STAGES.map((label, idx) => {
+          const reached = idx <= stage
+          const isLast = idx === SHIPMENT_STAGES.length - 1
+          return (
+            <div key={label} className={`flex items-center ${isLast ? '' : 'flex-1'}`}>
+              <div className="flex flex-col items-center gap-1">
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-white ${
+                    reached ? 'bg-green-500' : 'bg-gray-200'
+                  }`}
+                >
+                  {reached && <Check size={9} className="text-white" strokeWidth={3} />}
+                </span>
+                <span className={`text-[9px] font-bold whitespace-nowrap ${reached ? 'text-gray-700' : 'text-gray-400'}`}>
+                  {label}
+                </span>
+              </div>
+              {!isLast && (
+                <div className={`h-0.5 flex-1 mx-1 mb-3.5 rounded-full ${idx < stage ? 'bg-green-500' : 'bg-gray-200'}`} />
+              )}
             </div>
-            {!isLast && (
-              <div className={`h-0.5 flex-1 mx-1 mb-3.5 rounded-full ${idx < stage ? 'bg-green-500' : 'bg-gray-200'}`} />
-            )}
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
@@ -575,7 +611,7 @@ export default function DeliveryTab({
                         Tracking: {isTopship ? order.topshipTrackingId : (order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)}
                       </p>
                     </div>
-                    <div className="grid grid-cols-1 gap-1.5 flex-shrink-0 min-[360px]:grid-cols-3 sm:flex sm:flex-col">
+                    <div className="grid grid-cols-2 gap-1.5 flex-shrink-0 sm:flex sm:flex-col sm:min-w-[90px]">
                       <button
                         type="button"
                         onClick={() => refreshTracking(order)}
