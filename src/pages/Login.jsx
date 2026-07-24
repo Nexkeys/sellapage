@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import { loginSeller, registerSeller, resetPassword, auth } from '../firebase/auth'
 import { registerSession } from '../utils/sessionTracking'
+import { isReservedSlug } from '../utils/reservedSlugs'
 
 const ERROR_MESSAGES = {
   'auth/user-not-found': 'No account found with that email.',
@@ -126,6 +127,7 @@ export default function Login() {
       if (!form.whatsappNumber.trim()) return setError('Please enter your WhatsApp number.')
       if (!form.storeName.trim()) return setError('Please choose a store URL name.')
       if (form.storeName.length < 3) return setError('Store name must be at least 3 characters.')
+      if (isReservedSlug(form.storeName)) return setError('That store name is reserved. Please choose another.')
     }
     setLoading(true)
     try {

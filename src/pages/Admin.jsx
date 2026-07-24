@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 
@@ -22,16 +22,19 @@ const ADMIN_TABS = [
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
   { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
   { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
+  { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
 // Grouping used only by the mobile nav drawer — purely presentational, does not affect
 // ADMIN_TABS, role filtering (canAccessTab), or any tab's content/logic.
+// 'jobs' is the clean extension point for the future Blog moderation tab (Phase 2)
+// to sit beside in this same "Engagement" group.
 const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
-  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports'] },
+  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs'] },
   { label: 'Team', ids: ['admins'] },
 ];
 
@@ -132,6 +135,15 @@ export default function Admin() {
   const [expandedReport, setExpandedReport] = useState(null);
   const [reportNotes, setReportNotes] = useState('');
   const [updatingReport, setUpdatingReport] = useState(null);
+
+  const [jobsData, setJobsData] = useState(null);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [jobsError, setJobsError] = useState('');
+  const [jobsStatusFilter, setJobsStatusFilter] = useState('pending');
+  const [expandedJob, setExpandedJob] = useState(null);
+  const [rejectingJob, setRejectingJob] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [updatingJob, setUpdatingJob] = useState(null);
 
   const fetchHealth = useCallback(async () => {
     setHealthLoading(true); setHealthError('');
@@ -347,6 +359,27 @@ export default function Admin() {
     } finally { setUpdatingReport(null); }
   }, [reportsPage, reportsStatusFilter, reportsOffenseFilter, fetchReports]);
 
+  const fetchJobs = useCallback(async (status = 'pending') => {
+    setJobsLoading(true); setJobsError('');
+    try {
+      const r = await fetch(`/api/admin-jobs?action=list&status=${status}`, { headers: H });
+      if (!r.ok) throw new Error('Failed');
+      setJobsData(await r.json());
+    } catch { setJobsError('Failed to load job listings.'); } finally { setJobsLoading(false); }
+  }, []);
+
+  const updateJobStatus = useCallback(async (jobId, status, rejectionReason = '') => {
+    setUpdatingJob(jobId);
+    try {
+      await fetch('/api/admin-jobs?action=update', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        body: JSON.stringify({ jobId, status, rejectionReason, adminUid: user?.uid }),
+      });
+      fetchJobs(jobsStatusFilter);
+      setExpandedJob(null); setRejectingJob(null); setRejectReason('');
+    } finally { setUpdatingJob(null); }
+  }, [jobsStatusFilter, fetchJobs, user]);
+
   useEffect(() => {
     if (!user) { setRoleLoading(false); return; }
     getAdminRole(user.uid).then(role => {
@@ -371,6 +404,7 @@ export default function Admin() {
       revenue: () => fetchRevenue(),
       'sella-ai': () => fetchSella(),
       reports: () => fetchReports(reportsPage, reportsStatusFilter, reportsOffenseFilter),
+      jobs: () => fetchJobs(jobsStatusFilter),
     };
     m[activeTab]?.();
   }, [user, activeTab, adminRole]);
@@ -674,6 +708,64 @@ export default function Admin() {
               </div>}
             </div>)}</div>
             {reportsData?.total>20&&<div className="bg-gray-50/80 px-3 py-2 border-t border-gray-100 flex items-center justify-between"><button onClick={()=>{const p=Math.max(1,reportsPage-1);setReportsPage(p);fetchReports(p,reportsStatusFilter,reportsOffenseFilter);}} disabled={reportsPage===1} className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50"><ChevronLeft size={12} /> Prev</button><span className="text-[10px] font-semibold text-gray-500">{reportsPage}/{Math.ceil(reportsData.total/20)}</span><button onClick={()=>{const p=reportsPage+1;setReportsPage(p);fetchReports(p,reportsStatusFilter,reportsOffenseFilter);}} disabled={reportsPage*20>=reportsData.total} className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50">Next <ChevronRight size={12} /></button></div>}
+          </div>}
+        </div>}
+
+        {/* JOB LISTINGS */}
+        {activeTab === 'jobs' && <div className="space-y-4 animate-in fade-in duration-200">
+          {jobsError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{jobsError}</div>}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><h2 className="font-bold text-gray-800">Job Listings</h2><div className="flex gap-1.5 overflow-x-auto pb-1">{['all','pending','approved','rejected'].map(f=><button key={f} onClick={()=>{setJobsStatusFilter(f);fetchJobs(f);}} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${jobsStatusFilter===f?'bg-gray-900 text-white':'bg-gray-100 text-gray-600'}`}>{f[0].toUpperCase()+f.slice(1)}</button>)}</div></div>
+          {jobsData?.stats&&<div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{[
+            {l:'Total',v:jobsData.stats.total,c:'text-gray-900'},
+            {l:'Pending',v:jobsData.stats.pending,c:'text-amber-600'},
+            {l:'Approved',v:jobsData.stats.approved,c:'text-green-600'},
+            {l:'Rejected',v:jobsData.stats.rejected,c:'text-red-600'},
+          ].map(s=><div key={s.l} className="bg-white rounded-lg border border-gray-100 p-2.5 text-center"><p className="text-[9px] text-gray-400 font-bold uppercase">{s.l}</p><p className={`text-lg font-black mt-0.5 ${s.c}`}>{s.v}</p></div>)}</div>}
+          {jobsLoading?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+            <div className="divide-y divide-gray-50">{(jobsData?.jobs||[]).length===0?<div className="p-6 text-center text-gray-400 text-sm">No job listings found.</div>:jobsData.jobs.map(j=><div key={j.id} className="px-4 py-3 hover:bg-gray-50/50">
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-gray-900 truncate max-w-[220px]">{j.title}</p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
+                    <span className="text-[10px] font-bold text-gray-500">{j.businessName}</span>
+                    <span className="text-[10px] text-gray-400">· {j.location}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${j.status==='pending'?'bg-amber-50 text-amber-600 border-amber-200':j.status==='approved'?'bg-green-50 text-green-600 border-green-200':'bg-red-50 text-red-600 border-red-200'}`}>{j.status}</span>
+                  <button onClick={()=>{setExpandedJob(expandedJob===j.id?null:j.id);setRejectingJob(null);setRejectReason('');}} className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-lg hover:bg-gray-200">{expandedJob===j.id?'Close':'View'}</button>
+                </div>
+              </div>
+              <p className="text-[9px] text-gray-400">{j.createdAt?new Date(j.createdAt).toLocaleString('en-NG'):''}</p>
+              {expandedJob===j.id&&<div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div><span className="font-bold text-gray-500">Business:</span> <span className="text-gray-900">{j.businessName}</span> {j.storeSlug&&<a href={`/${j.storeSlug}`} target="_blank" rel="noopener noreferrer" className="text-green-600 underline ml-1">view store</a>}</div>
+                  <div><span className="font-bold text-gray-500">Category:</span> <span className="text-gray-900 capitalize">{j.category?.replace(/_/g,' ')}</span></div>
+                  <div><span className="font-bold text-gray-500">Type:</span> <span className="text-gray-900 capitalize">{j.jobType?.replace(/_/g,' ')}</span></div>
+                  <div><span className="font-bold text-gray-500">Pay:</span> <span className="text-gray-900">{j.pay}</span></div>
+                  <div><span className="font-bold text-gray-500">Location:</span> <span className="text-gray-900">{j.location}</span></div>
+                  <div><span className="font-bold text-gray-500">Timeline:</span> <span className="text-gray-900">{j.availabilityTimeline}</span></div>
+                </div>
+                <div><span className="text-[10px] font-bold text-gray-500 uppercase">Must-Haves</span><p className="text-xs text-gray-700 mt-0.5 whitespace-pre-wrap">{j.mustHaves}</p></div>
+                <div><span className="text-[10px] font-bold text-gray-500 uppercase">Description</span><p className="text-xs text-gray-700 mt-0.5 whitespace-pre-wrap">{j.description}</p></div>
+                {j.imageUrl&&<div><span className="text-[10px] font-bold text-gray-500 uppercase mb-1.5 block">Image</span><a href={j.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-xl overflow-hidden border border-gray-200 hover:border-green-400 transition-colors"><img src={j.imageUrl} alt={j.title} className="w-full h-full object-cover" /></a></div>}
+                {j.status==='rejected'&&j.rejectionReason&&<div className="p-2.5 bg-red-50 border border-red-100 rounded-lg"><span className="text-[10px] font-bold text-red-700 uppercase">Previous Rejection Reason</span><p className="text-xs text-red-600 mt-0.5">{j.rejectionReason}</p></div>}
+
+                {j.status==='pending'&&<div className="space-y-2">
+                  {rejectingJob===j.id?<div className="space-y-2">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">Rejection Reason (required)</label>
+                    <textarea value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="Explain what the vendor needs to fix..." rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 resize-none" />
+                    <div className="flex gap-2">
+                      <button onClick={()=>updateJobStatus(j.id,'rejected',rejectReason)} disabled={updatingJob===j.id||!rejectReason.trim()} className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-50">{updatingJob===j.id?'...':'Confirm Reject'}</button>
+                      <button onClick={()=>{setRejectingJob(null);setRejectReason('');}} className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700">Cancel</button>
+                    </div>
+                  </div>:<div className="flex flex-wrap gap-2">
+                    <button onClick={()=>updateJobStatus(j.id,'approved')} disabled={updatingJob===j.id} className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">{updatingJob===j.id?'...':'Approve'}</button>
+                    <button onClick={()=>setRejectingJob(j.id)} disabled={updatingJob===j.id} className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 disabled:opacity-50">Reject</button>
+                  </div>}
+                </div>}
+              </div>}
+            </div>)}</div>
           </div>}
         </div>}
 

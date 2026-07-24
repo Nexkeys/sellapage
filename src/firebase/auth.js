@@ -9,8 +9,13 @@ import {
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from './config'
 import { clearSessionId } from '../utils/sessionTracking'
+import { isReservedSlug } from '../utils/reservedSlugs'
 
 export const registerSeller = async (email, password, storeData) => {
+  if (isReservedSlug(storeData.storeName)) {
+    throw new Error('That store name is reserved. Please choose another.')
+  }
+
   const credential = await createUserWithEmailAndPassword(auth, email, password)
   const user = credential.user
 
@@ -28,6 +33,7 @@ export const registerSeller = async (email, password, storeData) => {
     productCount: 0,
     maxProducts: 15,
     maxImagesPerProduct: 3,
+    maxJobListings: 5,
     hasGrowthFeatures: false,
     hasProFeatures: false,
     hasPremiumFeatures: false,

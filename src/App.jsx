@@ -30,6 +30,8 @@ import LiveStoresPage from './pages/LiveStoresPage'
 import OfferNameLab from './pages/OfferNameLab'
 import PolicyGenerator from './pages/PolicyGenerator'
 import ReportStore from './pages/ReportStore'
+import JobsPage from './pages/JobsPage'
+import JobDetailPage from './pages/JobDetailPage'
 
 
 export default function App() {
@@ -62,6 +64,8 @@ export default function App() {
           <Route path="/tools/offer-name-lab" element={<OfferNameLab />} />
           <Route path="/tools/policy-generator" element={<PolicyGenerator />} />
           <Route path="/report-store" element={<ReportStore />} />
+          <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/jobs/:jobId" element={<JobDetailPage />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/live-stores" element={<LiveStoresPage />} />

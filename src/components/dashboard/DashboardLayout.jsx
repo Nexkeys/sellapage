@@ -28,6 +28,7 @@ import {
   BookOpen,
   Target,
   Share2,
+  Briefcase,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
   { id: "reviews", label: "Reviews", icon: Star },
   { id: "referral-program", label: "Referral Program", icon: Share2 },
   { id: "google-ads", label: "Google Ads", icon: Target },
+  { id: "job-listings", label: "Job Listings", icon: Briefcase },
   { type: "group", label: "Business" },
   { id: "online-store", label: "Business Page", icon: Globe },
   { id: "payouts", label: "Payouts", icon: Wallet },

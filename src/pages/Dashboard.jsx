@@ -67,6 +67,7 @@ import CustomDomainTab from "../components/dashboard/CustomDomainTab";
 import CACVerificationTab from "../components/dashboard/CACVerificationTab";
 import ReferralTab from "../components/dashboard/ReferralTab";
 import GoogleAdsTab from "../components/dashboard/GoogleAdsTab";
+import JobListingsTab from "../components/dashboard/JobListingsTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -1823,6 +1824,9 @@ export default function Dashboard() {
       )}
       {activeTab === 'referral-program' && (
         <ReferralTab user={user} store={store} />
+      )}
+      {activeTab === 'job-listings' && (
+        <JobListingsTab store={store} />
       )}
       {activeTab === 'google-ads' && (
         <GoogleAdsTab

@@ -34,6 +34,7 @@ const PLAN_LIMITS = {
   growth: {
     maxProducts: 50,
     maxImagesPerProduct: 10,
+    maxJobListings: 25,
     hasGrowthFeatures: true,
     hasProFeatures: false,
     hasPremiumFeatures: false,
@@ -41,6 +42,7 @@ const PLAN_LIMITS = {
   pro: {
     maxProducts: 999999,
     maxImagesPerProduct: 50,
+    maxJobListings: 50,
     hasGrowthFeatures: true,
     hasProFeatures: true,
     hasPremiumFeatures: false,
@@ -48,6 +50,7 @@ const PLAN_LIMITS = {
   premium: {
     maxProducts: 999999,
     maxImagesPerProduct: 50,
+    maxJobListings: 999999,
     hasGrowthFeatures: true,
     hasProFeatures: true,
     hasPremiumFeatures: true,

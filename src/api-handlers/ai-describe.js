@@ -3,10 +3,14 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore'
 
+// Bumped from {growth:20, pro:50, premium:50}: job description generations now
+// share this same daily counter and cost far more tokens per call (~350 vs ~40),
+// so the ceiling was raised to give vendors room for both without starving
+// product/service description usage.
 const DAILY_LIMITS = {
-  growth: 20,
-  pro: 50,
-  premium: 50,
+  growth: 30,
+  pro: 65,
+  premium: 65,
 }
 
 const GENERATION_COOLDOWN_MS = 15000
@@ -60,13 +64,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid JSON body' })
     }
 
-    const { storeId, productName, category, price } = body
+    const { storeId, productName, category, price, mode, jobTitle, notes } = body
+    const isJobMode = mode === 'job'
 
     if (!storeId) {
       return res.status(400).json({ error: 'Store ID is required' })
     }
 
-    if (!productName || !String(productName).trim()) {
+    if (isJobMode) {
+      if (!jobTitle || !String(jobTitle).trim()) {
+        return res.status(400).json({ error: 'Job title is required' })
+      }
+      const sentenceCount = String(notes || '').split(/[.!?]+/).filter(s => s.trim().length > 3).length
+      if (!notes || sentenceCount < 10) {
+        return res.status(400).json({ error: 'Please write at least 10 sentences of rough notes about the job first, then generate.' })
+      }
+    } else if (!productName || !String(productName).trim()) {
       return res.status(400).json({ error: 'Product name is required' })
     }
 
@@ -217,15 +230,24 @@ export default async function handler(req, res) {
 
       usageReserved = true
 
-      const prompt = [
-        'You are a product copywriter for Nigerian small business sellers and service providers. Write one short, cool, attractive product/service description line for the following item. Keep it simple and natural, maximum 12 words. Use plain friendly English. Do not exaggerate, do not sound robotic, and do not make it long. Do not include the price. Do not use bullet points. Write only one flowing sentence fragment or sentence.',
-        '',
-        `Product name: ${String(productName).trim()}`,
-        category ? `Category: ${String(category).trim()}` : null,
-        price !== undefined && price !== null && String(price).trim() ? `Price: NGN ${String(price).trim()}` : null,
-        '',
-        'Write only the description. No preamble, no label, no quotation marks.',
-      ].filter(line => line !== null).join('\n')
+      const prompt = isJobMode
+        ? [
+            'You are a job-post copywriter for Nigerian small business employers. Expand the rough notes below into a polished, well-structured job description for a job listing. Include what the role involves and what is expected of the candidate, written in 2-4 short paragraphs. Use plain, professional, friendly English. Do not invent a salary or pay figure. Do not use markdown formatting or bullet points — plain paragraphs only.',
+            '',
+            `Job title: ${String(jobTitle).trim()}`,
+            `Employer's rough notes: ${String(notes).trim()}`,
+            '',
+            'Write only the finished job description. No preamble, no label, no quotation marks.',
+          ].join('\n')
+        : [
+            'You are a product copywriter for Nigerian small business sellers and service providers. Write one short, cool, attractive product/service description line for the following item. Keep it simple and natural, maximum 12 words. Use plain friendly English. Do not exaggerate, do not sound robotic, and do not make it long. Do not include the price. Do not use bullet points. Write only one flowing sentence fragment or sentence.',
+            '',
+            `Product name: ${String(productName).trim()}`,
+            category ? `Category: ${String(category).trim()}` : null,
+            price !== undefined && price !== null && String(price).trim() ? `Price: NGN ${String(price).trim()}` : null,
+            '',
+            'Write only the description. No preamble, no label, no quotation marks.',
+          ].filter(line => line !== null).join('\n')
 
       const aiResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
         method: 'POST',
@@ -235,8 +257,8 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           model: 'meta/llama-3.1-8b-instruct',
-          max_tokens: 40,
-          temperature: 0.5,
+          max_tokens: isJobMode ? 350 : 40,
+          temperature: isJobMode ? 0.6 : 0.5,
           messages: [
             { role: 'user', content: prompt }
           ],

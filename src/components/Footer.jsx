@@ -63,6 +63,11 @@ export default function Footer() {
                 </li>
               ))}
               <li>
+                <Link to="/jobs" className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
+                  Jobs
+                </Link>
+              </li>
+              <li>
                 <Link to="/login" className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
                   Sign In
                 </Link>

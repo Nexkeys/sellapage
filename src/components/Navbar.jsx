@@ -1,7 +1,7 @@
 // src/components/Navbar.jsx/
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, X, LayoutDashboard, LogOut, Store } from 'lucide-react'
+import { Menu, X, LayoutDashboard, LogOut, Store, Briefcase } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { logoutSeller } from '../firebase/auth'
 
@@ -47,6 +47,10 @@ export default function Navbar() {
             <Link to="/live-stores" className="flex items-center gap-1.5 hover:text-green-600 transition-colors hover:font-semibold">
               <Store size={14} />
               Explore Stores
+            </Link>
+            <Link to="/jobs" className="flex items-center gap-1.5 hover:text-green-600 transition-colors hover:font-semibold">
+              <Briefcase size={14} />
+              Jobs
             </Link>
 
             {user ? (
@@ -104,7 +108,8 @@ export default function Navbar() {
             { label: 'Offer & Name Lab', href: '/tools/offer-name-lab' },
             { label: 'Policy Generator', href: '/tools/policy-generator' },
             { label: 'Pricing', href: '/pricing' },
-            { label: 'Explore Stores', href: '/live-stores', isLink: true },
+            { label: 'Explore Stores', href: '/live-stores', isLink: true, icon: Store },
+            { label: 'Jobs', href: '/jobs', isLink: true, icon: Briefcase },
           ].map(link => (
             link.isLink ? (
               <Link
@@ -113,7 +118,7 @@ export default function Navbar() {
                 onClick={close}
                 className="flex items-center gap-2 px-3 py-2.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-xl text-sm font-medium transition-all"
               >
-                <Store size={14} />
+                <link.icon size={14} />
                 {link.label}
               </Link>
             ) : (
