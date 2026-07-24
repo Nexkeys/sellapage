@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Search, BookOpen, ArrowRight, Loader2, Clock } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { getExcerpt, formatBlogDate, getCategoryBadgeClass } from '../utils/blogHelpers'
 

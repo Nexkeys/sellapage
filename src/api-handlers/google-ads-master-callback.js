@@ -46,7 +46,11 @@ export default async function handler(req, res) {
     }
 
     const refreshToken = tokenData.refresh_token
-    const customerId = process.env.GOOGLE_ADS_MCC_ID || '5897875835'
+    // The operating customer for campaign/budget creation must be a serving (client) account, not
+    // the manager account itself — Google Ads does not allow a manager account to directly hold
+    // campaigns. GOOGLE_ADS_MCC_ID (589-787-5835) stays the manager, used only for the
+    // login-customer-id header elsewhere; this is the serving account linked underneath it.
+    const customerId = process.env.GOOGLE_ADS_MASTER_SERVING_ID || '9738549037'
 
     await db.collection('platformSettings').doc('googleAdsMaster').set({
       refreshToken,
