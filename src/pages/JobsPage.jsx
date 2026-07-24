@@ -84,7 +84,7 @@ export default function JobsPage() {
             <span className="text-[11px] font-bold text-white uppercase tracking-wider">Sellapage Jobs & Opportunities</span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3 font-display">
-            Find Work. Hire Fast.
+            Find Work. Get Hired Fast.
           </h1>
           <p className="text-sm sm:text-base text-white/80 max-w-lg mx-auto leading-relaxed mb-6">
             Real openings posted directly by Sellapage vendors — contract, part-time, full-time, freelance, and gig work across Nigeria.

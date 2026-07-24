@@ -326,113 +326,6 @@ export default function JobListingsTab({ store }) {
     )
   }
 
-  const JobForm = () => (
-    <div className="p-4 space-y-4">
-      {formError && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
-          <AlertCircle size={14} /> {formError}
-        </div>
-      )}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Job Title *</label>
-          <input value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Social Media Manager" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Pay / Offer *</label>
-          <input value={form.pay} onChange={e => setForm(prev => ({ ...prev, pay: e.target.value }))} placeholder="e.g. ₦120,000/month or Negotiable" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category *</label>
-          <select value={form.category} onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all">
-            <option value="">Select category</option>
-            {JOB_CATEGORIES.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Job Type *</label>
-          <select value={form.jobType} onChange={e => setForm(prev => ({ ...prev, jobType: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all">
-            <option value="">Select type</option>
-            {JOB_TYPES.map(t => <option key={t.slug} value={t.slug}>{t.label}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Location *</label>
-          <input value={form.location} onChange={e => setForm(prev => ({ ...prev, location: e.target.value }))} placeholder="e.g. Lagos (Remote)" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Availability Timeline *</label>
-          <input value={form.availabilityTimeline} onChange={e => setForm(prev => ({ ...prev, availabilityTimeline: e.target.value }))} placeholder="e.g. Immediate" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Must-Haves / Requirements *</label>
-        <textarea value={form.mustHaves} onChange={e => setForm(prev => ({ ...prev, mustHaves: e.target.value }))} rows={2} placeholder="e.g. 2+ years experience, good communication skills..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-xs font-semibold text-gray-700">Description *</label>
-          {canUseAI ? (
-            <button type="button" onClick={() => setShowAiNotes(v => !v)} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all border border-green-200">
-              <Sparkles size={11} /> Generate with AI
-            </button>
-          ) : (
-            <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold px-2 py-1 rounded-lg bg-gray-50 border border-gray-200">
-              <Lock size={10} /> AI — Growth+
-            </span>
-          )}
-        </div>
-        {showAiNotes && canUseAI && (
-          <div className="mb-2 p-3 bg-green-50/50 border border-green-100 rounded-xl space-y-2">
-            <p className="text-[11px] text-gray-500">Type at least 10 sentences of rough notes about the role — the AI will turn it into a polished description.</p>
-            <textarea value={aiNotes} onChange={e => setAiNotes(e.target.value)} rows={4} placeholder="This role involves... The ideal candidate should..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
-            {aiError && <p className="text-red-500 text-xs font-medium">{aiError}</p>}
-            <button type="button" onClick={handleGenerateDescription} disabled={generating} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white transition-all">
-              {generating ? <><Loader2 size={11} className="animate-spin" /> Generating...</> : 'Generate Description'}
-            </button>
-          </div>
-        )}
-        <textarea value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Full job description..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-gray-700 mb-2">Image (Optional)</label>
-        <div className="flex flex-wrap gap-2">
-          {imagePreview && (
-            <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 group">
-              <img src={imagePreview} alt="" className="w-full h-full object-cover" />
-              <button onClick={() => { setImagePreview(''); setImageFile(null); setForm(prev => ({ ...prev, imageUrl: '' })) }} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <X size={16} className="text-white" />
-              </button>
-            </div>
-          )}
-          {!imagePreview && (
-            <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-green-400 hover:bg-green-50/30 transition-all group">
-              <UploadCloud size={16} className="text-gray-300 group-hover:text-green-400 transition-colors mb-0.5" />
-              <span className="text-[10px] text-gray-300 group-hover:text-green-400 font-medium">Upload</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-            </label>
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-3 pt-1">
-        <button onClick={resetForm} className="flex-1 sm:flex-none px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
-        <button onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none px-5 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
-          {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : editingJob ? 'Update Job' : 'Post Job'}
-        </button>
-      </div>
-    </div>
-  )
-
   return (
     <div className="p-4 sm:p-5 max-w-5xl mx-auto space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -483,7 +376,14 @@ export default function JobListingsTab({ store }) {
             <h2 className="font-bold text-gray-900 text-sm">Post New Job</h2>
             <button onClick={resetForm} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X size={15} /></button>
           </div>
-          <JobForm />
+          <JobForm
+            form={form} setForm={setForm} formError={formError} editingJob={editingJob}
+            canUseAI={canUseAI} showAiNotes={showAiNotes} setShowAiNotes={setShowAiNotes}
+            aiNotes={aiNotes} setAiNotes={setAiNotes} aiError={aiError} generating={generating}
+            onGenerateDescription={handleGenerateDescription}
+            imagePreview={imagePreview} setImagePreview={setImagePreview} setImageFile={setImageFile}
+            handleImageChange={handleImageChange} resetForm={resetForm} handleSave={handleSave} saving={saving}
+          />
         </div>
       )}
 
@@ -530,7 +430,14 @@ export default function JobListingsTab({ store }) {
                       <h2 className="font-bold text-gray-900 text-sm">Edit Job</h2>
                       <button onClick={resetForm} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X size={15} /></button>
                     </div>
-                    <JobForm />
+                    <JobForm
+                      form={form} setForm={setForm} formError={formError} editingJob={editingJob}
+                      canUseAI={canUseAI} showAiNotes={showAiNotes} setShowAiNotes={setShowAiNotes}
+                      aiNotes={aiNotes} setAiNotes={setAiNotes} aiError={aiError} generating={generating}
+                      onGenerateDescription={handleGenerateDescription}
+                      imagePreview={imagePreview} setImagePreview={setImagePreview} setImageFile={setImageFile}
+                      handleImageChange={handleImageChange} resetForm={resetForm} handleSave={handleSave} saving={saving}
+                    />
                   </div>
                 )
               }
@@ -621,6 +528,123 @@ export default function JobListingsTab({ store }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// Defined at module scope (not inside JobListingsTab) — nesting this as a local
+// function previously meant a brand-new component reference was created on
+// every keystroke's re-render, so React unmounted/remounted the whole form
+// (and its focused input) on every character typed.
+function JobForm({
+  form, setForm, formError, editingJob, canUseAI, showAiNotes, setShowAiNotes,
+  aiNotes, setAiNotes, aiError, generating, onGenerateDescription,
+  imagePreview, setImagePreview, setImageFile, handleImageChange, resetForm, handleSave, saving,
+}) {
+  return (
+    <div className="p-4 space-y-4">
+      {formError && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
+          <AlertCircle size={14} /> {formError}
+        </div>
+      )}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Job Title *</label>
+          <input value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Social Media Manager" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Pay / Offer *</label>
+          <input value={form.pay} onChange={e => setForm(prev => ({ ...prev, pay: e.target.value }))} placeholder="e.g. ₦120,000/month or Negotiable" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category *</label>
+          <select value={form.category} onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all">
+            <option value="">Select category</option>
+            {JOB_CATEGORIES.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Job Type *</label>
+          <select value={form.jobType} onChange={e => setForm(prev => ({ ...prev, jobType: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all">
+            <option value="">Select type</option>
+            {JOB_TYPES.map(t => <option key={t.slug} value={t.slug}>{t.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Location *</label>
+          <input value={form.location} onChange={e => setForm(prev => ({ ...prev, location: e.target.value }))} placeholder="e.g. Lagos (Remote)" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Availability Timeline *</label>
+          <input value={form.availabilityTimeline} onChange={e => setForm(prev => ({ ...prev, availabilityTimeline: e.target.value }))} placeholder="e.g. Immediate" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all" />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Must-Haves / Requirements *</label>
+        <textarea value={form.mustHaves} onChange={e => setForm(prev => ({ ...prev, mustHaves: e.target.value }))} rows={2} placeholder="e.g. 2+ years experience, good communication skills..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-semibold text-gray-700">Description *</label>
+          {canUseAI ? (
+            <button type="button" onClick={() => setShowAiNotes(v => !v)} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all border border-green-200">
+              <Sparkles size={11} /> Generate with AI
+            </button>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold px-2 py-1 rounded-lg bg-gray-50 border border-gray-200">
+              <Lock size={10} /> AI — Growth+
+            </span>
+          )}
+        </div>
+        {showAiNotes && canUseAI && (
+          <div className="mb-2 p-3 bg-green-50/50 border border-green-100 rounded-xl space-y-2">
+            <p className="text-[11px] text-gray-500">Type at least 10 sentences of rough notes about the role — the AI will turn it into a polished description.</p>
+            <textarea value={aiNotes} onChange={e => setAiNotes(e.target.value)} rows={4} placeholder="This role involves... The ideal candidate should..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+            {aiError && <p className="text-red-500 text-xs font-medium">{aiError}</p>}
+            <button type="button" onClick={onGenerateDescription} disabled={generating} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white transition-all">
+              {generating ? <><Loader2 size={11} className="animate-spin" /> Generating...</> : 'Generate Description'}
+            </button>
+          </div>
+        )}
+        <textarea value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Full job description..." className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-700 mb-2">Image (Optional)</label>
+        <div className="flex flex-wrap gap-2">
+          {imagePreview && (
+            <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 group">
+              <img src={imagePreview} alt="" className="w-full h-full object-cover" />
+              <button onClick={() => { setImagePreview(''); setImageFile(null); setForm(prev => ({ ...prev, imageUrl: '' })) }} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <X size={16} className="text-white" />
+              </button>
+            </div>
+          )}
+          {!imagePreview && (
+            <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-green-400 hover:bg-green-50/30 transition-all group">
+              <UploadCloud size={16} className="text-gray-300 group-hover:text-green-400 transition-colors mb-0.5" />
+              <span className="text-[10px] text-gray-300 group-hover:text-green-400 font-medium">Upload</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            </label>
+          )}
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-1">
+        <button onClick={resetForm} className="flex-1 sm:flex-none px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">Cancel</button>
+        <button onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none px-5 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+          {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : editingJob ? 'Update Job' : 'Post Job'}
+        </button>
+      </div>
     </div>
   )
 }

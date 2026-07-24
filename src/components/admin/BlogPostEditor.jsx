@@ -226,17 +226,6 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
     }
   }
 
-  const ToolbarBtn = ({ icon: Icon, active, onClick, title }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      className={`p-2 rounded-lg transition-colors ${active ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-100'}`}
-    >
-      <Icon size={15} />
-    </button>
-  )
-
   if (loadingPost || !editor) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -421,5 +410,22 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
         </div>
       </div>
     </div>
+  )
+}
+
+// Defined at module scope, not inside BlogPostEditor — a nested definition
+// gets recreated on every keystroke's re-render (same bug class fixed in
+// JobListingsTab.jsx's JobForm). Harmless here since it wraps buttons, not
+// text inputs, but worth keeping consistent.
+function ToolbarBtn({ icon: Icon, active, onClick, title }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`p-2 rounded-lg transition-colors ${active ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-100'}`}
+    >
+      <Icon size={15} />
+    </button>
   )
 }
