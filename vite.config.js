@@ -3,6 +3,16 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // esbuild's default minifier was mangling an identifier collision in the
+  // production bundle (a genuine top-level component reference — e.g. `SEO`
+  // used across many pages — got renamed at its declaration but left
+  // unrenamed at some call sites, throwing "ReferenceError: X is not
+  // defined" only in the minified build, never in dev or an unminified
+  // build). Terser is the more battle-tested minifier and doesn't reproduce
+  // this class of bug.
+  build: {
+    minify: "terser",
+  },
   plugins: [
     react(),
     VitePWA({

@@ -29,6 +29,9 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
   const [featuredFile, setFeaturedFile] = useState(null)
   const [featuredPreview, setFeaturedPreview] = useState('')
   const [categories, setCategories] = useState([])
+  const [showNewCategory, setShowNewCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
   const [loadingPost, setLoadingPost] = useState(!!postId)
   const [uploadingInlineImage, setUploadingInlineImage] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -53,9 +56,34 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
     const res = await fetch('/api/blog-admin?action=list-categories', { headers: { 'x-admin-token': token } })
     const data = await res.json().catch(() => ({}))
     setCategories(data.categories || [])
+    return data.categories || []
   }, [token])
 
   useEffect(() => { loadCategories() }, [loadCategories])
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim()
+    if (!name) return
+    setCreatingCategory(true)
+    setError('')
+    try {
+      const res = await fetch('/api/blog-admin?action=create-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to create category')
+      await loadCategories()
+      setForm(prev => ({ ...prev, category: data.category.id }))
+      setNewCategoryName('')
+      setShowNewCategory(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
 
   useEffect(() => {
     if (!postId || !editor) return
@@ -246,10 +274,33 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category *</label>
-          <select value={form.category} onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20">
-            <option value="">Select category</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="flex gap-2">
+            <select value={form.category} onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20">
+              <option value="">Select category</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <button type="button" onClick={() => setShowNewCategory(v => !v)} title="Add a new category" className="px-3 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-green-600 transition-all">
+              <Plus size={15} />
+            </button>
+          </div>
+          {categories.length === 0 && !showNewCategory && (
+            <p className="text-[11px] text-amber-600 mt-1.5">No categories yet — click + to add one.</p>
+          )}
+          {showNewCategory && (
+            <div className="flex gap-2 mt-2">
+              <input
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory() } }}
+                placeholder="New category name"
+                autoFocus
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
+              />
+              <button type="button" onClick={handleCreateCategory} disabled={creatingCategory || !newCategoryName.trim()} className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-lg text-xs font-bold">
+                {creatingCategory ? <Loader2 size={13} className="animate-spin" /> : 'Add'}
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">Author</label>
