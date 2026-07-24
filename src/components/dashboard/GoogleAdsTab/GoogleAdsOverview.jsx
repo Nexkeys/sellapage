@@ -18,7 +18,10 @@ const STAT_COLORS = {
   purple: { bg: 'bg-purple-50', text: 'text-purple-500', border: 'border-purple-100' },
 }
 
-export default function GoogleAdsOverview({ store, campaigns, reports, loading, onRefresh }) {
+export default function GoogleAdsOverview({ store, campaigns: allCampaigns, reports, loading, onRefresh }) {
+  // Sellapage-managed campaigns live on a different account with their own status view — exclude
+  // them from this self-managed account's stats.
+  const campaigns = (allCampaigns || []).filter((c) => c.managementMode !== 'sellapage')
   const currencyCode = store?.googleAdsCurrency || 'USD'
   const summary = reports?.summary || {}
   const activeCampaigns = campaigns?.filter((c) => c.status === 'ACTIVE' || c.status === 'ENABLED').length || 0

@@ -76,6 +76,7 @@ export async function handleBookingCheckout(db, data, res) {
     reviewToken: null,
     reviewTokenUsed: false,
     reviewSubmitted: false,
+    reminderSent: false,
     createdAt: Timestamp.now(),
     statusLog: [{
       status: "pending",

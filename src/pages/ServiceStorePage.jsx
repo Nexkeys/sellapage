@@ -1,7 +1,7 @@
 // src/pages/ServiceStorePage.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Package, Search, X, Grid, Tag, Calendar, Check, Loader2, MessageCircle, ArrowRight } from "lucide-react";
+import { Package, Search, X, Grid, Tag, Calendar, Check, Loader2, MessageCircle, ArrowRight, AlertCircle } from "lucide-react";
 import { getStoreBySlug } from "../firebase/products";
 import { getServices } from "../firebase/services";
 import { db } from "../firebase/config";
@@ -199,6 +199,8 @@ export default function ServiceStorePage() {
   const [completedBooking, setCompletedBooking] = useState(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [receiptDownloading, setReceiptDownloading] = useState(false);
+  const [verifyingBooking, setVerifyingBooking] = useState(false);
+  const [bookingVerifyError, setBookingVerifyError] = useState("");
 
   const allServicesRef = useRef(null);
   const viewCountedRef = useRef(false);
@@ -259,23 +261,70 @@ export default function ServiceStorePage() {
     const ref = searchParams.get("reference");
     if (!ref) return;
 
-    const stored = sessionStorage.getItem(`sellapage_checkout_${ref}`);
-    if (!stored) return;
-
-    try {
-      const parsed = JSON.parse(stored);
-      if (parsed.transactionType === "checkout") {
-        setCompletedBooking(parsed.booking);
-        setSuccessModalOpen(true);
-        sessionStorage.removeItem(`sellapage_checkout_${ref}`);
-      }
-    } catch {
-      // ignore invalid storage
-    }
-
     searchParams.delete("checkout");
     searchParams.delete("reference");
     setSearchParams(searchParams, { replace: true });
+
+    const stored = sessionStorage.getItem(`sellapage_checkout_${ref}`);
+    let usedSnapshot = false;
+
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.transactionType === "checkout") {
+          setCompletedBooking(parsed.booking);
+          setSuccessModalOpen(true);
+          sessionStorage.removeItem(`sellapage_checkout_${ref}`);
+          usedSnapshot = true;
+        }
+      } catch {
+        // ignore invalid storage
+      }
+    }
+
+    if (usedSnapshot) return;
+
+    // sessionStorage snapshot is gone — happens whenever the Paystack redirect
+    // lands in a different browsing context than the one that left (common in
+    // WhatsApp/Instagram in-app browsers). Fall back to a server-verified
+    // lookup by reference so the customer still gets their receipt, retrying
+    // briefly since the webhook that creates the booking can lag the redirect.
+    let cancelled = false;
+    setBookingVerifyError("");
+    setVerifyingBooking(true);
+    setSuccessModalOpen(true);
+
+    const attemptVerify = async (attempt = 0) => {
+      if (cancelled) return;
+      try {
+        const res = await fetch(
+          `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(ref)}`,
+        );
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && data.type === "booking") {
+          setCompletedBooking(data.booking);
+          setVerifyingBooking(false);
+          return;
+        }
+      } catch {
+        // network hiccup — fall through to retry
+      }
+      if (cancelled) return;
+      if (attempt < 5) {
+        setTimeout(() => attemptVerify(attempt + 1), 1500);
+      } else {
+        setVerifyingBooking(false);
+        setBookingVerifyError(
+          `We couldn't confirm your payment automatically. If you were charged, please contact the store with this reference: ${ref}`,
+        );
+      }
+    };
+    attemptVerify();
+
+    return () => {
+      cancelled = true;
+    };
   }, [store, searchParams, setSearchParams]);
 
   const {
@@ -1084,7 +1133,7 @@ export default function ServiceStorePage() {
         </div>
       )}
 
-      {successModalOpen && completedBooking && (
+      {successModalOpen && (verifyingBooking || bookingVerifyError || completedBooking) && (
         <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center">
           <div
             className="absolute inset-0"
@@ -1099,53 +1148,79 @@ export default function ServiceStorePage() {
               <X size={18} />
             </button>
 
-            <div className="w-14 h-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto">
-              <Check className="animate-bounce" size={24} />
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">
-                Booking Confirmed!
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Thank you for booking with {store?.businessName || "us"}.
-              </p>
-            </div>
-
-            <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50 text-left space-y-2 text-sm">
-              <div>
-                <span className="text-stone-400 font-medium">Customer:</span>{" "}
-                <span className="text-stone-900 font-semibold">{completedBooking.customerName}</span>
+            {verifyingBooking ? (
+              <div className="py-6 space-y-4">
+                <Loader2 size={32} className="text-green-600 animate-spin mx-auto" />
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Confirming your payment…</h3>
+                  <p className="text-sm text-gray-500 mt-1">This usually takes a few seconds.</p>
+                </div>
               </div>
-              <div>
-                <span className="text-stone-400 font-medium">Service:</span>{" "}
-                <span className="text-stone-900 font-semibold">
-                  {completedBooking.serviceName || "Service Booking"}
-                </span>
+            ) : bookingVerifyError ? (
+              <div className="py-4 space-y-4">
+                <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+                  <AlertCircle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Couldn't confirm your booking
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                    {bookingVerifyError}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-stone-400 font-medium">Total Paid:</span>{" "}
-                <span className="text-green-600 font-bold">
-                  ₦{Number(completedBooking.grandTotal || 0).toLocaleString()}
-                </span>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="w-14 h-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto">
+                  <Check className="animate-bounce" size={24} />
+                </div>
 
-            <button
-              type="button"
-              onClick={handleDownloadReceipt}
-              disabled={receiptDownloading}
-              className="w-full flex items-center justify-center gap-2 border-2 border-green-500 text-green-600 hover:bg-green-50 disabled:opacity-50 py-3 rounded-xl font-bold text-sm transition-all"
-            >
-              {receiptDownloading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Generating…
-                </>
-              ) : (
-                "Download Receipt"
-              )}
-            </button>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Booking Confirmed!
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Thank you for booking with {store?.businessName || "us"}.
+                  </p>
+                </div>
+
+                <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50 text-left space-y-2 text-sm">
+                  <div>
+                    <span className="text-stone-400 font-medium">Customer:</span>{" "}
+                    <span className="text-stone-900 font-semibold">{completedBooking.customerName}</span>
+                  </div>
+                  <div>
+                    <span className="text-stone-400 font-medium">Service:</span>{" "}
+                    <span className="text-stone-900 font-semibold">
+                      {completedBooking.serviceName || "Service Booking"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-stone-400 font-medium">Total Paid:</span>{" "}
+                    <span className="text-green-600 font-bold">
+                      ₦{Number(completedBooking.grandTotal || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadReceipt}
+                  disabled={receiptDownloading}
+                  className="w-full flex items-center justify-center gap-2 border-2 border-green-500 text-green-600 hover:bg-green-50 disabled:opacity-50 py-3 rounded-xl font-bold text-sm transition-all"
+                >
+                  {receiptDownloading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    "Download Receipt"
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -306,96 +306,43 @@ export default async function handler(req, res) {
         campaignType,
         budgetAmount,
         targeting: targetingRaw,
+        images: imagesRaw,
+        businessName,
+        targetLocation,
       } = data.metadata || {}
 
       if (!storeId || !campaignName || !budgetAmount) {
         return res.status(200).send("Missing ads metadata, skipped")
       }
 
+      // Safety net only — if ads-payment-verify.js already recorded this reference (the normal
+      // path), skip to avoid a duplicate submission.
+      const existing = await db.collection("googleAdsCampaigns")
+        .where("paystackReference", "==", data.reference)
+        .limit(1)
+        .get()
+      if (!existing.empty) {
+        return res.status(200).send("Already recorded")
+      }
+
       const targeting = typeof targetingRaw === "string" ? JSON.parse(targetingRaw) : targetingRaw
+      const images = typeof imagesRaw === "string" ? JSON.parse(imagesRaw) : (imagesRaw || [])
+      const normalizedType = (campaignType || "SEARCH").toUpperCase()
+      const isUnsupportedType = normalizedType === "SHOPPING" || normalizedType === "PERFORMANCE_MAX"
 
-      const masterDoc = await db.collection("platformSettings").doc("googleAdsMaster").get()
-      if (!masterDoc.exists) {
-        console.warn("[paystack-webhook] Master Google Ads account not connected, skipping campaign creation")
-        await db.collection("googleAdsCampaigns").add({
-          storeId,
-          provider: "google",
-          managementMode: "sellapage",
-          name: campaignName,
-          type: campaignType || "SEARCH",
-          status: "PAUSED",
-          budgetType: "daily",
-          budgetAmount: Number(budgetAmount),
-          serviceCharge: Math.round(Number(budgetAmount) * 0.10),
-          totalPaid: Number(budgetAmount) + Math.round(Number(budgetAmount) * 0.10),
-          spendToDate: 0,
-          impressions: 0,
-          clicks: 0,
-          ctr: 0,
-          conversions: 0,
-          targeting: targeting || {},
-          providerCampaignId: null,
-          paystackReference: data.reference,
-          createdAt: new Date().toISOString(),
-          lastSyncAt: null,
-        })
-        return res.status(200).send("OK")
-      }
-
-      const masterData = masterDoc.data()
-      const refreshToken = masterData.refreshToken
-      const customerId = masterData.customerId
-
-      let campaignResourceId = null
-      try {
-        const { getAccessToken, createBudget, createCampaign, createAdGroup, createResponsiveSearchAd, addKeywords } = await import("./_lib/google-ads-client.js")
-        const accessToken = await getAccessToken(refreshToken)
-        const loginCustomerId = process.env.GOOGLE_ADS_MCC_ID
-        const budgetMicros = Math.round(Number(budgetAmount) * 1000000)
-        const budgetResourceName = await createBudget(accessToken, customerId, {
-          name: `${campaignName} (Sellapage Managed)`,
-          amountMicros: budgetMicros,
-        }, loginCustomerId)
-        campaignResourceId = await createCampaign(accessToken, customerId, {
-          name: `${campaignName} (Sellapage Managed)`,
-          budgetResourceName,
-          status: "PAUSED",
-          advertisingChannelType: campaignType || "SEARCH",
-        }, loginCustomerId)
-
-        if (campaignResourceId && campaignType === "SEARCH" && targeting?.keywords?.length > 0) {
-          const adGroupResourceId = await createAdGroup(accessToken, customerId, {
-            campaignResourceName: campaignResourceId,
-            name: `${campaignName} Ad Group`,
-          }, loginCustomerId)
-
-          if (adGroupResourceId) {
-            if (targeting.headlines?.length > 0 && targeting.descriptions?.length > 0 && targeting.finalUrl) {
-              await createResponsiveSearchAd(accessToken, customerId, {
-                adGroupResourceName: adGroupResourceId,
-                headlines: targeting.headlines,
-                descriptions: targeting.descriptions,
-                finalUrl: targeting.finalUrl,
-              }, loginCustomerId)
-            }
-
-            await addKeywords(accessToken, customerId, {
-              adGroupResourceName: adGroupResourceId,
-              keywords: targeting.keywords,
-            }, loginCustomerId)
-          }
-        }
-      } catch (apiErr) {
-        console.warn("[paystack-webhook] Ads campaign creation failed (non-fatal):", apiErr.message)
-      }
-
+      // Campaign creation happens on admin approval (admin-ads-review.js), not here — this webhook
+      // is only a safety net that records the paid submission if the redirect-based verify never
+      // fired (e.g. vendor closed the browser before returning from Paystack).
       await db.collection("googleAdsCampaigns").add({
         storeId,
         provider: "google",
         managementMode: "sellapage",
         name: campaignName,
-        type: campaignType || "SEARCH",
-        status: "PAUSED",
+        type: normalizedType,
+        status: isUnsupportedType ? "FAILED" : "PENDING_REVIEW",
+        error: isUnsupportedType
+          ? "Shopping and Performance Max campaigns require a linked Google Merchant Center account, which is not yet supported. Your payment was received — contact support for a refund."
+          : null,
         budgetType: "daily",
         budgetAmount: Number(budgetAmount),
         serviceCharge: Math.round(Number(budgetAmount) * 0.10),
@@ -406,7 +353,10 @@ export default async function handler(req, res) {
         ctr: 0,
         conversions: 0,
         targeting: targeting || {},
-        providerCampaignId: campaignResourceId ? campaignResourceId.split('/').pop() : null,
+        images: Array.isArray(images) ? images.slice(0, 5) : [],
+        businessName: businessName || null,
+        targetLocation: targetLocation || null,
+        providerCampaignId: null,
         paystackReference: data.reference,
         createdAt: new Date().toISOString(),
         lastSyncAt: null,

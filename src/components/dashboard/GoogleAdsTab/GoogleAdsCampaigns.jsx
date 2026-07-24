@@ -32,7 +32,10 @@ const STATUS_STYLES = {
   REMOVED: 'bg-red-50 text-red-700 border border-red-100',
 }
 
-export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onError, onSuccess }) {
+export default function GoogleAdsCampaigns({ store, campaigns: allCampaigns, setCampaigns, onError, onSuccess }) {
+  // Sellapage-managed campaigns live on a different account and have their own status/review
+  // flow (no pause/resume) — shown separately in SellapageManagedCampaigns, not duplicated here.
+  const campaigns = (allCampaigns || []).filter((c) => c.managementMode !== 'sellapage')
   const currencyCode = store?.googleAdsCurrency || 'USD'
   const [showCreate, setShowCreate] = useState(false)
   const [expandedId, setExpandedId] = useState(null)

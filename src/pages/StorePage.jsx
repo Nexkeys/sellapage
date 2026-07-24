@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Loader2,
   CreditCard,
+  AlertCircle,
 } from "lucide-react";
 import { getStoreBySlug, getProducts } from "../firebase/products";
 import { db } from "../firebase/config";
@@ -244,6 +245,7 @@ function StoreCheckoutModal({
   setPromoLoading,
   promoError,
   setPromoError,
+  verifyError,
 }) {
   const subtotal = calcSubtotal(cart);
   const deliveryFee = selectedZone ? Number(selectedZone.price) : 0;
@@ -331,6 +333,8 @@ function StoreCheckoutModal({
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
             {step === "success" ? (
               <span className="text-green-600">Order complete</span>
+            ) : step === "verifying" ? (
+              <span className="text-green-600">Confirming payment</span>
             ) : (
               steps.map((s, i) => (
                 <span
@@ -684,6 +688,38 @@ function StoreCheckoutModal({
             </div>
           )}
 
+          {step === "verifying" && (
+            <div className="text-center space-y-5 py-8">
+              {verifyError ? (
+                <>
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                    <AlertCircle size={28} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg">
+                      Couldn't confirm your payment
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+                      {verifyError}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Loader2 size={32} className="text-green-600 animate-spin mx-auto" />
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg">
+                      Confirming your payment…
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">
+                      This usually takes a few seconds.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {step === "success" && completedOrder && (
             <div className="text-center space-y-5 py-4">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
@@ -747,6 +783,7 @@ export default function StorePage() {
   const [checkoutProcessing, setCheckoutProcessing] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
   const [receiptDownloading, setReceiptDownloading] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -949,24 +986,70 @@ export default function StorePage() {
     const ref = searchParams.get("reference");
     if (!ref) return;
 
-    const stored = sessionStorage.getItem(`sellapage_checkout_${ref}`);
-    if (!stored) return;
-
-    try {
-      const parsed = JSON.parse(stored);
-      if (parsed.transactionType === "checkout") {
-        setCompletedOrder(parsed.order);
-        setCheckoutOpen(true);
-        setCheckoutStep("success");
-        sessionStorage.removeItem(`sellapage_checkout_${ref}`);
-      }
-    } catch {
-      // ignore invalid storage
-    }
-
     searchParams.delete("checkout");
     searchParams.delete("reference");
     setSearchParams(searchParams, { replace: true });
+
+    const stored = sessionStorage.getItem(`sellapage_checkout_${ref}`);
+    let usedSnapshot = false;
+
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.transactionType === "checkout") {
+          setCompletedOrder(parsed.order);
+          setCheckoutOpen(true);
+          setCheckoutStep("success");
+          sessionStorage.removeItem(`sellapage_checkout_${ref}`);
+          usedSnapshot = true;
+        }
+      } catch {
+        // ignore invalid storage
+      }
+    }
+
+    if (usedSnapshot) return;
+
+    // sessionStorage snapshot is gone — happens whenever the Paystack redirect
+    // lands in a different browsing context than the one that left (common in
+    // WhatsApp/Instagram in-app browsers). Fall back to a server-verified
+    // lookup by reference so the customer still gets their receipt, retrying
+    // briefly since the webhook that creates the order can lag the redirect.
+    let cancelled = false;
+    setVerifyError("");
+    setCheckoutOpen(true);
+    setCheckoutStep("verifying");
+
+    const attemptVerify = async (attempt = 0) => {
+      if (cancelled) return;
+      try {
+        const res = await fetch(
+          `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(ref)}`,
+        );
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && data.type === "order") {
+          setCompletedOrder(data.order);
+          setCheckoutStep("success");
+          return;
+        }
+      } catch {
+        // network hiccup — fall through to retry
+      }
+      if (cancelled) return;
+      if (attempt < 5) {
+        setTimeout(() => attemptVerify(attempt + 1), 1500);
+      } else {
+        setVerifyError(
+          `We couldn't confirm your payment automatically. If you were charged, please contact the store with this reference: ${ref}`,
+        );
+      }
+    };
+    attemptVerify();
+
+    return () => {
+      cancelled = true;
+    };
   }, [store, searchParams, setSearchParams]);
 
   const handleProceedToCheckout = useCallback(() => {
@@ -1074,11 +1157,12 @@ export default function StorePage() {
     setAppliedDiscount(null);
     setPromoError("");
     setPromoLoading(false);
-    if (checkoutStep === "success") {
+    if (checkoutStep === "success" || checkoutStep === "verifying") {
       setCart([]);
       setCheckoutForm(EMPTY_CHECKOUT_FORM);
       setSelectedZone(null);
       setCompletedOrder(null);
+      setVerifyError("");
       setCheckoutStep("details");
     }
   };
@@ -1515,6 +1599,7 @@ export default function StorePage() {
           onPay={handleCheckoutPay}
           onDownloadReceipt={handleDownloadReceipt}
           receiptDownloading={receiptDownloading}
+          verifyError={verifyError}
         />
       )}
 

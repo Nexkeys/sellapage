@@ -249,6 +249,10 @@ export async function executeWriteAction(db, storeId, action) {
         statusLogEntry.newTime = newBookingTime
         payload.bookingDate = newBookingDate
         payload.bookingTime = newBookingTime
+        payload.reminderSent = false
+      }
+      if (['cancelled', 'completed', 'no_show', 'refunded'].includes(newStatus)) {
+        payload.reminderSent = true
       }
       payload.statusLog = FieldValue.arrayUnion(statusLogEntry)
       let reviewToken = booking.reviewToken || null

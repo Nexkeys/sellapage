@@ -99,12 +99,20 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/submit-review.js");
         return await handlerFunc(req, res);
       }
+      case "verify-transaction": {
+        const { default: handlerFunc } = await import("../src/api-handlers/verify-transaction.js");
+        return await handlerFunc(req, res);
+      }
       case "delete-account": {
         const { default: handlerFunc } = await import("../src/api-handlers/delete-account.js");
         return await handlerFunc(req, res);
       }
       case "expiry-cron": {
         const { default: handlerFunc } = await import("../src/api-handlers/expiry-cron.js");
+        return await handlerFunc(req, res);
+      }
+      case "booking-reminder-cron": {
+        const { default: handlerFunc } = await import("../src/api-handlers/booking-reminder-cron.js");
         return await handlerFunc(req, res);
       }
       case "admin-health": {
@@ -274,6 +282,14 @@ export default async function handler(req, res) {
       }
       case "admin-revenue": {
         const { default: handler } = await import("../src/api-handlers/admin-revenue.js")
+        return handler(req, res)
+      }
+      case "admin-ads-settings": {
+        const { default: handler } = await import("../src/api-handlers/admin-ads-settings.js")
+        return handler(req, res)
+      }
+      case "admin-ads-review": {
+        const { default: handler } = await import("../src/api-handlers/admin-ads-review.js")
         return handler(req, res)
       }
       case "admin-sella-ai": {

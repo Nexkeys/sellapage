@@ -55,12 +55,12 @@ export default function BookingsCalendar({ bookings = [], selectedDate, onSelect
   const goToNextMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-3.5">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="rounded-2xl border border-gray-100 bg-white p-2.5 sm:p-3.5">
+      <div className="mb-3 flex items-center justify-between px-1">
         <button
           type="button"
           onClick={goToPrevMonth}
-          className="rounded-xl border border-gray-200 p-1.5 text-gray-500 transition-all hover:bg-gray-50"
+          className="rounded-xl border border-gray-200 p-1.5 text-gray-500 transition-all hover:bg-gray-50 active:bg-gray-100"
           aria-label="Previous month"
         >
           <ChevronLeft size={15} />
@@ -69,17 +69,17 @@ export default function BookingsCalendar({ bookings = [], selectedDate, onSelect
         <button
           type="button"
           onClick={goToNextMonth}
-          className="rounded-xl border border-gray-200 p-1.5 text-gray-500 transition-all hover:bg-gray-50"
+          className="rounded-xl border border-gray-200 p-1.5 text-gray-500 transition-all hover:bg-gray-50 active:bg-gray-100"
           aria-label="Next month"
         >
           <ChevronRight size={15} />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
         {WEEKDAY_LABELS.map(label => (
-          <div key={label} className="py-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-gray-400">
-            {label}
+          <div key={label} className="py-1 text-center text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wide text-gray-400">
+            {label.slice(0, 3)}
           </div>
         ))}
 
@@ -93,15 +93,15 @@ export default function BookingsCalendar({ bookings = [], selectedDate, onSelect
               key={dateKey}
               type="button"
               onClick={() => onSelectDate?.(isSelected ? null : dateKey)}
-              className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border text-xs font-semibold transition-all
-                ${isSelected ? 'border-green-500 bg-green-50 text-green-700' : 'border-transparent hover:bg-gray-50'}
+              className={`relative flex min-h-[2.75rem] flex-col items-center justify-center gap-0.5 rounded-lg border text-[11px] font-semibold transition-all sm:min-h-[3.25rem] sm:rounded-xl sm:text-xs
+                ${isSelected ? 'border-green-500 bg-green-50 text-green-700' : 'border-transparent hover:bg-gray-50 active:bg-gray-100'}
                 ${!inCurrentMonth ? 'text-gray-300' : 'text-gray-700'}
                 ${isToday && !isSelected ? 'ring-2 ring-green-500/30' : ''}
               `}
             >
               {date.getDate()}
               {dayBookings.length > 0 && (
-                <span className="mt-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-green-600 px-1 text-[9px] font-extrabold text-white">
+                <span className="inline-flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-green-600 px-1 text-[8px] font-extrabold text-white sm:h-4 sm:min-w-[1rem] sm:text-[9px]">
                   {dayBookings.length}
                 </span>
               )}

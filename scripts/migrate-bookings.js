@@ -145,6 +145,9 @@ async function migrateStore(storeId, summary) {
       reviewToken: order.reviewToken || null,
       reviewTokenUsed: order.reviewTokenUsed || false,
       reviewSubmitted: order.reviewSubmitted || false,
+      // These are historical bookings (most already in the past) — never
+      // let booking-reminder-cron consider emailing a reminder for one.
+      reminderSent: true,
       createdAt: order.createdAt || Timestamp.now(),
       migratedFromOrderId: orderDoc.id,
       migratedAt: Timestamp.now(),

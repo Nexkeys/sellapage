@@ -56,46 +56,60 @@ export default async function handler(req, res) {
 
     const refreshToken = storeDoc.data().googleAdsRefreshToken
     let customerId = storeDoc.data().googleAdsCustomerId
-    if (!refreshToken) {
-      return res.status(400).json({ error: 'Google Ads not connected' })
-    }
+    const selfManagedConnected = !!refreshToken
 
-    if (!customerId) {
-      customerId = await resolveCustomerId(refreshToken)
-      if (customerId) {
-        await db.collection('stores').doc(storeId).update({ googleAdsCustomerId: customerId })
+    // Only self-managed actions (create/pause/resume) require a connected vendor Google Ads
+    // account — Sellapage-managed campaigns live on Sellapage's own master account and are listed
+    // straight from Firestore, so a vendor who only ever used "Run Ads with Sellapage" (never
+    // connected their own account) must still be able to see them.
+    if (action === 'create' || action === 'pause' || action === 'resume') {
+      if (!selfManagedConnected) {
+        return res.status(400).json({ error: 'Google Ads not connected' })
+      }
+      if (!customerId) {
+        customerId = await resolveCustomerId(refreshToken)
+        if (customerId) {
+          await db.collection('stores').doc(storeId).update({ googleAdsCustomerId: customerId })
+        }
+      }
+      if (!customerId) {
+        return res.status(400).json({ error: 'No Google Ads account found. Please reconnect.' })
       }
     }
-    if (!customerId) {
-      return res.status(400).json({ error: 'No Google Ads account found. Please reconnect.' })
-    }
-
-    const accessToken = await getAccessToken(refreshToken)
 
     if (action === 'list') {
       let apiCampaigns = []
       let apiListError = null
-      try {
-        const results = await listCampaigns(accessToken, customerId)
-        apiCampaigns = results.map((r) => {
-          const c = r.campaign || {}
-          const budget = r.campaignBudget || {}
-          const cleanId = String(c.id || '')
-          return {
-            id: cleanId,
-            providerCampaignId: cleanId,
-            name: c.name || 'Untitled',
-            status: c.status || 'UNKNOWN',
-            type: c.advertisingChannelType || 'SEARCH',
-            budgetMicros: Number(budget.amountMicros) || 0,
-            budgetAmount: (Number(budget.amountMicros) || 0) / 1000000,
-            resourceCampaignId: c.resourceName || `customers/${customerId}/campaigns/${cleanId}`,
-            source: 'google',
-          }
-        })
-      } catch (apiErr) {
-        apiListError = apiErr.message
-        console.warn('[google-ads-campaigns] Google Ads API list failed, falling back to Firestore:', apiErr.message)
+      if (selfManagedConnected && !customerId) {
+        customerId = await resolveCustomerId(refreshToken)
+        if (customerId) {
+          await db.collection('stores').doc(storeId).update({ googleAdsCustomerId: customerId })
+        }
+      }
+      if (selfManagedConnected && customerId) {
+        try {
+          const accessToken = await getAccessToken(refreshToken)
+          const results = await listCampaigns(accessToken, customerId)
+          apiCampaigns = results.map((r) => {
+            const c = r.campaign || {}
+            const budget = r.campaignBudget || {}
+            const cleanId = String(c.id || '')
+            return {
+              id: cleanId,
+              providerCampaignId: cleanId,
+              name: c.name || 'Untitled',
+              status: c.status || 'UNKNOWN',
+              type: c.advertisingChannelType || 'SEARCH',
+              budgetMicros: Number(budget.amountMicros) || 0,
+              budgetAmount: (Number(budget.amountMicros) || 0) / 1000000,
+              resourceCampaignId: c.resourceName || `customers/${customerId}/campaigns/${cleanId}`,
+              source: 'google',
+            }
+          })
+        } catch (apiErr) {
+          apiListError = apiErr.message
+          console.warn('[google-ads-campaigns] Google Ads API list failed, falling back to Firestore:', apiErr.message)
+        }
       }
 
       const firestoreSnap = await db
@@ -149,6 +163,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'create') {
+      const accessToken = await getAccessToken(refreshToken)
       const { name, type, budgetType, budgetAmount, targeting } = campaignData || {}
       if (!name || !budgetAmount) {
         return res.status(400).json({ error: 'Missing campaign name or budget' })
@@ -253,6 +268,11 @@ export default async function handler(req, res) {
       let campaignResourceName = null
 
       const campaignDoc = await db.collection('googleAdsCampaigns').doc(campaignId).get()
+      if (campaignDoc.exists && campaignDoc.data().managementMode === 'sellapage') {
+        return res.status(400).json({ error: 'This campaign is managed by Sellapage — contact support to pause or resume it.' })
+      }
+
+      const accessToken = await getAccessToken(refreshToken)
       if (campaignDoc.exists && campaignDoc.data().storeId === storeId) {
         campaignResourceName = campaignDoc.data().campaignResourceName
         await updateCampaignStatus(accessToken, customerId, campaignResourceName, newStatus)

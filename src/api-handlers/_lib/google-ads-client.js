@@ -210,7 +210,7 @@ export async function getCampaignReport(accessToken, customerId, dateRange = 'LA
   return searchGoogleAds(accessToken, customerId, query, loginCustomerId)
 }
 
-export async function createAdGroup(accessToken, customerId, { campaignResourceName, name }, loginCustomerId) {
+export async function createAdGroup(accessToken, customerId, { campaignResourceName, name, type }, loginCustomerId) {
   const cleanId = customerId.replace(/-/g, '')
   const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroups:mutate`, {
     method: 'POST',
@@ -222,7 +222,7 @@ export async function createAdGroup(accessToken, customerId, { campaignResourceN
             resourceName: `customers/${cleanId}/adGroups/-1`,
             name,
             campaign: campaignResourceName,
-            type: 'SEARCH_STANDARD',
+            type: type || 'SEARCH_STANDARD',
             status: 'ENABLED',
           },
         },
@@ -232,6 +232,86 @@ export async function createAdGroup(accessToken, customerId, { campaignResourceN
 
   const data = await res.json()
   if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to create ad group'))
+  return data.results?.[0]?.resourceName || null
+}
+
+// Google Ads requires raw image bytes (base64), not a URL — fetches the already-uploaded
+// Cloudinary image and re-uploads it to Google as an Asset. Returns the asset's resource name for
+// use in a ResponsiveDisplayAd's marketingImages/squareMarketingImages.
+export async function uploadImageAsset(accessToken, customerId, { imageUrl, name }, loginCustomerId) {
+  const cleanId = customerId.replace(/-/g, '')
+  const imgRes = await fetch(imageUrl)
+  if (!imgRes.ok) throw new Error(`Failed to fetch image for Google Ads upload: ${imageUrl}`)
+  const buffer = await imgRes.arrayBuffer()
+  const base64Data = Buffer.from(buffer).toString('base64')
+
+  const res = await fetch(`${BASE_URL}/customers/${cleanId}/assets:mutate`, {
+    method: 'POST',
+    headers: buildHeaders(accessToken, loginCustomerId),
+    body: JSON.stringify({
+      operations: [
+        {
+          create: {
+            resourceName: `customers/${cleanId}/assets/-1`,
+            name,
+            type: 'IMAGE',
+            imageAsset: { data: base64Data },
+          },
+        },
+      ],
+    }),
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to upload image asset'))
+  return data.results?.[0]?.resourceName || null
+}
+
+export async function createResponsiveDisplayAd(accessToken, customerId, {
+  adGroupResourceName,
+  imageAssetResourceNames,
+  headlines,
+  descriptions,
+  longHeadline,
+  businessName,
+  finalUrl,
+}, loginCustomerId) {
+  const cleanId = customerId.replace(/-/g, '')
+  // Google requires both marketingImages (landscape) and squareMarketingImages (1:1) — vendors
+  // only supply one set of images, so the same uploaded assets are reused for both. If a vendor's
+  // images don't meet Google's minimum size/aspect requirements, this will surface a specific,
+  // readable IMAGE_ERROR via formatGoogleAdsError rather than fail silently.
+  const images = (imageAssetResourceNames || []).map((assetResourceName) => ({ asset: assetResourceName }))
+  const ad = {
+    finalUrls: [finalUrl],
+    responsiveDisplayAd: {
+      headlines: headlines.map((h) => ({ text: h })),
+      descriptions: descriptions.map((d) => ({ text: d })),
+      longHeadline: { text: longHeadline },
+      businessName,
+      marketingImages: images,
+      squareMarketingImages: images,
+    },
+  }
+
+  const res = await fetch(`${BASE_URL}/customers/${cleanId}/adGroupAds:mutate`, {
+    method: 'POST',
+    headers: buildHeaders(accessToken, loginCustomerId),
+    body: JSON.stringify({
+      operations: [
+        {
+          create: {
+            adGroup: adGroupResourceName,
+            ad,
+            status: 'ENABLED',
+          },
+        },
+      ],
+    }),
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(formatGoogleAdsError(data, 'Failed to create display ad'))
   return data.results?.[0]?.resourceName || null
 }
 

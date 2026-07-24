@@ -116,6 +116,15 @@ export default async function handler(req, res) {
       statusLogEntry.newTime = newBookingTime
       updatePayload.bookingDate = newBookingDate
       updatePayload.bookingTime = newBookingTime
+      // A reminder may already have fired for the old time — reset so the
+      // booking-reminder-cron job reminds again ahead of the new time.
+      updatePayload.reminderSent = false
+    }
+
+    // Booking is no longer happening (or already happened) — stop the
+    // reminder cron from ever considering it, regardless of reminderSent.
+    if (['cancelled', 'completed', 'no_show', 'refunded'].includes(newStatus)) {
+      updatePayload.reminderSent = true
     }
 
     updatePayload.statusLog = FieldValue.arrayUnion(statusLogEntry)

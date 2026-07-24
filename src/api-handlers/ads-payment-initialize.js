@@ -20,6 +20,9 @@ export default async function handler(req, res) {
     campaignType,
     budgetAmount,
     targeting,
+    images,
+    businessName,
+    targetLocation,
   } = req.body
 
   if (!storeId || !campaignName || !budgetAmount) {
@@ -89,6 +92,9 @@ export default async function handler(req, res) {
           serviceCharge,
           total,
           targeting: JSON.stringify(targeting || {}),
+          images: JSON.stringify(Array.isArray(images) ? images.slice(0, 5) : []),
+          businessName: businessName || '',
+          targetLocation: targetLocation || '',
         },
       }),
     })

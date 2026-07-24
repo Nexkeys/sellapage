@@ -19,6 +19,7 @@ import GoogleAdsOverview from './GoogleAdsTab/GoogleAdsOverview'
 import GoogleAdsCampaigns from './GoogleAdsTab/GoogleAdsCampaigns'
 import GoogleAdsReports from './GoogleAdsTab/GoogleAdsReports'
 import SellapageAdsForm from './GoogleAdsTab/SellapageAdsForm'
+import SellapageManagedCampaigns from './GoogleAdsTab/SellapageManagedCampaigns'
 
 export default function GoogleAdsTab({ store, isPremium }) {
   const [activeView, setActiveView] = useState('overview')
@@ -33,7 +34,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
   const isConnected = store?.googleAdsConnected || false
 
   useEffect(() => {
-    if (!store?.id || !isConnected) return
+    if (!store?.id) return
 
     const fetchCampaigns = async () => {
       try {
@@ -97,11 +98,7 @@ export default function GoogleAdsTab({ store, isPremium }) {
       })
       const data = await res.json()
       if (res.ok && data.success) {
-        if (data.pending) {
-          setSuccess('Payment confirmed! Campaign will be created once Google Ads is connected.')
-        } else {
-          setSuccess('Campaign created successfully! It starts in PAUSED state.')
-        }
+        setSuccess(data.message || 'Payment confirmed! Your campaign is pending review.')
       } else {
         setError(data.error || 'Failed to verify payment')
       }
@@ -249,6 +246,8 @@ export default function GoogleAdsTab({ store, isPremium }) {
           <button onClick={() => setSuccess('')} className="text-emerald-400 hover:text-emerald-600"><X size={14} /></button>
         </div>
       )}
+
+      {!showSellapageForm && <SellapageManagedCampaigns campaigns={campaigns} />}
 
       {!isConnected && !showSellapageForm && (
         <GoogleAdsConnect

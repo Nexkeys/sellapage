@@ -1,5 +1,5 @@
 //src/components/dashboard/BookingsTab.jsx/
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Fragment } from 'react'
 import {
   AlertCircle,
   Calendar,
@@ -583,8 +583,8 @@ export default function BookingsTab({
                     const isExpanded = expandedBookingId === booking.id
                     const isUpdating = statusUpdatingId === booking.id
                     return (
-                      <>
-                        <tr key={booking.id} className="group border-b border-gray-100 transition-colors hover:bg-gray-50/40 last:border-b-0">
+                      <Fragment key={booking.id}>
+                        <tr className="group border-b border-gray-100 transition-colors hover:bg-gray-50/40 last:border-b-0">
                           <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                             <div className="flex items-start gap-2 text-[11px] font-medium text-gray-700">
                               <Clock size={12} className="mt-0.5 flex-shrink-0 text-gray-300" />
@@ -665,7 +665,7 @@ export default function BookingsTab({
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     )
                   })}
                 </tbody>
@@ -679,13 +679,13 @@ export default function BookingsTab({
               const isExpanded = expandedBookingId === booking.id
               const isUpdating = statusUpdatingId === booking.id
               return (
-                <article key={booking.id} className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2">
-                      <User size={14} className="mt-0.5 text-gray-300" />
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">{booking.customerName || '-'}</p>
-                        <p className="text-[11px] text-gray-400">{booking.customerPhone || '-'}</p>
+                <article key={booking.id} className="rounded-2xl border border-gray-100 bg-white p-3.5 space-y-3 sm:p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex min-w-0 flex-1 items-start gap-2">
+                      <User size={14} className="mt-0.5 flex-shrink-0 text-gray-300" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-gray-900">{booking.customerName || '-'}</p>
+                        <p className="truncate text-[11px] text-gray-400">{booking.customerPhone || '-'}</p>
                       </div>
                     </div>
                     <BookingStatusPicker
@@ -821,7 +821,7 @@ export default function BookingsTab({
                   {rescheduleError}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-bold text-gray-600">New Date</label>
                   <input
