@@ -18,13 +18,19 @@ export default async function handler(req, res) {
       const rewardsSnap = await db.collection('referralRewards').get()
       const withdrawalsSnap = await db.collection('withdrawal_requests').get()
 
+      // Legacy fields kept for any records predating the "available" reward
+      // model (rewards are now created immediately-available, never 'paid'
+      // or 'pending' on the referralRewards doc itself). Real payout truth
+      // lives on withdrawal_requests below.
       let totalRewardsPaid = 0
       let totalPending = 0
+      let totalRewardsEarned = 0
       const planBreakdown = { growth: 0, pro: 0, premium: 0 }
 
       const referrerTotals = {}
       rewardsSnap.docs.forEach(doc => {
         const d = doc.data()
+        totalRewardsEarned += d.rewardAmount || 0
         if (d.status === 'paid') totalRewardsPaid += d.rewardAmount || 0
         if (d.status === 'pending') totalPending += d.rewardAmount || 0
         if (planBreakdown[d.plan] !== undefined) planBreakdown[d.plan]++
@@ -60,22 +66,31 @@ export default async function handler(req, res) {
       let pendingWithdrawals = 0
       let completedWithdrawals = 0
       let totalWithdrawalAmount = 0
+      let totalPaidOut = 0
+      let totalPendingPayoutAmount = 0
 
       withdrawalsSnap.docs.forEach(doc => {
         const d = doc.data()
         if (d.status === 'pending') {
           pendingWithdrawals++
           totalWithdrawalAmount += d.amount || 0
+          totalPendingPayoutAmount += d.amount || 0
         }
-        if (d.status === 'completed') completedWithdrawals++
+        if (d.status === 'completed') {
+          completedWithdrawals++
+          totalPaidOut += d.amount || 0
+        }
       })
 
       return res.status(200).json({
         success: true,
         stats: {
           totalReferrals: rewardsSnap.size,
+          totalRewardsEarned,
           totalRewardsPaid,
           totalPending,
+          totalPaidOut,
+          totalPendingPayoutAmount,
           pendingWithdrawals,
           completedWithdrawals,
           totalWithdrawalAmount,
