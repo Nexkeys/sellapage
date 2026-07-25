@@ -38,8 +38,6 @@ export default function ReferralTab({ user, store }) {
   const [bankName, setBankName] = useState(store?.referralBankName || '')
   const [bankAccount, setBankAccount] = useState(store?.referralBankAccount || '')
   const [bankAccountName, setBankAccountName] = useState(store?.referralBankAccountName || '')
-  const [localAvailable, setLocalAvailable] = useState(store?.referralAvailable || 0)
-  const [localWithdrawn, setLocalWithdrawn] = useState(store?.referralWithdrawn || 0)
   const [referralStats, setReferralStats] = useState(null)
   const [recentReferrals, setRecentReferrals] = useState([])
   const [withdrawalHistory, setWithdrawalHistory] = useState([])
@@ -110,17 +108,29 @@ export default function ReferralTab({ user, store }) {
     }
   }, [token])
 
+  // Live refresh: fetch stats + withdrawal history on load, poll every 25s, and
+  // re-fetch when the tab regains focus — so new clicks/signups/referrals and
+  // payout status changes appear without a manual dashboard refresh. (Previously
+  // stats were fetched exactly once and the money cards bound only to the `store`
+  // prop, which is why nothing updated live.)
   useEffect(() => {
-    if (token) {
+    if (!token) return
+    fetchReferralStats()
+    fetchWithdrawalHistory()
+    const interval = setInterval(() => {
       fetchReferralStats()
-    }
-  }, [token, fetchReferralStats])
-
-  useEffect(() => {
-    if (showHistory && token) {
+      fetchWithdrawalHistory()
+    }, 25000)
+    const onFocus = () => {
+      fetchReferralStats()
       fetchWithdrawalHistory()
     }
-  }, [showHistory, token, fetchWithdrawalHistory])
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [token, fetchReferralStats, fetchWithdrawalHistory])
 
   const generateCode = async () => {
     setGenerating(true)
@@ -219,6 +229,11 @@ export default function ReferralTab({ user, store }) {
       setWithdrawError('Enter a valid amount')
       return
     }
+    const currentAvailable = referralStats ? (referralStats.referralAvailable || 0) : (store?.referralAvailable || 0)
+    if (amountKobo > currentAvailable) {
+      setWithdrawError(`Amount exceeds your available balance (${formatKobo(currentAvailable)})`)
+      return
+    }
 
     setWithdrawing(true)
     setWithdrawError('')
@@ -236,9 +251,11 @@ export default function ReferralTab({ user, store }) {
       const data = await res.json()
       if (data.success) {
         setWithdrawSuccess(data.message || 'Withdrawal request submitted!')
-        setLocalAvailable(prev => prev - amountKobo)
-        setLocalWithdrawn(prev => prev + amountKobo)
+        // Optimistically reflect the debit, then refetch from the server for truth.
+        setReferralStats(prev => prev ? { ...prev, referralAvailable: Math.max(0, (prev.referralAvailable || 0) - amountKobo) } : prev)
         setWithdrawAmount('')
+        fetchReferralStats()
+        fetchWithdrawalHistory()
         setTimeout(() => {
           setShowWithdraw(false)
           setWithdrawSuccess('')
@@ -257,17 +274,22 @@ export default function ReferralTab({ user, store }) {
     b.name.toLowerCase().includes(bankSearch.toLowerCase())
   )
 
-  const available = localAvailable || store?.referralAvailable || 0
-  const pending = store?.referralPending || 0
-  const withdrawn = localWithdrawn || store?.referralWithdrawn || 0
-  const totalEarned = store?.referralTotalEarned || 0
-  const totalClicks = store?.referralTotalClicks || 0
-  const totalSignups = store?.referralTotalSignups || 0
-  const totalPaid = store?.referralTotalPaid || 0
+  // Prefer the live-polled stats; fall back to the store prop for first paint.
+  const s = referralStats
+  const available = s ? (s.referralAvailable || 0) : (store?.referralAvailable || 0)
+  const totalEarned = s ? (s.referralTotalEarned || 0) : (store?.referralTotalEarned || 0)
+  const totalClicks = s ? (s.totalClicks || 0) : (store?.referralTotalClicks || 0)
+  const totalSignups = s ? (s.totalSignups || 0) : (store?.referralTotalSignups || 0)
+  const totalPaid = s ? (s.totalPaid || 0) : (store?.referralTotalPaid || 0)
+  // "Pending" now means payouts requested but not yet paid; "Paid Out" means completed payouts.
+  const pendingPayouts = withdrawalHistory
+    .filter(w => w.status === 'pending' || w.status === 'processing')
+    .reduce((sum, w) => sum + (w.amount || 0), 0)
+  const paidOut = withdrawalHistory
+    .filter(w => w.status === 'completed')
+    .reduce((sum, w) => sum + (w.amount || 0), 0)
   const hasCode = !!referralCode
   const hasBank = bankVerified || !!store?.referralBankVerified
-  const minimumKobo = 500000
-  const progressToMin = Math.min(100, Math.round((available / minimumKobo) * 100))
 
   return (
     <div className="space-y-5 pb-8">
@@ -358,17 +380,43 @@ export default function ReferralTab({ user, store }) {
       )}
 
       {hasCode && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Info className="w-4 h-4 text-green-600" />
+            <h3 className="text-sm font-semibold text-gray-900">How your rewards work</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {[
+              { plan: 'Growth', amount: '₦500' },
+              { plan: 'Pro', amount: '₦1,000' },
+              { plan: 'Premium', amount: '₦2,000' },
+            ].map((t) => (
+              <div key={t.plan} className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
+                <p className="text-lg sm:text-xl font-extrabold text-green-700">{t.amount}</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">per {t.plan} referral</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+            You earn when a vendor you referred upgrades to a paid plan — paid instantly to your available balance. If they later move up a tier, you're topped up to that tier's reward (up to ₦2,000). One-time per referral, never charged on renewals.
+          </p>
+        </div>
+      )}
+
+      {hasCode && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Available', value: formatKobo(available), icon: Wallet, color: 'text-green-600', bg: 'bg-green-50' },
-            { label: 'Pending', value: formatKobo(pending), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Withdrawn', value: formatKobo(withdrawn), icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Total Earned', value: formatKobo(totalEarned), icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
+            { label: 'Available', value: formatKobo(available), icon: Wallet, color: 'text-green-700', bg: 'from-green-50 to-emerald-50', ring: 'ring-green-100' },
+            { label: 'Pending Payout', value: formatKobo(pendingPayouts), icon: Clock, color: 'text-amber-700', bg: 'from-amber-50 to-yellow-50', ring: 'ring-amber-100' },
+            { label: 'Paid Out', value: formatKobo(paidOut), icon: Landmark, color: 'text-blue-700', bg: 'from-blue-50 to-sky-50', ring: 'ring-blue-100' },
+            { label: 'Total Earned', value: formatKobo(totalEarned), icon: TrendingUp, color: 'text-purple-700', bg: 'from-purple-50 to-fuchsia-50', ring: 'ring-purple-100' },
           ].map((item) => (
-            <div key={item.label} className={`${item.bg} rounded-xl p-3 sm:p-4`}>
-              <item.icon className={`w-4 h-4 ${item.color} mb-1`} />
-              <p className="text-xs text-gray-500">{item.label}</p>
-              <p className={`text-base sm:text-lg font-bold ${item.color}`}>{item.value}</p>
+            <div key={item.label} className={`bg-gradient-to-br ${item.bg} rounded-2xl p-3 sm:p-4 ring-1 ${item.ring}`}>
+              <div className={`inline-flex items-center justify-center w-8 h-8 rounded-xl bg-white/70 mb-2`}>
+                <item.icon className={`w-4 h-4 ${item.color}`} />
+              </div>
+              <p className="text-[11px] font-medium text-gray-500">{item.label}</p>
+              <p className={`text-base sm:text-lg font-extrabold ${item.color}`}>{item.value}</p>
             </div>
           ))}
         </div>
@@ -440,32 +488,26 @@ export default function ReferralTab({ user, store }) {
 
           {hasBank && (
             <div className="mt-4">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-gray-600">Progress to minimum withdrawal (₦5,000)</span>
-                <span className="font-medium text-gray-900">{progressToMin}%</span>
+              <div className="flex items-center justify-between rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 ring-1 ring-green-100 px-4 py-3 mb-3">
+                <div>
+                  <p className="text-xs text-gray-500">Available to withdraw</p>
+                  <p className="text-xl font-extrabold text-green-700">{formatKobo(available)}</p>
+                </div>
+                <Wallet className="w-6 h-6 text-green-400" />
               </div>
-              <div className="bg-gray-200 rounded-full h-2.5">
-                <div
-                  className="bg-green-600 h-2.5 rounded-full transition-all duration-500"
-                  style={{ width: `${progressToMin}%` }}
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {formatKobo(available)} of {formatKobo(minimumKobo)} minimum
-              </p>
 
-              {available >= minimumKobo ? (
+              {available > 0 ? (
                 <button
                   onClick={() => setShowWithdraw(true)}
-                  className="mt-4 w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-2"
                 >
                   <ArrowUpRight className="w-4 h-4" /> Withdraw Funds
                 </button>
               ) : (
-                <div className="mt-4 bg-gray-50 rounded-xl p-3 text-center">
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <Info className="w-4 h-4 text-gray-400 mx-auto mb-1" />
                   <p className="text-xs text-gray-500">
-                    Earn ₦500 – ₦2,000 for each vendor you refer who upgrades to a paid plan. Withdrawals start at ₦5,000.
+                    Earn ₦500 – ₦2,000 for each vendor you refer who upgrades to a paid plan. You can withdraw any amount the moment you earn it.
                   </p>
                 </div>
               )}
@@ -704,17 +746,26 @@ export default function ReferralTab({ user, store }) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₦)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Amount (₦)</label>
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawAmount(String(available / 100))}
+                    className="text-xs font-semibold text-green-600 hover:text-green-700"
+                  >
+                    Withdraw all
+                  </button>
+                </div>
                 <input
                   type="number"
-                  min="5000"
+                  min="1"
                   step="100"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="5000"
+                  placeholder="Enter amount"
                   className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-green-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">Minimum withdrawal: ₦5,000</p>
+                <p className="text-xs text-gray-500 mt-1">You can withdraw any amount up to {formatKobo(available)}.</p>
               </div>
 
               <button

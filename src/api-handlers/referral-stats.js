@@ -23,12 +23,38 @@ export default async function handler(req, res) {
     }
 
     const uid = decodedToken.uid
-    const storeSnap = await db.collection('stores').doc(uid).get()
+    const storeRef = db.collection('stores').doc(uid)
+    const storeSnap = await storeRef.get()
     if (!storeSnap.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
 
-    const storeData = storeSnap.data()
+    let storeData = storeSnap.data()
+
+    // Lazy sweep: referral earnings are now immediately available (no holding period),
+    // but the old webhook stranded earnings in `referralPending` with no release
+    // mechanism. Heal that on read — atomically move any leftover pending balance into
+    // available. Idempotent: once referralPending is 0 this never runs again.
+    if ((storeData.referralPending || 0) > 0) {
+      try {
+        await db.runTransaction(async (tx) => {
+          const fresh = await tx.get(storeRef)
+          const d = fresh.data() || {}
+          const stranded = d.referralPending || 0
+          if (stranded > 0) {
+            tx.update(storeRef, {
+              referralAvailable: (d.referralAvailable || 0) + stranded,
+              referralPending: 0,
+            })
+          }
+        })
+        const refreshed = await storeRef.get()
+        storeData = refreshed.data()
+      } catch (sweepErr) {
+        console.error('[referral-stats] pending sweep failed:', sweepErr)
+        // Non-fatal — fall through and return the un-swept snapshot.
+      }
+    }
 
     const rewardsSnap = await db
       .collection('referralRewards')

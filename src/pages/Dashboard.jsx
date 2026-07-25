@@ -41,7 +41,43 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
-import { Bell, Wallet } from "lucide-react";
+import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
+
+// Features unlocked at each plan, shown in the post-upgrade welcome modal.
+const PLAN_WELCOME = {
+  growth: {
+    label: "Growth",
+    features: [
+      "Analytics & click tracking (store views, top clicks)",
+      "AI product descriptions — 20 per day",
+      "Custom colours, fonts, and logo",
+      "Up to 50 listings + structured multi-item cart",
+      "Stock count management & categories",
+      "Post up to 25 job listings",
+    ],
+  },
+  pro: {
+    label: "Pro",
+    features: [
+      "In-app Paystack checkout + automatic orders",
+      "Payouts & bank settlement",
+      "Customer CRM, verified reviews, discounts & promo codes",
+      "Sendbox & Topship delivery integration",
+      "20 premium store themes + custom domain",
+      "CAC verification, product export, unlimited listings",
+    ],
+  },
+  premium: {
+    label: "Premium",
+    features: [
+      "Sella AI Business Partner (context-aware assistant)",
+      "Google Ads integration",
+      "White-label customer experience",
+      "Unlimited job listings",
+      "Everything in Pro, plus premium positioning",
+    ],
+  },
+};
 
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import OverviewTab from "../components/dashboard/Overview";
@@ -136,6 +172,20 @@ export default function Dashboard() {
     if (urlParams.get('ads-payment')) return 'google-ads'
     return 'overview'
   });
+
+  // "Welcome to [plan]" modal shown once after a successful upgrade redirect
+  // (BillingCallback sends the vendor to /dashboard?upgraded=<plan>).
+  const [welcomePlan, setWelcomePlan] = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('upgraded')
+    return ['growth', 'pro', 'premium'].includes(p) ? p : null
+  });
+  useEffect(() => {
+    if (welcomePlan) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('upgraded')
+      window.history.replaceState({}, '', url.pathname + (url.search || ''))
+    }
+  }, [welcomePlan]);
   const [showChecklist, setShowChecklist] = useState(false);
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [products, setProducts] = useState([]);
@@ -1475,6 +1525,16 @@ export default function Dashboard() {
         );
         return;
       }
+      // Stash the plan so BillingCallback can show a "Welcome to [plan]" modal
+      // after Paystack redirects back (mirrors the product-checkout sessionStorage handoff).
+      try {
+        if (data.reference) {
+          sessionStorage.setItem(
+            `sellapage_billing_${data.reference}`,
+            JSON.stringify({ plan: selectedPlan }),
+          );
+        }
+      } catch { /* sessionStorage unavailable — welcome modal simply won't show */ }
       window.location.href = data.authorization_url;
     } catch (err) {
       console.error("Billing initialize failed", err);
@@ -1960,6 +2020,49 @@ export default function Dashboard() {
             >
               Upgrade to Pro
             </button>
+          </div>
+        </div>
+      )}
+
+      {welcomePlan && PLAN_WELCOME[welcomePlan] && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setWelcomePlan(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 rounded-t-2xl p-6 text-white text-center">
+              <button
+                onClick={() => setWelcomePlan(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-lg text-white/80 hover:bg-white/20 transition-colors"
+                aria-label="Close"
+              >
+                <XIcon size={18} />
+              </button>
+              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-3">
+                <Sparkles size={26} />
+              </div>
+              <h2 className="text-xl font-extrabold">Welcome to {PLAN_WELCOME[welcomePlan].label}!</h2>
+              <p className="text-green-100 text-sm mt-1">Your plan is active. Here's what you can now do:</p>
+            </div>
+            <div className="p-5 space-y-2.5">
+              {PLAN_WELCOME[welcomePlan].features.map((f, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check size={12} className="text-green-600" />
+                  </span>
+                  <span className="text-sm text-gray-700">{f}</span>
+                </div>
+              ))}
+              <button
+                onClick={() => setWelcomePlan(null)}
+                className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all"
+              >
+                Start exploring
+              </button>
+            </div>
           </div>
         </div>
       )}

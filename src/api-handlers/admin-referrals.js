@@ -1,5 +1,6 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
+import { FieldValue } from 'firebase-admin/firestore'
 
 export default async function handler(req, res) {
   const adminToken = req.headers['x-admin-token']
@@ -190,29 +191,37 @@ export default async function handler(req, res) {
       batch.update(withdrawalRef, updateFields)
 
       if (status === 'rejected') {
+        // Reverse the request-time balance move: the vendor handler did
+        // referralAvailable -= amount and referralWithdrawn += amount when the
+        // request was created, so a rejection must restore BOTH (increment, not
+        // overwrite — the old code hard-set referralAvailable = amount, which
+        // clobbered any other available balance and never restored referralWithdrawn).
         const storeRef = db.collection('stores').doc(withdrawalData.userId)
         batch.update(storeRef, {
-          referralAvailable: (withdrawalData.amount || 0),
+          referralAvailable: FieldValue.increment(withdrawalData.amount || 0),
+          referralWithdrawn: FieldValue.increment(-(withdrawalData.amount || 0)),
         })
       }
 
       await batch.commit()
 
+      // Notify the vendor on BOTH outcomes (previously only 'completed' emailed).
       let emailSent = false
-      if (status === 'completed') {
-        try {
-          const storeSnap = await db.collection('stores').doc(withdrawalData.userId).get()
-          if (storeSnap.exists) {
-            const storeData = storeSnap.data()
-            const recipientEmail = storeData.email || storeData.ownerEmail
-            if (recipientEmail) {
-              const amountNaira = ((withdrawalData.amount || 0) / 100).toLocaleString()
+      try {
+        const storeSnap = await db.collection('stores').doc(withdrawalData.userId).get()
+        if (storeSnap.exists) {
+          const storeData = storeSnap.data()
+          const recipientEmail = storeData.email || storeData.ownerEmail
+          if (recipientEmail) {
+            const amountNaira = ((withdrawalData.amount || 0) / 100).toLocaleString()
+            const greetName = storeData.storeName || storeData.businessName || 'there'
+            if (status === 'completed') {
               await sendEmail(
                 recipientEmail,
                 `Sellapage - Payout Confirmed ₦${amountNaira}`,
                 `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
                     <h2 style="color: #16a34a;">Payout Confirmed</h2>
-                    <p>Hi ${storeData.storeName || 'there'},</p>
+                    <p>Hi ${greetName},</p>
                     <p>Your referral withdrawal request has been processed successfully.</p>
                     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 16px 0;">
                       <p style="margin: 4px 0;"><strong>Amount:</strong> ₦${amountNaira}</p>
@@ -223,15 +232,29 @@ export default async function handler(req, res) {
                     <p style="color: #6b7280; font-size: 13px;">If you have questions, contact support.</p>
                   </div>`
               )
-              emailSent = true
+            } else {
+              // rejected
+              await sendEmail(
+                recipientEmail,
+                `Sellapage - Withdrawal Request Update`,
+                `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #dc2626;">Withdrawal Not Processed</h2>
+                    <p>Hi ${greetName},</p>
+                    <p>Your referral withdrawal request of <strong>₦${amountNaira}</strong> could not be processed at this time.</p>
+                    ${note ? `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 16px 0; color: #991b1b;">${note}</div>` : ''}
+                    <p><strong>₦${amountNaira} has been returned to your available referral balance</strong>, so you can request a payout again anytime.</p>
+                    <p style="color: #6b7280; font-size: 13px;">If you have questions, contact support.</p>
+                  </div>`
+              )
             }
+            emailSent = true
           }
-        } catch (emailErr) {
-          console.error('[admin-referrals] Email send failed:', emailErr.message)
         }
-
-        await withdrawalRef.update({ emailSent })
+      } catch (emailErr) {
+        console.error('[admin-referrals] Email send failed:', emailErr.message)
       }
+
+      await withdrawalRef.update({ emailSent })
 
       return res.status(200).json({ success: true, message: `Withdrawal ${status}`, emailSent })
     }

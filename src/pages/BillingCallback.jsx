@@ -36,9 +36,20 @@ export default function BillingCallback() {
       }
     }
 
+    // Subscription / plan-upgrade path: read the plan stashed at billing-initialize
+    // time so the dashboard can show a "Welcome to [plan]" modal.
+    let upgradedPlan = null
+    try {
+      const billing = sessionStorage.getItem(`sellapage_billing_${reference}`)
+      if (billing) {
+        upgradedPlan = JSON.parse(billing).plan || null
+        sessionStorage.removeItem(`sellapage_billing_${reference}`)
+      }
+    } catch { /* ignore */ }
+
     setResolved(true)
     const timer = setTimeout(() => {
-      navigate('/dashboard', { replace: true })
+      navigate(upgradedPlan ? `/dashboard?upgraded=${upgradedPlan}` : '/dashboard', { replace: true })
     }, 4000)
 
     return () => clearTimeout(timer)

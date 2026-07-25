@@ -381,36 +381,56 @@ export default async function handler(req, res) {
 
   await batch.commit();
 
-  // --- Referral Reward Creation ---
+  // --- Referral Reward Creation (incremental, one-time-per-tier, immediately available) ---
+  // Commission is keyed to the HIGHEST plan tier the referred vendor has reached, not
+  // their first payment. We track the cumulative amount already credited to the referrer
+  // for this referred vendor on the referred store's own `referralCreditedToReferrer`
+  // field, and only ever credit the positive delta up to the new tier's reward. So:
+  //   first Growth  -> +₦500 (delta 50000-0)
+  //   upgrade Pro    -> +₦500 (delta 100000-50000)  = ₦1,000 total
+  //   upgrade Premium-> +₦1,000 (delta 200000-100000) = ₦2,000 total (cap)
+  //   renewal / same tier -> delta 0, nothing credited
+  //   downgrade -> delta negative, nothing credited, no clawback
+  // Earnings land in `referralAvailable` immediately (no holding period — the manual
+  // admin payout-approval step is the fraud checkpoint). The outer W1 idempotency guard
+  // (subscriptions where paystackRef == reference) prevents double-processing per payment,
+  // and the whole thing is written in one atomic batch.
   try {
     const referredById = storeCheckData.referredBy
     if (referredById) {
-      const referralSnap = await db.collection("stores").doc(storeId).collection("subscriptions").limit(2).get()
-      if (referralSnap.size === 1) {
-        const referrerSnap = await db.collection("stores").doc(referredById).get()
-        if (referrerSnap.exists) {
-          const REFERRAL_REWARDS = { growth: 50000, pro: 100000, premium: 200000 }
-          const rewardAmount = REFERRAL_REWARDS[plan] || 0
-          if (rewardAmount > 0) {
-            await db.collection("referralRewards").add({
-              referrerId: referredById,
-              referredUserId: storeId,
-              referredUserEmail: storeCheckData.email || "",
-              referredUserName: storeCheckData.businessName || "",
-              plan,
-              billingPeriod,
-              amountPaid: data.amount,
-              rewardAmount,
-              status: "pending",
-              createdAt: Timestamp.now(),
-              availableAt: Timestamp.fromMillis(Date.now() + 14 * 24 * 60 * 60 * 1000),
-            })
-            await db.collection("stores").doc(referredById).update({
-              referralPending: FieldValue.increment(rewardAmount),
-              referralTotalEarned: FieldValue.increment(rewardAmount),
-              referralTotalPaid: FieldValue.increment(1),
-            })
+      const referrerSnap = await db.collection("stores").doc(referredById).get()
+      if (referrerSnap.exists) {
+        const REFERRAL_REWARDS = { growth: 50000, pro: 100000, premium: 200000 }
+        const targetReward = REFERRAL_REWARDS[plan] || 0
+        const alreadyCredited = storeCheckData.referralCreditedToReferrer || 0
+        const delta = targetReward - alreadyCredited
+        if (delta > 0) {
+          const referralBatch = db.batch()
+          const rewardRef = db.collection("referralRewards").doc()
+          referralBatch.set(rewardRef, {
+            referrerId: referredById,
+            referredUserId: storeId,
+            referredUserEmail: storeCheckData.email || "",
+            referredUserName: storeCheckData.businessName || "",
+            plan,
+            billingPeriod,
+            amountPaid: data.amount,
+            rewardAmount: delta,
+            status: "available",
+            createdAt: Timestamp.now(),
+            availableAt: Timestamp.now(),
+          })
+          const referrerUpdate = {
+            referralAvailable: FieldValue.increment(delta),
+            referralTotalEarned: FieldValue.increment(delta),
           }
+          // Count each distinct referred vendor once (on their first reward), not per upgrade.
+          if (alreadyCredited === 0) {
+            referrerUpdate.referralTotalPaid = FieldValue.increment(1)
+          }
+          referralBatch.update(db.collection("stores").doc(referredById), referrerUpdate)
+          referralBatch.update(storeRef, { referralCreditedToReferrer: targetReward })
+          await referralBatch.commit()
         }
       }
     }

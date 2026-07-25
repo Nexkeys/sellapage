@@ -144,6 +144,15 @@ export default function SettingsTab({
       if (!res.ok || !data.authorization_url) {
         throw new Error('No authorization URL returned')
       }
+      // Stash the plan so BillingCallback can show a "Welcome to [plan]" modal after redirect.
+      try {
+        if (data.reference) {
+          sessionStorage.setItem(
+            `sellapage_billing_${data.reference}`,
+            JSON.stringify({ plan: targetPlan }),
+          )
+        }
+      } catch { /* sessionStorage unavailable */ }
       window.location.href = data.authorization_url
     } catch (err) {
       console.error('Upgrade failed', err)

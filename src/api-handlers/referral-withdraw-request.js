@@ -1,7 +1,5 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
-const MINIMUM_WITHDRAWAL = 500000
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -13,16 +11,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
+  // No minimum withdrawal — a vendor can withdraw any positive amount up to their
+  // available balance (validated below against referralAvailable).
   const { amount } = req.body
   if (!amount || typeof amount !== 'number' || amount <= 0) {
     return res.status(400).json({ error: 'Invalid withdrawal amount' })
-  }
-
-  if (amount < MINIMUM_WITHDRAWAL) {
-    return res.status(400).json({
-      error: 'minimum_not_met',
-      message: `Minimum withdrawal is ₦${(MINIMUM_WITHDRAWAL / 100).toLocaleString('en-NG')}`,
-    })
   }
 
   try {
