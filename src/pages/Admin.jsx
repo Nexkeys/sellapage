@@ -65,9 +65,12 @@ export default function Admin() {
   const [approvingId, setApprovingId] = useState(null);
 
   const [refStats, setRefStats] = useState(null);
-  const [refRewards, setRefRewards] = useState([]);
   const [refLoading, setRefLoading] = useState(false);
   const [refError, setRefError] = useState('');
+  const [referrers, setReferrers] = useState([]);
+  const [referrersMeta, setReferrersMeta] = useState({ page: 1, limit: 10, total: 0 });
+  const [refPage, setRefPage] = useState(1);
+  const [expandedReferrerId, setExpandedReferrerId] = useState(null);
 
   const [withdrawals, setWithdrawals] = useState([]);
   const [wdLoading, setWdLoading] = useState(false);
@@ -163,16 +166,18 @@ export default function Admin() {
     } catch { setDirError('Failed to load merchants.'); } finally { setDirLoading(false); }
   }, [payoutFilter]);
 
-  const fetchReferrals = useCallback(async () => {
+  const fetchReferrals = useCallback(async (p = 1) => {
     setRefLoading(true); setRefError('');
     try {
       const [s, r] = await Promise.all([
         fetch('/api/admin-referrals?action=stats', { headers: H }),
-        fetch('/api/admin-referrals?action=rewards&limit=20', { headers: H }),
+        fetch(`/api/admin-referrals?action=referrers&page=${p}&limit=10`, { headers: H }),
       ]);
       if (!s.ok || !r.ok) throw new Error('Failed');
       setRefStats((await s.json()).stats);
-      setRefRewards((await r.json()).rewards || []);
+      const rJson = await r.json();
+      setReferrers(rJson.referrers || []);
+      setReferrersMeta({ page: rJson.page || 1, limit: rJson.limit || 10, total: rJson.total || 0 });
     } catch { setRefError('Failed to load referral data.'); } finally { setRefLoading(false); }
   }, []);
 
@@ -515,7 +520,7 @@ export default function Admin() {
             <div className="hidden lg:block overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="bg-gray-50/80 border-b border-gray-100 text-[9px] font-black uppercase text-gray-400 tracking-wider"><th className="px-4 py-3">Merchant</th><th className="px-4 py-3">Plan</th><th className="px-4 py-3">Source</th><th className="px-4 py-3">Dates</th></tr></thead><tbody className="divide-y divide-gray-50">
               {(dirData?.stores||[]).map(s=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-3"><p className="font-bold text-gray-900">{s.storeName||'Unnamed'}</p><p className="text-[10px] text-gray-400 font-mono">@{s.handle}</p><div className="flex items-center gap-1 mt-1 text-[10px] text-gray-500"><span className="text-gray-400 font-bold w-4">W</span><span className="truncate max-w-[120px]">{s.whatsappNumber||'—'}</span></div>{s.subaccountCode&&<div className="mt-1.5 pt-1.5 border-t border-gray-100 text-[10px]"><span className="text-gray-400 font-bold">Payout:</span> {s.payoutsVerified?<span className="text-green-600 font-bold">Verified</span>:<span className="text-amber-600 font-bold">Pending</span>}{!s.payoutsVerified&&s.subaccountCode&&<button onClick={()=>tpv(s.id,true)} disabled={approvingId===s.id} className="ml-2 text-[9px] bg-green-600 text-white px-2 py-0.5 rounded-lg">{approvingId===s.id?'...':'Approve'}</button>}</div>}</td>
               <td className="px-4 py-3 align-top"><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span>{s.isPlanExpired&&<span className="text-[8px] font-bold text-red-600 ml-1">Expired</span>}</td>
-              <td className="px-4 py-3 align-top">{!s.referredBy?<span className="text-[10px] text-gray-400 italic">Not Referred</span>:!s.referredBy?<span className="text-[10px] font-bold text-gray-500">Organic</span>:<span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">{s.referredBy}</span>}</td>
+              <td className="px-4 py-3 align-top">{!s.referredBy?<span className="text-[10px] text-gray-400 italic">Not Referred</span>:<span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">{s.referredByReferralCode||s.referredByStoreName?`${s.referredByReferralCode||'—'} · ${s.referredByStoreName||'Unknown'}`:s.referredBy}</span>}</td>
               <td className="px-4 py-3 align-top text-[10px] text-gray-500"><p>Start: {s.planStartDate?new Date(s.planStartDate).toLocaleDateString('en-NG'):'—'}</p><p className={s.isPlanExpired?'text-red-500 font-bold':''}>End: {s.planEndDate?new Date(s.planEndDate).toLocaleDateString('en-NG'):'Lifetime'}</p></td>
               </tr>)}
               {!dirLoading&&(dirData?.stores||[]).length===0&&<tr><td colSpan="4" className="p-8 text-center text-gray-400 text-sm">No merchants found.</td></tr>}
@@ -532,7 +537,7 @@ export default function Admin() {
         {/* REFERRALS */}
         {activeTab === 'referrals' && <div className="space-y-4 animate-in fade-in duration-200">
           {refError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{refError}</div>}
-          <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Referral Program</h2><button onClick={fetchReferrals} disabled={refLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{refLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>
+          <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Referral Program</h2><button onClick={()=>fetchReferrals(refPage)} disabled={refLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{refLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>
           {refLoading&&!refStats?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:refStats&&<>
             {refStats.highestEarner&&<div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 p-4"><p className="text-[10px] font-bold text-green-700 uppercase tracking-wider mb-2">Top Referrer</p><div className="flex items-center justify-between"><div><p className="font-bold text-green-900">{refStats.highestEarner.storeName||'Unknown'}</p><p className="text-xs text-green-600">{refStats.highestEarner.totalReferrals} referrals</p>{refStats.highestEarner.email&&<p className="text-[10px] text-green-500 mt-0.5">{refStats.highestEarner.email}</p>}</div><p className="text-lg font-black text-green-700">{refStats.highestEarner.totalEarnedFormatted}</p></div></div>}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[
@@ -541,7 +546,32 @@ export default function Admin() {
               { l: 'Paid Out', v: `NGN ${(refStats.totalPaidOut/100).toLocaleString()}`, c: 'text-green-600' },
               { l: 'Pending Payouts', v: `NGN ${(refStats.totalPendingPayoutAmount/100).toLocaleString()}`, c: 'text-orange-600' },
             ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-lg font-black mt-0.5 ${s.c}`}>{s.value||s.v}</p></div>)}</div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Recent Rewards</h3></div><div className="divide-y divide-gray-50">{refRewards.length===0?<div className="p-6 text-center text-gray-400 text-sm">No rewards yet.</div>:refRewards.map(r=><div key={r.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50/50"><div className="min-w-0 flex-1"><p className="text-sm font-bold text-gray-900 truncate">{r.referredStoreName||'Unknown'}</p><p className="text-[10px] text-gray-500">{r.plan} · {r.createdAt?new Date(r.createdAt).toLocaleDateString('en-NG'):'—'}</p></div><div className="text-right flex-shrink-0 ml-2"><p className="text-sm font-bold text-green-600">NGN {((r.rewardAmount||0)/100).toLocaleString()}</p><span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${r.status==='pending'?'bg-amber-100 text-amber-700':'bg-green-100 text-green-700'}`}>{r.status}</span></div></div>)}</div></div>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between"><h3 className="font-bold text-xs text-gray-800">Referrers</h3><span className="text-[10px] text-gray-400 font-semibold">{referrersMeta.total} total</span></div>
+              <div className="divide-y divide-gray-50">
+                {referrers.length===0?<div className="p-6 text-center text-gray-400 text-sm">No referrers yet.</div>:referrers.map(rf=>{
+                  const isOpen = expandedReferrerId===rf.referrerId;
+                  return <div key={rf.referrerId}>
+                    <button onClick={()=>setExpandedReferrerId(isOpen?null:rf.referrerId)} className="w-full text-left px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 hover:bg-gray-50/50">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                        <ChevronRight size={14} className={`flex-shrink-0 text-gray-400 mt-0.5 transition-transform ${isOpen?'rotate-90':''}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap"><p className="text-sm font-bold text-gray-900 truncate">{rf.storeName}</p>{rf.referralCode&&<span className="text-[9px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100 flex-shrink-0">{rf.referralCode}</span>}</div>
+                          <p className="text-[10px] text-gray-500 mt-0.5">{rf.totalReferrals} referral{rf.totalReferrals===1?'':'s'}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 flex-shrink-0 text-right pl-6 sm:pl-0">
+                        <div><p className="text-[8px] text-gray-400 font-bold uppercase">Balance</p><p className="text-xs font-black text-emerald-600">NGN {(rf.availableBalance/100).toLocaleString()}</p></div>
+                        <div><p className="text-[8px] text-gray-400 font-bold uppercase">Pending</p><p className="text-xs font-black text-orange-600">NGN {(rf.pendingPayoutAmount/100).toLocaleString()}</p></div>
+                        <div><p className="text-[8px] text-gray-400 font-bold uppercase">Paid</p><p className="text-xs font-black text-green-600">NGN {(rf.paidOutAmount/100).toLocaleString()}</p></div>
+                      </div>
+                    </button>
+                    {isOpen&&<div className="bg-gray-50/60 px-4 py-2 border-t border-gray-100"><div className="divide-y divide-gray-100">{rf.referredVendors.map((v,i)=><div key={i} className="py-2 flex items-center justify-between gap-2"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-gray-800 truncate">{v.storeName}</p><p className="text-[10px] text-gray-500">{v.plan} · {v.createdAt?new Date(v.createdAt).toLocaleDateString('en-NG'):'—'}</p></div><div className="text-right flex-shrink-0"><p className="text-xs font-bold text-green-600">NGN {(v.rewardAmount/100).toLocaleString()}</p><span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full ${v.status==='pending'?'bg-amber-100 text-amber-700':'bg-green-100 text-green-700'}`}>{v.status}</span></div></div>)}</div></div>}
+                  </div>
+                })}
+              </div>
+              {referrersMeta.total>referrersMeta.limit&&<div className="bg-gray-50/80 px-3 py-2 border-t border-gray-100 flex items-center justify-between"><button onClick={()=>{const p=Math.max(1,refPage-1);setRefPage(p);fetchReferrals(p);}} disabled={refPage===1||refLoading} className="flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50"><ChevronLeft size={12} /> Prev</button><span className="text-[10px] font-semibold text-gray-500">Page {referrersMeta.page}/{Math.ceil(referrersMeta.total/referrersMeta.limit)}</span><button onClick={()=>{const p=refPage+1;setRefPage(p);fetchReferrals(p);}} disabled={refPage>=Math.ceil(referrersMeta.total/referrersMeta.limit)||refLoading} className="flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50">Next <ChevronRight size={12} /></button></div>}
+            </div>
           </>}
         </div>}
 

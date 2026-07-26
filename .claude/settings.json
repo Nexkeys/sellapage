@@ -10,7 +10,8 @@
       "Bash(node --check src/api-handlers/sitemap.js)",
       "Skill(run)",
       "Skill(run:*)",
-      "Bash(node --check src/api-handlers/admin-referrals.js)"
+      "Bash(node --check src/api-handlers/admin-referrals.js)",
+      "Bash(node --check src/api-handlers/admin-health.js)"
     ]
   }
 }

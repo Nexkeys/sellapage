@@ -100,6 +100,101 @@ export default async function handler(req, res) {
       })
     }
 
+    if (action === 'referrers') {
+      const page = parseInt(req.query.page) || 1
+      const limit = parseInt(req.query.limit) || 10
+
+      const rewardsSnap = await db.collection('referralRewards').get()
+      const withdrawalsSnap = await db.collection('withdrawal_requests').get()
+
+      const referrerGroups = {}
+      rewardsSnap.docs.forEach(doc => {
+        const d = doc.data()
+        const refId = d.referrerId || d.referrerUserId
+        if (!refId) return
+        if (!referrerGroups[refId]) {
+          referrerGroups[refId] = { referrerId: refId, totalReferrals: 0, totalEarned: 0, referredVendors: [] }
+        }
+        referrerGroups[refId].totalReferrals++
+        referrerGroups[refId].totalEarned += d.rewardAmount || 0
+        referrerGroups[refId].referredVendors.push({
+          referredUserId: d.referredUserId || null,
+          plan: d.plan || '',
+          rewardAmount: d.rewardAmount || 0,
+          status: d.status || '',
+          createdAt: d.createdAt?.toDate?.()?.toISOString() || d.createdAt || null,
+        })
+      })
+
+      const withdrawalTotals = {}
+      withdrawalsSnap.docs.forEach(doc => {
+        const d = doc.data()
+        if (!d.userId) return
+        if (!withdrawalTotals[d.userId]) withdrawalTotals[d.userId] = { pendingPayoutAmount: 0, paidOutAmount: 0 }
+        if (d.status === 'pending') withdrawalTotals[d.userId].pendingPayoutAmount += d.amount || 0
+        if (d.status === 'completed') withdrawalTotals[d.userId].paidOutAmount += d.amount || 0
+      })
+
+      const allReferrers = Object.values(referrerGroups)
+        .map(r => ({
+          ...r,
+          pendingPayoutAmount: withdrawalTotals[r.referrerId]?.pendingPayoutAmount || 0,
+          paidOutAmount: withdrawalTotals[r.referrerId]?.paidOutAmount || 0,
+        }))
+        .sort((a, b) => b.totalEarned - a.totalEarned)
+
+      const total = allReferrers.length
+      const offset = (page - 1) * limit
+      const pageReferrers = allReferrers.slice(offset, offset + limit)
+
+      const storeIds = new Set()
+      pageReferrers.forEach(r => {
+        storeIds.add(r.referrerId)
+        r.referredVendors.forEach(v => { if (v.referredUserId) storeIds.add(v.referredUserId) })
+      })
+
+      const storeMap = {}
+      if (storeIds.size) {
+        const storeDocs = await Promise.all(
+          [...storeIds].map(id => db.collection('stores').doc(id).get())
+        )
+        storeDocs.forEach(doc => {
+          if (doc.exists) {
+            const d = doc.data()
+            storeMap[doc.id] = {
+              storeName: d.storeName || d.handle || '',
+              referralCode: d.referralCode || '',
+              email: d.email || d.ownerEmail || '',
+              whatsappNumber: d.whatsappNumber || '',
+              referralAvailable: d.referralAvailable || 0,
+            }
+          }
+        })
+      }
+
+      const enrichedReferrers = pageReferrers.map(r => ({
+        referrerId: r.referrerId,
+        storeName: storeMap[r.referrerId]?.storeName || 'Unknown',
+        referralCode: storeMap[r.referrerId]?.referralCode || '',
+        email: storeMap[r.referrerId]?.email || '',
+        whatsappNumber: storeMap[r.referrerId]?.whatsappNumber || '',
+        totalReferrals: r.totalReferrals,
+        totalEarned: r.totalEarned,
+        availableBalance: storeMap[r.referrerId]?.referralAvailable || 0,
+        pendingPayoutAmount: r.pendingPayoutAmount,
+        paidOutAmount: r.paidOutAmount,
+        referredVendors: r.referredVendors.map(v => ({
+          storeName: v.referredUserId ? (storeMap[v.referredUserId]?.storeName || 'Unknown') : 'Unknown',
+          plan: v.plan,
+          rewardAmount: v.rewardAmount,
+          status: v.status,
+          createdAt: v.createdAt,
+        })).sort((a, b) => (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0)),
+      }))
+
+      return res.status(200).json({ success: true, referrers: enrichedReferrers, page, limit, total })
+    }
+
     if (action === 'rewards') {
       const page = parseInt(req.query.page) || 1
       const limit = parseInt(req.query.limit) || 20

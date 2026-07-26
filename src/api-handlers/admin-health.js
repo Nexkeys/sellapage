@@ -109,6 +109,25 @@ export default async function handler(req, res) {
         const endIndex = startIndex + limit;
         const paginatedChunk = filteredStores.slice(startIndex, endIndex);
 
+        // Resolve each referrer's store name + referral code for the "Source"
+        // column instead of exposing the raw referredBy store ID.
+        const referrerIds = [...new Set(paginatedChunk.map((s) => s.referredBy).filter(Boolean))];
+        const referrerMap = {};
+        if (referrerIds.length) {
+          const referrerDocs = await Promise.all(
+            referrerIds.map((id) => adminDb.collection('stores').doc(id).get())
+          );
+          referrerDocs.forEach((doc) => {
+            if (doc.exists) {
+              const d = doc.data();
+              referrerMap[doc.id] = {
+                storeName: d.storeName || d.handle || '',
+                referralCode: d.referralCode || '',
+              };
+            }
+          });
+        }
+
         // Async fetch leads counts + transform structure for the chunk
         const finalStores = await Promise.all(
           paginatedChunk.map(async (store) => {
@@ -162,6 +181,8 @@ export default async function handler(req, res) {
               payoutBankName: store.payoutBankName || null,
               payoutAccountNumberMasked: store.payoutAccountNumberMasked || null,
               payoutsVerified: store.payoutsVerified || false,
+              referredByStoreName: store.referredBy ? (referrerMap[store.referredBy]?.storeName || '') : null,
+              referredByReferralCode: store.referredBy ? (referrerMap[store.referredBy]?.referralCode || '') : null,
             };
           })
         );
