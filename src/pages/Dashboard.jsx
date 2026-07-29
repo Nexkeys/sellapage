@@ -317,7 +317,15 @@ export default function Dashboard() {
   }, [activeTab, isGrowthOrPro]);
 
   useEffect(() => {
-    if (activeTab === "orders" && store?.id && isGrowthOrPro && !ordersSynced)
+    // Orders/bookings back all four of these tabs — not just their own —
+    // so each one must be able to trigger the fetch itself, not rely on the
+    // vendor having already visited Orders/Bookings first in this session.
+    if (
+      ["orders", "payouts", "reviews", "delivery"].includes(activeTab) &&
+      store?.id &&
+      isGrowthOrPro &&
+      !ordersSynced
+    )
       fetchOrders();
   }, [activeTab, store?.id, isGrowthOrPro, ordersSynced]);
 
@@ -327,7 +335,12 @@ export default function Dashboard() {
   }, [store?.id]);
 
   useEffect(() => {
-    if (activeTab === "bookings" && store?.id && isGrowthOrPro && !bookingsSynced)
+    if (
+      ["bookings", "payouts"].includes(activeTab) &&
+      store?.id &&
+      isGrowthOrPro &&
+      !bookingsSynced
+    )
       fetchBookings();
   }, [activeTab, store?.id, isGrowthOrPro, bookingsSynced]);
 
@@ -1970,6 +1983,8 @@ export default function Dashboard() {
           store={store}
           orders={orders}
           ordersLoading={ordersLoading}
+          bookings={bookings}
+          bookingsLoading={bookingsLoading}
           user={user}
           onSubaccountCreated={handleSubaccountCreated}
         />
