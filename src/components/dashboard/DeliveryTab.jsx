@@ -39,7 +39,18 @@ function classifyShipmentStage(rawStatus) {
   return 0
 }
 
-function ShipmentStatusBar({ rawStatus }) {
+const STAGE_COLORS = {
+  0: 'text-gray-700',
+  1: 'text-blue-600',
+  2: 'text-blue-600',
+  3: 'text-green-600',
+}
+
+// Big headline + vertical dotted timeline, styled after the reference "Delivered" card
+// Nex shared — same underlying data/logic as before (classifyShipmentStage, the tracking
+// timeline array), just a different layout. Degrades to a single "Booked" entry when no
+// live tracking timeline is available yet, so the card never looks broken pre-Refresh.
+function ShipmentTimelineCard({ rawStatus, courierName, estimatedDelivery, timelineEvents, bookedAtLabel }) {
   const stage = classifyShipmentStage(rawStatus)
 
   if (stage === 'failed') {
@@ -51,68 +62,72 @@ function ShipmentStatusBar({ rawStatus }) {
     )
   }
 
-  return (
-    <>
-      {/* Mobile: Vertical stepper */}
-      <div className="sm:hidden">
-        <div className="flex items-center gap-2 mb-2">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-            stage === 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-          }`}>
-            {stage === 3 ? <Check size={11} /> : <Loader2 size={11} className="animate-spin" />}
-            {SHIPMENT_STAGES[stage]}
-          </span>
-        </div>
-        <div className="flex items-stretch gap-0 ml-1">
-          {SHIPMENT_STAGES.map((label, idx) => {
-            const reached = idx <= stage
-            const isLast = idx === SHIPMENT_STAGES.length - 1
-            return (
-              <div key={label} className="flex flex-col items-center">
-                <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-full ${
-                  reached ? 'bg-green-500' : 'bg-gray-200'
-                }`}>
-                  {reached && <Check size={8} className="text-white" strokeWidth={3} />}
-                </span>
-                <span className={`text-[8px] font-bold mt-1 ${reached ? 'text-gray-700' : 'text-gray-400'}`}>
-                  {label}
-                </span>
-                {!isLast && (
-                  <div className={`w-12 h-0.5 mt-[-14px] ml-0.5 rounded-full ${idx < stage ? 'bg-green-500' : 'bg-gray-200'}`} />
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+  const events = Array.isArray(timelineEvents) && timelineEvents.length > 0
+    ? timelineEvents
+    : [{ status: rawStatus || 'Booked', time: bookedAtLabel || '' }]
 
-      {/* Desktop: Horizontal layout */}
-      <div className="hidden sm:flex items-center">
-        {SHIPMENT_STAGES.map((label, idx) => {
-          const reached = idx <= stage
-          const isLast = idx === SHIPMENT_STAGES.length - 1
-          return (
-            <div key={label} className={`flex items-center ${isLast ? '' : 'flex-1'}`}>
-              <div className="flex flex-col items-center gap-1">
-                <span
-                  className={`flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-white ${
-                    reached ? 'bg-green-500' : 'bg-gray-200'
-                  }`}
-                >
-                  {reached && <Check size={9} className="text-white" strokeWidth={3} />}
-                </span>
-                <span className={`text-[9px] font-bold whitespace-nowrap ${reached ? 'text-gray-700' : 'text-gray-400'}`}>
-                  {label}
-                </span>
-              </div>
-              {!isLast && (
-                <div className={`h-0.5 flex-1 mx-1 mb-3.5 rounded-full ${idx < stage ? 'bg-green-500' : 'bg-gray-200'}`} />
-              )}
-            </div>
-          )
-        })}
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-baseline gap-2">
+        <p className={`text-lg font-black ${STAGE_COLORS[stage]}`}>{SHIPMENT_STAGES[stage]}</p>
+        {courierName && <span className="text-[11px] text-gray-500">via {courierName}</span>}
+        {estimatedDelivery && <span className="text-[11px] text-gray-400">ETA: {estimatedDelivery}</span>}
       </div>
-    </>
+      <div className="space-y-2.5 border-l-2 border-gray-100 pl-3">
+        {events.slice(0, 6).map((event, idx) => (
+          <div key={idx} className="relative">
+            <span className={`absolute -left-[18px] top-1 h-2 w-2 rounded-full ring-2 ring-white ${idx === 0 ? 'bg-green-500' : 'bg-gray-300'}`} />
+            <p className="text-[11px] font-semibold text-gray-700">{event.status || event.description}</p>
+            <p className="text-[10px] text-gray-400">{event.time || event.timestamp || ''}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Pickup/delivery address block — sourced entirely from data already loaded on the page
+// (the order and store objects), never a new fetch, so it can't itself error. Prefers the
+// exact addresses Topship actually booked with (persisted at booking time) over the
+// order's original checkout address, since the vendor may have edited them in the modal.
+function ShipmentAddressBlock({ order, store, isTopship }) {
+  const pickup = isTopship && order.topshipSenderAddress
+    ? order.topshipSenderAddress
+    : {
+        address: store?.pickupAddress?.streetAddress || '',
+        city: store?.pickupAddress?.city || '',
+        state: store?.pickupAddress?.state || '',
+      }
+  const delivery = isTopship && order.topshipReceiverAddress
+    ? order.topshipReceiverAddress
+    : {
+        address: order.deliveryAddress?.address || order.deliveryAddress?.streetAddress || '',
+        city: order.deliveryAddress?.city || order.deliveryAddress?.lga || '',
+        state: order.deliveryAddress?.state || '',
+      }
+
+  const pickupLine = [pickup.address, pickup.city, pickup.state].filter(Boolean).join(', ')
+  const deliveryLine = [delivery.address, delivery.city, delivery.state].filter(Boolean).join(', ')
+
+  if (!pickupLine && !deliveryLine) return null
+
+  return (
+    <div className="grid grid-cols-1 gap-2 rounded-lg bg-white border border-gray-100 px-3 py-2 sm:grid-cols-2">
+      <div className="flex items-start gap-1.5 min-w-0">
+        <MapPin size={12} className="text-gray-400 flex-shrink-0 mt-0.5" />
+        <div className="min-w-0">
+          <p className="text-[9px] font-bold uppercase text-gray-400">Pickup</p>
+          <p className="text-[11px] text-gray-600 truncate" title={pickupLine}>{pickupLine || 'Not set'}</p>
+        </div>
+      </div>
+      <div className="flex items-start gap-1.5 min-w-0">
+        <MapPin size={12} className="text-gray-400 flex-shrink-0 mt-0.5" />
+        <div className="min-w-0">
+          <p className="text-[9px] font-bold uppercase text-gray-400">Delivery</p>
+          <p className="text-[11px] text-gray-600 truncate" title={deliveryLine}>{deliveryLine || 'Not set'}</p>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -667,39 +682,25 @@ export default function DeliveryTab({
                     </p>
                   )}
 
+                  <ShipmentAddressBlock order={order} store={store} isTopship={isTopship} />
+
                   {tracking && (
-                    <div className="space-y-3">
-                      <ShipmentStatusBar rawStatus={tracking.status} />
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-100">
-                          {tracking.status}
-                        </span>
-                        {tracking.courierName && (
-                          <span className="text-[11px] text-gray-500">via {tracking.courierName}</span>
-                        )}
-                        {tracking.estimatedDelivery && (
-                          <span className="text-[11px] text-gray-400">- ETA: {tracking.estimatedDelivery}</span>
-                        )}
-                      </div>
-                      {Array.isArray(tracking.timeline) && tracking.timeline.length > 0 && (
-                        <div className="mt-2 space-y-1.5 border-l-2 border-green-100 pl-3">
-                          {tracking.timeline.slice(0, 4).map((event, idx) => (
-                            <div key={idx}>
-                              <p className="text-[11px] font-semibold text-gray-700">{event.status || event.description}</p>
-                              <p className="text-[10px] text-gray-400">{event.time || event.timestamp || ''}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                    <div className="mt-3">
+                      <ShipmentTimelineCard
+                        rawStatus={tracking.status}
+                        courierName={tracking.courierName}
+                        estimatedDelivery={tracking.estimatedDelivery}
+                        timelineEvents={tracking.timeline}
+                      />
                     </div>
                   )}
 
                   {!tracking && !error && (
-                    <div className="space-y-3">
-                      <ShipmentStatusBar rawStatus={isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')} />
-                      <p className="text-[11px] text-gray-400">
-                        Status: {isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')} - Click Refresh for live update
-                      </p>
+                    <div className="mt-3 space-y-1.5">
+                      <ShipmentTimelineCard
+                        rawStatus={isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')}
+                      />
+                      <p className="text-[11px] text-gray-400">Click Refresh for live update</p>
                     </div>
                   )}
                 </div>

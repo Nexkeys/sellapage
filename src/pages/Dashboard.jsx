@@ -1890,6 +1890,7 @@ export default function Dashboard() {
       {activeTab === "delivery" && isGrowthOrPro && (
         <DeliveryTab
           store={store}
+          user={user}
           onSave={handleDeliverySave}
           saveLoading={deliverySaving}
           saveError={deliveryError}
