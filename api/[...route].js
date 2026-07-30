@@ -115,6 +115,26 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/booking-reminder-cron.js");
         return await handlerFunc(req, res);
       }
+      case "receipt-create": {
+        const { default: handlerFunc } = await import("../src/api-handlers/receipt-create.js");
+        return await handlerFunc(req, res);
+      }
+      case "receipt-update": {
+        const { default: handlerFunc } = await import("../src/api-handlers/receipt-update.js");
+        return await handlerFunc(req, res);
+      }
+      case "receipt-delete": {
+        const { default: handlerFunc } = await import("../src/api-handlers/receipt-delete.js");
+        return await handlerFunc(req, res);
+      }
+      case "receipt-list": {
+        const { default: handlerFunc } = await import("../src/api-handlers/receipt-list.js");
+        return await handlerFunc(req, res);
+      }
+      case "receipt-settings": {
+        const { default: handlerFunc } = await import("../src/api-handlers/receipt-settings.js");
+        return await handlerFunc(req, res);
+      }
       case "admin-health": {
         const { default: handlerFunc } = await import("../src/api-handlers/admin-health.js");
         return await handlerFunc(req, res);

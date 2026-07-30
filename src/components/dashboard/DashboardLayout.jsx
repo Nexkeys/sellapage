@@ -30,6 +30,7 @@ import {
   Share2,
   Briefcase,
   CalendarDays,
+  Receipt,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -43,6 +44,7 @@ const NAV_ITEMS = [
   { id: "services", label: "Services", icon: Sparkles },
   { id: "categories", label: "Categories", icon: Tag },
   { id: "ledger", label: "Ledger", icon: BookOpen },
+  { id: "receipts", label: "Receipts", icon: Receipt },
   { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
   { id: "delivery", label: "Delivery", icon: Truck },

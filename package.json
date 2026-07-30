@@ -19,6 +19,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.8.0",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.303.0",
     "prembly-react-kyc": "^1.0.2",
     "qrcode": "^1.5.4",

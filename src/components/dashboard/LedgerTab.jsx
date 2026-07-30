@@ -370,7 +370,7 @@ export default function LedgerTab({ store }) {
     setFormError('')
     if (!form.customerName.trim()) { setFormError('Customer name is required.'); return }
     if (!form.itemName.trim()) { setFormError('Item name is required.'); return }
-    if (!form.amount || Number(form.amount) < 0) { setFormError('Enter a valid amount.'); return }
+    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) < 0) { setFormError('Enter a valid amount.'); return }
     if (!form.date) { setFormError('Date is required.'); return }
     if (!user?.uid) { setFormError('Authentication context missing.'); return }
 
@@ -385,7 +385,7 @@ export default function LedgerTab({ store }) {
           notes: form.notes.trim(),
           status: form.status
         })
-      } {
+      } else {
         const newDocId = Date.now().toString()
         const docRef = doc(db, 'stores', user.uid, 'ledger', newDocId)
         await setDoc(docRef, {
@@ -422,12 +422,22 @@ export default function LedgerTab({ store }) {
 
   const handleDelete = async (id) => {
     if (!user?.uid) return
+
+    const entry = entries.find(e => e.id === id)
+    const customerName = entry?.customerName || 'this entry'
+
+    const confirmed = window.confirm(
+      `Delete ledger entry for "${customerName}"? This cannot be undone.`
+    )
+    if (!confirmed) return
+
     try {
       const docRef = doc(db, 'stores', user.uid, 'ledger', id)
       await deleteDoc(docRef)
       if (editingId === id) resetForm()
     } catch (err) {
       console.error("Error deleting from cloud ledger: ", err)
+      setFormError('Failed to delete entry. Try again.')
     }
   }
 
@@ -594,7 +604,21 @@ export default function LedgerTab({ store }) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700">Amount (NGN) <span className="text-red-500">*</span></label>
-                <input type="number" min="0" step="1" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} placeholder="e.g. 20500" className={INPUT_CLASS} />
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.amount}
+                  onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                  onBlur={(e) => {
+                    const val = Number(e.target.value)
+                    if (isNaN(val) || val < 0) {
+                      setForm((p) => ({ ...p, amount: '' }))
+                    }
+                  }}
+                  placeholder="e.g. 20500"
+                  className={INPUT_CLASS}
+                />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700">Date <span className="text-red-500">*</span></label>

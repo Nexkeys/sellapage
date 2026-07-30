@@ -100,6 +100,7 @@ import PayoutsTab from "../components/dashboard/PayoutsTab";
 import BillingTab from "../components/dashboard/BillingTab";
 import DeliveryTab from "../components/dashboard/DeliveryTab";
 import LedgerTab from "../components/dashboard/LedgerTab";
+import ReceiptsTab from "../components/dashboard/ReceiptsTab";
 import CustomDomainTab from "../components/dashboard/CustomDomainTab";
 import CACVerificationTab from "../components/dashboard/CACVerificationTab";
 import ReferralTab from "../components/dashboard/ReferralTab";
@@ -1900,6 +1901,15 @@ export default function Dashboard() {
         />
       )}
       {activeTab === "ledger" && <LedgerTab store={store} />}
+      {activeTab === "receipts" && (
+        <ReceiptsTab
+          store={store}
+          user={user}
+          isGrowthOrPro={isGrowthOrPro}
+          isPro={isPro}
+          isPremium={isPremium}
+        />
+      )}
       {activeTab === "delivery" && isGrowthOrPro && (
         <DeliveryTab
           store={store}

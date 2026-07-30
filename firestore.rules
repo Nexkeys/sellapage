@@ -1,2 +1,118 @@
 UPDATED FIRESTORE RULES LIVES AT THE FIREBASE RULES TAB AND NOT THIS folder
 N.B *******
+
+
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /stores/{storeId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == storeId;
+      allow update: if request.auth != null && request.auth.uid == storeId;
+      allow delete: if request.auth != null && request.auth.uid == storeId;
+      
+      match /products/{productId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == storeId;
+        
+        match /reviews/{reviewId} {
+          allow read: if true; 
+          allow write: if false; 
+        }
+
+        match /variations/{variantId} {
+          allow read: if true;
+          allow write: if request.auth != null && request.auth.uid == storeId;
+        }
+      }
+      
+      match /categories/{categoryId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == storeId;
+      }
+      
+      match /services/{serviceId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == storeId;
+        
+        match /reviews/{reviewId} {
+          allow read: if true; 
+          allow write: if false; 
+        }
+      }
+      
+      match /orders/{orderId} {
+        allow read, write: if request.auth != null && request.auth.uid == storeId;
+      }
+      
+      match /bookings/{bookingId} {
+        allow read, write: if request.auth != null && request.auth.uid == storeId;
+      }
+
+      
+      match /analytics/{docId} {
+        allow read: if request.auth != null && request.auth.uid == storeId;
+        allow write: if true;
+      }
+      
+      match /subscriptions/{subId} {
+        allow read: if request.auth != null && request.auth.uid == storeId;
+        allow write: if false;
+      }
+
+      match /discounts/{discountId} {
+        allow read, write: if request.auth != null && request.auth.uid == storeId;
+      }
+
+      match /customers/{customerId} {
+        allow read, write: if request.auth != null && request.auth.uid == storeId;
+      }
+
+      match /ledger/{entryId} {
+        allow read, write: if request.auth != null && request.auth.uid == storeId;
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if request.auth != null && request.auth.uid == storeId;
+        allow write: if false;
+      }
+
+      // Sella AI Business Partner — server-only (written/read via Admin SDK,
+      // which bypasses these rules). Clients are blocked from tampering with
+      // their own daily usage count or reading any chat history directly.
+      match /sellaAiUsage/{dateId} {
+        allow read, write: if false;
+      }
+
+      match /sellaAiChats/{sessionId} {
+        allow read, write: if false;
+      }
+    }
+    
+    match /admins/{adminId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    match /leads/{leadId} {
+      allow create: if true;
+      allow read: if request.auth != null;
+    }
+    
+    match /waitlist/{id} {
+      allow create: if true;
+      allow read: if request.auth != null;
+    }
+    
+    match /supportEnquiries/{enquiryId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && request.auth.uid == resource.data.storeId;
+    }
+    
+    match /supportMessages/{messageId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && request.auth.uid == resource.data.storeId;
+    }
+  }
+}

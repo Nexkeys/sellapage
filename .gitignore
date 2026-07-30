@@ -23,6 +23,7 @@ Docs
 .vercel
 .env*
 
+
 # Migration script output (may contain customer PII)
 scripts/migration-output
 
