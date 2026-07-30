@@ -100,7 +100,7 @@ export default function LeaveReviewTab({ store, user, navigateTo }) {
         </div>
         <h1 className="text-lg font-black text-gray-900">Thank you!</h1>
         <p className="mt-2 text-sm text-gray-500">
-          Your review has been submitted and is awaiting a quick review from our team before it appears on our Success Stories page.
+          Thank You For Your Review! We appreciate your feedback and are thrilled to hear about your experience. Your insights help us improve and provide the best service possible.
         </p>
         <button
           type="button"
