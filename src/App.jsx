@@ -33,6 +33,7 @@ import ReportStore from './pages/ReportStore'
 import JobsPage from './pages/JobsPage'
 import JobDetailPage from './pages/JobDetailPage'
 import BlogPage from './pages/BlogPage'
+import SuccessStoriesPage from './pages/SuccessStoriesPage'
 import BlogPostPage from './pages/BlogPostPage'
 
 
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:jobId" element={<JobDetailPage />} />
           <Route path="/blog" element={<BlogPage />} />
+          <Route path="/success-stories" element={<SuccessStoriesPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/billing/callback" element={<BillingCallback />} />
           <Route path="/review" element={<ReviewPage />} />

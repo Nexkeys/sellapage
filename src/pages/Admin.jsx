@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
+import ReviewsAdmin from '../components/admin/ReviewsAdmin';
 
 const ADMIN_TABS = [
   { id: 'health', label: 'System Health', icon: Database, short: 'Health' },
@@ -25,6 +26,7 @@ const ADMIN_TABS = [
   { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
   { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },
   { id: 'blog', label: 'Blog', icon: BookOpen, short: 'Blog' },
+  { id: 'reviews', label: 'Reviews', icon: Star, short: 'Reviews' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
@@ -34,7 +36,7 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
-  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog'] },
+  { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews'] },
   { label: 'Team', ids: ['admins'] },
 ];
 
@@ -308,17 +310,42 @@ export default function Admin() {
 
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true); setAnalyticsError('');
+    // Each call is diagnosed individually and labeled, rather than a single
+    // generic "Failed." for all three — that's what was hiding the real
+    // cause: a non-JSON response (routing miss, 403, etc.) from any one of
+    // these throws inside .json() with no indication of which endpoint or why.
+    const load = async (label, url) => {
+      let res;
+      try {
+        res = await fetch(url, { headers: H });
+      } catch (err) {
+        throw new Error(`${label}: network error — ${err.message}`);
+      }
+      const bodyText = await res.text();
+      if (!res.ok) {
+        throw new Error(`${label}: HTTP ${res.status} — ${bodyText.slice(0, 200)}`);
+      }
+      try {
+        return JSON.parse(bodyText);
+      } catch {
+        throw new Error(`${label}: non-JSON response (status ${res.status}) — ${bodyText.slice(0, 200)}`);
+      }
+    };
     try {
       const [ov, ts, su] = await Promise.all([
-        fetch('/api/admin-analytics?action=overview', { headers: H }),
-        fetch('/api/admin-analytics?action=top-stores&limit=10', { headers: H }),
-        fetch('/api/admin-analytics?action=signups&days=30', { headers: H }),
+        load('overview', '/api/admin-analytics?action=overview'),
+        load('top-stores', '/api/admin-analytics?action=top-stores&limit=10'),
+        load('signups', '/api/admin-analytics?action=signups&days=30'),
       ]);
-      if (!ov.ok) throw new Error('Failed');
-      setAnalyticsData((await ov.json()).analytics);
-      setTopStores((await ts.json()).stores || []);
-      setSignupSeries((await su.json()).series || []);
-    } catch { setAnalyticsError('Failed.'); } finally { setAnalyticsLoading(false); }
+      setAnalyticsData(ov.analytics);
+      setTopStores(ts.stores || []);
+      setSignupSeries(su.series || []);
+    } catch (err) {
+      console.error('[Admin Analytics] fetch failed:', err);
+      setAnalyticsError(err.message || 'Failed to load analytics.');
+    } finally {
+      setAnalyticsLoading(false);
+    }
   }, []);
 
   const fetchRevenue = useCallback(async () => {
@@ -801,6 +828,9 @@ export default function Admin() {
 
         {/* BLOG */}
         {activeTab === 'blog' && <BlogAdmin token={token} adminUid={user?.uid} />}
+
+        {/* REVIEWS */}
+        {activeTab === 'reviews' && <ReviewsAdmin token={token} />}
 
         {/* TEAM */}
         {activeTab === 'admins' && <div className="space-y-4 animate-in fade-in duration-200">

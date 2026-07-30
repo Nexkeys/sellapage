@@ -193,9 +193,10 @@ export default function ReceiptCustomizer({ draft, onChange, locked, store, plan
             type="button"
             onClick={() => toggleQrCode(!draft.qrCodeEnabled)}
             disabled={qrLoading}
-            className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${draft.qrCodeEnabled ? 'bg-green-600' : 'bg-gray-200'}`}
+            aria-pressed={!!draft.qrCodeEnabled}
+            className={`inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full p-1 transition-colors ${draft.qrCodeEnabled ? 'justify-end bg-green-600' : 'justify-start bg-gray-200'}`}
           >
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${draft.qrCodeEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            <span className="h-5 w-5 rounded-full bg-white shadow-md" />
           </button>
         </div>
         {qrLoading && <p className="mt-2 text-[11px] text-gray-400">Generating QR code…</p>}

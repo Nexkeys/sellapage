@@ -101,6 +101,7 @@ import BillingTab from "../components/dashboard/BillingTab";
 import DeliveryTab from "../components/dashboard/DeliveryTab";
 import LedgerTab from "../components/dashboard/LedgerTab";
 import ReceiptsTab from "../components/dashboard/ReceiptsTab";
+import LeaveReviewTab from "../components/dashboard/LeaveReviewTab";
 import CustomDomainTab from "../components/dashboard/CustomDomainTab";
 import CACVerificationTab from "../components/dashboard/CACVerificationTab";
 import ReferralTab from "../components/dashboard/ReferralTab";
@@ -1901,6 +1902,9 @@ export default function Dashboard() {
         />
       )}
       {activeTab === "ledger" && <LedgerTab store={store} />}
+      {activeTab === "leave-review" && (
+        <LeaveReviewTab store={store} user={user} navigateTo={setActiveTab} />
+      )}
       {activeTab === "receipts" && (
         <ReceiptsTab
           store={store}

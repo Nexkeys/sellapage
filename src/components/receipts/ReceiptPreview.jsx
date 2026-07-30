@@ -13,7 +13,12 @@ export default function ReceiptPreview({ draft, savedReceipt, onSave, saving, ca
   const [pdfBusy, setPdfBusy] = useState(false)
   const [pngBusy, setPngBusy] = useState(false)
 
-  const receiptForRender = savedReceipt || draft
+  // `draft` is the live, currently-edited state — it must always win over
+  // `savedReceipt` (a snapshot from the last save) for every field the user
+  // can edit, or the preview freezes on stale data until the next save.
+  // `savedReceipt` is only spread first so its server-assigned `receiptNumber`
+  // survives (draft never carries one for a brand-new, unsaved receipt).
+  const receiptForRender = { ...savedReceipt, ...draft }
   const template = getTemplateById(receiptForRender.templateId)
   // Editing an existing receipt already has a receiptNumber from the moment
   // you arrive here — download/share shouldn't wait for a fresh re-save.

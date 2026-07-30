@@ -1,7 +1,7 @@
 // src/components/Navbar.jsx/
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, X, LayoutDashboard, LogOut, Store, Briefcase, BookOpen } from 'lucide-react'
+import { Menu, X, LayoutDashboard, LogOut, Store, Briefcase, BookOpen, Star } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { logoutSeller } from '../firebase/auth'
 
@@ -55,6 +55,10 @@ export default function Navbar() {
             <Link to="/blog" className="flex items-center gap-1.5 hover:text-green-600 transition-colors hover:font-semibold">
               <BookOpen size={14} />
               Blog
+            </Link>
+            <Link to="/success-stories" className="flex items-center gap-1.5 hover:text-green-600 transition-colors hover:font-semibold">
+              <Star size={14} />
+              Success Stories
             </Link>
 
             {user ? (
@@ -115,6 +119,7 @@ export default function Navbar() {
             { label: 'Explore Stores', href: '/live-stores', isLink: true, icon: Store },
             { label: 'Jobs', href: '/jobs', isLink: true, icon: Briefcase },
             { label: 'Blog', href: '/blog', isLink: true, icon: BookOpen },
+            { label: 'Success Stories', href: '/success-stories', isLink: true, icon: Star },
           ].map(link => (
             link.isLink ? (
               <Link

@@ -35,6 +35,8 @@ import {
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
 import SellaAI from "./SellaAI";
+import CalculatorFAB from "./CalculatorFAB";
+import ReviewPromptModal from "./ReviewPromptModal";
 import { sendHeartbeat } from "../../utils/sessionTracking";
 
 const NAV_ITEMS = [
@@ -506,6 +508,8 @@ export default function DashboardLayout({
 
       {/* Sella AI — movable Business Partner, persistent across every tab (Premium only) */}
       <SellaAI store={store} />
+      <CalculatorFAB />
+      <ReviewPromptModal store={store} navigateTo={setActiveTab} />
     </div>
   );
 }

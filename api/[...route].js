@@ -115,6 +115,18 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/booking-reminder-cron.js");
         return await handlerFunc(req, res);
       }
+      case "platform-review-submit": {
+        const { default: handlerFunc } = await import("../src/api-handlers/platform-review-submit.js");
+        return await handlerFunc(req, res);
+      }
+      case "platform-reviews-admin": {
+        const { default: handlerFunc } = await import("../src/api-handlers/platform-reviews-admin.js");
+        return await handlerFunc(req, res);
+      }
+      case "platform-reviews-public": {
+        const { default: handlerFunc } = await import("../src/api-handlers/platform-reviews-public.js");
+        return await handlerFunc(req, res);
+      }
       case "receipt-create": {
         const { default: handlerFunc } = await import("../src/api-handlers/receipt-create.js");
         return await handlerFunc(req, res);

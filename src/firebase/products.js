@@ -66,6 +66,45 @@ export const uploadSingleImage = async (imageFile, folder = 'sellapage/logos') =
   return await uploadToCloudinary(imageFile, folder)
 }
 
+// Videos need Cloudinary's /video/upload endpoint — /image/upload (used
+// above) rejects video files outright. Same unsigned preset/cloud name;
+// the Cloudinary preset must have video allowed as a resource type for
+// this to succeed (an account/dashboard-side setting, not something this
+// code can control).
+export const MAX_VIDEO_UPLOAD_BYTES = 10 * 1024 * 1024 // 10MB
+
+export const uploadVideo = async (videoFile, folder = 'sellapage/reviews/videos') => {
+  if (!CLOUD_NAME || !UPLOAD_PRESET) {
+    throw new Error(
+      'Cloudinary is not configured. Please check VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your .env file.'
+    )
+  }
+  if (videoFile.size > MAX_VIDEO_UPLOAD_BYTES) {
+    throw new Error('Video is too large — each video must be 10MB or smaller.')
+  }
+
+  const formData = new FormData()
+  formData.append('file', videoFile)
+  formData.append('upload_preset', UPLOAD_PRESET)
+  formData.append('folder', folder)
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`,
+    { method: 'POST', body: formData }
+  )
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}))
+    throw new Error(
+      errData?.error?.message ||
+      `Video upload failed (${response.status}). Check your Cloudinary upload preset allows video uploads.`
+    )
+  }
+
+  const data = await response.json()
+  return data.secure_url
+}
+
 
 export const checkProductLimit = async (storeId) => {
   const storeSnap = await getDoc(doc(db, 'stores', storeId))
