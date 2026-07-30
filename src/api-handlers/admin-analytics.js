@@ -4,6 +4,10 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  // Vercel's edge network can conditionally-cache a GET response (serving a
+  // bodyless 304 to a repeat identical request) unless a handler explicitly
+  // opts out. Live admin data must never be served stale/empty like that.
+  res.setHeader('Cache-Control', 'no-store, max-age=0')
   if (req.method === 'OPTIONS') return res.status(204).end()
 
   const adminToken = req.headers['x-admin-token']

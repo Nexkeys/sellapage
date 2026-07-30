@@ -14,28 +14,37 @@ export default async function handler(req, res) {
 
     if (action === 'list') {
       const limit = Math.min(100, parseInt(req.query.limit) || 50)
+      // `where` + `orderBy` on different fields needs a composite index
+      // Firestore doesn't have — same bug found (and fixed the same way) in
+      // platform-reviews-admin.js. Fetch by status only, sort in memory.
+      // Fetch a generous cap (not the caller's `limit`) so sorting-then-
+      // slicing in memory still surfaces the true most-recent reviews,
+      // rather than an arbitrary Firestore-ordered subset capped too early.
       const snap = await db
         .collection('platformReviews')
         .where('status', '==', 'approved')
-        .orderBy('createdAt', 'desc')
-        .limit(limit)
+        .limit(500)
         .get()
 
-      const reviews = snap.docs.map((doc) => {
-        const d = doc.data()
-        return {
-          id: doc.id,
-          storeName: d.storeName,
-          storeSlug: d.storeSlug,
-          authorName: d.authorName,
-          rating: d.rating,
-          reviewText: d.reviewText,
-          images: d.images || [],
-          videos: d.videos || [],
-          featured: !!d.featured,
-          createdAt: d.createdAt,
-        }
-      })
+      const reviews = snap.docs
+        .map((doc) => {
+          const d = doc.data()
+          return {
+            id: doc.id,
+            storeName: d.storeName,
+            storeSlug: d.storeSlug,
+            authorName: d.authorName,
+            rating: d.rating,
+            reviewText: d.reviewText,
+            images: d.images || [],
+            videos: d.videos || [],
+            featured: !!d.featured,
+            createdAt: d.createdAt,
+          }
+        })
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, limit)
+
       // Featured reviews surface first for the public wall's hero section.
       reviews.sort((a, b) => (b.featured === a.featured ? 0 : b.featured ? 1 : -1))
 

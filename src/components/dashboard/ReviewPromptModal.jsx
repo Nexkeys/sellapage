@@ -1,11 +1,12 @@
 // src/components/dashboard/ReviewPromptModal.jsx
 // A full-screen overlay (deliberately not a small banner, per Nex's request)
-// shown once per login session, asking the vendor to leave a Sellapage
-// review. Admin-togglable from the Admin > Reviews tab.
+// asking the vendor to leave a Sellapage review. Deliberately reappears on
+// every fresh dashboard load (reload, sign in, sign up) rather than being
+// dismissed-for-session — the only things that permanently stop it are the
+// admin turning the prompt off platform-wide, or the vendor having already
+// submitted a review. "Maybe Later" only hides it for the current page view.
 import { useEffect, useState } from 'react'
 import { Star, X, MessageSquarePlus } from 'lucide-react'
-
-const SESSION_DISMISS_KEY = 'sellapage_review_prompt_dismissed'
 
 export default function ReviewPromptModal({ store, navigateTo }) {
   const [visible, setVisible] = useState(false)
@@ -13,7 +14,6 @@ export default function ReviewPromptModal({ store, navigateTo }) {
   useEffect(() => {
     if (!store?.id) return
     if (store.hasSubmittedPlatformReview) return
-    if (sessionStorage.getItem(SESSION_DISMISS_KEY)) return
 
     let cancelled = false
     fetch('/api/platform-reviews-public?action=prompt-status')
@@ -28,12 +28,10 @@ export default function ReviewPromptModal({ store, navigateTo }) {
   }, [store?.id, store?.hasSubmittedPlatformReview])
 
   const dismiss = () => {
-    sessionStorage.setItem(SESSION_DISMISS_KEY, '1')
     setVisible(false)
   }
 
   const goLeaveReview = () => {
-    sessionStorage.setItem(SESSION_DISMISS_KEY, '1')
     setVisible(false)
     navigateTo?.('leave-review')
   }

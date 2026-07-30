@@ -20,21 +20,25 @@ export default async function handler(req, res) {
       const page = Math.max(1, parseInt(req.query.page) || 1)
       const limit = Math.min(50, parseInt(req.query.limit) || 20)
 
-      let q = db.collection('platformReviews').orderBy('createdAt', 'desc')
-      if (status !== 'all') q = q.where('status', '==', status)
-
-      const snap = await q.limit(500).get()
-      const all = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-      const total = all.length
-      const start = (page - 1) * limit
-      const pageItems = all.slice(start, start + limit)
+      // No `where` + `orderBy` on different fields — that combination needs
+      // a composite index Firestore doesn't have here (this exact query
+      // shape was throwing FAILED_PRECONDITION / error 9 in production).
+      // Collection is small enough to fetch unfiltered and do
+      // filter/sort/paginate/count all in memory — same approach already
+      // used elsewhere in this codebase (e.g. admin-referrals.js) to avoid
+      // needing new indexes.
+      const snap = await db.collection('platformReviews').limit(500).get()
+      const all = snap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
       const counts = { all: all.length, pending: 0, approved: 0, rejected: 0 }
-      // Recompute counts across the full set only when unfiltered — cheap
-      // enough at this data scale, avoids a second round-trip.
-      if (status === 'all') {
-        for (const r of all) counts[r.status] = (counts[r.status] || 0) + 1
-      }
+      for (const r of all) counts[r.status] = (counts[r.status] || 0) + 1
+
+      const filtered = status === 'all' ? all : all.filter((r) => r.status === status)
+      const total = filtered.length
+      const start = (page - 1) * limit
+      const pageItems = filtered.slice(start, start + limit)
 
       return res.status(200).json({ reviews: pageItems, total, page, limit, counts })
     }
