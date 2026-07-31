@@ -2,6 +2,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithCustomToken,
   signOut,
   onAuthStateChanged,
   deleteUser,
@@ -61,6 +62,10 @@ export const registerSeller = async (email, password, storeData) => {
 
 export const loginSeller = async (email, password) => {
   return await signInWithEmailAndPassword(auth, email, password)
+}
+
+export const loginWithCustomToken = async (customToken) => {
+  return await signInWithCustomToken(auth, customToken)
 }
 
 export const logoutSeller = async () => {

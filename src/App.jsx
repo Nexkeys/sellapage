@@ -35,6 +35,7 @@ import JobDetailPage from './pages/JobDetailPage'
 import BlogPage from './pages/BlogPage'
 import SuccessStoriesPage from './pages/SuccessStoriesPage'
 import BlogPostPage from './pages/BlogPostPage'
+import JoinTeam from './pages/JoinTeam'
 
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/join-team" element={<JoinTeam />} />
           <Route
             path="/dashboard"
             element={

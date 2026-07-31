@@ -107,6 +107,7 @@ import CACVerificationTab from "../components/dashboard/CACVerificationTab";
 import ReferralTab from "../components/dashboard/ReferralTab";
 import GoogleAdsTab from "../components/dashboard/GoogleAdsTab";
 import JobListingsTab from "../components/dashboard/JobListingsTab";
+import TeamTab from "../components/dashboard/TeamTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -2024,6 +2025,9 @@ export default function Dashboard() {
       )}
       {activeTab === 'job-listings' && (
         <JobListingsTab store={store} />
+      )}
+      {activeTab === 'team' && (
+        <TeamTab store={store} />
       )}
       {activeTab === 'google-ads' && (
         <GoogleAdsTab

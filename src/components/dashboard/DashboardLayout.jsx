@@ -31,6 +31,7 @@ import {
   Briefcase,
   CalendarDays,
   Receipt,
+  UserPlus,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -38,6 +39,7 @@ import SellaAI from "./SellaAI";
 import CalculatorFAB from "./CalculatorFAB";
 import ReviewPromptModal from "./ReviewPromptModal";
 import { sendHeartbeat } from "../../utils/sessionTracking";
+import { canStaffAccessTab } from "../../utils/staffRoles";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard },
@@ -68,6 +70,7 @@ const NAV_ITEMS = [
   { id: "billing", label: "Billing", icon: CreditCard },
   { id: "custom-domain", label: "Custom Domain", icon: Globe },
   { id: "cac-verification", label: "CAC Verification", icon: ShieldCheck },
+  { id: "team", label: "Team", icon: UserPlus },
   { id: "settings", label: "Settings", icon: Settings },
   { id: "support", label: "Support", icon: HelpCircle },
 ];
@@ -155,6 +158,10 @@ export default function DashboardLayout({
     (store?.hasGrowthFeatures ?? (plan === "growth" || plan === "pro")) &&
     !effectiveIsPro;
   const isGrowthOrAbove = plan === 'growth' || plan === 'pro' || plan === 'premium';
+  const isPremiumPlan = plan === 'premium';
+  const isStaffIdentity = !!store?._isStaff;
+  const staffTabAccess = (tabId, needsWrite = false) =>
+    canStaffAccessTab({ tabs: store?._staffTabs || [] }, tabId, needsWrite);
 
   const planEndDate = store?.planEndDate?.toDate?.();
   const daysUntilExpiry = planEndDate
@@ -180,9 +187,12 @@ export default function DashboardLayout({
         if (item.id === 'services' && vendorType === 'products') return false;
         if (item.id === 'orders' && vendorType === 'services') return false;
         if (item.id === 'bookings' && vendorType === 'products') return false;
+        if (item.id === 'team' && !isPremiumPlan) return false;
+        if (item.id === 'team' && isStaffIdentity) return false;
+        if (isStaffIdentity && item.id !== 'team' && !staffTabAccess(item.id)) return false;
         return true;
       }),
-    [isGrowthOrAbove, vendorType, effectiveIsPro],
+    [isGrowthOrAbove, vendorType, effectiveIsPro, isPremiumPlan, isStaffIdentity, store?._staffTabs],
   );
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -265,6 +275,9 @@ export default function DashboardLayout({
           if (id === 'services' && vendorType === 'products') return null;
           if (id === 'orders' && vendorType === 'services') return null;
           if (id === 'bookings' && vendorType === 'products') return null;
+          if (id === 'team' && !isPremiumPlan) return null;
+          if (id === 'team' && isStaffIdentity) return null;
+          if (isStaffIdentity && id !== 'team' && !staffTabAccess(id)) return null;
           const active = activeTab === id;
           return (
             <button
@@ -283,8 +296,8 @@ export default function DashboardLayout({
         })}
       </nav>
 
-      {/* Upgrade Banner — hidden for Pro */}
-      {!effectiveIsPro && (
+      {/* Upgrade Banner — hidden for Pro, and for staff (billing is owner-only) */}
+      {!effectiveIsPro && !isStaffIdentity && (
         <div className="mx-3 mb-3 p-3.5 rounded-2xl bg-white/5 border border-white/8">
           <div className="flex items-center gap-2 mb-1">
             <Star size={13} className="text-yellow-400" />
@@ -379,6 +392,13 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Staff identity banner */}
+        {isStaffIdentity && (
+          <div className="w-full bg-indigo-600 text-white text-xs font-semibold text-center px-4 py-2 flex-shrink-0">
+            Managing {store?.storeName || store?.businessName || "this store"} as {store?._staffRoleName || "Staff"}
+          </div>
+        )}
+
         {/* Grace Period Banner */}
         {isGrace && (
           <div className="w-full bg-amber-500 text-white text-xs font-semibold text-center px-4 py-2 flex-shrink-0">

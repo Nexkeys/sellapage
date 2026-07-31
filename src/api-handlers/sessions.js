@@ -1,6 +1,7 @@
 //src/api-handlers/sessions.js/
 import { randomUUID } from 'crypto'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
+import { resolveCallerStoreId } from './_lib/verify-store-access.js'
 
 function parseUserAgent(ua = '') {
   let os = 'Unknown OS'
@@ -64,7 +65,11 @@ export default async function handler(req, res) {
 
   const decoded = await verifyAuth(req)
   if (!decoded) return res.status(401).json({ error: 'Unauthorized' })
-  const storeId = decoded.uid
+
+  const access = await resolveCallerStoreId(decoded.uid)
+  if (!access) return res.status(403).json({ error: 'No store access' })
+  const { storeId, role, staffName } = access
+  const actorLabel = role === 'owner' ? 'Vendor' : `Staff: ${staffName || 'Unknown'}`
 
   try {
     const db = getAdminDb()
@@ -72,6 +77,26 @@ export default async function handler(req, res) {
     const sessionsRef = db.collection('stores').doc(storeId).collection('sessions')
 
     if (action === 'list' && req.method === 'GET') {
+      // Self-service view — only the caller's own sessions, whether owner or
+      // staff (a staff member's "log out this device" screen shouldn't be
+      // able to see the owner's or other staff's devices).
+      const snap = await sessionsRef.orderBy('lastActiveAt', 'desc').limit(100).get()
+      const sessions = snap.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || null,
+          lastActiveAt: doc.data().lastActiveAt?.toDate?.()?.toISOString() || null,
+        }))
+        .filter(s => !s.revoked && (s.actorUid ? s.actorUid === decoded.uid : role === 'owner'))
+
+      return res.status(200).json({ success: true, sessions })
+    }
+
+    if (action === 'list-all' && req.method === 'GET') {
+      // Owner-only cross-staff overview, for the Team tab ("who's logged in
+      // where"). Not exposed to staff regardless of role.
+      if (role !== 'owner') return res.status(403).json({ error: 'Owner only' })
       const snap = await sessionsRef.orderBy('lastActiveAt', 'desc').limit(100).get()
       const sessions = snap.docs
         .map(doc => ({
@@ -103,6 +128,8 @@ export default async function handler(req, res) {
         region: location.region,
         country: location.country,
         userAgent: ua,
+        actorUid: decoded.uid,
+        actorLabel,
         revoked: false,
         createdAt: new Date(),
         lastActiveAt: new Date(),
@@ -134,7 +161,18 @@ export default async function handler(req, res) {
       const { sessionId } = body
       if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' })
 
-      await sessionsRef.doc(sessionId).update({ revoked: true, revokedAt: new Date() })
+      const targetRef = sessionsRef.doc(sessionId)
+      const targetSnap = await targetRef.get()
+      if (!targetSnap.exists) return res.status(404).json({ error: 'Session not found' })
+      const target = targetSnap.data()
+      // Self-revoke always allowed; the owner may additionally revoke any
+      // session on their own store (staff removal already does this via
+      // staff-manage.js, this covers ad-hoc owner-initiated revokes too).
+      if (target.actorUid !== decoded.uid && role !== 'owner') {
+        return res.status(403).json({ error: 'Forbidden' })
+      }
+
+      await targetRef.update({ revoked: true, revokedAt: new Date() })
       return res.status(200).json({ success: true })
     }
 

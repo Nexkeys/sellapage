@@ -339,6 +339,27 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "staff-roles": {
+        const { default: handler } = await import("../src/api-handlers/staff-roles.js")
+        return handler(req, res)
+      }
+      case "staff-invites": {
+        const { default: handler } = await import("../src/api-handlers/staff-invites.js")
+        return handler(req, res)
+      }
+      case "staff-join": {
+        const { default: handler } = await import("../src/api-handlers/staff-join.js")
+        return handler(req, res)
+      }
+      case "staff-manage": {
+        const { default: handler } = await import("../src/api-handlers/staff-manage.js")
+        return handler(req, res)
+      }
+      case "staff-identity": {
+        const { default: handler } = await import("../src/api-handlers/staff-identity.js")
+        return handler(req, res)
+      }
+
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
     }
