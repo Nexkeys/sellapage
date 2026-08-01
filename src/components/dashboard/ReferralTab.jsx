@@ -83,7 +83,7 @@ export default function ReferralTab({ user, store }) {
 
   const fetchReferralStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/referral-stats`, {
+      const res = await fetch(`${API_BASE}/api/referral-stats${store?.id ? `?storeId=${store.id}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -93,11 +93,11 @@ export default function ReferralTab({ user, store }) {
       }
     } catch {
     }
-  }, [token])
+  }, [token, store?.id])
 
   const fetchWithdrawalHistory = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/referral-withdrawals`, {
+      const res = await fetch(`${API_BASE}/api/referral-withdrawals${store?.id ? `?storeId=${store.id}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -106,7 +106,7 @@ export default function ReferralTab({ user, store }) {
       }
     } catch {
     }
-  }, [token])
+  }, [token, store?.id])
 
   // Live refresh: fetch stats + withdrawal history on load, poll every 25s, and
   // re-fetch when the tab regains focus — so new clicks/signups/referrals and

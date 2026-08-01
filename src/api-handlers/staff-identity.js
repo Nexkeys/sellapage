@@ -45,6 +45,7 @@ export default async function handler(req, res) {
       storeId: data.storeId,
       membershipId: membership.id,
       staffName: data.name,
+      staffEmail: data.email,
       roleId: data.roleId,
       roleName: roleSnap.exists ? roleSnap.data().name : 'Staff',
       tabs: roleSnap.exists ? (roleSnap.data().tabs || []) : [],

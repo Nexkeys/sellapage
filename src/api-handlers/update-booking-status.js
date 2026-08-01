@@ -4,6 +4,7 @@ import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
 import { sendPush } from './_lib/send-push.js'
 import { generateWhatsAppLink } from '../utils/whatsapp.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -76,9 +77,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired token' })
     }
 
-    if (decodedToken.uid !== storeId) {
+    const access = await resolveStoreAccess(decodedToken.uid, storeId, 'bookings', true)
+    if (!access.allowed) {
       return res.status(403).json({ error: 'Forbidden' })
     }
+    const actorLabel = access.role === 'owner' ? 'Vendor' : `Staff: ${access.staffName || 'Unknown'}`
 
     const bookingRef = db
       .collection('stores')
@@ -101,12 +104,13 @@ export default async function handler(req, res) {
       status: newStatus,
       changedAt: changedAtIso,
       changedBy: decodedToken.uid,
-      changedByLabel: 'Vendor',
+      changedByLabel: actorLabel,
     }
 
     const updatePayload = {
       status: newStatus,
       updatedAt: changedAtIso,
+      lastUpdatedBy: { uid: decodedToken.uid, label: actorLabel },
     }
 
     if (newStatus === 'rescheduled') {

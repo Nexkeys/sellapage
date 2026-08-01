@@ -1,4 +1,5 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -22,7 +23,14 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired token' })
     }
 
-    const uid = decodedToken.uid
+    // storeId defaults to the caller's own uid (unchanged behavior for owners
+    // calling this without the param); an explicit storeId lets a staff
+    // member with referral-program access view their store's stats.
+    const uid = (req.query.storeId || decodedToken.uid)
+    if (uid !== decodedToken.uid) {
+      const access = await resolveStoreAccess(decodedToken.uid, uid, 'referral-program', false)
+      if (!access.allowed) return res.status(403).json({ error: 'Forbidden' })
+    }
     const storeRef = db.collection('stores').doc(uid)
     const storeSnap = await storeRef.get()
     if (!storeSnap.exists) {

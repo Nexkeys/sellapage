@@ -7,6 +7,7 @@
 // repo's live security rules aren't version-controlled/editable here.
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { JOB_TYPE_SLUGS, JOB_CATEGORY_SLUGS } from '../utils/jobCategories.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
 const JOB_LISTING_LIMITS = { starter: 5, growth: 25, pro: 50, premium: 999999 }
 
@@ -23,7 +24,7 @@ function isValidUrl(value) {
   }
 }
 
-async function verifyVendor(req, res, adminAuth, expectedStoreId) {
+async function verifyVendor(req, res, adminAuth, expectedStoreId, needsWrite = true) {
   const authHeader = req.headers.authorization || req.headers.Authorization || ''
   const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
   if (!idToken) {
@@ -37,9 +38,12 @@ async function verifyVendor(req, res, adminAuth, expectedStoreId) {
     res.status(401).json({ error: 'Invalid or expired session. Please sign in again.' })
     return null
   }
-  if (expectedStoreId && decoded.uid !== expectedStoreId) {
-    res.status(403).json({ error: 'You can only manage your own job listings.' })
-    return null
+  if (expectedStoreId) {
+    const access = await resolveStoreAccess(decoded.uid, expectedStoreId, 'job-listings', needsWrite)
+    if (!access.allowed) {
+      res.status(403).json({ error: 'You can only manage your own job listings.' })
+      return null
+    }
   }
   return decoded
 }
@@ -99,7 +103,7 @@ export default async function handler(req, res) {
     if (action === 'list' && req.method === 'GET') {
       const storeId = req.query.storeId
       if (!storeId) return res.status(400).json({ error: 'Missing storeId' })
-      const decoded = await verifyVendor(req, res, adminAuth, storeId)
+      const decoded = await verifyVendor(req, res, adminAuth, storeId, false)
       if (!decoded) return
 
       const snap = await db.collection('jobListings')

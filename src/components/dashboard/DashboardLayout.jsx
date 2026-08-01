@@ -319,11 +319,13 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* User Profile */}
+      {/* User Profile — shows the currently logged-in identity: the staff
+          member's own account when acting as staff, not the store owner's,
+          so it's visually clear staff have their own separate login. */}
       <div className="px-3 pb-4">
         <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/8">
           <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
-            {store?.logoUrl ? (
+            {!isStaffIdentity && store?.logoUrl ? (
               <img
                 src={store.logoUrl}
                 alt=""
@@ -331,16 +333,20 @@ export default function DashboardLayout({
               />
             ) : (
               <span className="text-white text-xs font-bold">
-                {getInitials(store?.businessName)}
+                {getInitials(isStaffIdentity ? store?._staffName : store?.businessName)}
               </span>
             )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
               <p className="text-white text-xs font-semibold truncate">
-                {store?.businessName || "Your Business"}
+                {isStaffIdentity ? (store?._staffName || "Staff") : (store?.businessName || "Your Business")}
               </p>
-              {badge && (
+              {isStaffIdentity ? (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  {store?._staffRoleName || "Staff"}
+                </span>
+              ) : badge && (
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}
                 >
@@ -349,7 +355,7 @@ export default function DashboardLayout({
               )}
             </div>
             <p className="text-gray-600 text-[11px] truncate">
-              {store?.email || "Business Owner"}
+              {isStaffIdentity ? (store?._staffEmail || "Staff Account") : (store?.email || "Business Owner")}
             </p>
           </div>
           <button

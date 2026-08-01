@@ -37,6 +37,7 @@ export function AuthProvider({ children }) {
                 _staffRoleName: idData.roleName,
                 _staffTabs: idData.tabs || [],
                 _staffName: idData.staffName,
+                _staffEmail: idData.staffEmail,
               } : null)
             } else {
               setStore(null)
