@@ -396,5 +396,95 @@ export const themes = [
       navigationDockLayout: "retro-block",
       internalTabShellStyle: { cardClasses: "bg-[#151520] border-2 border-[#00ffff] shadow-[0_0_15px_rgba(0,255,255,0.3)] rounded-none", textClasses: "text-white" }
     }
+  },
+  {
+    id: 'desert-terracotta',
+    name: 'Desert Terracotta',
+    defaultColors: { background: '#faf3ec', card: '#fffaf5', text: '#5c3a21', primary: '#c1440e', accent: '#e0a458' },
+    typography: { headerFontFamily: "'Fraunces', serif", bodyFontFamily: "'Karla', sans-serif", fontUrl: "https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Karla:wght@400;500;700&display=swap" },
+    defaultThemeText: { footer: "Handmade in the desert. Earthy goods, honestly made." },
+    structuralStyle: {
+      cardBorderRadius: "rounded-2xl",
+      cardBorder: "border border-[#e0a458]/30 shadow-[0_6px_20px_rgba(193,68,14,0.08)] hover:border-[#c1440e]/60 hover:shadow-[0_10px_25px_rgba(193,68,14,0.15)]",
+      containerClasses: "bg-[#faf3ec] text-[#5c3a21]",
+      buttonClasses: "bg-[#c1440e] hover:bg-[#a3390c] text-white rounded-2xl font-semibold px-6 py-2.5",
+    },
+    layout: {
+      headerLayout: "classic-flat-row",
+      navigationDockLayout: "flush-bottom",
+      internalTabShellStyle: { cardClasses: "bg-[#fffaf5] border border-[#e0a458]/30 shadow-sm rounded-2xl", textClasses: "text-[#5c3a21]" }
+    }
+  },
+  {
+    id: 'nordic-frost',
+    name: 'Nordic Frost',
+    defaultColors: { background: '#f4f8fb', card: '#ffffff', text: '#1e293b', primary: '#5b8bb0', accent: '#cfe3ee' },
+    typography: { headerFontFamily: "'Sora', sans-serif", bodyFontFamily: "'Manrope', sans-serif", fontUrl: "https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Manrope:wght@400;500;600&display=swap" },
+    defaultThemeText: { footer: "Clean design, honest materials. Scandinavian simplicity." },
+    structuralStyle: {
+      cardBorderRadius: "rounded-xl",
+      cardBorder: "border border-[#cfe3ee] shadow-[0_2px_10px_rgba(91,139,176,0.08)] hover:border-[#5b8bb0]/50 hover:shadow-[0_8px_20px_rgba(91,139,176,0.12)]",
+      containerClasses: "bg-[#f4f8fb] text-[#1e293b]",
+      buttonClasses: "bg-transparent border border-[#5b8bb0] text-[#5b8bb0] hover:bg-[#5b8bb0] hover:text-white rounded-lg font-medium tracking-wide px-6",
+    },
+    layout: {
+      headerLayout: "minimal-underline",
+      navigationDockLayout: "flush-bottom",
+      internalTabShellStyle: { cardClasses: "bg-white border border-[#cfe3ee] shadow-sm rounded-xl", textClasses: "text-[#1e293b]" }
+    }
+  },
+  {
+    id: 'cosmic-nebula',
+    name: 'Cosmic Nebula',
+    defaultColors: { background: '#0b0620', card: '#160f35', text: '#e9e4ff', primary: '#8b5cf6', accent: '#f472b6' },
+    typography: { headerFontFamily: "'Unbounded', sans-serif", bodyFontFamily: "'Rubik', sans-serif", fontUrl: "https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Rubik:wght@400;500;600&display=swap" },
+    defaultThemeText: { footer: "Out-of-this-world finds. Explore the collection." },
+    structuralStyle: {
+      cardBorderRadius: "rounded-2xl",
+      cardBorder: "border border-purple-500/30 hover:border-pink-400/60 shadow-[0_0_20px_rgba(139,92,246,0.15)] hover:shadow-[0_0_25px_rgba(244,114,182,0.35)] backdrop-blur-sm",
+      containerClasses: "bg-[#0b0620] text-[#e9e4ff] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/30 via-[#0b0620] to-[#0b0620]",
+      buttonClasses: "bg-gradient-to-r from-violet-500 to-pink-500 hover:from-violet-400 hover:to-pink-400 text-white rounded-full font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)]",
+    },
+    layout: {
+      headerLayout: "neon-cyber-bordered",
+      navigationDockLayout: "floating-pill",
+      internalTabShellStyle: { cardClasses: "bg-[#160f35] border border-purple-500/30 shadow-[0_0_15px_rgba(139,92,246,0.15)] rounded-2xl", textClasses: "text-[#e9e4ff]" }
+    }
+  },
+  {
+    id: 'harvest-amber',
+    name: 'Harvest Amber',
+    defaultColors: { background: '#fdf6ec', card: '#ffffff', text: '#4a3418', primary: '#b5651d', accent: '#e3a857' },
+    typography: { headerFontFamily: "'Bitter', serif", bodyFontFamily: "'Mulish', sans-serif", fontUrl: "https://fonts.googleapis.com/css2?family=Bitter:wght@600;700&family=Mulish:wght@400;500;700&display=swap" },
+    defaultThemeText: { footer: "Fresh from the farm to your door." },
+    structuralStyle: {
+      cardBorderRadius: "rounded-lg",
+      cardBorder: "border-l-[4px] border-l-[#b5651d] border-y border-r border-[#e3a857]/30 shadow-md hover:shadow-lg",
+      containerClasses: "bg-[#fdf6ec] text-[#4a3418]",
+      buttonClasses: "bg-[#b5651d] hover:bg-[#9a5518] text-white rounded-lg font-semibold px-6 py-2.5",
+    },
+    layout: {
+      headerLayout: "heavy-block",
+      navigationDockLayout: "flush-bottom",
+      internalTabShellStyle: { cardClasses: "bg-white border-l-[4px] border-l-[#b5651d] shadow-md rounded-lg", textClasses: "text-[#4a3418]" }
+    }
+  },
+  {
+    id: 'coral-reef',
+    name: 'Coral Reef',
+    defaultColors: { background: '#f0fbfa', card: '#ffffff', text: '#0b3d3a', primary: '#ff6b5b', accent: '#14b8a6' },
+    typography: { headerFontFamily: "'Baloo 2', sans-serif", bodyFontFamily: "'Figtree', sans-serif", fontUrl: "https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Figtree:wght@400;500;600&display=swap" },
+    defaultThemeText: { footer: "Dive into our ocean-fresh collection." },
+    structuralStyle: {
+      cardBorderRadius: "rounded-[1.75rem]",
+      cardBorder: "border border-teal-100 shadow-[0_10px_30px_-10px_rgba(20,184,166,0.2)] hover:shadow-[0_15px_35px_-10px_rgba(255,107,91,0.25)] hover:-translate-y-1 transition-all",
+      containerClasses: "bg-[#f0fbfa] text-[#0b3d3a]",
+      buttonClasses: "bg-[#ff6b5b] hover:bg-[#ff5540] text-white rounded-full font-bold shadow-md px-7 py-2.5",
+    },
+    layout: {
+      headerLayout: "glass-pill",
+      navigationDockLayout: "floating-pill",
+      internalTabShellStyle: { cardClasses: "bg-white border border-teal-100 shadow-lg rounded-[1.75rem]", textClasses: "text-[#0b3d3a]" }
+    }
   }
 ];
