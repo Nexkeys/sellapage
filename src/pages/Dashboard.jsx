@@ -41,6 +41,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
+import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
 import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
 
 // Features unlocked at each plan, shown in the post-upgrade welcome modal.
@@ -352,9 +353,24 @@ export default function Dashboard() {
     setBookings([]);
   }, [store?.id]);
 
-  // Analytics real-time listener — only for Growth/Pro, lives at Dashboard level
+  // Analytics — real-time listener for the owner; staff get a one-time fetch
+  // through the server proxy since their uid can't pass the analytics
+  // collection's `request.auth.uid == storeId` read rule.
   useEffect(() => {
     if (!store?.id || !isGrowthOrPro) return;
+
+    if (isActingAsStaffFor(store.id)) {
+      fetchStoreDocAsStaff("analytics", store.id).then((data) => {
+        setAnalyticsData({
+          totalViews: data?.totalViews ?? 0,
+          totalClicks: data?.totalClicks ?? 0,
+          engagedViews: data?.engagedViews ?? 0,
+          totalBookingRequests: data?.totalBookingRequests ?? 0,
+        });
+      });
+      return;
+    }
+
     const unsubscribe = onSnapshot(
       doc(db, "stores", store.id, "analytics", "storeSummary"),
       (snap) => {
@@ -513,6 +529,12 @@ export default function Dashboard() {
   const fetchLeads = async () => {
     setLeadsLoading(true);
     try {
+      if (isActingAsStaffFor(store.id)) {
+        const items = await fetchStoreCollectionAsStaff("leads", store.id);
+        items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        setLeads(items);
+        return;
+      }
       const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
       const storeLeads = snap.docs
@@ -529,6 +551,13 @@ export default function Dashboard() {
   const fetchOrders = async () => {
     setOrdersLoading(true);
     try {
+      if (isActingAsStaffFor(store.id)) {
+        const items = await fetchStoreCollectionAsStaff("orders", store.id);
+        items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        setOrders(items);
+        setOrdersSynced(true);
+        return;
+      }
       const q = query(
         collection(db, "stores", store.id, "orders"),
         orderBy("createdAt", "desc"),
@@ -636,6 +665,13 @@ export default function Dashboard() {
   const fetchBookings = async () => {
     setBookingsLoading(true);
     try {
+      if (isActingAsStaffFor(store.id)) {
+        const items = await fetchStoreCollectionAsStaff("bookings", store.id);
+        items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        setBookings(items);
+        setBookingsSynced(true);
+        return;
+      }
       const q = query(
         collection(db, "stores", store.id, "bookings"),
         orderBy("createdAt", "desc"),

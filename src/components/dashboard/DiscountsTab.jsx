@@ -14,6 +14,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from "../../utils/staffDataFetch";
 
 const formatExpiryDate = (expiryDate) => {
   if (!expiryDate) return "";
@@ -55,6 +56,12 @@ export default function DiscountsTab({ store, isPro, navigateTo }) {
     const fetchDiscounts = async () => {
       setLoading(true);
       try {
+        if (isActingAsStaffFor(store.id)) {
+          const items = await fetchStoreCollectionAsStaff("discounts", store.id);
+          items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+          setDiscounts(items);
+          return;
+        }
         const discountsRef = collection(db, "stores", store.id, "discounts");
         const discountsQuery = query(
           discountsRef,

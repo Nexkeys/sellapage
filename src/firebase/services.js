@@ -13,6 +13,7 @@ import {
   increment,
 } from 'firebase/firestore'
 import { db } from './config'
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../utils/staffDataFetch'
 
 
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
@@ -118,7 +119,20 @@ export const addService = async (storeId, serviceData, imageFiles = []) => {
 }
 
 
+const shapeService = (id, data) => {
+  const imageUrls = data.imageUrls?.length
+    ? data.imageUrls
+    : data.imageUrl ? [data.imageUrl] : []
+  return { id, ...data, imageUrls, imageUrl: imageUrls[0] || '' }
+}
+
 export const getServices = async (storeId, maxProducts = null) => {
+  if (isActingAsStaffFor(storeId)) {
+    const items = await fetchStoreCollectionAsStaff('services', storeId)
+    items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+    const limited = maxProducts && maxProducts < 999999 ? items.slice(0, maxProducts) : items
+    return limited.map(({ id, ...data }) => shapeService(id, data))
+  }
   const constraints = [orderBy('createdAt', 'desc')]
   if (maxProducts && maxProducts < 999999) {
     constraints.push(limit(maxProducts))
@@ -128,13 +142,7 @@ export const getServices = async (storeId, maxProducts = null) => {
     ...constraints
   )
   const snap = await getDocs(q)
-  return snap.docs.map(d => {
-    const data = d.data()
-    const imageUrls = data.imageUrls?.length
-      ? data.imageUrls
-      : data.imageUrl ? [data.imageUrl] : []
-    return { id: d.id, ...data, imageUrls, imageUrl: imageUrls[0] || '' }
-  })
+  return snap.docs.map(d => shapeService(d.id, d.data()))
 }
 
 

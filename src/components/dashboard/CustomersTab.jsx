@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Lock, Loader2, ChevronDown, MessageCircle, Users, Mail, CreditCard } from 'lucide-react'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../../utils/staffDataFetch'
 
 function getInitials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -38,6 +39,12 @@ export default function CustomersTab({ store, isPro, navigateTo }) {
 
     const fetchCustomers = async () => {
       try {
+        if (isActingAsStaffFor(store.id)) {
+          const items = await fetchStoreCollectionAsStaff('customers', store.id)
+          items.sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0))
+          setCustomers(items)
+          return
+        }
         const q = query(
           collection(db, 'stores', store.id, 'customers'),
           orderBy('totalSpent', 'desc')

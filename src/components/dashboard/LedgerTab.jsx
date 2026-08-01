@@ -5,8 +5,8 @@ import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-
 
 // Firebase Cloud Sync Imports
 import { db } from '../../firebase/config'
-import { useAuth } from '../../hooks/useAuth'
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../../utils/staffDataFetch'
 
 const INPUT_CLASS = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
 
@@ -177,7 +177,6 @@ const EMPTY_FORM = {
 }
 
 export default function LedgerTab({ store }) {
-  const { user } = useAuth()
   const [entries, setEntries] = useState([])
   const [loadingEntries, setLoadingEntries] = useState(true)
 
@@ -193,11 +192,23 @@ export default function LedgerTab({ store }) {
   const [pdfStartDate, setPdfStartDate] = useState('')
   const [pdfEndDate, setPdfEndDate] = useState('')
 
-  // Firestore Real-time Sync
+  // Firestore Real-time Sync (owner) — a staff member's uid has no
+  // stores/{uid} doc and is blocked by rules from reading another store's
+  // ledger directly, so staff get a one-time fetch through the server proxy
+  // instead of a live listener (no real-time updates, but functional).
   useEffect(() => {
-    if (!user?.uid) return
+    if (!store?.id) return
 
-    const ledgerRef = collection(db, 'stores', user.uid, 'ledger')
+    if (isActingAsStaffFor(store.id)) {
+      setLoadingEntries(true)
+      fetchStoreCollectionAsStaff('ledger', store.id)
+        .then(setEntries)
+        .catch((error) => console.error('Ledger staff fetch error:', error))
+        .finally(() => setLoadingEntries(false))
+      return
+    }
+
+    const ledgerRef = collection(db, 'stores', store.id, 'ledger')
     const unsubscribe = onSnapshot(ledgerRef, (snapshot) => {
       const liveData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -211,7 +222,7 @@ export default function LedgerTab({ store }) {
     })
 
     return () => unsubscribe()
-  }, [user?.uid])
+  }, [store?.id])
 
   useEffect(() => {
     setCurrentPage(1)
@@ -372,11 +383,11 @@ export default function LedgerTab({ store }) {
     if (!form.itemName.trim()) { setFormError('Item name is required.'); return }
     if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) < 0) { setFormError('Enter a valid amount.'); return }
     if (!form.date) { setFormError('Date is required.'); return }
-    if (!user?.uid) { setFormError('Authentication context missing.'); return }
+    if (!store?.id) { setFormError('Authentication context missing.'); return }
 
     try {
       if (editingId) {
-        const docRef = doc(db, 'stores', user.uid, 'ledger', editingId)
+        const docRef = doc(db, 'stores', store.id, 'ledger', editingId)
         await updateDoc(docRef, {
           customerName: form.customerName.trim(),
           itemName: form.itemName.trim(),
@@ -387,7 +398,7 @@ export default function LedgerTab({ store }) {
         })
       } else {
         const newDocId = Date.now().toString()
-        const docRef = doc(db, 'stores', user.uid, 'ledger', newDocId)
+        const docRef = doc(db, 'stores', store.id, 'ledger', newDocId)
         await setDoc(docRef, {
           customerName: form.customerName.trim(),
           itemName: form.itemName.trim(),
@@ -421,7 +432,7 @@ export default function LedgerTab({ store }) {
   }
 
   const handleDelete = async (id) => {
-    if (!user?.uid) return
+    if (!store?.id) return
 
     const entry = entries.find(e => e.id === id)
     const customerName = entry?.customerName || 'this entry'
@@ -432,7 +443,7 @@ export default function LedgerTab({ store }) {
     if (!confirmed) return
 
     try {
-      const docRef = doc(db, 'stores', user.uid, 'ledger', id)
+      const docRef = doc(db, 'stores', store.id, 'ledger', id)
       await deleteDoc(docRef)
       if (editingId === id) resetForm()
     } catch (err) {

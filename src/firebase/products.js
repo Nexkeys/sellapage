@@ -16,6 +16,7 @@ import {
   increment,
 } from 'firebase/firestore'
 import { db } from './config'
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../utils/staffDataFetch'
 
 
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
@@ -158,7 +159,20 @@ export const addProduct = async (storeId, productData, imageFiles = []) => {
 }
 
 
+const shapeProduct = (id, data) => {
+  const imageUrls = data.imageUrls?.length
+    ? data.imageUrls
+    : data.imageUrl ? [data.imageUrl] : []
+  return { id, ...data, type: data.type || 'physical', imageUrls, imageUrl: imageUrls[0] || '' }
+}
+
 export const getProducts = async (storeId, maxProducts = null) => {
+  if (isActingAsStaffFor(storeId)) {
+    const items = await fetchStoreCollectionAsStaff('products', storeId)
+    items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+    const limited = maxProducts && maxProducts < 999999 ? items.slice(0, maxProducts) : items
+    return limited.map(({ id, ...data }) => shapeProduct(id, data))
+  }
   const constraints = [orderBy('createdAt', 'desc')]
   if (maxProducts && maxProducts < 999999) {
     constraints.push(limit(maxProducts))
@@ -168,13 +182,7 @@ export const getProducts = async (storeId, maxProducts = null) => {
     ...constraints
   )
   const snap = await getDocs(q)
-  return snap.docs.map(d => {
-    const data = d.data()
-    const imageUrls = data.imageUrls?.length
-      ? data.imageUrls
-      : data.imageUrl ? [data.imageUrl] : []
-    return { id: d.id, ...data, type: data.type || 'physical', imageUrls, imageUrl: imageUrls[0] || '' }
-  })
+  return snap.docs.map(d => shapeProduct(d.id, d.data()))
 }
 
 
@@ -260,6 +268,9 @@ export const saveCustomCategory = async (storeId, categoryName) => {
 
 
 export const getCustomCategories = async (storeId) => {
+  if (isActingAsStaffFor(storeId)) {
+    return fetchStoreCollectionAsStaff('categories', storeId)
+  }
   const snap = await getDocs(collection(db, 'stores', storeId, 'categories'))
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
