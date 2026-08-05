@@ -1,5 +1,6 @@
 //src/api-handlers/sendbox-payment-initialize.js
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
 const SERVICE_CHARGE = 250
 
@@ -48,7 +49,8 @@ export default async function handler(req, res) {
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
-    if (storeDoc.data().ownerId !== decodedToken.uid) {
+    const access = await resolveStoreAccess(decodedToken.uid, storeId, 'delivery', true)
+    if (!access.allowed) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 

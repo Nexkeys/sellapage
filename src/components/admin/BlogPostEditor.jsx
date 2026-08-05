@@ -273,7 +273,7 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
             </button>
           </div>
           {categories.length === 0 && !showNewCategory && (
-            <p className="text-[11px] text-amber-600 mt-1.5">No categories yet — click + to add one.</p>
+            <p className="text-[11px] text-amber-600 mt-1.5">No categories yet, click + to add one.</p>
           )}
           {showNewCategory && (
             <div className="flex gap-2 mt-2">

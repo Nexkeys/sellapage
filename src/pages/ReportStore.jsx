@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ShieldAlert, Upload, X, Loader2, CheckCircle2, ArrowLeft, Image as ImageIcon } from 'lucide-react'
+import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
@@ -197,7 +198,7 @@ export default function ReportStore() {
           )}
 
           {/* Store URL */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+          <Reveal className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
             <h2 className="font-display font-bold text-sm text-gray-900 flex items-center gap-2">
               <span className="w-6 h-6 bg-green-50 rounded-lg flex items-center justify-center text-[10px] font-black text-green-600">1</span>
               Store Details
@@ -213,10 +214,10 @@ export default function ReportStore() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all"
               />
             </div>
-          </div>
+          </Reveal>
 
           {/* Reporter Info */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+          <Reveal delay={80} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
             <h2 className="font-display font-bold text-sm text-gray-900 flex items-center gap-2">
               <span className="w-6 h-6 bg-green-50 rounded-lg flex items-center justify-center text-[10px] font-black text-green-600">2</span>
               Your Information
@@ -256,10 +257,10 @@ export default function ReportStore() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all"
               />
             </div>
-          </div>
+          </Reveal>
 
           {/* Report Details */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+          <Reveal delay={160} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
             <h2 className="font-display font-bold text-sm text-gray-900 flex items-center gap-2">
               <span className="w-6 h-6 bg-green-50 rounded-lg flex items-center justify-center text-[10px] font-black text-green-600">3</span>
               Report Details
@@ -307,10 +308,10 @@ export default function ReportStore() {
               />
               <p className="text-[10px] text-gray-400 mt-1 text-right">{form.description.length}/1000</p>
             </div>
-          </div>
+          </Reveal>
 
           {/* Screenshot Upload */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+          <Reveal delay={240} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
             <h2 className="font-display font-bold text-sm text-gray-900 flex items-center gap-2">
               <span className="w-6 h-6 bg-green-50 rounded-lg flex items-center justify-center text-[10px] font-black text-green-600">4</span>
               Screenshot Proof
@@ -362,7 +363,7 @@ export default function ReportStore() {
                 <ImageIcon size={14} /> Maximum screenshots reached (3/3)
               </div>
             )}
-          </div>
+          </Reveal>
 
           {/* Submit */}
           <button

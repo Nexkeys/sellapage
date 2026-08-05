@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Check, X, ArrowRight } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
 
@@ -70,9 +71,9 @@ export default function VsWhatsAppBusiness() {
       {/* Feature comparison */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-2xl mx-auto">
-          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+          <Reveal as="h2" className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
             Side by Side
-          </h2>
+          </Reveal>
 
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div />
@@ -85,7 +86,7 @@ export default function VsWhatsAppBusiness() {
           </div>
 
           {FEATURES.map((section, si) => (
-            <div key={si} className="mb-4">
+            <Reveal key={si} delay={si * 100} className="mb-4">
               <p className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 px-1">{section.category}</p>
               <div className="space-y-2">
                 {section.items.map((row, i) => (
@@ -104,7 +105,7 @@ export default function VsWhatsAppBusiness() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -112,11 +113,11 @@ export default function VsWhatsAppBusiness() {
       {/* The key limitation */}
       <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+          <Reveal as="h2" className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
             The Big Problem with WA Business Catalogue
-          </h2>
+          </Reveal>
           <div className="grid md:grid-cols-2 gap-5">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <Reveal direction="left" className="bg-white rounded-2xl border border-gray-200 p-6">
               <p className="font-bold text-gray-400 text-sm mb-1">WhatsApp Business Catalogue</p>
               <div className="w-8 h-1 bg-gray-200 rounded mb-4" />
               <p className="text-gray-500 text-sm leading-relaxed">
@@ -124,22 +125,22 @@ export default function VsWhatsAppBusiness() {
                 New customers who don't have your number already can't browse your products.
                 And customers on Instagram or other platforms can't access it at all.
               </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6">
+            </Reveal>
+            <Reveal direction="right" delay={150} className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6">
               <p className="font-bold text-brand-600 text-sm mb-1">Sellapage Commerce Workspace</p>
               <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
               <p className="text-gray-600 text-sm leading-relaxed">
                 Your Sellapage link works in a browser, on Instagram, in WhatsApp status,
                 on Twitter — anywhere. Any customer can browse your catalogue, order, pay, and become part of your customer record.
               </p>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       {/* Best combo */}
       <section className="py-16 px-4 bg-white">
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-display font-bold text-gray-900 text-2xl mb-4">
             Actually, Use Both Together
           </h2>
@@ -147,12 +148,12 @@ export default function VsWhatsAppBusiness() {
             WhatsApp Business can still handle conversations. Sellapage handles the commerce layer:
             catalogue, orders, customers, checkout, reviews, and analytics. They work well together.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* CTA */}
       <section className="py-20 px-4 bg-gradient-to-br from-brand-500 to-emerald-600">
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-display font-extrabold text-white text-3xl mb-3">
             Start free. Sell today.
           </h2>
@@ -166,7 +167,7 @@ export default function VsWhatsAppBusiness() {
             {user ? 'Open Your Dashboard' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
-        </div>
+        </Reveal>
       </section>
 
       <Footer />

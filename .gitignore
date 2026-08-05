@@ -18,11 +18,12 @@ PAYSTACK_API_DOC.txt
 KWIK_API_DOC.md
 Docs
 
+
 # Local Vercel folder
 .aider*
 .vercel
 .env*
-
+.claude
 
 # Migration script output (may contain customer PII)
 scripts/migration-output

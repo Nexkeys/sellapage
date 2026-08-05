@@ -14,7 +14,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
-import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from "../../utils/staffDataFetch";
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from "../../utils/staffDataFetch";
 
 const formatExpiryDate = (expiryDate) => {
   if (!expiryDate) return "";
@@ -152,14 +152,30 @@ export default function DiscountsTab({ store, isPro, navigateTo }) {
         createdAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(
-        collection(db, "stores", store.id, "discounts"),
-        payload,
-      );
+      let newId;
+      if (isActingAsStaffFor(store.id)) {
+        const result = await writeStoreDocAsStaff({
+          type: "discounts",
+          storeId: store.id,
+          op: "create",
+          data: {
+            ...payload,
+            createdAt: new Date().toISOString(),
+            expiryDate: expiryDate ? expiryDate.toDate().toISOString() : null,
+          },
+        });
+        newId = result.id;
+      } else {
+        const docRef = await addDoc(
+          collection(db, "stores", store.id, "discounts"),
+          payload,
+        );
+        newId = docRef.id;
+      }
 
       setDiscounts((prev) => [
         {
-          id: docRef.id,
+          id: newId,
           ...payload,
           createdAt: Timestamp.fromDate(new Date()),
         },
@@ -177,9 +193,19 @@ export default function DiscountsTab({ store, isPro, navigateTo }) {
 
   const handleToggleActive = async (discountId, nextState) => {
     try {
-      await updateDoc(doc(db, "stores", store.id, "discounts", discountId), {
-        isActive: nextState,
-      });
+      if (isActingAsStaffFor(store.id)) {
+        await writeStoreDocAsStaff({
+          type: "discounts",
+          storeId: store.id,
+          op: "update",
+          docId: discountId,
+          data: { isActive: nextState },
+        });
+      } else {
+        await updateDoc(doc(db, "stores", store.id, "discounts", discountId), {
+          isActive: nextState,
+        });
+      }
       setDiscounts((prev) =>
         prev.map((discount) =>
           discount.id === discountId
@@ -197,7 +223,16 @@ export default function DiscountsTab({ store, isPro, navigateTo }) {
 
     setDeleting(discountId);
     try {
-      await deleteDoc(doc(db, "stores", store.id, "discounts", discountId));
+      if (isActingAsStaffFor(store.id)) {
+        await writeStoreDocAsStaff({
+          type: "discounts",
+          storeId: store.id,
+          op: "delete",
+          docId: discountId,
+        });
+      } else {
+        await deleteDoc(doc(db, "stores", store.id, "discounts", discountId));
+      }
       setDiscounts((prev) =>
         prev.filter((discount) => discount.id !== discountId),
       );

@@ -30,6 +30,7 @@ import {
   collection,
   getDocs,
   query,
+  where,
   orderBy,
   writeBatch,
   deleteDoc,
@@ -535,11 +536,19 @@ export default function Dashboard() {
         setLeads(items);
         return;
       }
-      const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
+      // Scoped server-side by storeId (was: fetch ALL leads platform-wide and
+      // filter client-side, which required a rule letting any signed-in user
+      // read every store's leads). Single-field where + in-memory sort, so no
+      // composite index is needed.
+      const q = query(collection(db, "leads"), where("storeId", "==", store.id));
       const snap = await getDocs(q);
       const storeLeads = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((l) => l.storeId === store.id);
+        .sort((a, b) => {
+          const ta = a.createdAt?.toMillis?.() ?? new Date(a.createdAt || 0).getTime();
+          const tb = b.createdAt?.toMillis?.() ?? new Date(b.createdAt || 0).getTime();
+          return tb - ta;
+        });
       setLeads(storeLeads);
     } catch (err) {
       console.error("Failed to fetch leads", err);

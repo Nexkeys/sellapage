@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Check, ArrowRight, X, HelpCircle, TrendingDown } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import {
   PLAN_PERIODS,
@@ -407,7 +408,7 @@ export default function Pricing() {
 
       {/* Plan Cards */}
       <section className="py-8 sm:py-16 px-4 bg-white">
-        <div className="max-w-7xl mx-auto">
+        <Reveal className="max-w-7xl mx-auto">
           {/* Mobile Carousel */}
           <div
             ref={cardRef}
@@ -444,13 +445,13 @@ export default function Pricing() {
               <PlanCard key={p.id} plan={p} selectedPeriod={selectedPeriod} user={user} navigate={navigate} />
             ))}
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* Comparison */}
       <section className="py-8 sm:py-16 px-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-6 sm:mb-12">
+          <Reveal className="text-center mb-6 sm:mb-12">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 block sm:mb-3">Detailed Comparison</span>
             <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 sm:mb-4">
               See every feature side by side
@@ -458,7 +459,7 @@ export default function Pricing() {
             <p className="text-gray-500 text-xs sm:text-base max-w-2xl mx-auto">
               Compare all capabilities across plans. Starter is free forever. Growth, Pro, and Premium unlock the full commerce workspace progressively.
             </p>
-          </div>
+          </Reveal>
 
           {/* Mobile Carousel */}
           <div
@@ -528,15 +529,15 @@ export default function Pricing() {
       {/* FAQ */}
       <section className="py-10 sm:py-16 px-4 bg-white">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
+          <Reveal className="text-center mb-8 sm:mb-12">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 block sm:mb-3">FAQ</span>
             <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900">
               Pricing Questions
             </h2>
-          </div>
+          </Reveal>
           <div className="space-y-2 sm:space-y-3">
             {FAQS.map((faq, i) => (
-              <details key={i} className="group border border-gray-100 rounded-2xl bg-white shadow-sm shadow-gray-100/60">
+              <Reveal as="details" key={i} delay={i * 60} className="group border border-gray-100 rounded-2xl bg-white shadow-sm shadow-gray-100/60">
                 <summary className="w-full flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 sm:py-4 text-left cursor-pointer list-none hover:bg-gray-50 transition-colors">
                   <span className="font-display font-semibold text-gray-900 text-[13px] sm:text-sm leading-snug">{faq.q}</span>
                   <HelpCircle size={18} className="text-gray-400 flex-shrink-0 group-open:text-brand-500 transition-colors" />
@@ -544,7 +545,7 @@ export default function Pricing() {
                 <div className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5 border-t border-gray-100">
                   <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{faq.a}</p>
                 </div>
-              </details>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -552,7 +553,7 @@ export default function Pricing() {
 
       {/* Final CTA */}
       <section className="py-14 sm:py-20 px-4 bg-brand-600">
-        <div className="max-w-3xl mx-auto text-center">
+        <Reveal className="max-w-3xl mx-auto text-center">
           <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-3 sm:mb-4">
             Ready to run your business from one dashboard?
           </h2>
@@ -566,7 +567,7 @@ export default function Pricing() {
             {user ? 'Open Your Dashboard' : 'Create Free Account'}
             <ArrowRight size={16} />
           </button>
-        </div>
+        </Reveal>
       </section>
 
       <Footer />

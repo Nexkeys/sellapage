@@ -1,6 +1,7 @@
 //src/api-handlers/sendbox-create-shipment.js/
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { createSendboxShipment } from './_lib/sendbox-booking.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -40,7 +41,8 @@ export default async function handler(req, res) {
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
-    if (storeDoc.data().ownerId !== decodedToken.uid) {
+    const access = await resolveStoreAccess(decodedToken.uid, storeId, 'delivery', true)
+    if (!access.allowed) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 

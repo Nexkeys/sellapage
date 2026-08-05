@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAccessToken, listAccessibleCustomers, getCustomer } from './_lib/google-ads-client.js'
+import { setGoogleAdsRefreshToken } from './_lib/store-secrets.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -54,9 +55,9 @@ export default async function handler(req, res) {
     const customerNames = await listAccessibleCustomers(accessToken)
 
     if (!customerNames.length) {
+      await setGoogleAdsRefreshToken(db, storeId, tokenData.refresh_token)
       await db.collection('stores').doc(storeId).update({
         googleAdsConnected: true,
-        googleAdsRefreshToken: tokenData.refresh_token,
         googleAdsConnectedAt: new Date().toISOString(),
       })
       return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent('Connected but no Google Ads accounts found. Please create a Google Ads account first.')}`)
@@ -72,9 +73,9 @@ export default async function handler(req, res) {
       console.warn('[google-ads-callback] getCustomer failed, saving raw customerId:', infoErr.message)
     }
 
+    await setGoogleAdsRefreshToken(db, storeId, tokenData.refresh_token)
     await db.collection('stores').doc(storeId).update({
       googleAdsConnected: true,
-      googleAdsRefreshToken: tokenData.refresh_token,
       googleAdsConnectedAt: new Date().toISOString(),
       googleAdsCustomerId: customerId,
       googleAdsAccountName: accountInfo?.descriptiveName || null,

@@ -3,6 +3,8 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
 import { getAccessToken, listAccessibleCustomers, getCustomer } from './_lib/google-ads-client.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
+import { getGoogleAdsRefreshToken } from './_lib/store-secrets.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -40,11 +42,12 @@ export default async function handler(req, res) {
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
-    if (storeDoc.data().ownerId !== decodedToken.uid) {
+    const access = await resolveStoreAccess(decodedToken.uid, storeId, 'google-ads', false)
+    if (!access.allowed) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
-    const refreshToken = storeDoc.data().googleAdsRefreshToken
+    const refreshToken = await getGoogleAdsRefreshToken(db, storeId)
     if (!refreshToken) {
       return res.status(400).json({ error: 'Google Ads not connected' })
     }

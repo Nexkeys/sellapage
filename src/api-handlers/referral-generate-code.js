@@ -72,9 +72,12 @@ export default async function handler(req, res) {
       referralTotalSignups: storeData.referralTotalSignups || 0,
       referralTotalPaid: storeData.referralTotalPaid || 0,
       referralBankName: storeData.referralBankName || null,
-      referralBankAccount: storeData.referralBankAccount || null,
       referralBankAccountName: storeData.referralBankAccountName || null,
+      referralBankAccountMasked: storeData.referralBankAccountMasked || null,
       referralBankVerified: storeData.referralBankVerified || false,
+      // Deliberately NOT re-writing referralBankAccount/-Code here: those now
+      // live in stores/{uid}/private/referralBank, and echoing a stale copy
+      // back onto this world-readable doc would undo the migration.
     })
 
     return res.status(200).json({

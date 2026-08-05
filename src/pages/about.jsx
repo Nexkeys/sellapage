@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, ExternalLink } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 
 export default function About() {
@@ -35,35 +36,35 @@ export default function About() {
       {/* ── WHAT WE DO ─────────────────────────────────────────────────── */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <Reveal className="text-center mb-12">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What We Built</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6">
               A commerce platform for every Nigerian business
             </h2>
-          </div>
-          
+          </Reveal>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* Value 1 */}
-            <div className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
+            <Reveal className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
               <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Store in Minutes</h3>
               <p className="text-brand-700/80 text-sm leading-relaxed">
                 Any Nigerian business owner can have a professional, shareable store page live in under five minutes. No coding, no technical knowledge, no prior experience.
               </p>
-            </div>
+            </Reveal>
             {/* Value 2 */}
-            <div className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
+            <Reveal delay={100} className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
               <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Sell Products or Services</h3>
               <p className="text-brand-700/80 text-sm leading-relaxed">
                 Sellapage supports physical products, digital items, and service bookings. Fashion sellers, food vendors, makeup artists, tutors, consultants, and agencies can all run from one workspace.
               </p>
-            </div>
+            </Reveal>
             {/* Value 3 */}
-            <div className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
+            <Reveal delay={200} className="bg-brand-50 rounded-2xl p-6 border border-brand-100 shadow-sm flex flex-col justify-start">
               <h3 className="font-display font-bold text-brand-700 text-lg mb-3">Built to Grow With You</h3>
               <p className="text-brand-700/80 text-sm leading-relaxed">
                 Starter is permanently free. Growth and Pro unlock analytics, carts, AI descriptions, premium themes, customer CRM, reviews, checkout, delivery zones, and payout tools as you scale.
               </p>
-            </div>
+            </Reveal>
           </div>
 
           {/* Platform Capabilities */}
@@ -110,14 +111,15 @@ export default function About() {
               { value: '200+',     label: 'Active Nigerian Stores' },
               { value: '2026', label: 'Launched' },
               { value: '₦0',       label: 'To Get Started' },
-            ].map((stat) => (
-              <div
+            ].map((stat, i) => (
+              <Reveal
                 key={stat.label}
+                delay={i * 100}
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center"
               >
                 <p className="font-display text-3xl font-extrabold text-brand-600 mb-1">{stat.value}</p>
                 <p className="text-gray-500 text-sm">{stat.label}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -126,16 +128,16 @@ export default function About() {
       {/* ── THE TEAM ────────────────────────────────────────────────────── */}
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <Reveal className="text-center mb-12">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">The Team</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
               The people behind it
             </h2>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {/* The Builders */}
-            <div className="bg-gray-50 rounded-2xl border border-gray-100 p-8">
+            <Reveal direction="left" className="bg-gray-50 rounded-2xl border border-gray-100 p-8">
               <div className="w-11 h-11 rounded-xl bg-brand-600 flex items-center justify-center mb-5">
               <img
               src="/nexkeys-logo.png"
@@ -145,14 +147,14 @@ export default function About() {
               </div>
               <h3 className="font-display font-bold text-gray-900 text-lg mb-3">NexKeys Agency</h3>
               <p className="text-gray-500 text-sm leading-relaxed mb-5">
-                The product and engineering team behind Sellapage, based in Lagos, Nigeria. 
+                The product and engineering team behind Sellapage, based in Lagos, Nigeria.
                 <br></br>
                 We build practical digital tools for African businesses tools that work in the Nigerian context, not imports from markets that do not understand ours.
               </p>
-            </div>
+            </Reveal>
 
             {/* The Mission */}
-            <div className="bg-brand-600 rounded-2xl p-8">
+            <Reveal direction="right" delay={150} className="bg-brand-600 rounded-2xl p-8">
               <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-5">
                 <span className="text-white font-display font-extrabold text-sm">🎯</span>
               </div>
@@ -160,7 +162,7 @@ export default function About() {
               <p className="text-brand-100 text-sm leading-relaxed">
                 Make professional online selling accessible to every Nigerian business owner or service provider regardless of their technical ability or budget. We started with the simplest possible product and we are building from there, one real seller at a time — products, services, checkout, delivery, customers, analytics, and growth from one dashboard.
               </p>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -168,14 +170,14 @@ export default function About() {
       {/* ── TRANSPARENCY ─────────────────────────────────────────────────── */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <Reveal className="text-center mb-12">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Transparency</span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-gray-900">
               What's under the hood
             </h2>
-          </div>
+          </Reveal>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <Reveal delay={100} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {[
               { label: 'Business Registration', status: 'CAC Registered — BN - 9689086' },
               { label: 'Payment Processing',    status: 'Paystack — CBN licensed' },
@@ -197,7 +199,7 @@ export default function About() {
                 <span className="text-gray-500 text-sm text-right">{item.status}</span>
               </div>
             ))}
-          </div>
+          </Reveal>
 
           <p className="text-gray-400 text-xs text-center mt-6 leading-relaxed">
             Sellapage is a live, growing platform. 
@@ -209,7 +211,7 @@ export default function About() {
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section className="py-20 bg-brand-600">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <Reveal className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-4">
             Run Your Entire Business from One Dashboard.
           </h2>
@@ -222,7 +224,7 @@ export default function About() {
           >
             Create Your Free Store <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       <Footer />

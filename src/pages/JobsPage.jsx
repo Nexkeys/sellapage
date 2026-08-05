@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { Search, Briefcase, MapPin, ArrowRight, Loader2, Store } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { JOB_CATEGORIES, JOB_TYPES, JOB_TYPE_BADGE, getCategoryLabel, getJobTypeLabel } from '../utils/jobCategories'
 import SEO from '../components/SEO'
 
@@ -179,7 +180,8 @@ export default function JobsPage() {
 
 function JobCard({ job }) {
   return (
-    <Link
+    <Reveal
+      as={Link}
       to={`/jobs/${job.id}`}
       className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-200/60 hover:-translate-y-0.5 transition-all duration-300"
     >
@@ -215,6 +217,6 @@ function JobCard({ job }) {
         </div>
         <p className="text-[10px] text-gray-400">{getCategoryLabel(job.category)}</p>
       </div>
-    </Link>
+    </Reveal>
   )
 }

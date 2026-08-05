@@ -36,7 +36,10 @@ export default function ReferralTab({ user, store }) {
   const [bankSearch, setBankSearch] = useState('')
   const [bankVerified, setBankVerified] = useState(store?.referralBankVerified || false)
   const [bankName, setBankName] = useState(store?.referralBankName || '')
-  const [bankAccount, setBankAccount] = useState(store?.referralBankAccount || '')
+  // Only the masked number is on the store doc now — the full account number
+  // lives server-side in stores/{id}/private/referralBank. `bankAccount` holds
+  // the full number only during the session where the vendor just typed it.
+  const [bankAccount, setBankAccount] = useState('')
   const [bankAccountName, setBankAccountName] = useState(store?.referralBankAccountName || '')
   const [referralStats, setReferralStats] = useState(null)
   const [recentReferrals, setRecentReferrals] = useState([])
@@ -482,7 +485,7 @@ export default function ReferralTab({ user, store }) {
                 <span className="text-sm font-medium text-green-900">Bank Account Verified</span>
               </div>
               <p className="text-sm text-green-800">{bankName || store?.referralBankName}</p>
-              <p className="text-sm text-green-800">{bankAccount || store?.referralBankAccount} — {bankAccountName || store?.referralBankAccountName}</p>
+              <p className="text-sm text-green-800">{bankAccount || store?.referralBankAccountMasked} — {bankAccountName || store?.referralBankAccountName}</p>
             </div>
           )}
 
@@ -741,7 +744,7 @@ export default function ReferralTab({ user, store }) {
             <div className="bg-gray-50 rounded-xl p-4 mb-4">
               <p className="text-sm text-gray-600">Available Balance</p>
               <p className="text-2xl font-bold text-green-600">{formatKobo(available)}</p>
-              <p className="text-xs text-gray-500 mt-1">{bankName || store?.referralBankName} — {bankAccount || store?.referralBankAccount}</p>
+              <p className="text-xs text-gray-500 mt-1">{bankName || store?.referralBankName} — {bankAccount || store?.referralBankAccountMasked}</p>
             </div>
 
             <div className="space-y-4">

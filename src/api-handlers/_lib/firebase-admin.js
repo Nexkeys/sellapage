@@ -3,8 +3,10 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// NOTE: This module is currently unused. Handlers initialize Firebase Admin inline.
-// Kept for potential future consolidation.
+// Shared Firebase Admin accessors. Most handlers use these; a few older ones
+// (google-ads-*, and others predating this module) still initialize inline.
+// Both are safe to mix — the getApps() guard below means whichever runs first
+// wins and the other reuses the same app, so there's no double-init.
 
 let initialized = false;
 

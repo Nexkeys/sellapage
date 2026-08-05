@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
 
@@ -480,7 +481,7 @@ export default function Home() {
       {/* ── WHAT SELLAPAGE DOES ──────────────────────────────────────────── */}
       <section id="features" className="py-14 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-600 mb-3 block">What Sellapage Does</span>
             <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
               One Platform For Everything You Sell Or Offer
@@ -488,9 +489,9 @@ export default function Home() {
             <p className="text-gray-500 max-w-xl mx-auto text-base">
               Built for Nigerian sellers, service providers and freelancers who want to look professional and close more sales without the technical headache.
             </p>
-          </div>
+          </Reveal>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <Reveal delay={100} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {[
               { icon: Store, title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
               { icon: Package, title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
@@ -509,7 +510,7 @@ export default function Home() {
                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
               </div>
             ))}
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -518,7 +519,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left copy */}
-            <div>
+            <Reveal direction="left">
               <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Why Nigerian Businesses Choose Sellapage™</span>
               <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 leading-tight mb-5">
                 Less chaos. More orders.<br />
@@ -563,10 +564,10 @@ export default function Home() {
               >
                 Create Your Free Store <ArrowRight className="w-4 h-4" />
               </button>
-            </div>
+            </Reveal>
 
             {/* Right image */}
-            <div className="relative flex justify-center">
+            <Reveal direction="right" delay={150} className="relative flex justify-center">
               <img
                 src="/midpageshowcase-secondarylaptop.png"
                 alt="Sellapage dashboard showing products, orders, analytics, and customers"
@@ -575,7 +576,7 @@ export default function Home() {
                 loading="lazy"
                 className="w-full max-w-[520px] object-contain rounded-2xl drop-shadow-xl"
               />
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -583,7 +584,7 @@ export default function Home() {
       {/* ── THE REAL PROBLEM ────────────────────────────────────────────── */}
       <section className="py-14 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-red-500 mb-3 block">
               The Real Problem
             </span>
@@ -593,7 +594,7 @@ export default function Home() {
             <p className="text-gray-500 max-w-xl mx-auto text-base">
               It works until it doesn't. And for most sellers, it breaks at the worst possible time.
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 sm:mb-14">
             {[
@@ -649,21 +650,21 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="bg-brand-600 rounded-2xl p-6 sm:p-10 text-center max-w-3xl mx-auto">
+          <Reveal className="bg-brand-600 rounded-2xl p-6 sm:p-10 text-center max-w-3xl mx-auto">
             <h3 className="font-display font-extrabold text-white text-2xl sm:text-3xl mb-3">
               Sellapage fixes all of this for free.
             </h3>
             <p className="text-brand-100 max-w-xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
               Get a professional store link that never expires, receive organised orders, manage customers, track performance, accept payments, handle delivery, run discounts, collect reviews, and run your entire business from one dashboard.
             </p>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
       <section id="how-it-works" className="py-14 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Getting Started</span>
             <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
               From sign-up to first order in one session
@@ -671,20 +672,20 @@ export default function Home() {
             <p className="text-gray-500 max-w-md mx-auto text-base">
               No technical setup. No waiting. Just create, add, share, and manage from your dashboard.
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 relative">
             {/* connector line desktop */}
             <div className="hidden sm:block absolute top-10 left-[calc(16.67%+12px)] right-[calc(16.67%+12px)] h-0.5 bg-brand-100 z-0" />
-            {steps.map((step) => (
-              <div key={step.number} className="relative z-10 flex flex-col items-center text-center">
+            {steps.map((step, i) => (
+              <Reveal key={step.number} delay={i * 120} className="relative z-10 flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-2xl bg-brand-600 flex flex-col items-center justify-center mb-5 shadow-md shadow-brand-200/60">
                   <span className="text-brand-100 text-xs font-bold uppercase tracking-wider">Step</span>
                   <span className="text-white font-display text-xl font-extrabold leading-none">{step.number}</span>
                 </div>
                 <h3 className="font-display font-bold text-gray-900 text-base mb-3">{step.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed max-w-xs">{step.description}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
 
@@ -697,7 +698,7 @@ export default function Home() {
       {/* ── FEATURES GRID ───────────────────────────────────────────────── */}
       <section className="py-14 sm:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What You Get</span>
             <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
               Built to help you sell more
@@ -705,7 +706,7 @@ export default function Home() {
             <p className="text-gray-500 max-w-xl mx-auto text-base">
               Every feature is live today. Starter gives you the essentials. Growth, Pro, and Premium unlock the full commerce workspace.
             </p>
-          </div>
+          </Reveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {features.map((f) => (
               <div key={f.title} className="bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-md hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
@@ -723,7 +724,7 @@ export default function Home() {
       {/* ── REAL STORES (EXAMPLES) ──────────────────────────────────────── */}
       <section id="examples" className="py-14 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-12">
+          <Reveal className="flex flex-wrap items-end justify-between gap-4 mb-12">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Real Stores on Sellapage™</span>
               <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900">
@@ -733,12 +734,14 @@ export default function Home() {
                 Live Nigerian businesses using Sellapage for products, services, and bookings.
               </p>
             </div>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
-            {storeExamples.map((store) => (
-              <a 
-                key={store.name} 
+            {storeExamples.map((store, i) => (
+              <Reveal
+                as="a"
+                key={store.name}
+                delay={i * 120}
                 href={store.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -771,7 +774,7 @@ export default function Home() {
                   <p className="font-display font-bold text-gray-900 text-base leading-snug group-hover:text-brand-600 transition-colors">{store.name}</p>
                   <p className="text-gray-500 text-sm mt-2 leading-relaxed">{store.desc}</p>
                 </div>
-              </a>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -780,7 +783,7 @@ export default function Home() {
       {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
       <section className="py-14 sm:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What Our Users Say</span>
             <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
               Loved by Business Owners
@@ -788,11 +791,11 @@ export default function Home() {
             <p className="text-gray-500 text-base max-w-xl mx-auto">
               Real Nigerian merchants, service providers, and freelancers sharing their experience with Sellapage.
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-            {testimonials.map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 transition-all duration-200 flex flex-col">
+            {testimonials.map((t, i) => (
+              <Reveal key={t.name} delay={i * 120} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 transition-all duration-200 flex flex-col">
                 {/* quote mark */}
                 <div className="text-brand-200 text-5xl font-serif leading-none mb-3 select-none">&ldquo;</div>
                 <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">{t.text}</p>
@@ -810,7 +813,7 @@ export default function Home() {
                     <p className="text-gray-400 text-xs">{t.role}</p>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -819,7 +822,7 @@ export default function Home() {
       {/* ── PLATFORM FEATURES ───────────────────────────────────────────── */}
       <section className="py-14 sm:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Commerce Tools</span>
             <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
               Built for the full selling workflow
@@ -827,7 +830,7 @@ export default function Home() {
             <p className="text-gray-500 text-base max-w-2xl mx-auto">
               From checkout to delivery, customers, reviews, discounts, analytics, and growth — Sellapage gives Nigerian businesses the operating layer to sell with confidence. Pro and Premium unlock the full suite.
             </p>
-          </div>
+          </Reveal>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
             {platformFeatures.map((item) => (
               <div key={item.title} className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-all duration-200 group">
@@ -845,15 +848,15 @@ export default function Home() {
       {/* ── FAQ ─────────────────────────────────────────────────────────── */}
       <section id="faq" className="py-14 sm:py-20 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">FAQ</span>
             <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900">
               Frequently Asked Questions
             </h2>
-          </div>
+          </Reveal>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
-              <details key={i} className="group border border-gray-100 rounded-2xl bg-white shadow-sm shadow-gray-100/60">
+              <Reveal as="details" key={i} delay={i * 60} className="group border border-gray-100 rounded-2xl bg-white shadow-sm shadow-gray-100/60">
                 <summary className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer list-none hover:bg-gray-50 transition-colors">
                   <span className="font-display font-semibold text-gray-900 text-sm">{faq.q}</span>
                   <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
@@ -861,7 +864,7 @@ export default function Home() {
                 <div className="px-5 pb-5 pt-0">
                   <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
                 </div>
-              </details>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -870,7 +873,7 @@ export default function Home() {
        {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
       <section className="py-12 sm:py-20 bg-brand-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+          <Reveal className="flex flex-col lg:flex-row items-center justify-between gap-8">
             {/* Left */}
             <div className="flex items-center gap-4 max-w-xl">
               <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -919,7 +922,7 @@ export default function Home() {
                 <span className="text-brand-100 text-xs">200+ active Nigerian stores use Sellapage</span>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 

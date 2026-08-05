@@ -1,6 +1,8 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
+import { clearGoogleAdsRefreshToken } from './_lib/store-secrets.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -38,13 +40,14 @@ export default async function handler(req, res) {
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
-    if (storeDoc.data().ownerId !== decodedToken.uid) {
+    const access = await resolveStoreAccess(decodedToken.uid, storeId, 'google-ads', true)
+    if (!access.allowed) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
+    await clearGoogleAdsRefreshToken(db, storeId)
     await db.collection('stores').doc(storeId).update({
       googleAdsConnected: false,
-      googleAdsRefreshToken: null,
       googleAdsCustomerId: null,
       googleAdsAccountName: null,
       googleAdsCurrency: null,

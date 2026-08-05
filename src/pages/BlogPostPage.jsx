@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import BlogCommentSection from '../components/BlogCommentSection'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { getExcerpt, formatBlogDate, getCategoryBadgeClass } from '../utils/blogHelpers'
@@ -138,7 +139,7 @@ export default function BlogPostPage() {
           <span className="text-gray-600 truncate max-w-[160px]">{post.categoryName}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Reveal className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight font-display leading-tight">
@@ -210,7 +211,7 @@ export default function BlogPostPage() {
               )}
             </div>
           </div>
-        </div>
+        </Reveal>
 
         <div className="mt-6">
           <BlogCommentSection postId={post.id} commentsEnabled={post.commentsEnabled} />

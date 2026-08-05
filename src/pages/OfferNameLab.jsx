@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { ArrowRight, Copy, Sparkles, Wand2 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 
 const STYLE_POOLS = {
@@ -182,7 +183,7 @@ export default function OfferNameLab() {
         {/* Output Section Layout Grid */}
         <section className="px-4 pb-16">
           <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-3">
-            <div className="rounded-[26px] bg-gray-950 p-6 text-white shadow-xl shadow-gray-300/70 lg:col-span-1">
+            <Reveal direction="left" className="rounded-[26px] bg-gray-950 p-6 text-white shadow-xl shadow-gray-300/70 lg:col-span-1">
               <Wand2 className="mb-4 text-orange-300" />
               <h2 className="font-display text-xl font-extrabold">Distinct Brand Names</h2>
               <p className="text-xs text-gray-400 mt-1 mb-4">Click any option below to copy.</p>
@@ -194,9 +195,9 @@ export default function OfferNameLab() {
                   </button>
                 ))}
               </div>
-            </div>
+            </Reveal>
 
-            <div className="space-y-5 lg:col-span-2">
+            <Reveal direction="right" delay={150} className="space-y-5 lg:col-span-2">
               {[
                 ['One-line Conversion Hook', output.oneLiner],
                 ['Instagram / WhatsApp Bullet Bio', output.bio],
@@ -223,7 +224,7 @@ export default function OfferNameLab() {
                   ))}
                 </div>
               </div>
-            </div>
+            </Reveal>
           </div>
         </section>
       </main>

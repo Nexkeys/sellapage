@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Check, X, ArrowRight } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
 
@@ -68,9 +69,9 @@ export default function VsInstagramBio() {
       {/* Feature comparison */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-2xl mx-auto">
-          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+          <Reveal as="h2" className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
             Side by Side
-          </h2>
+          </Reveal>
 
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div />
@@ -83,7 +84,7 @@ export default function VsInstagramBio() {
           </div>
 
           {FEATURES.map((section, si) => (
-            <div key={si} className="mb-4">
+            <Reveal key={si} delay={si * 100} className="mb-4">
               <p className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-2 px-1">{section.category}</p>
               <div className="space-y-2">
                 {section.items.map((row, i) => (
@@ -102,7 +103,7 @@ export default function VsInstagramBio() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -110,11 +111,11 @@ export default function VsInstagramBio() {
       {/* The algorithm problem */}
       <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+          <Reveal as="h2" className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
             The Problem with Selling on Instagram
-          </h2>
+          </Reveal>
           <div className="grid md:grid-cols-2 gap-5">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <Reveal direction="left" className="bg-white rounded-2xl border border-gray-200 p-6">
               <p className="font-bold text-gray-400 text-sm mb-1">Selling via Instagram</p>
               <div className="w-8 h-1 bg-gray-200 rounded mb-4" />
               <p className="text-gray-500 text-sm leading-relaxed">
@@ -122,8 +123,8 @@ export default function VsInstagramBio() {
                 You can only have one bio link. Customers have to DM you to ask price.
                 Posts disappear in the feed after a day. You're constantly posting just to stay visible.
               </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6">
+            </Reveal>
+            <Reveal direction="right" delay={150} className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6">
               <p className="font-bold text-brand-600 text-sm mb-1">With Sellapage in your bio</p>
               <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
               <p className="text-gray-600 text-sm leading-relaxed">
@@ -131,14 +132,14 @@ export default function VsInstagramBio() {
                 Any visitor clicks it and sees your products, services, prices, photos, and ordering options in one place.
                 They order directly. No algorithm. No posts buried. Always accessible.
               </p>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       {/* Best combo */}
       <section className="py-16 px-4 bg-white">
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-display font-bold text-gray-900 text-2xl mb-4">
             Use Instagram to Promote, Sellapage to Sell
           </h2>
@@ -147,12 +148,12 @@ export default function VsInstagramBio() {
             in your bio. When people want to buy, they click through to your real commerce workspace.
             Instagram brings the audience. Sellapage closes the sale.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* CTA */}
       <section className="py-20 px-4 bg-gradient-to-br from-brand-500 to-emerald-600">
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-display font-extrabold text-white text-3xl mb-3">
             Start free. Sell today.
           </h2>
@@ -166,7 +167,7 @@ export default function VsInstagramBio() {
             {user ? 'Open Your Dashboard' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
-        </div>
+        </Reveal>
       </section>
 
       <Footer />

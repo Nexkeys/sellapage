@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Copy, FileText, ShieldCheck, CheckCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 
 export default function PolicyGenerator() {
@@ -238,8 +239,8 @@ _By proceeding with payment verification, you validate this operational contract
               ['Official Storefront Blueprint', policy.full, 'lg:col-span-2'],
               ['Instagram Highlight Content', policy.short, ''],
               ['WhatsApp Invoice Text Payload', policy.whatsapp, 'lg:col-span-3'],
-            ].map(([label, text, classes]) => (
-              <div key={label} className={`rounded-[26px] border border-emerald-100 bg-white p-6 shadow-sm transition-all hover:shadow-md ${classes}`}>
+            ].map(([label, text, classes], i) => (
+              <Reveal key={label} delay={i * 100} className={`rounded-[26px] border border-emerald-100 bg-white p-6 shadow-sm transition-all hover:shadow-md ${classes}`}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <FileText size={16} className="text-emerald-600" />
@@ -250,7 +251,7 @@ _By proceeding with payment verification, you validate this operational contract
                   </button>
                 </div>
                 <pre className="mt-4 whitespace-pre-wrap font-mono text-xs leading-6 text-gray-700 bg-gray-50/50 p-4 rounded-xl border border-gray-100 max-h-[380px] overflow-y-auto">{text}</pre>
-              </div>
+              </Reveal>
             ))}
           </div>
         </section>

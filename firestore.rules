@@ -1,24 +1,41 @@
 UPDATED FIRESTORE RULES LIVES AT THE FIREBASE RULES TAB AND NOT THIS folder
 N.B *******
 
+This file is a REFERENCE COPY kept in sync by hand. Publish changes in the
+Firebase Console. Last synced: 2026-08-05 (staff accounts + secret relocation).
 
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     match /stores/{storeId} {
+      // Public read is required by public store pages. Safe now that
+      // credentials/full bank details live in stores/{storeId}/private/*
+      // (see src/api-handlers/_lib/store-secrets.js). NEVER write a secret
+      // onto this document — Firestore has no field-level security, so
+      // anything here is world-readable.
       allow read: if true;
       allow create: if request.auth != null && request.auth.uid == storeId;
       allow update: if request.auth != null && request.auth.uid == storeId;
       allow delete: if request.auth != null && request.auth.uid == storeId;
-      
+
+      // Staff access is intentionally NOT granted anywhere below. Staff act
+      // through firebase-admin API handlers, which bypass rules and check
+      // permissions via resolveStoreAccess(). Owner-only here is deliberate.
+
+      // Server-only: OAuth refresh tokens, full bank account numbers.
+      match /private/{docId} {
+        allow read, write: if false;
+      }
+
       match /products/{productId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == storeId;
-        
+
         match /reviews/{reviewId} {
-          allow read: if true; 
-          allow write: if false; 
+          allow read: if true;
+          allow write: if false;
         }
 
         match /variations/{variantId} {
@@ -26,36 +43,43 @@ service cloud.firestore {
           allow write: if request.auth != null && request.auth.uid == storeId;
         }
       }
-      
+
       match /categories/{categoryId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == storeId;
       }
-      
+
       match /services/{serviceId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == storeId;
-        
+
         match /reviews/{reviewId} {
-          allow read: if true; 
-          allow write: if false; 
+          allow read: if true;
+          allow write: if false;
         }
       }
-      
+
       match /orders/{orderId} {
         allow read, write: if request.auth != null && request.auth.uid == storeId;
       }
-      
+
       match /bookings/{bookingId} {
         allow read, write: if request.auth != null && request.auth.uid == storeId;
       }
 
-      
+      // Anonymous visitors on public store pages must be able to increment
+      // counters, so writes stay unauthenticated — but are restricted to the
+      // known counter fields. affectedKeys() on update inspects only what
+      // changed, so unrelated fields added later won't break tracking.
       match /analytics/{docId} {
         allow read: if request.auth != null && request.auth.uid == storeId;
-        allow write: if true;
+        allow create: if request.resource.data.keys().hasOnly(
+          ['totalViews', 'totalClicks', 'engagedViews', 'totalBookingRequests', 'updatedAt']);
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          ['totalViews', 'totalClicks', 'engagedViews', 'totalBookingRequests', 'updatedAt']);
+        allow delete: if false;
       }
-      
+
       match /subscriptions/{subId} {
         allow read: if request.auth != null && request.auth.uid == storeId;
         allow write: if false;
@@ -78,6 +102,11 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Staff role definitions — server-only (Admin SDK).
+      match /staffRoles/{roleId} {
+        allow read, write: if false;
+      }
+
       // Sella AI Business Partner — server-only (written/read via Admin SDK,
       // which bypasses these rules). Clients are blocked from tampering with
       // their own daily usage count or reading any chat history directly.
@@ -89,29 +118,45 @@ service cloud.firestore {
         allow read, write: if false;
       }
     }
-    
+
+    // Staff accounts — server-only (Admin SDK via staff-*.js handlers).
+    match /staffMemberships/{membershipId} {
+      allow read, write: if false;
+    }
+
+    match /staffInvites/{code} {
+      allow read, write: if false;
+    }
+
+    // Self-scoped: adminRoles.js only ever reads the caller's own doc.
     match /admins/{adminId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && request.auth.uid == adminId;
       allow write: if false;
     }
-    
+
+    // Scoped to the owning store. Requires the client query to be
+    // `where('storeId','==',uid)` — Dashboard.jsx fetchLeads does this.
     match /leads/{leadId} {
       allow create: if true;
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+                  && request.auth.uid == resource.data.storeId;
     }
-    
+
+    // Nothing client-side reads waitlist; the admin panel uses the Admin SDK.
     match /waitlist/{id} {
       allow create: if true;
-      allow read: if request.auth != null;
+      allow read: if false;
     }
-    
+
     match /supportEnquiries/{enquiryId} {
-      allow create: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.storeId == request.auth.uid;
       allow read: if request.auth != null && request.auth.uid == resource.data.storeId;
     }
-    
+
     match /supportMessages/{messageId} {
-      allow create: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.storeId == request.auth.uid;
       allow read: if request.auth != null && request.auth.uid == resource.data.storeId;
     }
   }

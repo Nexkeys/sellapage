@@ -1,4 +1,5 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
+import { getReferralBank } from './_lib/store-secrets.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -68,13 +69,24 @@ export default async function handler(req, res) {
       })
     }
 
+    // Full account number lives in stores/{uid}/private/referralBank — read it
+    // server-side and denormalize onto the request so the admin can actually
+    // pay it. withdrawal_requests has no client-readable rule, so it stays safe.
+    const bank = await getReferralBank(db, uid)
+    if (!bank.accountNumber) {
+      return res.status(400).json({
+        error: 'bank_not_setup',
+        message: 'Please set up your bank account first.',
+      })
+    }
+
     await db.collection('withdrawal_requests').add({
       userId: uid,
       storeName: storeData.businessName || '',
       amount,
-      bankName: storeData.referralBankName,
-      bankAccount: storeData.referralBankAccount,
-      bankAccountName: storeData.referralBankAccountName,
+      bankName: bank.bankName,
+      bankAccount: bank.accountNumber,
+      bankAccountName: bank.accountName,
       status: 'pending',
       createdAt: new Date().toISOString(),
     })

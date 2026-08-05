@@ -63,7 +63,10 @@ export default async function handler(req, res) {
     if (!collectionName) return res.status(400).json({ error: 'Invalid type' })
 
     const access = await resolveStoreAccess(decoded.uid, storeId, type, false)
-    if (!access.allowed) return res.status(403).json({ error: 'Forbidden' })
+    // A role simply not granted this tab isn't an error worth surfacing — the
+    // nav hides it anyway. Return an empty list so any stray call renders
+    // cleanly instead of throwing.
+    if (!access.allowed) return res.status(200).json({ success: true, items: [] })
 
     const snap = await db.collection('stores').doc(storeId).collection(collectionName).get()
     return res.status(200).json({ success: true, items: snap.docs.map(serializeDoc) })

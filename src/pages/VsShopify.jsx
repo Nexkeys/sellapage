@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Check, X, ArrowRight, AlertCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
 
@@ -59,7 +60,7 @@ export default function VsShopify() {
 
       {/* Cost callout */}
       <section className="py-10 px-4 bg-white">
-        <div className="max-w-2xl mx-auto">
+        <Reveal className="max-w-2xl mx-auto">
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4">
             <AlertCircle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
@@ -71,15 +72,15 @@ export default function VsShopify() {
               </p>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* Feature comparison */}
       <section className="py-10 px-4 bg-white">
         <div className="max-w-2xl mx-auto">
-          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+          <Reveal as="h2" className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
             Side by Side
-          </h2>
+          </Reveal>
 
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div />
@@ -114,11 +115,11 @@ export default function VsShopify() {
       {/* Real-life scenario */}
       <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+          <Reveal as="h2" className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
             The Reality for Most Sellers
-          </h2>
+          </Reveal>
           <div className="grid md:grid-cols-2 gap-5">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <Reveal direction="left" className="bg-white rounded-2xl border border-gray-200 p-6">
               <p className="font-bold text-gray-400 text-sm mb-1">Starting on Shopify</p>
               <div className="w-8 h-1 bg-gray-200 rounded mb-4" />
               <p className="text-gray-500 text-sm leading-relaxed">
@@ -126,15 +127,15 @@ export default function VsShopify() {
                 set up product pages, configure shipping settings. Two weeks later, you're still figuring it out —
                 and you've already paid ₦47,000.
               </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6">
+            </Reveal>
+            <Reveal direction="right" delay={150} className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6">
               <p className="font-bold text-brand-600 text-sm mb-1">Starting on Sellapage</p>
               <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
               <p className="text-gray-600 text-sm leading-relaxed">
                 You sign up. You add your products or services, prices, photos, delivery details, and payment options.
                 In under 30 minutes, customers are browsing, ordering, and entering your Sellapage workflow.
               </p>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -142,11 +143,11 @@ export default function VsShopify() {
       {/* Who should use what */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
+          <Reveal as="h2" className="font-display font-bold text-gray-900 text-2xl text-center mb-8">
             Which One Is Right for You?
-          </h2>
+          </Reveal>
           <div className="grid md:grid-cols-2 gap-5">
-            <div className="bg-gray-50 rounded-2xl p-6">
+            <Reveal direction="left" className="bg-gray-50 rounded-2xl p-6">
               <p className="font-bold text-gray-600 mb-4">Use Shopify if...</p>
               <ul className="space-y-2.5">
                 {[
@@ -161,8 +162,8 @@ export default function VsShopify() {
                   </li>
                 ))}
               </ul>
-            </div>
-            <div className="bg-brand-50 rounded-2xl border border-brand-100 p-6">
+            </Reveal>
+            <Reveal direction="right" delay={150} className="bg-brand-50 rounded-2xl border border-brand-100 p-6">
               <p className="font-bold text-brand-700 mb-4">Use Sellapage if...</p>
               <ul className="space-y-2.5">
                 {[
@@ -177,14 +178,14 @@ export default function VsShopify() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       {/* CTA */}
       <section className="py-20 px-4 bg-gradient-to-br from-brand-500 to-emerald-600">
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-display font-extrabold text-white text-3xl mb-3">
             Start free. Sell today.
           </h2>
@@ -198,7 +199,7 @@ export default function VsShopify() {
             {user ? 'Check your growth workspace' : 'Create Free Account'}
             <ArrowRight size={18} />
           </button>
-        </div>
+        </Reveal>
       </section>
 
       <Footer />

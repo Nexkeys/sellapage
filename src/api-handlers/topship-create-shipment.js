@@ -12,6 +12,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { bookTopshipShipment, resolveShipmentRoute } from './_lib/topship-booking.js'
 import { sendEmail } from './_lib/send-email.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -65,7 +66,8 @@ export default async function handler(req, res) {
     if (!storeDoc.exists) {
       return res.status(404).json({ error: 'Store not found' })
     }
-    if (storeDoc.data().ownerId !== decodedToken.uid) {
+    const access = await resolveStoreAccess(decodedToken.uid, storeId, 'delivery', true)
+    if (!access.allowed) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 

@@ -1,4 +1,5 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
+import { setReferralBank } from './_lib/store-secrets.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -124,13 +125,16 @@ export default async function handler(req, res) {
       })
     }
 
-    await db.collection('stores').doc(uid).update({
-      referralBankName: bankName,
-      referralBankCode: bankCode,
-      referralBankAccount: accountNumber,
-      referralBankAccountName: accountName,
-      referralBankVerified: true,
+    // Full account number + bank code go to stores/{uid}/private/referralBank
+    // (server-only). Only the masked number and display fields land on the
+    // world-readable store doc.
+    const publicFields = await setReferralBank(db, uid, {
+      bankName,
+      bankCode,
+      accountNumber,
+      accountName,
     })
+    await db.collection('stores').doc(uid).update(publicFields)
 
     console.log(`[referral-bank-save] Bank saved successfully for uid=${uid}: ${bankName} - ${accountName}`)
 

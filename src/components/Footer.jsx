@@ -35,7 +35,7 @@ export default function Footer() {
               <span className="font-display font-bold text-white text-base tracking-tight">Sellapage</span>
             </Link>
             <p className="text-gray-500 text-xs leading-relaxed mb-4">
-              The all-in-one commerce workspace for Nigerian businesses. Products, services, checkout, delivery, customers, analytics, and growth — one dashboard.
+              The all-in-one commerce workspace for Nigerian businesses. Products, services, checkout, delivery, customers, analytics, and growth from one dashboard.
             </p>
             <div className="flex flex-wrap gap-2">
               {['CAC Registered', 'Paystack Secured', 'Firebase Encrypted'].map((badge) => (

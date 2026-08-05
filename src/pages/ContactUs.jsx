@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { HelpCircle, ArrowRight, Mail, MessageCircle, ExternalLink } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
 
@@ -40,7 +41,7 @@ export default function ContactUs() {
 
           {/* Dashboard support — shown differently based on auth state */}
           {user ? (
-            <div className="bg-brand-50 border border-brand-200 rounded-2xl p-6 flex items-start gap-5">
+            <Reveal className="bg-brand-50 border border-brand-200 rounded-2xl p-6 flex items-start gap-5">
               <div className="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <HelpCircle size={22} className="text-brand-600" />
               </div>
@@ -60,9 +61,9 @@ export default function ContactUs() {
                   <ArrowRight size={15} />
                 </button>
               </div>
-            </div>
+            </Reveal>
           ) : (
-            <div className="bg-brand-50 border border-brand-200 rounded-2xl p-6 flex items-start gap-5">
+            <Reveal className="bg-brand-50 border border-brand-200 rounded-2xl p-6 flex items-start gap-5">
               <div className="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <HelpCircle size={22} className="text-brand-600" />
               </div>
@@ -85,11 +86,11 @@ export default function ContactUs() {
                   <ArrowRight size={15} />
                 </Link>
               </div>
-            </div>
+            </Reveal>
           )}
 
           {/* Email */}
-          <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
+          <Reveal delay={100} className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
             <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
               <Mail size={22} className="text-gray-600" />
             </div>
@@ -107,10 +108,10 @@ export default function ContactUs() {
                 <ExternalLink size={13} />
               </a>
             </div>
-          </div>
+          </Reveal>
 
           {/* Direct support */}
-          <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
+          <Reveal delay={150} className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
             <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
               <MessageCircle size={22} className="text-green-600" />
             </div>
@@ -130,10 +131,10 @@ export default function ContactUs() {
                 Chat with Support
               </a>
             </div>
-          </div>
+          </Reveal>
 
           {/* Built by */}
-          <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
+          <Reveal delay={200} className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
             <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 text-xl">
               <img
               src="/og-image.png"
@@ -158,13 +159,13 @@ export default function ContactUs() {
                 <ExternalLink size={13} />
               </a>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* FAQ nudge */}
       <section className="py-10 px-4 bg-gray-50 border-t border-gray-100">
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <p className="text-gray-500 text-sm mb-3">
             Looking for quick answers? Many common questions about stores, orders, plans, and customers are already answered on our homepage.
           </p>
@@ -175,7 +176,7 @@ export default function ContactUs() {
             Read the FAQ
             <ArrowRight size={14} />
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       <Footer />

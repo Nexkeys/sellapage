@@ -16,7 +16,7 @@ import {
   increment,
 } from 'firebase/firestore'
 import { db } from './config'
-import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../utils/staffDataFetch'
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../utils/staffDataFetch'
 
 
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
@@ -135,6 +135,16 @@ export const addProduct = async (storeId, productData, imageFiles = []) => {
     existingPlan === 'premium' ? 50 : existingPlan === 'pro' ? 50 : existingPlan === 'growth' ? 10 : 3
   )
 
+  // Staff: Cloudinary upload still runs client-side (unaffected by Firestore
+  // rules); only the Firestore write goes through the server proxy, which
+  // re-checks the plan limit itself.
+  if (isActingAsStaffFor(storeId)) {
+    const imageUrls = await uploadMultipleImages(imageFiles.slice(0, maxImages))
+    const payload = { ...productData, imageUrls, imageUrl: imageUrls[0] || '', createdAt: new Date().toISOString() }
+    const { id } = await writeStoreDocAsStaff({ type: 'products', storeId, op: 'create', data: payload })
+    return { id, ...productData, imageUrls, imageUrl: imageUrls[0] || '' }
+  }
+
   const [productsSnap, servicesSnap] = await Promise.all([
     getCountFromServer(collection(db, 'stores', storeId, 'products')),
     getCountFromServer(collection(db, 'stores', storeId, 'services')),
@@ -207,6 +217,17 @@ export const updateProduct = async (storeId, productId, updates, newImageFiles =
     updatedAt: new Date(),
   }
 
+  if (isActingAsStaffFor(storeId)) {
+    await writeStoreDocAsStaff({
+      type: 'products',
+      storeId,
+      op: 'update',
+      docId: productId,
+      data: { ...finalData, updatedAt: finalData.updatedAt.toISOString() },
+    })
+    return finalData
+  }
+
   await updateDoc(doc(db, 'stores', storeId, 'products', productId), finalData)
   return finalData
 }
@@ -214,15 +235,21 @@ export const updateProduct = async (storeId, productId, updates, newImageFiles =
 
 export const removeProductImage = async (storeId, productId, imageUrl, currentImageUrls) => {
   const imageUrls = currentImageUrls.filter(url => url !== imageUrl)
-  await updateDoc(doc(db, 'stores', storeId, 'products', productId), {
-    imageUrls,
-    imageUrl: imageUrls[0] || '',
-  })
+  const patch = { imageUrls, imageUrl: imageUrls[0] || '' }
+  if (isActingAsStaffFor(storeId)) {
+    await writeStoreDocAsStaff({ type: 'products', storeId, op: 'update', docId: productId, data: patch })
+    return imageUrls
+  }
+  await updateDoc(doc(db, 'stores', storeId, 'products', productId), patch)
   return imageUrls
 }
 
 
 export const deleteProduct = async (storeId, productId) => {
+  if (isActingAsStaffFor(storeId)) {
+    await writeStoreDocAsStaff({ type: 'products', storeId, op: 'delete', docId: productId })
+    return
+  }
   const batch = writeBatch(db)
   batch.delete(doc(db, 'stores', storeId, 'products', productId))
   batch.update(doc(db, 'stores', storeId), { productCount: increment(-1) })
@@ -253,6 +280,20 @@ export const getStoreBySlug = async (storeName) => {
 export const saveCustomCategory = async (storeId, categoryName) => {
   const normalized = categoryName.trim()
   if (!normalized) return null
+
+  if (isActingAsStaffFor(storeId)) {
+    const existing = await fetchStoreCollectionAsStaff('categories', storeId)
+    const match = existing.find(c => c.name === normalized)
+    if (match) return match.id
+    const { id } = await writeStoreDocAsStaff({
+      type: 'categories',
+      storeId,
+      op: 'create',
+      data: { name: normalized, createdAt: new Date().toISOString() },
+    })
+    return id
+  }
+
   const q = query(
     collection(db, 'stores', storeId, 'categories'),
     where('name', '==', normalized)

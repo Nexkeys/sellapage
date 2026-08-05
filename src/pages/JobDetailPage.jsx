@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { JOB_TYPE_BADGE, getCategoryLabel, getJobTypeLabel } from '../utils/jobCategories'
 import SEO from '../components/SEO'
 
@@ -158,7 +159,7 @@ export default function JobDetailPage() {
           <span className="text-gray-600 truncate max-w-[160px]">{job.title}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Reveal className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight font-display leading-tight">
@@ -242,7 +243,7 @@ export default function JobDetailPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
 
       <Footer />

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import { getActiveStores } from '../firebase/products'
 import SEO from '../components/SEO'
 
@@ -201,7 +202,8 @@ function StoreCard({ store }) {
   const isCACVerified = store.cacVerified === true
 
   return (
-    <Link
+    <Reveal
+      as={Link}
       to={`/${store.storeName}`}
       className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-200/60 hover:-translate-y-0.5 transition-all duration-300"
     >
@@ -253,6 +255,6 @@ function StoreCard({ store }) {
           <ArrowRight size={14} className="text-gray-300 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all" />
         </div>
       </div>
-    </Link>
+    </Reveal>
   )
 }

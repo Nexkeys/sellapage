@@ -53,3 +53,22 @@ export async function fetchStoreDocAsStaff(type, storeId) {
 export function isActingAsStaffFor(storeId) {
   return !!auth.currentUser && auth.currentUser.uid !== storeId
 }
+
+// Write counterpart. Throws on failure so callers surface the same errors
+// their existing Firestore write path would (including the plan-limit
+// 'FREE_PLAN_LIMIT_REACHED' signal the product/service forms already handle).
+export async function writeStoreDocAsStaff({ type, storeId, op, docId, data }) {
+  const user = auth.currentUser
+  if (!user) throw new Error('Not signed in')
+  const token = await user.getIdToken()
+  const res = await fetch('/api/store-write', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ type, storeId, op, docId, data }),
+  })
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok || !payload.success) {
+    throw new Error(payload.error || 'Failed to save. You may not have permission.')
+  }
+  return payload
+}

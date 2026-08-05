@@ -3,7 +3,10 @@
 // assignable via the Team tab's Role Builder unless listed here — see
 // Docs/Staff-Team-Accounts-Plan.md Part B/G for why this is a deny-list, not
 // an allow-list.
-export const OWNER_ONLY_TABS = ['billing', 'settings', 'team']
+// 'payouts' = bank/settlement details, 'referral-program' = the owner's own
+// commission balance and withdrawals to the owner's personal bank account.
+// Both are the owner's money, not store operations — never delegatable.
+export const OWNER_ONLY_TABS = ['billing', 'settings', 'team', 'payouts', 'referral-program']
 
 export const MAX_STAFF_ROLES = 20
 export const MAX_ACTIVE_STAFF = 10

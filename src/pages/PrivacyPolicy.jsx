@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 
 
@@ -123,7 +124,7 @@ export default function PrivacyPolicy() {
       <section className="py-16 px-4">
         <div className="max-w-3xl mx-auto space-y-10">
           {sections.map((section, i) => (
-            <div key={i}>
+            <Reveal key={i} delay={Math.min(i, 4) * 60}>
               <h2 className="font-display font-bold text-gray-900 text-xl mb-4">
                 {section.title}
               </h2>
@@ -135,11 +136,11 @@ export default function PrivacyPolicy() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Reveal>
           ))}
 
           {/* Contact */}
-          <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6">
+          <Reveal className="bg-gray-50 rounded-2xl border border-gray-100 p-6">
             <h2 className="font-display font-bold text-gray-900 text-xl mb-2">
               Questions?
             </h2>
@@ -153,7 +154,7 @@ export default function PrivacyPolicy() {
             >
               Contact Us →
             </Link>
-          </div>
+          </Reveal>
         </div>
       </section>
 

@@ -6,7 +6,7 @@ import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-
 // Firebase Cloud Sync Imports
 import { db } from '../../firebase/config'
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
-import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../../utils/staffDataFetch'
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../../utils/staffDataFetch'
 
 const INPUT_CLASS = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
 
@@ -385,21 +385,28 @@ export default function LedgerTab({ store }) {
     if (!form.date) { setFormError('Date is required.'); return }
     if (!store?.id) { setFormError('Authentication context missing.'); return }
 
+    const isStaff = isActingAsStaffFor(store.id)
+
     try {
       if (editingId) {
-        const docRef = doc(db, 'stores', store.id, 'ledger', editingId)
-        await updateDoc(docRef, {
+        const patch = {
           customerName: form.customerName.trim(),
           itemName: form.itemName.trim(),
           amount: Number(form.amount),
           date: form.date,
           notes: form.notes.trim(),
           status: form.status
-        })
+        }
+        if (isStaff) {
+          await writeStoreDocAsStaff({ type: 'ledger', storeId: store.id, op: 'update', docId: editingId, data: patch })
+          // No live listener for staff — reflect the change locally.
+          setEntries(prev => prev.map(e => (e.id === editingId ? { ...e, ...patch } : e)))
+        } else {
+          await updateDoc(doc(db, 'stores', store.id, 'ledger', editingId), patch)
+        }
       } else {
         const newDocId = Date.now().toString()
-        const docRef = doc(db, 'stores', store.id, 'ledger', newDocId)
-        await setDoc(docRef, {
+        const newEntry = {
           customerName: form.customerName.trim(),
           itemName: form.itemName.trim(),
           amount: Number(form.amount),
@@ -407,7 +414,13 @@ export default function LedgerTab({ store }) {
           notes: form.notes.trim(),
           status: form.status || 'Paid',
           createdAt: new Date().toISOString(),
-        })
+        }
+        if (isStaff) {
+          await writeStoreDocAsStaff({ type: 'ledger', storeId: store.id, op: 'create', docId: newDocId, data: newEntry })
+          setEntries(prev => [{ id: newDocId, ...newEntry }, ...prev])
+        } else {
+          await setDoc(doc(db, 'stores', store.id, 'ledger', newDocId), newEntry)
+        }
       }
       resetForm()
     } catch (err) {
@@ -443,8 +456,12 @@ export default function LedgerTab({ store }) {
     if (!confirmed) return
 
     try {
-      const docRef = doc(db, 'stores', store.id, 'ledger', id)
-      await deleteDoc(docRef)
+      if (isActingAsStaffFor(store.id)) {
+        await writeStoreDocAsStaff({ type: 'ledger', storeId: store.id, op: 'delete', docId: id })
+        setEntries(prev => prev.filter(e => e.id !== id))
+      } else {
+        await deleteDoc(doc(db, 'stores', store.id, 'ledger', id))
+      }
       if (editingId === id) resetForm()
     } catch (err) {
       console.error("Error deleting from cloud ledger: ", err)

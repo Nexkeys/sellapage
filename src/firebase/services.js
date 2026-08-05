@@ -13,7 +13,7 @@ import {
   increment,
 } from 'firebase/firestore'
 import { db } from './config'
-import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../utils/staffDataFetch'
+import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../utils/staffDataFetch'
 
 
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
@@ -86,14 +86,16 @@ export const addService = async (storeId, serviceData, imageFiles = []) => {
   const storeData = storeSnap.exists() ? storeSnap.data() : {}
   const { maxProducts, maxImagesPerProduct } = getPlanLimits(storeData)
 
-  const count = await getCombinedListingCount(storeId)
-  if (count >= maxProducts) throw new Error('FREE_PLAN_LIMIT_REACHED')
+  const isStaff = isActingAsStaffFor(storeId)
+
+  if (!isStaff) {
+    const count = await getCombinedListingCount(storeId)
+    if (count >= maxProducts) throw new Error('FREE_PLAN_LIMIT_REACHED')
+  }
 
   const imageUrls = await uploadMultipleImages(imageFiles.slice(0, maxImagesPerProduct))
   const now = new Date()
 
-  const batch = writeBatch(db)
-  const serviceRef = doc(collection(db, 'stores', storeId, 'services'))
   const finalData = {
     name: serviceData.name,
     price: serviceData.price,
@@ -111,6 +113,19 @@ export const addService = async (storeId, serviceData, imageFiles = []) => {
     updatedAt: now,
   }
 
+  // Staff: the server proxy re-checks the plan limit itself before writing.
+  if (isStaff) {
+    const { id } = await writeStoreDocAsStaff({
+      type: 'services',
+      storeId,
+      op: 'create',
+      data: { ...finalData, createdAt: now.toISOString(), updatedAt: now.toISOString() },
+    })
+    return { id, ...finalData }
+  }
+
+  const batch = writeBatch(db)
+  const serviceRef = doc(collection(db, 'stores', storeId, 'services'))
   batch.set(serviceRef, finalData)
   batch.update(doc(db, 'stores', storeId), { productCount: increment(1) })
   await batch.commit()
@@ -165,12 +180,27 @@ export const updateService = async (storeId, serviceId, updates, newImageFiles =
     updatedAt: new Date(),
   }
 
+  if (isActingAsStaffFor(storeId)) {
+    await writeStoreDocAsStaff({
+      type: 'services',
+      storeId,
+      op: 'update',
+      docId: serviceId,
+      data: { ...finalData, updatedAt: finalData.updatedAt.toISOString() },
+    })
+    return finalData
+  }
+
   await updateDoc(doc(db, 'stores', storeId, 'services', serviceId), finalData)
   return finalData
 }
 
 
 export const deleteService = async (storeId, serviceId) => {
+  if (isActingAsStaffFor(storeId)) {
+    await writeStoreDocAsStaff({ type: 'services', storeId, op: 'delete', docId: serviceId })
+    return
+  }
   const batch = writeBatch(db)
   batch.delete(doc(db, 'stores', storeId, 'services', serviceId))
   batch.update(doc(db, 'stores', storeId), { productCount: increment(-1) })
@@ -188,5 +218,9 @@ export const deleteAllStoreServices = async (storeId) => {
 
 
 export const toggleServiceActive = async (storeId, serviceId, isActive) => {
+  if (isActingAsStaffFor(storeId)) {
+    await writeStoreDocAsStaff({ type: 'services', storeId, op: 'update', docId: serviceId, data: { isActive } })
+    return
+  }
   await updateDoc(doc(db, 'stores', storeId, 'services', serviceId), { isActive })
 }

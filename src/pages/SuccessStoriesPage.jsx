@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { Star, Quote, Film, ArrowRight, Loader2 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 
@@ -75,20 +76,20 @@ export default function SuccessStoriesPage() {
           <>
             {featured.length > 0 && (
               <div className="mb-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {featured.map((r) => (
-                  <ReviewCard key={r.id} review={r} featured />
+                {featured.map((r, i) => (
+                  <ReviewCard key={r.id} review={r} featured delay={i * 100} />
                 ))}
               </div>
             )}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {rest.map((r) => (
-                <ReviewCard key={r.id} review={r} />
+              {rest.map((r, i) => (
+                <ReviewCard key={r.id} review={r} delay={i * 80} />
               ))}
             </div>
           </>
         )}
 
-        <div className="mt-16 rounded-3xl bg-gray-950 px-6 py-10 text-center sm:px-12 sm:py-14">
+        <Reveal className="mt-16 rounded-3xl bg-gray-950 px-6 py-10 text-center sm:px-12 sm:py-14">
           <h2 className="text-xl sm:text-2xl font-black text-white">Ready to start your own success story?</h2>
           <p className="mt-2 text-sm text-gray-400">Set up your free store on Sellapage in minutes.</p>
           <Link
@@ -97,7 +98,7 @@ export default function SuccessStoriesPage() {
           >
             Get Started Free <ArrowRight size={15} />
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       <Footer />
@@ -105,9 +106,9 @@ export default function SuccessStoriesPage() {
   )
 }
 
-function ReviewCard({ review, featured = false }) {
+function ReviewCard({ review, featured = false, delay = 0 }) {
   return (
-    <div className={`rounded-2xl border bg-white p-5 sm:p-6 ${featured ? 'border-amber-200 shadow-md shadow-amber-100/50' : 'border-gray-100'}`}>
+    <Reveal delay={delay} className={`rounded-2xl border bg-white p-5 sm:p-6 ${featured ? 'border-amber-200 shadow-md shadow-amber-100/50' : 'border-gray-100'}`}>
       {featured && (
         <span className="mb-3 inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
           Featured Story
@@ -142,6 +143,6 @@ function ReviewCard({ review, featured = false }) {
         </div>
         <p className="flex-shrink-0 text-[10px] text-gray-400">{formatDate(review.createdAt)}</p>
       </div>
-    </div>
+    </Reveal>
   )
 }

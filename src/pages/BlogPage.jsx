@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Search, BookOpen, ArrowRight, Loader2, Clock } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { getExcerpt, formatBlogDate, getCategoryBadgeClass } from '../utils/blogHelpers'
@@ -175,7 +176,7 @@ export default function BlogPage() {
 
 function PostCard({ post, categoryLabel }) {
   return (
-    <Link to={`/blog/${post.slug}`} className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-200/60 hover:-translate-y-0.5 transition-all duration-300">
+    <Reveal as={Link} to={`/blog/${post.slug}`} className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-200/60 hover:-translate-y-0.5 transition-all duration-300">
       <div className="relative h-32 bg-gradient-to-br from-brand-50 to-green-50 overflow-hidden">
         <img src={post.featuredImageUrl || '/og-image.png'} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
       </div>
@@ -188,6 +189,6 @@ function PostCard({ post, categoryLabel }) {
           <ArrowRight size={13} className="text-gray-300 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all" />
         </div>
       </div>
-    </Link>
+    </Reveal>
   )
 }
