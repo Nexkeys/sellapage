@@ -8,6 +8,7 @@ export const JOB_TYPES = [
   { slug: 'part_time', label: 'Part-time' },
   { slug: 'full_time', label: 'Full-time' },
   { slug: 'freelance', label: 'Freelance' },
+  { slug: 'Internship', label: 'Internship' },
   { slug: 'side_gig', label: 'Side Gig' },
 ]
 
