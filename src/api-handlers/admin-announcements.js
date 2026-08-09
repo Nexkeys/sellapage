@@ -1,19 +1,21 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
+import { verifyAdmin } from './_lib/verify-admin.js'
+import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
+  applyCorsOrigin(req, res)
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(204).end()
 
   const action = req.query.action || 'list'
+  // `active` stays public: AnnouncementBanner.jsx fetches it unauthenticated on
+  // every dashboard load to show live banners. Preserved deliberately.
   const isPublicActiveRead = action === 'active' && req.method === 'GET'
 
   if (!isPublicActiveRead) {
-    const adminToken = req.headers['x-admin-token']
-    if (!adminToken || adminToken !== process.env.ADMIN_SECRET_TOKEN) {
-      return res.status(403).json({ error: 'Forbidden' })
-    }
+    const admin = await verifyAdmin(req, 'announcements')
+    if (!admin) return res.status(403).json({ error: 'Forbidden' })
   }
 
   try {

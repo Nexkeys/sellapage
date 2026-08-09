@@ -6,17 +6,17 @@
 // vendor — closing that gap for the first time in this codebase.
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
+import { verifyAdmin } from './_lib/verify-admin.js'
+import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
+  applyCorsOrigin(req, res)
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(204).end()
 
-  const adminToken = req.headers['x-admin-token']
-  if (!adminToken || adminToken !== process.env.ADMIN_SECRET_TOKEN) {
-    return res.status(403).json({ error: 'Forbidden' })
-  }
+  const admin = await verifyAdmin(req, 'jobs')
+  if (!admin) return res.status(403).json({ error: 'Forbidden' })
 
   try {
     const db = getAdminDb()
@@ -56,7 +56,9 @@ export default async function handler(req, res) {
 
     if (action === 'update' && req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {})
-      const { jobId, status, rejectionReason, adminUid } = body
+      // adminUid no longer accepted from the body — attribution comes from the
+      // verified admin identity so the moderation trail can't be forged.
+      const { jobId, status, rejectionReason } = body
 
       if (!jobId) return res.status(400).json({ error: 'Missing jobId' })
       if (!['approved', 'rejected'].includes(status)) {
@@ -74,7 +76,8 @@ export default async function handler(req, res) {
       const updateData = {
         status,
         reviewedAt: new Date(),
-        reviewedBy: adminUid || 'admin',
+        reviewedBy: admin.uid,
+        reviewedByRole: admin.role,
       }
       updateData.rejectionReason = status === 'rejected' ? rejectionReason.trim() : ''
 

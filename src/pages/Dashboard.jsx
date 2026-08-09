@@ -458,12 +458,12 @@ export default function Dashboard() {
             planFields.planStatus = data.planStatus ?? "active";
             planFields.productCount = data.productCount ?? 0;
 
-            try {
-              await updateDoc(doc(db, "stores", store.id), planFields);
-            } catch (writeErr) {
-              console.error("Failed to migrate legacy store fields", writeErr);
-            }
-
+            // Derived in memory only — no longer written back. Plan/entitlement
+            // fields are locked in firestore.rules (a client that could write
+            // them could self-upgrade to premium), and these values are purely
+            // a function of `plan`, so recomputing them per session is
+            // equivalent. paystack-webhook.js and expiry-cron.js remain the only
+            // writers, both server-side via the Admin SDK.
             Object.assign(data, planFields);
           }
 

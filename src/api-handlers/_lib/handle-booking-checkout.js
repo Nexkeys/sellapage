@@ -1,6 +1,6 @@
 //sellapage/api/_lib/handle-booking-checkout.js/
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
-import { sendEmail } from "./send-email.js";
+import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
 
 // Service-booking branch of the paystack-webhook "checkout" dispatcher.
@@ -177,7 +177,7 @@ export async function handleBookingCheckout(db, data, res) {
             </div>
             <div style="padding: 32px;">
               <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px 0;">Booking Confirmed!</h2>
-              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${customerName}, your booking has been received and is awaiting confirmation from the vendor.</p>
+              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${escapeHtml(customerName)}, your booking has been received and is awaiting confirmation from the vendor.</p>
               <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
                 <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 16px 0;">Booking Details</h3>
                 <table style="width: 100%; border-collapse: collapse;">
@@ -223,7 +223,7 @@ export async function handleBookingCheckout(db, data, res) {
         ? sendPush(
             storeData.fcmToken,
             "New Booking Received 📅",
-            `${customerName} just booked ${serviceName || "a service"} — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+            `${escapeHtml(customerName)} just booked ${serviceName || "a service"} — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             { bookingId: bookingRef.id, type: "new_booking" },
           )
         : Promise.resolve(),
@@ -238,7 +238,7 @@ export async function handleBookingCheckout(db, data, res) {
                 </div>
                 <div style="padding: 32px;">
                   <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px 0;">New Booking Received 📅</h2>
-                  <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">You just got a new booking from ${customerName}. Here are the details:</p>
+                  <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">You just got a new booking from ${escapeHtml(customerName)}. Here are the details:</p>
                   <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
                     <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 16px 0;">Booking Details</h3>
                     <table style="width: 100%; border-collapse: collapse;">
@@ -266,7 +266,7 @@ export async function handleBookingCheckout(db, data, res) {
                     <table style="width: 100%; border-collapse: collapse;">
                       <tr>
                         <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Name</td>
-                        <td style="padding: 6px 0; color: #111827; font-size: 14px; text-align: right;">${customerName || "-"}</td>
+                        <td style="padding: 6px 0; color: #111827; font-size: 14px; text-align: right;">${escapeHtml(customerName || "-")}</td>
                       </tr>
                       <tr>
                         <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Phone</td>

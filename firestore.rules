@@ -1,30 +1,143 @@
-UPDATED FIRESTORE RULES LIVES AT THE FIREBASE RULES TAB AND NOT THIS folder
-N.B *******
-
-This file is a REFERENCE COPY kept in sync by hand. Publish changes in the
-Firebase Console. Last synced: 2026-08-05 (staff accounts + secret relocation).
-
+// ============================================================================
+// SELLAPAGE — FIRESTORE SECURITY RULES
+// ============================================================================
+// Last updated: 2026-08-09 (security review remediation — C-06, H-07, M-05)
+//
+// DEPLOYMENT: copy this file's contents (everything below the header block)
+// into Firebase Console > Firestore > Rules, or run:
+//     firebase deploy --only firestore:rules
+//
+// ⚠️ DEPLOY ORDER MATTERS. Ship the application code FIRST, then these rules.
+// Two client writes were moved server-side to make the field locks below
+// possible, and deploying rules ahead of that code will break both flows:
+//   1. CACVerificationTab.jsx now calls  POST /api/verify-cac?action=confirm
+//      instead of writing `cacVerified` directly.
+//   2. Dashboard.jsx no longer writes the legacy plan-field backfill; it
+//      derives those values in memory instead.
+//
+// DESIGN NOTES
+// - The Admin SDK (all files in src/api-handlers/) BYPASSES these rules
+//   entirely. Every lock below constrains browsers only; server handlers are
+//   unaffected. This is why fields can be locked here without breaking any
+//   server-side write path.
+// - Firestore has NO field-level read security. Anything on a document with
+//   `allow read: if true` is world-readable. Secrets therefore live in
+//   stores/{id}/private/* (see src/api-handlers/_lib/store-secrets.js).
+// - `allow read` grants BOTH `get` and `list`. `list` cannot be disabled on
+//   /stores because getStoreBySlug() (src/firebase/products.js:270) and
+//   getActiveStores() (:321) are collection queries that every public
+//   storefront depends on.
+// ============================================================================
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ------------------------------------------------------------------
+    // Field groups locked against client writes on /stores/{storeId}.
+    //
+    // Rationale: `allow update: if request.auth.uid == storeId` permits the
+    // owner to write ANY field, and server handlers read several of these as
+    // authoritative facts. Without these locks a vendor could, from the
+    // browser console: set their own `referralAvailable` and withdraw real
+    // money (referral-withdraw-request.js:50), self-grant a premium plan
+    // (store-write.js:58, staff-invites.js:79), or award themselves the
+    // "CAC Verified" badge shown on their public storefront
+    // (StoreNavbar.jsx:125), defeating the Prembly KYC flow.
+    // ------------------------------------------------------------------
+
+    // Money. Written only by paystack-webhook.js, referral-*.js and
+    // admin-referrals.js — all server-side.
+    function moneyFields() {
+      return [
+        'referralAvailable', 'referralPending', 'referralWithdrawn',
+        'referralTotalEarned', 'referralCreditedToReferrer', 'referralTotalPaid',
+        'referralTotalSignups', 'referralTotalClicks', 'referralCode',
+        'referralBankVerified', 'referralBankName', 'referralBankAccountName',
+        'referralBankAccountMasked', 'referralBankAccount', 'referralBankCode',
+        'subaccountCode'
+      ];
+    }
+
+    // Identity / verification. Written only by verify-cac.js and admin-cac.js.
+    function verificationFields() {
+      return [
+        'cacVerified', 'cacVerifiedAt', 'cacBusinessName', 'cacRcNumber',
+        'cacStatus', 'cacRegistrationDate', 'cacRetryCount', 'cacLastRetryAt',
+        'cacRejectedAt', 'cacRejectionReason', 'cacAttempts', 'cacDocType',
+        'rcNumber'
+      ];
+    }
+
+    // Third-party integrations. Written only by google-ads-*.js and
+    // *-custom-domain.js.
+    function integrationFields() {
+      return [
+        'googleAdsConnected', 'googleAdsCustomerId', 'googleAdsRefreshToken',
+        'googleAdsAccountName', 'googleAdsCurrency', 'googleAdsTimezone',
+        'customDomain', 'customDomainStatus', 'customDomainAddedAt'
+      ];
+    }
+
+    // Plan entitlements. Written only by paystack-webhook.js (on payment) and
+    // expiry-cron.js (on downgrade).
+    function planFields() {
+      return [
+        'plan', 'planStatus', 'planStartDate', 'planEndDate', 'graceUntil',
+        'maxProducts', 'maxImagesPerProduct', 'maxJobListings',
+        'hasGrowthFeatures', 'hasProFeatures', 'hasPremiumFeatures',
+        'subscriptionStatus'
+      ];
+    }
+
+    function lockedStoreFields() {
+      return moneyFields()
+        .concat(verificationFields())
+        .concat(integrationFields())
+        .concat(planFields());
+    }
+
     match /stores/{storeId} {
-      // Public read is required by public store pages. Safe now that
-      // credentials/full bank details live in stores/{storeId}/private/*
-      // (see src/api-handlers/_lib/store-secrets.js). NEVER write a secret
-      // onto this document — Firestore has no field-level security, so
-      // anything here is world-readable.
+      // PUBLIC READ — required by public store pages, and `list` is required by
+      // getStoreBySlug()/getActiveStores(). Safe ONLY because credentials and
+      // full bank details live in stores/{id}/private/* (store-secrets.js).
+      // NEVER write a secret onto this document.
       allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == storeId;
-      allow update: if request.auth != null && request.auth.uid == storeId;
+
+      // CREATE (registerSeller, src/firebase/auth.js:23). The client hardcodes
+      // safe defaults, but a direct SDK call bypasses the UI — so the safe
+      // values are pinned here rather than trusted. Money, verification and
+      // integration fields must be absent at signup entirely.
+      allow create: if request.auth != null
+                    && request.auth.uid == storeId
+                    && !request.resource.data.keys().hasAny(moneyFields())
+                    && !request.resource.data.keys().hasAny(verificationFields())
+                    && !request.resource.data.keys().hasAny(integrationFields())
+                    && request.resource.data.get('plan', 'starter') == 'starter'
+                    && request.resource.data.get('hasGrowthFeatures', false) == false
+                    && request.resource.data.get('hasProFeatures', false) == false
+                    && request.resource.data.get('hasPremiumFeatures', false) == false
+                    && request.resource.data.get('maxProducts', 15) <= 15
+                    && request.resource.data.get('maxImagesPerProduct', 3) <= 3
+                    && request.resource.data.get('maxJobListings', 5) <= 5;
+
+      // UPDATE — the owner may edit their own store, but never the locked
+      // fields. affectedKeys() inspects only what actually changed, so an
+      // unchanged locked field passing through a form payload is still fine.
+      allow update: if request.auth != null
+                    && request.auth.uid == storeId
+                    && !request.resource.data.diff(resource.data)
+                          .affectedKeys().hasAny(lockedStoreFields());
+
       allow delete: if request.auth != null && request.auth.uid == storeId;
 
-      // Staff access is intentionally NOT granted anywhere below. Staff act
-      // through firebase-admin API handlers, which bypass rules and check
-      // permissions via resolveStoreAccess(). Owner-only here is deliberate.
+      // Staff access to everything below is intentionally NOT granted here.
+      // Staff act through firebase-admin API handlers, which bypass rules
+      // entirely and check permissions via resolveStoreAccess(). Owner-only
+      // here is the correct, deliberate posture - do not loosen it.
 
-      // Server-only: OAuth refresh tokens, full bank account numbers.
+      // Server-only: OAuth refresh tokens, full bank account numbers, and the
+      // pending CAC verification stash consumed by verify-cac?action=confirm.
       match /private/{docId} {
         allow read, write: if false;
       }
@@ -69,14 +182,40 @@ service cloud.firestore {
 
       // Anonymous visitors on public store pages must be able to increment
       // counters, so writes stay unauthenticated — but are restricted to the
-      // known counter fields. affectedKeys() on update inspects only what
-      // changed, so unrelated fields added later won't break tracking.
+      // known counter fields AND to monotonic single-step increments. Without
+      // the value bounds, anyone could set totalViews to an arbitrary number or
+      // hammer this endpoint to burn the Spark plan's daily write quota.
       match /analytics/{docId} {
         allow read: if request.auth != null && request.auth.uid == storeId;
+
         allow create: if request.resource.data.keys().hasOnly(
-          ['totalViews', 'totalClicks', 'engagedViews', 'totalBookingRequests', 'updatedAt']);
+                           ['totalViews', 'totalClicks', 'engagedViews',
+                            'totalBookingRequests', 'updatedAt'])
+                      && request.resource.data.get('totalViews', 0) <= 1
+                      && request.resource.data.get('totalClicks', 0) <= 1
+                      && request.resource.data.get('engagedViews', 0) <= 1
+                      && request.resource.data.get('totalBookingRequests', 0) <= 1;
+
         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-          ['totalViews', 'totalClicks', 'engagedViews', 'totalBookingRequests', 'updatedAt']);
+                           ['totalViews', 'totalClicks', 'engagedViews',
+                            'totalBookingRequests', 'updatedAt'])
+                      && request.resource.data.get('totalViews', 0)
+                           >= resource.data.get('totalViews', 0)
+                      && request.resource.data.get('totalViews', 0)
+                           <= resource.data.get('totalViews', 0) + 1
+                      && request.resource.data.get('totalClicks', 0)
+                           >= resource.data.get('totalClicks', 0)
+                      && request.resource.data.get('totalClicks', 0)
+                           <= resource.data.get('totalClicks', 0) + 1
+                      && request.resource.data.get('engagedViews', 0)
+                           >= resource.data.get('engagedViews', 0)
+                      && request.resource.data.get('engagedViews', 0)
+                           <= resource.data.get('engagedViews', 0) + 1
+                      && request.resource.data.get('totalBookingRequests', 0)
+                           >= resource.data.get('totalBookingRequests', 0)
+                      && request.resource.data.get('totalBookingRequests', 0)
+                           <= resource.data.get('totalBookingRequests', 0) + 1;
+
         allow delete: if false;
       }
 
@@ -102,12 +241,13 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Staff role definitions — server-only (Admin SDK).
+      // Staff role definitions - server-only (Admin SDK). Explicitly denied so
+      // nobody later mistakes "no rule here" for an oversight.
       match /staffRoles/{roleId} {
         allow read, write: if false;
       }
 
-      // Sella AI Business Partner — server-only (written/read via Admin SDK,
+      // Sella AI Business Partner - server-only (written/read via Admin SDK,
       // which bypasses these rules). Clients are blocked from tampering with
       // their own daily usage count or reading any chat history directly.
       match /sellaAiUsage/{dateId} {
@@ -119,7 +259,8 @@ service cloud.firestore {
       }
     }
 
-    // Staff accounts — server-only (Admin SDK via staff-*.js handlers).
+    // Staff accounts - server-only (Admin SDK via staff-*.js handlers).
+    // Explicitly denied: no client should ever query these directly.
     match /staffMemberships/{membershipId} {
       allow read, write: if false;
     }
@@ -128,23 +269,48 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Self-scoped: adminRoles.js only ever reads the caller's own doc.
+    // Self-scoped: adminRoles.js only ever reads the caller's own doc, so a
+    // vendor cannot enumerate the admin team and their roles.
     match /admins/{adminId} {
       allow read: if request.auth != null && request.auth.uid == adminId;
       allow write: if false;
     }
 
-    // Scoped to the owning store. Requires the client query to be
-    // `where('storeId','==',uid)` — Dashboard.jsx fetchLeads does this.
+    // TIGHTENED 2026-08-09: was `read: if request.auth != null`, which let ANY
+    // signed-in vendor read EVERY store's leads (customer PII). The precondition
+    // this was waiting on has landed — Dashboard.jsx:543 now queries with
+    // where('storeId','==',store.id), which satisfies the per-document rule.
+    // Create stays open for anonymous storefront lead capture, but is now
+    // constrained in shape and size so it can't be used to dump junk into the
+    // collection or burn the daily write quota.
+    // Field set verified against src/firebase/leads.js:10 (saveLead) and
+    // src/components/LeadForm.jsx:23, which submits { name, phone, interest }
+    // plus leadType/storeId/storeName/createdAt. `leadData` is a spread, so if
+    // the form ever gains a field, add it here or creates will start failing.
     match /leads/{leadId} {
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['storeId', 'storeName', 'name', 'phone', 'interest',
+                          'leadType', 'createdAt'])
+                    && request.resource.data.storeId is string
+                    && request.resource.data.name is string
+                    && request.resource.data.phone is string
+                    && request.resource.data.name.size() <= 200
+                    && request.resource.data.phone.size() <= 40
+                    && request.resource.data.get('interest', '').size() <= 2000
+                    && request.resource.data.get('storeName', '').size() <= 200;
+
       allow read: if request.auth != null
                   && request.auth.uid == resource.data.storeId;
     }
 
-    // Nothing client-side reads waitlist; the admin panel uses the Admin SDK.
+    // Nothing client-side reads waitlist — the admin panel uses the Admin SDK.
+    // No writer was found in this repo either, so create is left open in shape
+    // (an external landing-page form may still post here) and guarded only on
+    // volume, to stop it being used to burn the Spark plan's daily write quota.
     match /waitlist/{id} {
-      allow create: if true;
+      allow create: if request.resource.data.keys().size() <= 12
+                    && request.resource.data.get('email', '').size() <= 320
+                    && request.resource.data.get('name', '').size() <= 200;
       allow read: if false;
     }
 
@@ -158,6 +324,48 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.storeId == request.auth.uid;
       allow read: if request.auth != null && request.auth.uid == resource.data.storeId;
+    }
+
+    // ------------------------------------------------------------------
+    // Server-only collections (Admin SDK). Listed explicitly rather than
+    // relying on default-deny, so their absence is never read as an oversight.
+    // ------------------------------------------------------------------
+
+    // OAuth CSRF nonces (google-ads-auth.js / google-ads-callback.js).
+    match /oauthStates/{state} {
+      allow read, write: if false;
+    }
+
+    // Rate-limit counters (_lib/rate-limit.js).
+    match /rateLimits/{bucket} {
+      allow read, write: if false;
+    }
+
+    // One-signup-per-user referral attribution (referral-signup.js).
+    match /referralAttributions/{uid} {
+      allow read, write: if false;
+    }
+
+    // Payout requests — hold full bank account numbers. Admin SDK only.
+    match /withdrawal_requests/{requestId} {
+      allow read, write: if false;
+    }
+
+    match /referralRewards/{rewardId} {
+      allow read, write: if false;
+    }
+
+    // Abuse reports, feature flags, cached bank list — Admin SDK only.
+    match /storeReports/{reportId} {
+      allow read, write: if false;
+    }
+
+    match /featureFlags/{flagId} {
+      allow read, write: if false;
+    }
+
+    match /cache/{docId} {
+      allow read, write: if false;
     }
   }
 }

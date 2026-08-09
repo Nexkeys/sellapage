@@ -13,6 +13,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 
 const GOOGLE_ADS_DOC = 'googleAds'
 const REFERRAL_BANK_DOC = 'referralBank'
+const CONTACT_DOC = 'contact'
 
 function privateDoc(db, storeId, docId) {
   return db.collection('stores').doc(storeId).collection('private').doc(docId)
@@ -22,6 +23,57 @@ export function maskAccountNumber(accountNumber) {
   const value = String(accountNumber || '')
   if (value.length < 4) return ''
   return '******' + value.slice(-4)
+}
+
+// ------------------------------------------------------------------- Contact
+// GROUNDWORK for the vendor-PII relocation (security review H-02). NOT YET
+// WIRED — see the migration note below before using these.
+//
+// stores/{storeId} is world-readable AND listable: getStoreBySlug()
+// (src/firebase/products.js:270) and getActiveStores() (:321) are collection
+// queries every public storefront depends on, so `list` cannot be denied in
+// firestore.rules. That means anyone can page the whole collection and harvest
+// every vendor's email, phone, whatsappNumber, address and rcNumber. Because
+// the rules layer cannot fix it, the only real fix is moving those fields off
+// the public document — which is what these helpers are for.
+//
+// MIGRATION SEQUENCE (do not collapse into one deploy):
+//   1. Write to both: call setStoreContact() alongside the existing public
+//      write. Nothing breaks; both sources agree.
+//   2. Switch readers: server handlers use getStoreContact(); any client code
+//      reading store.email/phone/etc. moves to an authenticated endpoint.
+//      Find them with:
+//        grep -rn "store\.\(email\|phone\|whatsappNumber\|address\|rcNumber\)" src/
+//   3. Delete the public copies with a sweep like scripts/sweep-public-secrets.js.
+//
+// Note step 2 is the real work: signup (src/firebase/auth.js:23) and settings
+// updates write these fields from the browser, and clients cannot write to
+// private/* (rules deny it), so those writes need a server endpoint first.
+
+/** Vendor contact + KYC details. Server-side callers only. */
+export async function getStoreContact(db, storeId) {
+  const snap = await privateDoc(db, storeId, CONTACT_DOC).get()
+  if (snap.exists) return snap.data()
+
+  // Fallback to the public doc while the migration is incomplete, so callers
+  // switched to this helper keep working for un-migrated stores.
+  const storeSnap = await db.collection('stores').doc(storeId).get()
+  const s = storeSnap.exists ? storeSnap.data() : {}
+  return {
+    email: s.email || '',
+    phone: s.phone || '',
+    whatsappNumber: s.whatsappNumber || '',
+    address: s.address || '',
+    rcNumber: s.rcNumber || '',
+  }
+}
+
+/** Writes contact details privately. Returns nothing to put on the public doc. */
+export async function setStoreContact(db, storeId, { email, phone, whatsappNumber, address, rcNumber }) {
+  await privateDoc(db, storeId, CONTACT_DOC).set(
+    { email, phone, whatsappNumber, address, rcNumber, updatedAt: new Date() },
+    { merge: true },
+  )
 }
 
 // ---------------------------------------------------------------- Google Ads

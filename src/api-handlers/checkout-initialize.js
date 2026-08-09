@@ -1,6 +1,7 @@
 //sellapage/api/checkout-initialize.js/
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -26,6 +27,11 @@ export default async function handler(req, res) {
 
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    // Free-tier protection: on Spark, quota exhaustion is an outage, not a bill.
+    if (!memoryRateLimit('checkout-initialize', clientKey(req), 20, 60000)) {
+      return tooManyRequests(res)
     }
 
     let body;
@@ -144,17 +150,142 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Store has no email address on file" });
     }
 
-    const subtotal =
-      kind === "product"
-        ? cartItems.reduce(
-            (sum, item) => sum + Number(item.price) * Number(item.quantity),
-            0,
-          )
-        : Number(servicePrice);
+    // ------------------------------------------------------------------
+    // AUTHORITATIVE PRICING — every figure below is read from Firestore.
+    //
+    // This block previously computed the charge from `item.price`,
+    // `servicePrice`, `deliveryFee` and `discountAmount` as supplied in the
+    // request body. Since the body is fully attacker-controlled, anyone could
+    // buy any product for ₦1 (the Math.max floor) and the resulting Paystack
+    // webhook would be genuinely signed — indistinguishable from a real sale
+    // to the vendor. Client values are now used only to identify WHAT is being
+    // bought; never HOW MUCH it costs.
+    // ------------------------------------------------------------------
+    let subtotal = 0;
+    const verifiedCartItems = [];
+
+    if (kind === "product") {
+      const itemRefs = cartItems.map((item) =>
+        db
+          .collection("stores")
+          .doc(storeId)
+          .collection("products")
+          .doc(String(item?.id || item?.productId || "")),
+      );
+
+      let itemSnaps;
+      try {
+        itemSnaps = await db.getAll(...itemRefs);
+      } catch {
+        return res.status(400).json({ error: "Could not verify cart items" });
+      }
+
+      for (let i = 0; i < cartItems.length; i++) {
+        const snap = itemSnaps[i];
+        if (!snap || !snap.exists) {
+          return res.status(400).json({
+            error: "item_unavailable",
+            message: "One of the items in your cart is no longer available. Please refresh and try again.",
+          });
+        }
+
+        const product = snap.data() || {};
+        const quantity = Number(cartItems[i]?.quantity);
+        if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 1000) {
+          return res.status(400).json({ error: "Invalid quantity" });
+        }
+
+        const unitPrice = Number(product.price);
+        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+          return res.status(500).json({ error: "A product in your cart has invalid pricing" });
+        }
+
+        subtotal += unitPrice * quantity;
+
+        // Rebuild the line item from server data so the order record and the
+        // vendor's email show true prices, not whatever the client claimed.
+        verifiedCartItems.push({
+          ...cartItems[i],
+          id: snap.id,
+          name: product.name || cartItems[i]?.name || "",
+          price: unitPrice,
+          quantity,
+        });
+      }
+    } else {
+      const serviceSnap = await db
+        .collection("stores")
+        .doc(storeId)
+        .collection("services")
+        .doc(String(serviceId))
+        .get();
+
+      if (!serviceSnap.exists) {
+        return res.status(400).json({
+          error: "service_unavailable",
+          message: "That service is no longer available. Please refresh and try again.",
+        });
+      }
+
+      subtotal = Number(serviceSnap.data()?.price);
+      if (!Number.isFinite(subtotal) || subtotal < 0) {
+        return res.status(500).json({ error: "That service has invalid pricing" });
+      }
+    }
+
+    // Delivery fee must match one of the vendor's configured zones (an array on
+    // the store doc, managed in DeliveryTab.jsx) rather than being trusted.
+    let verifiedDeliveryFee = 0;
+    if (kind === "product") {
+      const zones = Array.isArray(store.deliveryZones) ? store.deliveryZones : [];
+      if (zones.length > 0) {
+        const match = zones.find((z) => Number(z?.price) === parsedDeliveryFee);
+        if (!match) {
+          return res.status(400).json({
+            error: "invalid_delivery_fee",
+            message: "Delivery option is no longer valid. Please reselect your delivery area.",
+          });
+        }
+        verifiedDeliveryFee = Number(match.price) || 0;
+      }
+    }
+
+    // Re-validate the promo code server-side and recompute the discount.
+    // `discountAmount` from the body is ignored entirely — validate-discount.js
+    // was advisory only, so a client could previously claim any discount.
+    let parsedDiscountAmount = 0;
+    if (promoCode) {
+      const discountSnap = await db
+        .collection("stores")
+        .doc(storeId)
+        .collection("discounts")
+        .where("code", "==", String(promoCode).trim().toUpperCase())
+        .where("isActive", "==", true)
+        .limit(1)
+        .get();
+
+      if (!discountSnap.empty) {
+        const d = discountSnap.docs[0].data() || {};
+        const expired =
+          d.expiryDate && typeof d.expiryDate.toMillis === "function"
+            ? d.expiryDate.toMillis() < Date.now()
+            : false;
+        const exhausted =
+          d.usageLimit != null && Number(d.usageCount || 0) >= Number(d.usageLimit);
+
+        if (!expired && !exhausted) {
+          const raw =
+            d.type === "percentage"
+              ? Math.floor(subtotal * (Number(d.value) / 100))
+              : Number(d.value);
+          parsedDiscountAmount = Math.max(0, Math.min(Number(raw) || 0, subtotal));
+        }
+      }
+    }
+
     const processingFee = calcProcessingFee(subtotal);
-    const parsedDiscountAmount = Number(discountAmount) || 0;
     const grandTotal = Math.max(
-      subtotal + parsedDeliveryFee + processingFee - parsedDiscountAmount,
+      subtotal + verifiedDeliveryFee + processingFee - parsedDiscountAmount,
       1,
     );
     const amountKobo = Math.round(grandTotal * 100);
@@ -188,8 +319,11 @@ export default async function handler(req, res) {
               orderType: kind === "booking" ? "booking" : "checkout",
               ...(kind === "product"
                 ? {
-                    cartItems: JSON.stringify(cartItems),
-                    deliveryFee: parsedDeliveryFee,
+                    // Server-verified line items and fee — the webhook builds
+                    // the order record from this metadata, so it must not carry
+                    // client-claimed prices.
+                    cartItems: JSON.stringify(verifiedCartItems),
+                    deliveryFee: verifiedDeliveryFee,
                     deliveryAddress: JSON.stringify(deliveryAddress),
                     notes: notes || "",
                   }
@@ -198,7 +332,9 @@ export default async function handler(req, res) {
                     bookingTime,
                     serviceId,
                     serviceName: serviceName.trim(),
-                    servicePrice: Number(servicePrice),
+                    // Server-verified: read from stores/{id}/services/{serviceId},
+                    // not from the request body.
+                    servicePrice: subtotal,
                     locationType: locationType || "",
                     locationPref: locationPref || "",
                     customerNotes: customerNotes || "",

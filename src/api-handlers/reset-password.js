@@ -2,6 +2,8 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { sendEmail } from './_lib/send-email.js'
+import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
+import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -14,7 +16,7 @@ const auth = getAuth()
 export default async function handler(req, res) {
   try {
     // Standardize CORS headers for Vercel execution context
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    applyCorsOrigin(req, res);
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
 
@@ -24,6 +26,11 @@ export default async function handler(req, res) {
 
     if (req.method !== 'POST') {
       return res.status(405).send('Method Not Allowed')
+    }
+
+    // Free-tier protection: on Spark, quota exhaustion is an outage, not a bill.
+    if (!memoryRateLimit('reset-password', clientKey(req), 5, 3600000)) {
+      return tooManyRequests(res)
     }
 
     let body

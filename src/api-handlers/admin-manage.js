@@ -1,19 +1,23 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
+import { verifyAdmin } from './_lib/verify-admin.js'
+import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 const VALID_ROLES = ['super_admin', 'finance', 'support', 'operations', 'marketing']
 
 export default async function handler(req, res) {
   try {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
+    applyCorsOrigin(req, res)
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     if (req.method === 'OPTIONS') return res.status(204).end()
     if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' })
 
-    const adminToken = req.headers['x-admin-token']
-    if (!process.env.ADMIN_SECRET_TOKEN) return res.status(403).json({ error: 'Missing ADMIN_SECRET_TOKEN' })
-    if (!adminToken) return res.status(403).json({ error: 'Missing x-admin-token header' })
-    if (adminToken !== process.env.ADMIN_SECRET_TOKEN) return res.status(403).json({ error: 'Token mismatch' })
+    // This endpoint creates admin accounts and changes roles — the highest
+    // privilege in the system. Restricted to super_admin, and the previous
+    // distinct error messages ("Missing header" / "Token mismatch") are
+    // collapsed into one generic response so it can't be used as an oracle.
+    const admin = await verifyAdmin(req, 'admins')
+    if (!admin) return res.status(403).json({ error: 'Forbidden' })
 
     const db = getAdminDb()
     const action = (req.query.action || 'list')
@@ -110,7 +114,10 @@ export default async function handler(req, res) {
         if (authErr.code === 'auth/email-already-exists') {
           return res.status(409).json({ error: 'An account with this email already exists.' })
         }
-        return res.status(500).json({ error: `Failed to create user: ${authErr.message}` })
+        // Don't echo the raw Firebase error to the client — it leaks internal
+        // detail. Logged server-side instead.
+        console.error('[admin-manage] createUser failed:', authErr.code, authErr.message)
+        return res.status(500).json({ error: 'Failed to create user. Please try again.' })
       }
 
       const uid = userRecord.uid

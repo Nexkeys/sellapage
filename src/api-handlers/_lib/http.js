@@ -4,6 +4,35 @@ export function setCorsHeaders(res, headers = {}) {
   }
 }
 
+// Origins allowed to call privileged endpoints. Public storefront reads
+// (jobs-public, blog-public, platform-reviews-public, sitemap) deliberately
+// keep `Access-Control-Allow-Origin: *` because vendors serve stores from their
+// own custom domains — but admin, payment and account endpoints should not be
+// scriptable from arbitrary websites.
+const ALLOWED_ORIGINS = new Set([
+  'https://sellapage.com.ng',
+  'https://www.sellapage.com.ng',
+  ...(process.env.NODE_ENV !== 'production'
+    ? ['http://localhost:5173', 'http://localhost:3000']
+    : []),
+]);
+
+/**
+ * Reflects the request Origin only when it is explicitly allowed, instead of
+ * echoing `*`. Note this app authenticates with bearer tokens rather than
+ * cookies, so `*` was not classic CSRF — but it did let any site script the
+ * admin API from a visitor's browser, masking the true source of abuse.
+ */
+export function applyCors(req, res, { methods = 'GET,POST,OPTIONS' } = {}) {
+  const origin = req.headers?.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', methods);
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
 export function sendJson(res, statusCode, body, headers = {}) {
   setCorsHeaders(res, headers);
   return res.status(statusCode).json(body);

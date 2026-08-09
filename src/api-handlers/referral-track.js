@@ -1,8 +1,14 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
+import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // Free-tier protection: on Spark, quota exhaustion is an outage, not a bill.
+  if (!memoryRateLimit('referral-track', clientKey(req), 10, 60000)) {
+    return tooManyRequests(res)
   }
 
   const { code } = req.body

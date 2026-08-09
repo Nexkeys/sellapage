@@ -1,6 +1,7 @@
 //src/api-handlers/validate-discount.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
+import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -23,6 +24,11 @@ export default async function handler(req, res) {
 
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    // Free-tier protection: on Spark, quota exhaustion is an outage, not a bill.
+    if (!memoryRateLimit('validate-discount', clientKey(req), 20, 60000)) {
+      return tooManyRequests(res)
     }
 
     let body

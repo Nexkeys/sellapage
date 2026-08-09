@@ -1,13 +1,11 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
 import { FieldValue } from 'firebase-admin/firestore'
+import { verifyAdmin } from './_lib/verify-admin.js'
 
 export default async function handler(req, res) {
-  const adminToken = req.headers['x-admin-token']
-
-  if (!adminToken || adminToken !== process.env.ADMIN_SECRET_TOKEN) {
-    return res.status(403).json({ error: 'Forbidden' })
-  }
+  const admin = await verifyAdmin(req, 'referrals')
+  if (!admin) return res.status(403).json({ error: 'Forbidden' })
 
   const action = req.query.action || 'list'
 
@@ -268,52 +266,68 @@ export default async function handler(req, res) {
     if (action === 'process-withdrawal' && req.method === 'POST') {
       let body = {}
       try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body; } catch {}
-      const { withdrawalId, status, note, adminUid } = body
+      // `adminUid` is deliberately NOT read from the body any more. It used to
+      // be self-asserted, so any admin could attribute an approval to a
+      // colleague — and with the old shared token there was no way to tell who
+      // really acted. It now comes from the verified identity.
+      const { withdrawalId, status, note } = body
       if (!withdrawalId || !['completed', 'rejected'].includes(status)) {
         return res.status(400).json({ error: 'Invalid parameters' })
       }
 
       const withdrawalRef = db.collection('withdrawal_requests').doc(withdrawalId)
-      const withdrawalSnap = await withdrawalRef.get()
 
-      if (!withdrawalSnap.exists) {
-        return res.status(404).json({ error: 'Withdrawal not found' })
-      }
+      // Transactional: the old code read the withdrawal, checked its status,
+      // then committed a batch — a check-then-act window in which two admins
+      // clicking Approve at once could both pass the `pending` guard and both
+      // refund the balance on rejection.
+      let withdrawalData
+      try {
+        withdrawalData = await db.runTransaction(async (tx) => {
+          const snap = await tx.get(withdrawalRef)
+          if (!snap.exists) throw new Error('not_found')
 
-      const withdrawalData = withdrawalSnap.data()
-      if (withdrawalData.status !== 'pending') {
-        return res.status(400).json({ error: 'Withdrawal already processed' })
-      }
+          const data = snap.data()
+          if (data.status !== 'pending') throw new Error('already_processed')
 
-      const updateFields = {
-        status,
-        processedAt: new Date(),
-        approvedBy: adminUid || 'admin',
-        approvedAt: new Date(),
-        note: note || '',
-      }
+          const updateFields = {
+            status,
+            processedAt: new Date(),
+            approvedBy: admin.uid,
+            approvedByRole: admin.role,
+            approvedAt: new Date(),
+            note: note || '',
+          }
+          if (status === 'completed') {
+            updateFields.paidAt = new Date()
+          }
 
-      if (status === 'completed') {
-        updateFields.paidAt = new Date()
-      }
+          tx.update(withdrawalRef, updateFields)
 
-      const batch = db.batch()
-      batch.update(withdrawalRef, updateFields)
+          if (status === 'rejected') {
+            // Reverse the request-time balance move: the vendor handler did
+            // referralAvailable -= amount and referralWithdrawn += amount when the
+            // request was created, so a rejection must restore BOTH (increment, not
+            // overwrite — the old code hard-set referralAvailable = amount, which
+            // clobbered any other available balance and never restored referralWithdrawn).
+            const storeRef = db.collection('stores').doc(data.userId)
+            tx.update(storeRef, {
+              referralAvailable: FieldValue.increment(data.amount || 0),
+              referralWithdrawn: FieldValue.increment(-(data.amount || 0)),
+            })
+          }
 
-      if (status === 'rejected') {
-        // Reverse the request-time balance move: the vendor handler did
-        // referralAvailable -= amount and referralWithdrawn += amount when the
-        // request was created, so a rejection must restore BOTH (increment, not
-        // overwrite — the old code hard-set referralAvailable = amount, which
-        // clobbered any other available balance and never restored referralWithdrawn).
-        const storeRef = db.collection('stores').doc(withdrawalData.userId)
-        batch.update(storeRef, {
-          referralAvailable: FieldValue.increment(withdrawalData.amount || 0),
-          referralWithdrawn: FieldValue.increment(-(withdrawalData.amount || 0)),
+          return data
         })
+      } catch (txErr) {
+        if (txErr.message === 'not_found') {
+          return res.status(404).json({ error: 'Withdrawal not found' })
+        }
+        if (txErr.message === 'already_processed') {
+          return res.status(400).json({ error: 'Withdrawal already processed' })
+        }
+        throw txErr
       }
-
-      await batch.commit()
 
       // Notify the vendor on BOTH outcomes (previously only 'completed' emailed).
       let emailSent = false

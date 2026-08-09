@@ -1,6 +1,8 @@
 // sellapage/api/admin-health.js
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { verifyAdmin } from './_lib/verify-admin.js';
 import { getFirestore } from 'firebase-admin/firestore';
+import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 
 if (!getApps().length) {
@@ -14,7 +16,7 @@ const adminDb = getFirestore();
 export default async function handler(req, res) {
   try {
     // Standardize CORS headers for Vercel execution context
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    applyCorsOrigin(req, res);
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 
@@ -27,23 +29,12 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // Token gate — validates secret from environment against x-admin-token header
-    const adminToken = req.headers['x-admin-token'] || req.headers['X-Admin-Token'];
-
-    // Check 1: If process.env.ADMIN_SECRET_TOKEN is falsy/missing
-    if (!process.env.ADMIN_SECRET_TOKEN) {
-      return res.status(403).json({ error: 'BACKEND_ENV_MISSING: ADMIN_SECRET_TOKEN is not defined in Vercel environment.' });
-    }
-
-    // Check 2: If the incoming header token is missing
-    if (!adminToken) {
-      return res.status(403).json({ error: 'FRONTEND_HEADER_MISSING: The x-admin-token header did not reach the server or is empty.' });
-    }
-
-    // Check 3: If the tokens do not match
-    if (adminToken !== process.env.ADMIN_SECRET_TOKEN) {
-      return res.status(403).json({ error: 'TOKEN_MISMATCH: Frontend sent a token, but it does not match the backend token.' });
-    }
+    // Identity gate. The previous three-branch version returned distinct
+    // diagnostics (BACKEND_ENV_MISSING / FRONTEND_HEADER_MISSING /
+    // TOKEN_MISMATCH) which were useful while debugging but told an attacker
+    // exactly how far their guess got. One generic response now.
+    const admin = await verifyAdmin(req, 'health');
+    if (!admin) return res.status(403).json({ error: 'Forbidden' });
 
     const queryParams = req.query || {};
     const action = queryParams.action || 'health';

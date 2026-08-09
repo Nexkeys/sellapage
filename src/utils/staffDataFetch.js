@@ -27,7 +27,13 @@ export async function fetchStoreCollectionAsStaff(type, storeId) {
   const res = await fetch(`/api/store-data?type=${encodeURIComponent(type)}&storeId=${encodeURIComponent(storeId)}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
-  if (!res.ok) return []
+  if (!res.ok) {
+    // Never swallow this silently — an empty list here is indistinguishable
+    // from "this store has no products", which is exactly how the earlier
+    // routing bug hid itself.
+    console.error(`[staffDataFetch] ${type} fetch failed for store ${storeId}: ${res.status}`)
+    return []
+  }
   const data = await res.json()
   return (data.items || []).map(hydrateTimestamps)
 }
@@ -46,12 +52,37 @@ export async function fetchStoreDocAsStaff(type, storeId) {
   return data.doc ? hydrateTimestamps(data.doc) : null
 }
 
-// True when the logged-in identity is not the store owner (a different
-// Firebase Auth uid than the target storeId) — the signal every read
-// function uses to decide whether to go through the server proxy instead
-// of a direct (rules-blocked) Firestore read.
+// The store this user is a CONFIRMED active staff member of, set by useAuth
+// once /api/staff-identity has verified the membership server-side. Null for
+// owners, logged-out visitors, and any signed-in user who isn't staff.
+let activeStaffStoreId = null
+
+export function setActiveStaffStore(storeId) {
+  activeStaffStoreId = storeId || null
+}
+
+export function clearActiveStaffStore() {
+  activeStaffStoreId = null
+}
+
+// True ONLY when the current user is a verified staff member of THIS store —
+// the signal every read/write function uses to route through the server proxy
+// instead of a direct Firestore call.
+//
+// This deliberately does NOT mean "logged in and not the owner". It did once,
+// and that broke every public storefront for signed-in visitors: any logged-in
+// user viewing someone else's store was routed to /api/store-data, denied
+// (correctly — they're not staff), and handed an empty list, so the store
+// rendered as "no listed items yet". Logged-out visitors were unaffected,
+// which made it look like a browser/cache quirk. Keep this scoped to a
+// confirmed membership.
 export function isActingAsStaffFor(storeId) {
-  return !!auth.currentUser && auth.currentUser.uid !== storeId
+  return (
+    !!auth.currentUser &&
+    !!storeId &&
+    activeStaffStoreId === storeId &&
+    auth.currentUser.uid !== storeId
+  )
 }
 
 // Write counterpart. Throws on failure so callers surface the same errors

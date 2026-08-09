@@ -49,8 +49,17 @@ export default function Admin() {
   const [roleLoading, setRoleLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('health');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const token = import.meta.env.VITE_ADMIN_SECRET_TOKEN || '';
-  const H = { 'x-admin-token': token };
+  // Admin endpoints authenticate the *person* now — a Firebase ID token plus an
+  // active admins/{uid} document, checked server-side by _lib/verify-admin.js.
+  // This replaces VITE_ADMIN_SECRET_TOKEN, which Vite inlined into the public
+  // JS bundle, handing every visitor the platform's master admin credential.
+  //
+  // Called per request rather than cached: getIdToken() transparently refreshes
+  // a token that is near its one-hour expiry, so long admin sessions keep working.
+  const H = useCallback(async () => {
+    const t = await user?.getIdToken();
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  }, [user]);
 
   const [healthData, setHealthData] = useState(null);
   const [healthLoading, setHealthLoading] = useState(true);
@@ -153,7 +162,7 @@ export default function Admin() {
   const fetchHealth = useCallback(async () => {
     setHealthLoading(true); setHealthError('');
     try {
-      const r = await fetch('/api/admin-health?action=health', { headers: H });
+      const r = await fetch('/api/admin-health?action=health', { headers: await H() });
       if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `${r.status}`); }
       setHealthData(await r.json()); setCountdown(30);
     } catch (e) { setHealthError(e.message); } finally { setHealthLoading(false); }
@@ -162,7 +171,7 @@ export default function Admin() {
   const fetchDirectory = useCallback(async (p = 1, q = '') => {
     setDirLoading(true); setDirError('');
     try {
-      const r = await fetch(`/api/admin-health?action=directory&page=${p}&limit=10&search=${encodeURIComponent(q)}&payoutFilter=${payoutFilter}`, { headers: H });
+      const r = await fetch(`/api/admin-health?action=directory&page=${p}&limit=10&search=${encodeURIComponent(q)}&payoutFilter=${payoutFilter}`, { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setDirData(await r.json());
     } catch { setDirError('Failed to load merchants.'); } finally { setDirLoading(false); }
@@ -172,8 +181,8 @@ export default function Admin() {
     setRefLoading(true); setRefError('');
     try {
       const [s, r] = await Promise.all([
-        fetch('/api/admin-referrals?action=stats', { headers: H }),
-        fetch(`/api/admin-referrals?action=referrers&page=${p}&limit=10`, { headers: H }),
+        fetch('/api/admin-referrals?action=stats', { headers: await H() }),
+        fetch(`/api/admin-referrals?action=referrers&page=${p}&limit=10`, { headers: await H() }),
       ]);
       if (!s.ok || !r.ok) throw new Error('Failed');
       setRefStats((await s.json()).stats);
@@ -186,7 +195,7 @@ export default function Admin() {
   const fetchWithdrawals = useCallback(async (status = 'pending') => {
     setWdLoading(true); setWdError('');
     try {
-      const r = await fetch(`/api/admin-referrals?action=withdrawals&status=${status}&limit=50`, { headers: H });
+      const r = await fetch(`/api/admin-referrals?action=withdrawals&status=${status}&limit=50`, { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setWithdrawals((await r.json()).withdrawals || []);
     } catch { setWdError('Failed.'); } finally { setWdLoading(false); }
@@ -196,8 +205,8 @@ export default function Admin() {
     setProcessingWd(id);
     try {
       await fetch('/api/admin-referrals?action=process-withdrawal', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
-        body: JSON.stringify({ withdrawalId: id, status, note, adminUid: user?.uid }),
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
+        body: JSON.stringify({ withdrawalId: id, status, note }),
       });
       fetchWithdrawals(wdStatusFilter);
     } finally { setProcessingWd(null); }
@@ -206,7 +215,7 @@ export default function Admin() {
   const fetchAdmins = useCallback(async () => {
     setAdminLoading(true); setAdminError('');
     try {
-      const r = await fetch('/api/admin-manage?action=list', { headers: H });
+      const r = await fetch('/api/admin-manage?action=list', { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setAdminList((await r.json()).admins || []);
     } catch { setAdminError('Failed.'); } finally { setAdminLoading(false); }
@@ -217,7 +226,7 @@ export default function Admin() {
     setCreatingAdmin(true);
     try {
       const r = await fetch('/api/admin-manage?action=create-user', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
         body: JSON.stringify({ email: newAdminEmail.trim(), password: newAdminPass, role: newAdminRole, displayName: newAdminName }),
       });
       const data = await r.json();
@@ -230,7 +239,7 @@ export default function Admin() {
   const fetchCac = useCallback(async () => {
     setCacLoading(true); setCacError('');
     try {
-      const r = await fetch(`/api/admin-cac?action=list&page=${cacPage}&limit=20&status=${cacStatusFilter}`, { headers: H });
+      const r = await fetch(`/api/admin-cac?action=list&page=${cacPage}&limit=20&status=${cacStatusFilter}`, { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setCacData(await r.json());
     } catch { setCacError('Failed.'); } finally { setCacLoading(false); }
@@ -239,7 +248,7 @@ export default function Admin() {
   const fetchDomains = useCallback(async () => {
     setDomainLoading(true); setDomainError('');
     try {
-      const r = await fetch(`/api/admin-domains?action=list&page=${domainPage}&limit=20`, { headers: H });
+      const r = await fetch(`/api/admin-domains?action=list&page=${domainPage}&limit=20`, { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setDomainData(await r.json());
     } catch { setDomainError('Failed.'); } finally { setDomainLoading(false); }
@@ -248,7 +257,7 @@ export default function Admin() {
   const fetchAnnouncements = useCallback(async () => {
     setAnnLoading(true); setAnnError('');
     try {
-      const r = await fetch('/api/admin-announcements?action=list', { headers: H });
+      const r = await fetch('/api/admin-announcements?action=list', { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setAnnouncements((await r.json()).announcements || []);
     } catch { setAnnError('Failed.'); } finally { setAnnLoading(false); }
@@ -258,7 +267,7 @@ export default function Admin() {
     if (!newAnn.title.trim() || !newAnn.message.trim()) return;
     try {
       await fetch('/api/admin-announcements?action=create', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
         body: JSON.stringify(newAnn),
       });
       setNewAnn({ title: '', message: '', type: 'info' });
@@ -269,7 +278,7 @@ export default function Admin() {
   const toggleAnnouncement = useCallback(async (id, currentActive) => {
     try {
       await fetch('/api/admin-announcements?action=update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
         body: JSON.stringify({ announcementId: id, active: !currentActive }),
       });
       fetchAnnouncements();
@@ -280,7 +289,7 @@ export default function Admin() {
     if (!confirm('Delete this announcement?')) return;
     try {
       await fetch('/api/admin-announcements?action=delete', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
         body: JSON.stringify({ announcementId: id }),
       });
       fetchAnnouncements();
@@ -290,7 +299,7 @@ export default function Admin() {
   const fetchTickets = useCallback(async () => {
     setTicketLoading(true); setTicketError('');
     try {
-      const r = await fetch(`/api/admin-tickets?action=list&page=${ticketPage}&limit=20&status=${ticketStatusFilter}`, { headers: H });
+      const r = await fetch(`/api/admin-tickets?action=list&page=${ticketPage}&limit=20&status=${ticketStatusFilter}`, { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       const d = await r.json();
       setTickets(d.tickets || []);
@@ -301,7 +310,7 @@ export default function Admin() {
   const updateTicket = useCallback(async (id, status) => {
     try {
       await fetch('/api/admin-tickets?action=update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
         body: JSON.stringify({ ticketId: id, status }),
       });
       fetchTickets();
@@ -317,7 +326,7 @@ export default function Admin() {
     const load = async (label, url) => {
       let res;
       try {
-        res = await fetch(url, { headers: H });
+        res = await fetch(url, { headers: await H() });
       } catch (err) {
         throw new Error(`${label}: network error — ${err.message}`);
       }
@@ -352,8 +361,8 @@ export default function Admin() {
     setRevenueLoading(true); setRevenueError('');
     try {
       const [p, sr] = await Promise.all([
-        fetch('/api/admin-revenue?action=platform', { headers: H }),
-        fetch('/api/admin-revenue?action=store-revenue&limit=20', { headers: H }),
+        fetch('/api/admin-revenue?action=platform', { headers: await H() }),
+        fetch('/api/admin-revenue?action=store-revenue&limit=20', { headers: await H() }),
       ]);
       if (!p.ok) throw new Error('Failed');
       setRevenueData((await p.json()).platform);
@@ -364,7 +373,7 @@ export default function Admin() {
   const fetchSella = useCallback(async () => {
     setSellaLoading(true); setSellaError('');
     try {
-      const r = await fetch('/api/admin-sella-ai?action=usage', { headers: H });
+      const r = await fetch('/api/admin-sella-ai?action=usage', { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setSellaData(await r.json());
     } catch { setSellaError('Failed to load Sella AI usage.'); } finally { setSellaLoading(false); }
@@ -373,7 +382,7 @@ export default function Admin() {
   const fetchReports = useCallback(async (p = 1, status = 'all', offense = 'all') => {
     setReportsLoading(true); setReportsError('');
     try {
-      const r = await fetch(`/api/admin-reports?action=list&page=${p}&limit=20&status=${status}&offense=${offense}`, { headers: H });
+      const r = await fetch(`/api/admin-reports?action=list&page=${p}&limit=20&status=${status}&offense=${offense}`, { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setReportsData(await r.json());
     } catch { setReportsError('Failed to load reports.'); } finally { setReportsLoading(false); }
@@ -383,7 +392,7 @@ export default function Admin() {
     setUpdatingReport(reportId);
     try {
       await fetch('/api/admin-reports?action=update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
         body: JSON.stringify({ reportId, status, adminNotes }),
       });
       fetchReports(reportsPage, reportsStatusFilter, reportsOffenseFilter);
@@ -394,7 +403,7 @@ export default function Admin() {
   const fetchJobs = useCallback(async (status = 'pending') => {
     setJobsLoading(true); setJobsError('');
     try {
-      const r = await fetch(`/api/admin-jobs?action=list&status=${status}`, { headers: H });
+      const r = await fetch(`/api/admin-jobs?action=list&status=${status}`, { headers: await H() });
       if (!r.ok) throw new Error('Failed');
       setJobsData(await r.json());
     } catch { setJobsError('Failed to load job listings.'); } finally { setJobsLoading(false); }
@@ -404,8 +413,8 @@ export default function Admin() {
     setUpdatingJob(jobId);
     try {
       await fetch('/api/admin-jobs?action=update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...H },
-        body: JSON.stringify({ jobId, status, rejectionReason, adminUid: user?.uid }),
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
+        body: JSON.stringify({ jobId, status, rejectionReason }),
       });
       fetchJobs(jobsStatusFilter);
       setExpandedJob(null); setRejectingJob(null); setRejectReason('');
@@ -461,7 +470,7 @@ export default function Admin() {
   const cp = (t, id) => { navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
   const tpv = async (storeId, verified) => {
     setApprovingId(storeId);
-    try { await fetch('/api/admin-health?action=verify_payout', { method: 'POST', headers: { 'Content-Type': 'application/json', ...H }, body: JSON.stringify({ storeId, verified }) }); fetchDirectory(page, search); } finally { setApprovingId(null); }
+    try { await fetch('/api/admin-health?action=verify_payout', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) }, body: JSON.stringify({ storeId, verified }) }); fetchDirectory(page, search); } finally { setApprovingId(null); }
   };
 
   if (roleLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-400" /></div>;
@@ -827,10 +836,10 @@ export default function Admin() {
         </div>}
 
         {/* BLOG */}
-        {activeTab === 'blog' && <BlogAdmin token={token} adminUid={user?.uid} />}
+        {activeTab === 'blog' && <BlogAdmin authHeaders={H} adminUid={user?.uid} />}
 
         {/* REVIEWS */}
-        {activeTab === 'reviews' && <ReviewsAdmin token={token} />}
+        {activeTab === 'reviews' && <ReviewsAdmin authHeaders={H} />}
 
         {/* TEAM */}
         {activeTab === 'admins' && <div className="space-y-4 animate-in fade-in duration-200">

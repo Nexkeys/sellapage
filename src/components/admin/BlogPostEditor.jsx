@@ -20,7 +20,7 @@ const EMPTY_FORM = {
   metaTitle: '', metaDescription: '', authorName: 'Sellapage Team', commentsEnabled: true,
 }
 
-export default function BlogPostEditor({ token, adminUid, postId, onClose, onSaved }) {
+export default function BlogPostEditor({ authHeaders, adminUid, postId, onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [slugTouched, setSlugTouched] = useState(false)
   const [tagInput, setTagInput] = useState('')
@@ -53,11 +53,11 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
   })
 
   const loadCategories = useCallback(async () => {
-    const res = await fetch('/api/blog-admin?action=list-categories', { headers: { 'x-admin-token': token } })
+    const res = await fetch('/api/blog-admin?action=list-categories', { headers: { ...(await authHeaders()) } })
     const data = await res.json().catch(() => ({}))
     setCategories(data.categories || [])
     return data.categories || []
-  }, [token])
+  }, [authHeaders])
 
   useEffect(() => { loadCategories() }, [loadCategories])
 
@@ -69,7 +69,7 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
     try {
       const res = await fetch('/api/blog-admin?action=create-category', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ name }),
       })
       const data = await res.json()
@@ -91,7 +91,7 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
     ;(async () => {
       setLoadingPost(true)
       try {
-        const res = await fetch(`/api/blog-admin?action=get-post&id=${postId}`, { headers: { 'x-admin-token': token } })
+        const res = await fetch(`/api/blog-admin?action=get-post&id=${postId}`, { headers: { ...(await authHeaders()) } })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Failed to load post')
         const p = data.post
@@ -115,7 +115,7 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
       }
     })()
     return () => { cancelled = true }
-  }, [postId, editor, token])
+  }, [postId, editor, authHeaders])
 
   const handleTitleChange = (e) => {
     const title = e.target.value
@@ -213,7 +213,7 @@ export default function BlogPostEditor({ token, adminUid, postId, onClose, onSav
 
       const res = await fetch(`/api/blog-admin?action=${action}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify(payload),
       })
       const data = await res.json()

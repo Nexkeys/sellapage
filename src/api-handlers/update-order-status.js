@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
-import { sendEmail } from './_lib/send-email.js'
+import { sendEmail, escapeHtml } from './_lib/send-email.js'
 import { sendPush } from './_lib/send-push.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
@@ -151,7 +151,7 @@ export default async function handler(req, res) {
               </div>
               <div style="padding: 32px;">
                 <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px 0;">${statusLabel}</h2>
-                <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${customerName}, ${statusMessage}</p>
+                <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${escapeHtml(customerName)}, ${statusMessage}</p>
                 <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
                   <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 12px 0;">Order Summary</h3>
                   <p style="color: #374151; font-size: 14px; margin: 0 0 8px 0;">${itemsText}</p>

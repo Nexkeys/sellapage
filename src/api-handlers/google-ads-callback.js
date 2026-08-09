@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { code, state: storeId, error: authError } = req.query
+  const { code, state, error: authError } = req.query
 
   const appUrl = process.env.APP_URL || 'https://www.sellapage.com.ng'
 
@@ -26,8 +26,31 @@ export default async function handler(req, res) {
     return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent(message)}`)
   }
 
-  if (!code || !storeId) {
+  if (!code || !state) {
     return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent('Missing authorization code. Please try connecting again.')}`)
+  }
+
+  // Consume the nonce atomically. This both authenticates the callback (only
+  // the store that started the flow holds this value) and prevents replay.
+  // `state` used to be the raw storeId, which meant this endpoint would write
+  // an OAuth refresh token to any store an attacker named.
+  let storeId
+  try {
+    storeId = await db.runTransaction(async (tx) => {
+      const ref = db.collection('oauthStates').doc(String(state))
+      const snap = await tx.get(ref)
+      if (!snap.exists) throw new Error('invalid_state')
+
+      const s = snap.data()
+      if (s.consumed || s.provider !== 'google-ads' || (s.expiresAt || 0) < Date.now()) {
+        throw new Error('invalid_state')
+      }
+
+      tx.update(ref, { consumed: true, consumedAt: Date.now() })
+      return s.storeId
+    })
+  } catch {
+    return res.redirect(`${appUrl}/dashboard?tab=google-ads&google-ads=error&message=${encodeURIComponent('This connection link is invalid or has expired. Please try connecting again.')}`)
   }
 
   try {

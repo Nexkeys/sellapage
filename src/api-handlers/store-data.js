@@ -63,10 +63,20 @@ export default async function handler(req, res) {
     if (!collectionName) return res.status(400).json({ error: 'Invalid type' })
 
     const access = await resolveStoreAccess(decoded.uid, storeId, type, false)
-    // A role simply not granted this tab isn't an error worth surfacing — the
-    // nav hides it anyway. Return an empty list so any stray call renders
-    // cleanly instead of throwing.
-    if (!access.allowed) return res.status(200).json({ success: true, items: [] })
+    if (!access.allowed) {
+      // A role simply not granted this tab is expected — the nav hides it
+      // anyway — so return an empty list rather than an error.
+      if (access.reason === 'tab_not_granted' || access.reason === 'read_only') {
+        return res.status(200).json({ success: true, items: [] })
+      }
+      // Anything else (notably not_a_staff_member) means the caller should
+      // never have been routed here at all. Fail LOUDLY: returning an empty
+      // 200 for this case once made a client-side routing bug invisible —
+      // signed-in visitors silently saw every public storefront as empty,
+      // with nothing in the browser console or the Vercel logs to show why.
+      console.warn(`[store-data] denied uid=${decoded.uid} store=${storeId} type=${type} reason=${access.reason}`)
+      return res.status(403).json({ error: 'Forbidden', reason: access.reason })
+    }
 
     const snap = await db.collection('stores').doc(storeId).collection(collectionName).get()
     return res.status(200).json({ success: true, items: snap.docs.map(serializeDoc) })

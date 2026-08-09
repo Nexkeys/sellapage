@@ -8,6 +8,7 @@ import {
   ArrowLeft, Loader2, Clock, BookOpen, Check, Share2, Twitter, Facebook,
   Linkedin, MessageCircle,
 } from 'lucide-react'
+import DOMPurify from 'isomorphic-dompurify'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
@@ -163,7 +164,13 @@ export default function BlogPostPage() {
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5">
-              <div className="blog-content" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+              {/* Defence in depth: blog-admin.js already sanitizes on write, but
+                  posts created before that change are still stored raw, and this
+                  renders on the same origin as vendor/admin Firebase sessions. */}
+              <div
+                className="blog-content"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.contentHtml || '') }}
+              />
             </div>
           </div>
 

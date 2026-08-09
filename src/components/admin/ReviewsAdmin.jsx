@@ -8,10 +8,11 @@ import {
   ChevronLeft, ChevronRight, Sparkles,
 } from 'lucide-react'
 
-async function callReviewsAdmin(action, token, { method = 'GET', body, query = '' } = {}) {
+// `authHeaders`: async fn returning the caller's Bearer ID token — see BlogAdmin.jsx.
+async function callReviewsAdmin(action, authHeaders, { method = 'GET', body, query = '' } = {}) {
   const res = await fetch(`/api/platform-reviews-admin?action=${action}${query}`, {
     method,
-    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: method === 'POST' ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
@@ -25,7 +26,7 @@ const STATUS_STYLES = {
   rejected: 'bg-red-50 text-red-700 border-red-200',
 }
 
-export default function ReviewsAdmin({ token }) {
+export default function ReviewsAdmin({ authHeaders }) {
   const [statusFilter, setStatusFilter] = useState('pending')
   const [page, setPage] = useState(1)
   const [reviews, setReviews] = useState([])
@@ -45,7 +46,7 @@ export default function ReviewsAdmin({ token }) {
     setLoading(true)
     setError('')
     try {
-      const data = await callReviewsAdmin('list', token, {
+      const data = await callReviewsAdmin('list', authHeaders, {
         query: `&status=${statusFilter}&page=${page}&limit=${LIMIT}`,
       })
       setReviews(data.reviews || [])
@@ -56,19 +57,19 @@ export default function ReviewsAdmin({ token }) {
     } finally {
       setLoading(false)
     }
-  }, [token, statusFilter, page])
+  }, [authHeaders, statusFilter, page])
 
   const fetchPromptSetting = useCallback(async () => {
     setPromptLoading(true)
     try {
-      const data = await callReviewsAdmin('get-prompt-settings', token)
+      const data = await callReviewsAdmin('get-prompt-settings', authHeaders)
       setPromptEnabled(!!data.enabled)
     } catch {
       /* non-blocking */
     } finally {
       setPromptLoading(false)
     }
-  }, [token])
+  }, [authHeaders])
 
   useEffect(() => { fetchReviews() }, [fetchReviews])
   useEffect(() => { fetchPromptSetting() }, [fetchPromptSetting])
@@ -78,7 +79,7 @@ export default function ReviewsAdmin({ token }) {
     const next = !promptEnabled
     setPromptSaving(true)
     try {
-      await callReviewsAdmin('set-prompt-settings', token, { method: 'POST', body: { enabled: next } })
+      await callReviewsAdmin('set-prompt-settings', authHeaders, { method: 'POST', body: { enabled: next } })
       setPromptEnabled(next)
     } catch (err) {
       setError(err.message)
@@ -90,7 +91,7 @@ export default function ReviewsAdmin({ token }) {
   const moderate = async (reviewId, status) => {
     setActingId(reviewId)
     try {
-      await callReviewsAdmin('moderate', token, { method: 'POST', body: { reviewId, status } })
+      await callReviewsAdmin('moderate', authHeaders, { method: 'POST', body: { reviewId, status } })
       await fetchReviews()
     } catch (err) {
       setError(err.message)
@@ -102,7 +103,7 @@ export default function ReviewsAdmin({ token }) {
   const toggleFeatured = async (reviewId, featured) => {
     setActingId(reviewId)
     try {
-      await callReviewsAdmin('toggle-featured', token, { method: 'POST', body: { reviewId, featured } })
+      await callReviewsAdmin('toggle-featured', authHeaders, { method: 'POST', body: { reviewId, featured } })
       await fetchReviews()
     } catch (err) {
       setError(err.message)
@@ -115,7 +116,7 @@ export default function ReviewsAdmin({ token }) {
     if (!window.confirm('Delete this review permanently?')) return
     setActingId(reviewId)
     try {
-      await callReviewsAdmin('delete', token, { method: 'POST', body: { reviewId } })
+      await callReviewsAdmin('delete', authHeaders, { method: 'POST', body: { reviewId } })
       await fetchReviews()
     } catch (err) {
       setError(err.message)

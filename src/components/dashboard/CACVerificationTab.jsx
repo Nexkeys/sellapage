@@ -75,17 +75,22 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
     setConfirming(true)
     setError('')
     try {
+      // Saved server-side (verify-cac?action=confirm) rather than by a direct
+      // Firestore write: `cacVerified` is locked in firestore.rules so the badge
+      // can only ever be granted by a real Prembly verification, not by a client.
       const token = await user?.getIdToken()
-      const { getFirestore, doc, updateDoc } = await import('firebase/firestore')
-      const { db } = await import('../../firebase/config.js')
-      await updateDoc(doc(db, 'stores', store.id), {
-        cacVerified: true,
-        cacBusinessName: verifyResult.cacBusinessName,
-        cacRcNumber: verifyResult.rcNumber,
-        cacStatus: verifyResult.cacStatus,
-        cacRegistrationDate: verifyResult.registrationDate || '',
-        cacVerifiedAt: new Date().toISOString(),
+      const res = await fetch('/api/verify-cac?action=confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
       })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to save verification.')
+      }
       setConfirmed(true)
     } catch (err) {
       console.error('[CACVerificationTab] confirm error:', err)

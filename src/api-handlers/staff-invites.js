@@ -5,6 +5,7 @@
 // needing a new Firestore composite index, consistent with this codebase's
 // established counter pattern (referralTotalClicks etc.) and its documented
 // history of production issues from missing composite indexes.
+import crypto from 'crypto'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { FieldValue } from 'firebase-admin/firestore'
 import {
@@ -16,11 +17,17 @@ import {
 
 const RATE_WINDOW_MS = 60 * 60 * 1000
 
+// crypto.randomBytes, not Math.random. Math.random is V8's xorshift128+, whose
+// internal state is recoverable from a handful of consecutive outputs — and
+// redeeming an invite creates a staff account with real access to a store's
+// data, against an unauthenticated endpoint (staff-join.js). Widened from 6 to
+// 8 characters at the same time: 32^8 ≈ 1.1e12 instead of 32^6 ≈ 1.1e9.
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = crypto.randomBytes(8)
   let code = 'ST-'
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(bytes[i] % chars.length)
   }
   return code
 }

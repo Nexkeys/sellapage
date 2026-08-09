@@ -71,7 +71,12 @@ export default async function handler(req, res) {
     .update(rawBody)
     .digest("hex");
 
-  if (signature !== expectedSignature) {
+  // Constant-time comparison. `!==` on strings short-circuits at the first
+  // differing byte, leaking how much of a forged signature was correct.
+  // timingSafeEqual throws on length mismatch, so length is checked first.
+  const sigBuf = Buffer.from(String(signature || ""), "utf8");
+  const expBuf = Buffer.from(expectedSignature, "utf8");
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
     return res.status(401).send("Invalid signature");
   }
 

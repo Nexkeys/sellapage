@@ -8,6 +8,34 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { slugify } from '../utils/slugify.js'
 import { estimateReadTime, getExcerpt } from '../utils/blogHelpers.js'
+import { verifyAdmin } from './_lib/verify-admin.js'
+import DOMPurify from 'isomorphic-dompurify'
+import { applyCors as applyCorsOrigin } from './_lib/http.js'
+
+// Blog HTML is stored raw and rendered with dangerouslySetInnerHTML in
+// BlogPostPage.jsx, so anything persisted here executes in every visitor's
+// browser on the sellapage.com.ng origin — where vendor and admin Firebase
+// sessions live. Sanitizing on write makes the stored value the safe one.
+//
+// The allowlist matches what the TipTap editor can actually produce
+// (@tiptap/starter-kit + extension-image + extension-link). If a post loses
+// formatting after this change, add the missing tag here — never re-allow
+// script/iframe/style or on* handlers.
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: [
+    'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'img', 'hr', 'span',
+    'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'figure', 'figcaption',
+  ],
+  ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target', 'rel', 'class', 'colspan', 'rowspan'],
+  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|\/(?!\/))/i, // no javascript:, no data:
+  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'link'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'style'],
+}
+
+function sanitizeContent(html) {
+  return DOMPurify.sanitize(String(html || ''), SANITIZE_CONFIG)
+}
 
 async function uniqueSlug(db, baseSlug, excludePostId) {
   let candidate = baseSlug || 'post'
@@ -41,15 +69,13 @@ function buildStatusFields(body) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token')
+  applyCorsOrigin(req, res)
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(204).end()
 
-  const adminToken = req.headers['x-admin-token']
-  if (!adminToken || adminToken !== process.env.ADMIN_SECRET_TOKEN) {
-    return res.status(403).json({ error: 'Forbidden' })
-  }
+  const admin = await verifyAdmin(req, 'blog')
+  if (!admin) return res.status(403).json({ error: 'Forbidden' })
 
   try {
     const db = getAdminDb()
@@ -116,7 +142,7 @@ export default async function handler(req, res) {
         title: body.title.trim(),
         slug,
         excerpt: (body.excerpt || '').trim(),
-        contentHtml: body.contentHtml,
+        contentHtml: sanitizeContent(body.contentHtml),
         featuredImageUrl: body.featuredImageUrl ? String(body.featuredImageUrl).trim() : '',
         category: body.category,
         tags: Array.isArray(body.tags) ? body.tags.map(t => String(t).toLowerCase().trim()).filter(Boolean) : [],
@@ -124,8 +150,8 @@ export default async function handler(req, res) {
         metaDescription: (body.metaDescription || '').trim(),
         commentsEnabled: body.commentsEnabled !== false,
         commentCount: 0,
-        readTimeMinutes: estimateReadTime(body.contentHtml),
-        authorAdminUid: body.adminUid || 'admin',
+        readTimeMinutes: estimateReadTime(sanitizeContent(body.contentHtml)),
+        authorAdminUid: admin.uid,
         authorName: (body.authorName || 'Sellapage Team').trim(),
         createdAt: now,
         updatedAt: now,
@@ -159,14 +185,14 @@ export default async function handler(req, res) {
         title: body.title.trim(),
         slug,
         excerpt: (body.excerpt || '').trim(),
-        contentHtml: body.contentHtml,
+        contentHtml: sanitizeContent(body.contentHtml),
         featuredImageUrl: body.featuredImageUrl ? String(body.featuredImageUrl).trim() : '',
         category: body.category,
         tags: Array.isArray(body.tags) ? body.tags.map(t => String(t).toLowerCase().trim()).filter(Boolean) : [],
         metaTitle: (body.metaTitle || '').trim(),
         metaDescription: (body.metaDescription || '').trim(),
         commentsEnabled: body.commentsEnabled !== false,
-        readTimeMinutes: estimateReadTime(body.contentHtml),
+        readTimeMinutes: estimateReadTime(sanitizeContent(body.contentHtml)),
         authorName: (body.authorName || 'Sellapage Team').trim(),
         updatedAt: new Date(),
         ...statusFields,

@@ -1,10 +1,16 @@
+import crypto from 'crypto'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
+// CSPRNG rather than Math.random — see the note in staff-invites.js. Referral
+// codes are lower-risk than invite codes (they attribute credit rather than
+// grant access), but predictable codes still allow enumeration of other
+// vendors' codes, and the fix is free.
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = crypto.randomBytes(8)
   let code = 'SP-'
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(bytes[i] % chars.length)
   }
   return code
 }

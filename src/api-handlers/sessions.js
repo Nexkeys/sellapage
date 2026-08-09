@@ -33,11 +33,19 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || ''
 }
 
+// X-Forwarded-For is client-supplied, so `ip` reaching this function is
+// attacker-controlled. The host is fixed, so this was never SSRF — but an
+// unvalidated value is still interpolated into a URL path, and the resulting
+// city/region/country is stored on the session record. Validate the shape.
+const IPV4 = /^(\d{1,3}\.){3}\d{1,3}$/
+const IPV6 = /^[0-9a-fA-F:]{2,45}$/
+
 async function lookupLocation(ip) {
   const isPrivate = !ip || ip === '::1' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')
   if (isPrivate) return { city: '', region: '', country: '' }
+  if (!IPV4.test(ip) && !IPV6.test(ip)) return { city: '', region: '', country: '' }
   try {
-    const r = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) })
+    const r = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(3000) })
     if (!r.ok) return { city: '', region: '', country: '' }
     const data = await r.json()
     return { city: data.city || '', region: data.region || '', country: data.country_name || '' }

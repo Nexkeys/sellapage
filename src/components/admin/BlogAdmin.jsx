@@ -10,10 +10,14 @@ import {
 } from 'lucide-react'
 import BlogPostEditor from './BlogPostEditor'
 
-async function callBlogAdmin(action, token, { method = 'GET', body, query = '' } = {}) {
+// `authHeaders` is an async function returning an Authorization header carrying
+// the caller's Firebase ID token (see Admin.jsx). It replaces the old static
+// x-admin-token string, which was read from a VITE_ variable and therefore
+// shipped to every browser in the production bundle.
+async function callBlogAdmin(action, authHeaders, { method = 'GET', body, query = '' } = {}) {
   const res = await fetch(`/api/blog-admin?action=${action}${query}`, {
     method,
-    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: method === 'POST' ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
@@ -21,7 +25,7 @@ async function callBlogAdmin(action, token, { method = 'GET', body, query = '' }
   return data
 }
 
-export default function BlogAdmin({ token, adminUid }) {
+export default function BlogAdmin({ authHeaders, adminUid }) {
   const [view, setView] = useState('list')
   const [editingPostId, setEditingPostId] = useState(null)
 
@@ -47,7 +51,7 @@ export default function BlogAdmin({ token, adminUid }) {
     setLoading(true)
     setError('')
     try {
-      const data = await callBlogAdmin('list-posts', token, { query: `&status=${status}` })
+      const data = await callBlogAdmin('list-posts', authHeaders, { query: `&status=${status}` })
       setPosts(data.posts || [])
       setStats(data.stats || null)
     } catch (err) {
@@ -55,14 +59,14 @@ export default function BlogAdmin({ token, adminUid }) {
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [authHeaders])
 
   const loadCategories = useCallback(async () => {
     try {
-      const data = await callBlogAdmin('list-categories', token)
+      const data = await callBlogAdmin('list-categories', authHeaders)
       setCategories(data.categories || [])
     } catch { /* surfaced via posts list error state if needed */ }
-  }, [token])
+  }, [authHeaders])
 
   useEffect(() => { loadPosts(statusFilter) }, [statusFilter, loadPosts])
   useEffect(() => { loadCategories() }, [loadCategories])
@@ -71,7 +75,7 @@ export default function BlogAdmin({ token, adminUid }) {
     if (!window.confirm('Delete this post permanently? This cannot be undone.')) return
     setDeleting(id)
     try {
-      await callBlogAdmin('delete-post', token, { method: 'POST', body: { id } })
+      await callBlogAdmin('delete-post', authHeaders, { method: 'POST', body: { id } })
       setPosts(prev => prev.filter(p => p.id !== id))
     } catch (err) {
       alert(err.message)
@@ -84,7 +88,7 @@ export default function BlogAdmin({ token, adminUid }) {
     if (!newCategoryName.trim()) return
     setCreatingCategory(true)
     try {
-      await callBlogAdmin('create-category', token, { method: 'POST', body: { name: newCategoryName.trim() } })
+      await callBlogAdmin('create-category', authHeaders, { method: 'POST', body: { name: newCategoryName.trim() } })
       setNewCategoryName('')
       loadCategories()
     } catch (err) {
@@ -97,7 +101,7 @@ export default function BlogAdmin({ token, adminUid }) {
   const handleDeleteCategory = async (id) => {
     if (!window.confirm('Delete this category?')) return
     try {
-      await callBlogAdmin('delete-category', token, { method: 'POST', body: { id } })
+      await callBlogAdmin('delete-category', authHeaders, { method: 'POST', body: { id } })
       setCategories(prev => prev.filter(c => c.id !== id))
     } catch (err) {
       alert(err.message)
@@ -109,7 +113,7 @@ export default function BlogAdmin({ token, adminUid }) {
     setExpandedPostId(postId)
     setLoadingComments(true)
     try {
-      const data = await callBlogAdmin('list-comments', token, { query: `&postId=${postId}` })
+      const data = await callBlogAdmin('list-comments', authHeaders, { query: `&postId=${postId}` })
       setComments(data.comments || [])
     } catch {
       setComments([])
@@ -121,7 +125,7 @@ export default function BlogAdmin({ token, adminUid }) {
   const handleDeleteComment = async (postId, commentId) => {
     setDeletingComment(commentId)
     try {
-      await callBlogAdmin('delete-comment', token, { method: 'POST', body: { postId, commentId } })
+      await callBlogAdmin('delete-comment', authHeaders, { method: 'POST', body: { postId, commentId } })
       setComments(prev => prev.filter(c => c.id !== commentId))
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentCount: Math.max(0, (p.commentCount || 0) - 1) } : p))
     } catch (err) {
@@ -136,7 +140,7 @@ export default function BlogAdmin({ token, adminUid }) {
     const next = !post.commentsEnabled
     setPosts(prev => prev.map(p => p.id === post.id ? { ...p, commentsEnabled: next } : p))
     try {
-      await callBlogAdmin('toggle-comments', token, { method: 'POST', body: { postId: post.id, enabled: next } })
+      await callBlogAdmin('toggle-comments', authHeaders, { method: 'POST', body: { postId: post.id, enabled: next } })
     } catch (err) {
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, commentsEnabled: !next } : p))
       alert(err.message)
@@ -150,7 +154,7 @@ export default function BlogAdmin({ token, adminUid }) {
       <div className="p-4 sm:p-5 max-w-3xl mx-auto">
         <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5">
           <BlogPostEditor
-            token={token}
+            authHeaders={authHeaders}
             adminUid={adminUid}
             postId={editingPostId}
             onClose={() => { setView('list'); setEditingPostId(null) }}

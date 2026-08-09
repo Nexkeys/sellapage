@@ -1,13 +1,32 @@
 import { useState } from 'react'
 import { Link2, Loader2, ExternalLink, Shield, Target, BarChart3, Wallet } from 'lucide-react'
+import { auth } from '../../../firebase/config'
 
 export default function GoogleAdsConnect({ store, onError, onSuccess }) {
   const [loading, setLoading] = useState(null)
 
-  const handleConnectOwn = () => {
+  // Was: window.location.href = `/api/google-ads-auth?storeId=${store.id}`.
+  // That endpoint is now authenticated and derives the store from the ID token
+  // instead of a query parameter, and returns the Google consent URL as JSON
+  // with a single-use `state` nonce. Sending storeId in a URL let anyone start
+  // a connect flow for any store and capture the resulting refresh token.
+  const handleConnectOwn = async () => {
     if (!store?.id) return
     setLoading('own')
-    window.location.href = `/api/google-ads-auth?storeId=${store.id}`
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/google-ads-auth', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.authUrl) {
+        throw new Error(data.error || 'Could not start Google Ads connection.')
+      }
+      window.location.assign(data.authUrl)
+    } catch (err) {
+      setLoading(null)
+      onError?.(err.message || 'Could not start Google Ads connection.')
+    }
   }
 
   return (

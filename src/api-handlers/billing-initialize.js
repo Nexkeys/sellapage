@@ -1,6 +1,8 @@
 //sellapage/api/billing-initialize.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
+import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
+import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -21,7 +23,7 @@ const VALID_PERIODS = ['monthly', 'quarterly', 'biannual', 'annual']
 export default async function handler(req, res) {
   try {
     // Standardize CORS headers for Vercel execution context
-    res.setHeader('Access-Control-Allow-Origin', '*')
+    applyCorsOrigin(req, res)
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
 
@@ -31,6 +33,11 @@ export default async function handler(req, res) {
 
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    // Free-tier protection: on Spark, quota exhaustion is an outage, not a bill.
+    if (!memoryRateLimit('billing-initialize', clientKey(req), 10, 60000)) {
+      return tooManyRequests(res)
     }
 
     let body

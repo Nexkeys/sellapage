@@ -1,6 +1,6 @@
 //sellapage/api/_lib/handle-product-checkout.js/
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
-import { sendEmail } from "./send-email.js";
+import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
@@ -36,6 +36,22 @@ export async function handleProductCheckout(db, data, res) {
     parsedDeliveryAddress = JSON.parse(deliveryAddress);
   } catch {
     return res.status(400).send("Invalid JSON in cartItems or deliveryAddress");
+  }
+
+  // Reconciliation: what Paystack actually charged (data.amount, in kobo) must
+  // match the total recorded in the transaction metadata. checkout-initialize.js
+  // now prices everything server-side, so a mismatch means metadata tampering or
+  // a pricing bug — flagged on the order rather than silently accepted.
+  const expectedKobo = Math.round(Number(grandTotal) * 100);
+  const chargedKobo = Number(data.amount);
+  const amountMismatch =
+    Number.isFinite(expectedKobo) && Number.isFinite(chargedKobo) && expectedKobo !== chargedKobo;
+
+  if (amountMismatch) {
+    console.error(
+      `[handle-product-checkout] AMOUNT MISMATCH ref=${data.reference} store=${storeId} ` +
+      `expected=${expectedKobo} charged=${chargedKobo}`,
+    );
   }
 
   // Idempotency check for orders
@@ -77,6 +93,8 @@ export async function handleProductCheckout(db, data, res) {
     discountAmount: Number(discountAmount) || 0,
     paystackReference: data.reference,
     paystackAmount: data.amount,
+    // Surfaces a suspicious order in the dashboard instead of it looking normal.
+    ...(amountMismatch ? { amountMismatch: true, expectedAmountKobo: expectedKobo } : {}),
     orderType: orderType || "checkout",
     status: "pending",
     paymentStatus: "paid",
@@ -190,7 +208,7 @@ export async function handleProductCheckout(db, data, res) {
             </div>
             <div style="padding: 32px;">
               <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px 0;">Order Confirmed!</h2>
-              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${customerName}, your order has been received and is being processed.</p>
+              <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${escapeHtml(customerName)}, your order has been received and is being processed.</p>
               <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
                 <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 16px 0;">Order Details</h3>
                 <table style="width: 100%; border-collapse: collapse;">
@@ -240,7 +258,7 @@ export async function handleProductCheckout(db, data, res) {
         ? sendPush(
             storeData.fcmToken,
             "New Order Received 🛍️",
-            `${customerName} just placed an order — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+            `${escapeHtml(customerName)} just placed an order — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             { orderId: orderRef.id, type: "new_order" },
           )
         : Promise.resolve(),
@@ -255,7 +273,7 @@ export async function handleProductCheckout(db, data, res) {
                 </div>
                 <div style="padding: 32px;">
                   <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px 0;">New Order Received 🛍️</h2>
-                  <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">You just got a new order from ${customerName}. Here are the details:</p>
+                  <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">You just got a new order from ${escapeHtml(customerName)}. Here are the details:</p>
                   <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
                     <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 16px 0;">Order Details</h3>
                     <table style="width: 100%; border-collapse: collapse;">
@@ -283,7 +301,7 @@ export async function handleProductCheckout(db, data, res) {
                     <table style="width: 100%; border-collapse: collapse;">
                       <tr>
                         <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Name</td>
-                        <td style="padding: 6px 0; color: #111827; font-size: 14px; text-align: right;">${customerName || "-"}</td>
+                        <td style="padding: 6px 0; color: #111827; font-size: 14px; text-align: right;">${escapeHtml(customerName || "-")}</td>
                       </tr>
                       <tr>
                         <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Phone</td>

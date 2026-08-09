@@ -221,9 +221,15 @@ export default function PayoutsTab({ store, orders, ordersLoading, bookings, boo
     if (!accountNumber || accountNumber.length !== 10 || !bankCode) return
     setResolveLoading(true)
     try {
+      // resolve-account is authenticated and rate-limited now — it used to be
+      // an open proxy to Paystack's bank-name lookup, callable by anyone.
+      const idToken = await user?.getIdToken()
       const res = await fetch('/api/resolve-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({ accountNumber, bankCode }),
       })
       const data = await res.json()

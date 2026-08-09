@@ -14,6 +14,16 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
+  // `action=confirm` is the second step of the two-step UX: step 1 verifies
+  // against Prembly and stashes the result server-side; this step promotes that
+  // stashed result onto the public store doc. The write lives here rather than
+  // in the client (it used to be a direct updateDoc in CACVerificationTab) so
+  // that `cacVerified` can be locked in firestore.rules — otherwise any vendor
+  // could award themselves the CAC Verified badge from the browser console.
+  if (req.query.action === 'confirm') {
+    return confirmVerification(req, res, idToken)
+  }
+
   const { storeId, rcNumber } = req.body
 
   if (!storeId || !rcNumber) {
@@ -180,6 +190,19 @@ export default async function handler(req, res) {
       cacLastRetryAt: new Date().toISOString(),
     })
 
+    // Stash the verified result server-side so `action=confirm` can promote it
+    // without re-calling Prembly (which costs money and burns a retry). Lives in
+    // private/* — never client-readable, never client-writable.
+    await db.collection('stores').doc(storeId)
+      .collection('private').doc('cacPending')
+      .set({
+        cacBusinessName,
+        cacRcNumber: cleanRC,
+        cacStatus: cacStatus || 'active',
+        cacRegistrationDate: registrationDate || '',
+        verifiedAt: new Date().toISOString(),
+      })
+
     const retriesLeft = Math.max(0, 3 - newRetryCount)
     const vendorEmail = storeData.email
 
@@ -212,6 +235,72 @@ export default async function handler(req, res) {
     return res.status(500).json({
       error: 'server_error',
       message: 'Something went wrong. Please try again or contact support.',
+    })
+  }
+}
+
+/**
+ * Step 2 of CAC verification. Promotes the result stashed by the verify step
+ * onto the public store document. The vendor supplies no CAC data here — the
+ * only input that matters is their identity, so nothing they send can influence
+ * what gets written.
+ */
+async function confirmVerification(req, res, idToken) {
+  try {
+    const auth = getAdminAuth()
+    const db = getAdminDb()
+
+    let decodedToken
+    try {
+      decodedToken = await auth.verifyIdToken(idToken)
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired token' })
+    }
+
+    const storeId = decodedToken.uid
+    const pendingRef = db.collection('stores').doc(storeId).collection('private').doc('cacPending')
+    const pendingSnap = await pendingRef.get()
+
+    if (!pendingSnap.exists) {
+      return res.status(400).json({
+        error: 'nothing_to_confirm',
+        message: 'Please verify your RC or BN number first.',
+      })
+    }
+
+    const pending = pendingSnap.data()
+
+    // Re-assert the status gate here too: the verify step already rejects
+    // inactive businesses, but a stash could predate a rule change.
+    if (pending.cacStatus && pending.cacStatus !== 'active' && pending.cacStatus !== 'approved') {
+      return res.status(400).json({
+        error: 'inactive_business',
+        message: `Only active businesses can be verified (status: "${pending.cacStatus}").`,
+      })
+    }
+
+    await db.collection('stores').doc(storeId).update({
+      cacVerified: true,
+      cacBusinessName: pending.cacBusinessName,
+      cacRcNumber: pending.cacRcNumber,
+      cacStatus: pending.cacStatus,
+      cacRegistrationDate: pending.cacRegistrationDate || '',
+      cacVerifiedAt: new Date().toISOString(),
+    })
+
+    // One-shot: consume the stash so a stale result can't be re-promoted later.
+    await pendingRef.delete().catch(() => {})
+
+    return res.status(200).json({
+      success: true,
+      cacVerified: true,
+      cacBusinessName: pending.cacBusinessName,
+    })
+  } catch (err) {
+    console.error('[verify-cac confirm] Error:', err)
+    return res.status(500).json({
+      error: 'server_error',
+      message: 'Could not save your verification. Please try again.',
     })
   }
 }
