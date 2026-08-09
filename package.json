@@ -17,10 +17,10 @@
     "@tiptap/react": "^3.28.0",
     "@tiptap/starter-kit": "^3.28.0",
     "@vercel/speed-insights": "^2.0.0",
+    "dompurify": "^3.4.13",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.8.0",
     "html-to-image": "^1.11.13",
-    "isomorphic-dompurify": "^3.22.0",
     "lucide-react": "^0.303.0",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
@@ -28,6 +28,7 @@
     "react-helmet-async": "^3.0.0",
     "react-router-dom": "^6.30.3",
     "resend": "^6.12.4",
+    "sanitize-html": "^2.17.6",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {

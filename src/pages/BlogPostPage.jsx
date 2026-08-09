@@ -8,7 +8,10 @@ import {
   ArrowLeft, Loader2, Clock, BookOpen, Check, Share2, Twitter, Facebook,
   Linkedin, MessageCircle,
 } from 'lucide-react'
-import DOMPurify from 'isomorphic-dompurify'
+// Plain browser DOMPurify — NOT isomorphic-dompurify, which drags jsdom into
+// the dependency tree (see the note in blog-admin.js). This runs in the
+// browser where a real DOM already exists.
+import DOMPurify from 'dompurify'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'

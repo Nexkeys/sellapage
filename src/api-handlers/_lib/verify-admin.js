@@ -51,7 +51,7 @@ const TAB_ACCESS = {
  *   3. Set ALLOW_LEGACY_ADMIN_TOKEN = false, redeploy, and rotate
  *      ADMIN_SECRET_TOKEN in Vercel. Until step 3 the leaked token still works.
  */
-const ALLOW_LEGACY_ADMIN_TOKEN = true
+const ALLOW_LEGACY_ADMIN_TOKEN = false
 
 /**
  * Verifies the caller is an active platform admin, and — when `requiredTab` is

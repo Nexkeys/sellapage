@@ -9,7 +9,7 @@ import { getAdminDb } from './_lib/firebase-admin.js'
 import { slugify } from '../utils/slugify.js'
 import { estimateReadTime, getExcerpt } from '../utils/blogHelpers.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
-import DOMPurify from 'isomorphic-dompurify'
+import sanitizeHtml from 'sanitize-html'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 // Blog HTML is stored raw and rendered with dangerouslySetInnerHTML in
@@ -21,20 +21,39 @@ import { applyCors as applyCorsOrigin } from './_lib/http.js'
 // (@tiptap/starter-kit + extension-image + extension-link). If a post loses
 // formatting after this change, add the missing tag here — never re-allow
 // script/iframe/style or on* handlers.
+//
+// Uses `sanitize-html` (htmlparser2-based, pure JS) rather than DOMPurify.
+// DOMPurify needs a DOM, so on the server it pulls in jsdom — whose
+// transitive dep @exodus/bytes is ESM-only and cannot be require()d by
+// Vercel's CommonJS serverless bundle. That threw ERR_REQUIRE_ESM at import
+// time and took down the ENTIRE catch-all router, not just this handler.
+// Any server-side sanitizer here must be jsdom-free.
+//
+// sanitize-html is allowlist-by-default: anything not named below is dropped,
+// so the old FORBID_TAGS/FORBID_ATTR lists are implicit (script, style,
+// iframe, form and every on* handler are all excluded by omission).
 const SANITIZE_CONFIG = {
-  ALLOWED_TAGS: [
+  allowedTags: [
     'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'img', 'hr', 'span',
     'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'figure', 'figcaption',
   ],
-  ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target', 'rel', 'class', 'colspan', 'rowspan'],
-  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|\/(?!\/))/i, // no javascript:, no data:
-  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'link'],
-  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'style'],
+  allowedAttributes: {
+    '*': ['title', 'class'],
+    a: ['href', 'target', 'rel'],
+    img: ['src', 'alt'],
+    th: ['colspan', 'rowspan'],
+    td: ['colspan', 'rowspan'],
+  },
+  // Equivalent of the old ALLOWED_URI_REGEXP: no javascript:, no data:.
+  allowedSchemes: ['http', 'https', 'mailto'],
+  allowedSchemesAppliedToAttributes: ['href', 'src'],
+  allowProtocolRelative: false, // blocks //evil.com
+  disallowedTagsMode: 'discard',
 }
 
 function sanitizeContent(html) {
-  return DOMPurify.sanitize(String(html || ''), SANITIZE_CONFIG)
+  return sanitizeHtml(String(html || ''), SANITIZE_CONFIG)
 }
 
 async function uniqueSlug(db, baseSlug, excludePostId) {
