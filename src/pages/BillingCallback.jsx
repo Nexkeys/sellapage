@@ -3,6 +3,27 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { CheckCircle } from 'lucide-react'
 
+/**
+ * Where to send the customer after a successful checkout.
+ *
+ * Product orders live on the storefront (`/:storeName`, StorePage.jsx) and
+ * service bookings on `/:storeName/services` (ServiceStorePage.jsx) — each page
+ * reads its own sessionStorage snapshot and renders its own success modal with
+ * the downloadable receipt.
+ *
+ * This used to always return the product page. A service booking therefore
+ * landed on StorePage, which looked for an *order* with that reference, found a
+ * *booking* instead, and rendered an empty "Order complete" modal with no
+ * receipt — while the equivalent product flow worked fine.
+ *
+ * The snapshot shape is the discriminator: ServiceStorePage stores `booking`,
+ * StorePage stores `order`.
+ */
+function checkoutReturnPath(parsed) {
+  const base = `/${parsed.storeName}`
+  return parsed.booking ? `${base}/services` : base
+}
+
 export default function BillingCallback() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -25,7 +46,7 @@ export default function BillingCallback() {
           setResolved(true)
           const timer = setTimeout(() => {
             navigate(
-              `/${parsed.storeName}?checkout=success&reference=${encodeURIComponent(reference)}`,
+              `${checkoutReturnPath(parsed)}?checkout=success&reference=${encodeURIComponent(reference)}`,
               { replace: true },
             )
           }, 3000)
@@ -112,7 +133,7 @@ export default function BillingCallback() {
             </p>
           </div>
           <Link
-            to={`/${checkoutData.storeName}?checkout=success&reference=${encodeURIComponent(reference)}`}
+            to={`${checkoutReturnPath(checkoutData)}?checkout=success&reference=${encodeURIComponent(reference)}`}
             className="text-green-600 font-semibold text-sm hover:underline"
           >
             View store

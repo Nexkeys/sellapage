@@ -12,11 +12,16 @@ import { getAdminDb } from './_lib/firebase-admin.js'
 // Without this, the endpoint accepted any unauthenticated POST and would
 // rewrite an order's fulfilment status for any guessed shipment code.
 //
-// ROLLOUT: leave ENFORCE_WEBHOOK_SECRET = false for one deploy and watch the
-// Vercel logs. Once you see authenticated calls arriving (i.e. no
-// "UNAUTHENTICATED CALL" warnings), set it to true. Flipping it before the
-// Sendbox dashboard URL is updated will silently stop status updates.
-const ENFORCE_WEBHOOK_SECRET = false
+// ENFORCED since 2026-08-09. The staged "watch mode" rollout was skipped
+// deliberately: there were no active shipments at the time (no vendors on a
+// paid plan), so there was no live traffic that enforcing could disrupt — and
+// leaving it permissive indefinitely was the greater risk.
+//
+// If order statuses ever stop updating from Sendbox, check the Vercel logs for
+// "[sendbox-webhook] UNAUTHENTICATED CALL". That means the callback URL
+// registered in the Sendbox dashboard is missing the ?key= parameter, or the
+// key doesn't match SENDBOX_WEBHOOK_SECRET in Vercel.
+const ENFORCE_WEBHOOK_SECRET = true
 
 function keyMatches(provided, expected) {
   if (!provided || !expected) return false

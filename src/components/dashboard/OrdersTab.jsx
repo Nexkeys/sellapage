@@ -359,23 +359,18 @@ export default function OrdersTab({
           return
         }
 
-        const verifyRes = await fetch('/api/sendbox-payment-verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ reference, storeId: parsed.storeId }),
-        })
-        const verifyData = await verifyRes.json()
-        if (!verifyRes.ok || !verifyData.success) {
-          setShipmentPaymentResult({ success: false, error: verifyData.error || 'Payment verification failed.' })
-          return
-        }
+        // The separate /api/sendbox-payment-verify call was removed: that handler
+        // never existed, so this step always 404'd and the shipment was never
+        // booked despite the customer being charged. sendbox-create-shipment now
+        // verifies the Paystack reference itself (same as the Topship path above)
+        // and reads courierId from the verified transaction metadata.
         const bookRes = await fetch('/api/sendbox-create-shipment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             storeId: parsed.storeId,
-            orderId: verifyData.orderId,
-            courierId: verifyData.courierId,
+            orderId: parsed.orderId,
+            reference,
             senderDetails: parsed.senderDetails,
             receiverDetails: parsed.receiverDetails,
             weight: parsed.weight,
@@ -388,7 +383,7 @@ export default function OrdersTab({
           sessionStorage.removeItem(`sellapage_shipment_${reference}`)
           const newUrl = window.location.pathname
           window.history.replaceState({}, '', newUrl)
-          await onUpdateOrder?.(verifyData.orderId, {
+          await onUpdateOrder?.(parsed.orderId, {
             SendboxTrackingId: bookData.trackingId || '',
             sendboxTrackingId: bookData.trackingId || '',
             SendboxOrderId: bookData.orderId || '',
