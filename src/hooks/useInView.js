@@ -17,6 +17,13 @@ export function useInView(options = {}) {
       return
     }
 
+    // No IntersectionObserver (old browser / odd webview): reveal immediately.
+    // Failing closed here would leave content permanently invisible.
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -24,7 +31,13 @@ export function useInView(options = {}) {
           observer.unobserve(el)
         }
       },
-      { threshold: 0.15, rootMargin: '0px 0px -60px 0px', ...options },
+      // threshold MUST stay 0 — it's a fraction of the OBSERVED ELEMENT's own
+      // area, so anything taller than (viewport / threshold) can never satisfy
+      // it and stays opacity-0 forever. A 5000px-tall blog article on a 640px
+      // mobile viewport tops out at 12.8% visible, so the old 0.15 threshold
+      // silently blanked long articles. The negative bottom rootMargin already
+      // gives the "scrolled meaningfully into view" feel without that risk.
+      { threshold: 0, rootMargin: '0px 0px -60px 0px', ...options },
     )
     observer.observe(el)
     return () => observer.disconnect()
