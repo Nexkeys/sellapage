@@ -61,6 +61,7 @@ export default function Admin() {
     return t ? { Authorization: `Bearer ${t}` } : {};
   }, [user]);
 
+  const [termii, setTermii] = useState(null);
   const [healthData, setHealthData] = useState(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [healthError, setHealthError] = useState('');
@@ -166,6 +167,12 @@ export default function Admin() {
       if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `${r.status}`); }
       setHealthData(await r.json()); setCountdown(30);
     } catch (e) { setHealthError(e.message); } finally { setHealthLoading(false); }
+    // Non-blocking: Termii is a separate provider, so a failure there must not
+    // blank the rest of the health tab.
+    try {
+      const t = await fetch('/api/admin-termii', { headers: await H() });
+      setTermii(t.ok ? await t.json() : { success: false, error: 'unreachable' });
+    } catch { setTermii({ success: false, error: 'unreachable' }); }
   }, []);
 
   const fetchDirectory = useCallback(async (p = 1, q = '') => {
@@ -512,6 +519,48 @@ export default function Admin() {
         {/* HEALTH */}
         {activeTab === 'health' && <div className="space-y-4 animate-in fade-in duration-200">
           {healthError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{healthError}</div>}
+
+          {/* Termii SMS — wallet + sender ID. An empty wallet or a missing
+              sender ID makes phone verification fail for every vendor with no
+              obvious cause, so both are surfaced explicitly rather than left
+              to be discovered from failed sends. */}
+          {termii && <div className={`rounded-xl border p-4 ${termii.lowBalance || !termii.success || termii.senderIds?.totalElements === 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100 shadow-xs'}`}>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Termii SMS</p>
+                {!termii.success ? (
+                  <p className="text-sm font-bold text-red-600 mt-1">Unreachable — {termii.error || 'error'}</p>
+                ) : !termii.configured ? (
+                  <p className="text-sm font-bold text-gray-500 mt-1">Not configured on this environment</p>
+                ) : (
+                  <>
+                    <p className={`text-2xl font-black mt-0.5 ${termii.lowBalance ? 'text-amber-600' : 'text-gray-900'}`}>
+                      {termii.currency || 'NGN'} {Number(termii.balance || 0).toLocaleString()}
+                    </p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{termii.application || ''} · wallet balance</p>
+                  </>
+                )}
+              </div>
+              {termii.success && termii.configured && (
+                <div className="text-right flex-shrink-0">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Sender IDs</p>
+                  <p className={`text-lg font-black ${termii.senderIds?.totalElements ? 'text-green-600' : 'text-amber-600'}`}>
+                    {termii.senderIds?.totalElements ?? '—'}
+                  </p>
+                </div>
+              )}
+            </div>
+            {termii.success && termii.configured && termii.senderIds?.totalElements === 0 && (
+              <p className="mt-3 text-xs text-amber-800 bg-amber-100/60 border border-amber-200 rounded-lg p-2.5 leading-relaxed">
+                <strong>No approved sender ID.</strong> SMS OTP cannot be sent until one is approved — Termii requires an approved sender ID in the <code>from</code> field. Request one on the Termii dashboard; approval takes days.
+              </p>
+            )}
+            {termii.lowBalance && (
+              <p className="mt-2 text-xs text-amber-800 leading-relaxed">
+                Balance is below {termii.currency || 'NGN'} {Number(termii.lowBalanceThreshold || 0).toLocaleString()} — top up before enabling phone verification.
+              </p>
+            )}
+          </div>}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[{ id: 'firestore', n: 'Firebase', d: 'Core database', data: healthData?.platform, i: <Database size={16} className="text-blue-600" /> },
               { id: 'cloudinary', n: 'Cloudinary', d: 'Images', data: healthData?.cloudinary, i: <Cloud size={16} className="text-blue-600" /> },

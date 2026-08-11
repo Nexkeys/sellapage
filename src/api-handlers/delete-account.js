@@ -3,6 +3,8 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { sendEmail } from './_lib/send-email.js'
+import { redeemProof, logAudit, otpErrorMessage, OTP_PURPOSES } from './_lib/otp.js'
+import { clientKey } from './_lib/rate-limit.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -58,6 +60,24 @@ export default async function handler(req, res) {
     }
 
     const uid = decodedToken.uid
+
+    // Step-up verification: deleting a store is irreversible, so a valid ID
+    // token alone is not sufficient. Requires a freshly verified email OTP
+    // bound to this uid AND to the store_delete purpose specifically; the
+    // challenge is burned here so one code authorises exactly one deletion.
+    const proof = await redeemProof(db, { uid, purpose: OTP_PURPOSES.STORE_DELETE })
+    if (!proof.ok) {
+      await logAudit(db, {
+        uid,
+        action: 'store_delete',
+        purpose: OTP_PURPOSES.STORE_DELETE,
+        result: 'blocked',
+        ip: clientKey(req),
+        userAgent: req.headers['user-agent'] || '',
+        meta: { reason: proof.error },
+      })
+      return res.status(403).json({ error: proof.error, message: otpErrorMessage(proof.error) })
+    }
 
     // Get store data
     const storeSnap = await db.collection('stores').doc(uid).get()

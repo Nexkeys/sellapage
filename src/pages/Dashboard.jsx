@@ -43,6 +43,7 @@ import {
 } from "firebase/firestore";
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
 import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
+import OtpVerifyModal from "../components/OtpVerifyModal";
 import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
 
 // Features unlocked at each plan, shown in the post-upgrade welcome modal.
@@ -230,6 +231,9 @@ export default function Dashboard() {
   const [deliverySuccess, setDeliverySuccess] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  // Pending step-up verification: { purpose, title, description, run }.
+  // `run` fires only after the emailed code verifies.
+  const [otpFlow, setOtpFlow] = useState(null);
   const [logoUploading, setLogoUploading] = useState(false);
 
   const [supportSubmitting, setSupportSubmitting] = useState(false);
@@ -1494,15 +1498,12 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeleteAccount = async (password) => {
+  // Runs only after the emailed code has been verified. The server independently
+  // re-checks and burns that verification inside /api/delete-account, so this
+  // ordering is for UX — it is not what makes the guard hold.
+  const performAccountDeletion = async () => {
     setDeleteLoading(true);
-    setDeleteError("");
     try {
-      // Re-authenticate user first
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await reauthenticateWithCredential(user, credential);
-
-      // Acquire a fresh ID token (modular SDK user from useAuth)
       const token = await user.getIdToken();
 
       // Fire-and-forget background deletion request; do not await.
@@ -1521,6 +1522,31 @@ export default function Dashboard() {
       // Immediately purge local auth state and navigate home for optimistic UX
       logoutSeller().catch((err) => console.error("Logout failed", err));
       navigate("/");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async (password) => {
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+
+      // Password proven — now require the emailed code before anything is
+      // destroyed. Deletion itself is deferred until the code is verified,
+      // so a failed/abandoned check leaves the account fully intact.
+      setDeleteLoading(false);
+      setOtpFlow({
+        purpose: "store_delete",
+        title: "Confirm store deletion",
+        description:
+          "This permanently deletes your store, products and orders. Enter the code we just emailed you.",
+        run: performAccountDeletion,
+      });
+      return;
     } catch (err) {
       console.error("Delete account failed", err);
       if (
@@ -2145,6 +2171,19 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <OtpVerifyModal
+        open={!!otpFlow}
+        purpose={otpFlow?.purpose}
+        title={otpFlow?.title}
+        description={otpFlow?.description}
+        onClose={() => setOtpFlow(null)}
+        onVerified={async () => {
+          const flow = otpFlow;
+          setOtpFlow(null);
+          await flow?.run?.();
+        }}
+      />
     </DashboardLayout>
   );
 }

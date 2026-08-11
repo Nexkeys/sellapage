@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { OWNER_ONLY_TABS } from '../../utils/staffRoles'
+import OtpVerifyModal from '../OtpVerifyModal'
 
 // A store's own assignable-tab list — mirrors DashboardLayout's NAV_ITEMS
 // minus group separators and OWNER_ONLY_TABS, so the Role Builder only ever
@@ -46,6 +47,8 @@ export default function TeamTab({ store }) {
 
   const [reassigning, setReassigning] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  // Pending step-up verification: { purpose, title, description, run }.
+  const [otpFlow, setOtpFlow] = useState(null)
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError('')
@@ -128,14 +131,27 @@ export default function TeamTab({ store }) {
     }
   }
 
-  const createInvite = async () => {
+  // Each of these three actions requires a freshly emailed code. The server
+  // independently re-checks and burns that verification inside the handler,
+  // so this prompt is UX — it is not what enforces the guard.
+  const createInvite = () => {
     if (!inviteRoleId) return
+    setError('')
+    setOtpFlow({
+      purpose: 'staff_invite',
+      title: 'Confirm staff invite',
+      description: 'An invite code gives someone access to your store. Enter the code we just emailed you.',
+      run: performCreateInvite,
+    })
+  }
+
+  const performCreateInvite = async () => {
     setCreatingInvite(true); setError('')
     try {
       const headers = { 'Content-Type': 'application/json', ...(await authHeaders()) }
       const res = await fetch('/api/staff-invites?action=create', { method: 'POST', headers, body: JSON.stringify({ roleId: inviteRoleId }) })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to create invite')
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to create invite')
       setNewCode(data.code)
       fetchAll()
     } catch (err) {
@@ -161,24 +177,59 @@ export default function TeamTab({ store }) {
     setTimeout(() => setCopiedCode(false), 1500)
   }
 
-  const reassignRole = async (membershipId, roleId) => {
+  const reassignRole = (membershipId, roleId) => {
+    setError('')
+    setOtpFlow({
+      purpose: 'staff_role_change',
+      title: 'Confirm role change',
+      description: "Changing a role changes what this person can see and do. Enter the code we just emailed you.",
+      run: () => performReassignRole(membershipId, roleId),
+    })
+  }
+
+  const performReassignRole = async (membershipId, roleId) => {
     setBusyId(membershipId)
     try {
       const headers = { 'Content-Type': 'application/json', ...(await authHeaders()) }
-      await fetch('/api/staff-manage?action=update-role', { method: 'POST', headers, body: JSON.stringify({ membershipId, roleId }) })
+      const res = await fetch('/api/staff-manage?action=update-role', { method: 'POST', headers, body: JSON.stringify({ membershipId, roleId }) })
+      // Previously unchecked — a 403 from the step-up guard would have been
+      // swallowed and looked like a silent no-op.
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || data.error || 'Failed to change role')
+      }
       setReassigning(null)
       fetchAll()
+    } catch (err) {
+      setError(err.message)
     } finally {
       setBusyId(null)
     }
   }
-  const removeStaff = async (membershipId) => {
+
+  const removeStaff = (membershipId) => {
     if (!window.confirm('Remove this staff member? They will be logged out immediately.')) return
+    setError('')
+    setOtpFlow({
+      purpose: 'staff_remove',
+      title: 'Confirm staff removal',
+      description: 'This revokes their access and logs them out immediately. Enter the code we just emailed you.',
+      run: () => performRemoveStaff(membershipId),
+    })
+  }
+
+  const performRemoveStaff = async (membershipId) => {
     setBusyId(membershipId)
     try {
       const headers = { 'Content-Type': 'application/json', ...(await authHeaders()) }
-      await fetch('/api/staff-manage?action=remove', { method: 'POST', headers, body: JSON.stringify({ membershipId }) })
+      const res = await fetch('/api/staff-manage?action=remove', { method: 'POST', headers, body: JSON.stringify({ membershipId }) })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || data.error || 'Failed to remove staff member')
+      }
       fetchAll()
+    } catch (err) {
+      setError(err.message)
     } finally {
       setBusyId(null)
     }
@@ -396,6 +447,19 @@ export default function TeamTab({ store }) {
           </div>
         </div>
       )}
+
+      <OtpVerifyModal
+        open={!!otpFlow}
+        purpose={otpFlow?.purpose}
+        title={otpFlow?.title}
+        description={otpFlow?.description}
+        onClose={() => setOtpFlow(null)}
+        onVerified={async () => {
+          const flow = otpFlow
+          setOtpFlow(null)
+          await flow?.run?.()
+        }}
+      />
     </div>
   )
 }

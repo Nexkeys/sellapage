@@ -367,6 +367,18 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/store-write.js")
         return handler(req, res)
       }
+      case "otp-send": {
+        const { default: handler } = await import("../src/api-handlers/otp-send.js")
+        return handler(req, res)
+      }
+      case "otp-verify": {
+        const { default: handler } = await import("../src/api-handlers/otp-verify.js")
+        return handler(req, res)
+      }
+      case "admin-termii": {
+        const { default: handler } = await import("../src/api-handlers/admin-termii.js")
+        return handler(req, res)
+      }
 
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });

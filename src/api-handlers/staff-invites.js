@@ -8,6 +8,8 @@
 import crypto from 'crypto'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { FieldValue } from 'firebase-admin/firestore'
+import { redeemProof, logAudit, otpErrorMessage, OTP_PURPOSES } from './_lib/otp.js'
+import { clientKey } from './_lib/rate-limit.js'
 import {
   MAX_PENDING_INVITES,
   INVITE_RATE_LIMIT_PER_HOUR,
@@ -75,6 +77,23 @@ export default async function handler(req, res) {
       try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch {}
       const { roleId } = body
       if (!roleId) return res.status(400).json({ error: 'roleId is required' })
+
+      // Step-up verification: an invite code grants a stranger access to this
+      // store's data, so it needs a freshly verified email OTP bound to this
+      // uid and to the staff_invite purpose. Burned here — one code, one invite.
+      const proof = await redeemProof(db, { uid: ownerUid, purpose: OTP_PURPOSES.STAFF_INVITE })
+      if (!proof.ok) {
+        await logAudit(db, {
+          uid: ownerUid,
+          action: 'staff_invite_create',
+          purpose: OTP_PURPOSES.STAFF_INVITE,
+          result: 'blocked',
+          ip: clientKey(req),
+          userAgent: req.headers['user-agent'] || '',
+          meta: { reason: proof.error },
+        })
+        return res.status(403).json({ error: proof.error, message: otpErrorMessage(proof.error) })
+      }
 
       const roleSnap = await storeRef.collection('staffRoles').doc(roleId).get()
       if (!roleSnap.exists) return res.status(404).json({ error: 'Role not found' })

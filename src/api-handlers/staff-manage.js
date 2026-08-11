@@ -2,6 +2,8 @@
 // Owner-only staff administration: list active staff, reassign role, remove
 // (deactivate + revoke their active sessions on this store).
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
+import { redeemProof, logAudit, otpErrorMessage, OTP_PURPOSES } from './_lib/otp.js'
+import { clientKey } from './_lib/rate-limit.js'
 
 async function verifyOwner(req) {
   const authHeader = req.headers.authorization || ''
@@ -54,7 +56,32 @@ export default async function handler(req, res) {
       const roleSnap = await db.collection('stores').doc(ownerUid).collection('staffRoles').doc(roleId).get()
       if (!roleSnap.exists) return res.status(404).json({ error: 'Role not found' })
 
+      // Step-up verification: a role change can silently escalate what a staff
+      // member can reach, so it needs a fresh OTP bound to this purpose.
+      const proof = await redeemProof(db, { uid: ownerUid, purpose: OTP_PURPOSES.STAFF_ROLE_CHANGE })
+      if (!proof.ok) {
+        await logAudit(db, {
+          uid: ownerUid,
+          action: 'staff_role_change',
+          purpose: OTP_PURPOSES.STAFF_ROLE_CHANGE,
+          result: 'blocked',
+          ip: clientKey(req),
+          userAgent: req.headers['user-agent'] || '',
+          meta: { reason: proof.error, membershipId },
+        })
+        return res.status(403).json({ error: proof.error, message: otpErrorMessage(proof.error) })
+      }
+
       await ref.update({ roleId })
+      await logAudit(db, {
+        uid: ownerUid,
+        action: 'staff_role_change',
+        purpose: OTP_PURPOSES.STAFF_ROLE_CHANGE,
+        result: 'completed',
+        ip: clientKey(req),
+        userAgent: req.headers['user-agent'] || '',
+        meta: { membershipId, roleId },
+      })
       return res.status(200).json({ success: true })
     }
 
@@ -70,6 +97,22 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Staff member not found' })
       }
       const staffUid = snap.data().staffUid
+
+      // Step-up verification: removal revokes a person's access and their live
+      // sessions. Requires a fresh OTP bound to the staff_remove purpose.
+      const proof = await redeemProof(db, { uid: ownerUid, purpose: OTP_PURPOSES.STAFF_REMOVE })
+      if (!proof.ok) {
+        await logAudit(db, {
+          uid: ownerUid,
+          action: 'staff_remove',
+          purpose: OTP_PURPOSES.STAFF_REMOVE,
+          result: 'blocked',
+          ip: clientKey(req),
+          userAgent: req.headers['user-agent'] || '',
+          meta: { reason: proof.error, membershipId },
+        })
+        return res.status(403).json({ error: proof.error, message: otpErrorMessage(proof.error) })
+      }
 
       await ref.update({ active: false, deactivatedAt: new Date() })
 
