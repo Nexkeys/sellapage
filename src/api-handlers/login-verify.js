@@ -12,6 +12,7 @@ import { clientKey } from './_lib/rate-limit.js'
 import { resolveCallerStoreId } from './_lib/verify-store-access.js'
 import { redeemProof, logAudit, otpErrorMessage, OTP_PURPOSES } from './_lib/otp.js'
 import { isLoginOtpEnabled } from './_lib/login-risk.js'
+import { getLockState } from './_lib/login-lockout.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'POST,OPTIONS' })) return
@@ -41,6 +42,19 @@ export default async function handler(req, res) {
     // they act on, not under their own uid.
     const access = await resolveCallerStoreId(uid)
     if (!access?.storeId) return res.status(403).json({ error: 'Forbidden' })
+
+    // A locked account must not be able to trust a device by clearing an email
+    // OTP. Without this, the OTP screen becomes an alternative way in for
+    // someone who has the password but is locked out.
+    if (decoded.email) {
+      const lock = await getLockState(db, decoded.email)
+      if (lock.locked) {
+        return res.status(423).json({
+          error: 'account_locked',
+          message: 'This account is locked. Use account recovery to regain access.',
+        })
+      }
+    }
 
     // Burn the verified challenge. Bound to uid + the `login` purpose, so a
     // code issued for any other action cannot trust a device.

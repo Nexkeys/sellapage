@@ -6,6 +6,7 @@ import { loginSeller, registerSeller, resetPassword, logoutSeller, auth } from '
 import { registerSession, confirmLoginOtp } from '../utils/sessionTracking'
 import OtpVerifyModal from '../components/OtpVerifyModal'
 import { getRecaptchaToken } from '../utils/recaptcha'
+import RecaptchaCheckbox from '../components/RecaptchaCheckbox'
 import { isReservedSlug } from '../utils/reservedSlugs'
 
 const ERROR_MESSAGES = {
@@ -32,6 +33,19 @@ export default function Login() {
   const [lockedOut, setLockedOut] = useState(false)
   // Set only when SMS is live: the number to verify before finishing signup.
   const [signupPhone, setSignupPhone] = useState(null)
+  // Visible reCAPTCHA v2 checkbox state.
+  const [captchaToken, setCaptchaToken] = useState(null)
+  const [captchaSiteKey, setCaptchaSiteKey] = useState(null)
+  // True when the widget can't render (v3 key, blocked, offline) — the form
+  // then stops requiring it rather than trapping a real vendor.
+  const [captchaUnavailable, setCaptchaUnavailable] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/public-config')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.recaptchaSiteKey) setCaptchaSiteKey(d.recaptchaSiteKey); else setCaptchaUnavailable(true) })
+      .catch(() => setCaptchaUnavailable(true))
+  }, [])
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [resetSent, setResetSent] = useState(false)
@@ -140,6 +154,23 @@ export default function Login() {
     setLoading(true)
     try {
       if (mode === 'login') {
+        // Check the lock BEFORE authenticating. Doing it after meant a correct
+        // password produced a real Firebase session first, which is precisely
+        // what a lock must prevent — knowing the password is what's locked out.
+        try {
+          const lockRes = await fetch('/api/login-attempt?action=status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: form.email }),
+          })
+          const lockData = await lockRes.json().catch(() => ({}))
+          if (lockData.locked) {
+            setLockedOut(true)
+            setLoading(false)
+            return
+          }
+        } catch { /* network only — don't block sign-in on this check */ }
+
         const credential = await loginSeller(form.email, form.password)
         const token = await credential.user.getIdToken()
 
@@ -152,6 +183,16 @@ export default function Login() {
           sessionRisk = await registerSession(token)
         } catch (err) {
           console.error('Failed to register session:', err)
+        }
+
+        // Server refused the session because the account is locked. Sign the
+        // Firebase session straight back out — leaving a valid token alive
+        // would let the dashboard load before the heartbeat caught up.
+        if (sessionRisk?.locked) {
+          await logoutSeller().catch(() => {})
+          setLockedOut(true)
+          setLoading(false)
+          return
         }
 
         if (sessionRisk?.otpRequired) {
@@ -177,7 +218,7 @@ export default function Login() {
         // Human check before creating anything. Invalid token stops the signup;
         // an unavailable reCAPTCHA does not (see utils/recaptcha.js).
         try {
-          const rcToken = await getRecaptchaToken('signup')
+          const rcToken = captchaToken || await getRecaptchaToken('signup')
           const rc = await fetch('/api/login-attempt?action=verify-human', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -691,9 +732,20 @@ export default function Login() {
               </div>
             )}
 
+            {/* Visible "I'm not a robot" checkbox. Renders on both sign-in and
+                registration. Hides itself if the key is v3 or the script is
+                blocked, and the submit button stops requiring it in that case. */}
+            {!captchaUnavailable && captchaSiteKey && (
+              <RecaptchaCheckbox
+                siteKey={captchaSiteKey}
+                onChange={setCaptchaToken}
+                onUnavailable={() => setCaptchaUnavailable(true)}
+              />
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!captchaUnavailable && captchaSiteKey && !captchaToken)}
               className="w-full bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md mt-2"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}

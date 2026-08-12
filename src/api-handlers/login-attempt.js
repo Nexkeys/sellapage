@@ -61,8 +61,22 @@ export default async function handler(req, res) {
     }
 
     if (action === 'clear') {
-      // Called after a SUCCESSFUL sign-in. Safe to expose: knowing the correct
-      // password is the proof, and a locked account cannot sign in anyway.
+      // Called after a successful sign-in to reset the FAILED-ATTEMPT COUNTER.
+      //
+      // It must NEVER clear an actual lock. Previously it did, which meant an
+      // attacker who eventually guessed the password — or anyone who simply
+      // remembered it after locking themselves out — wiped the lock and walked
+      // straight in, with no admin ever seeing it. Knowing the password is
+      // exactly what a lock is supposed to stop being sufficient.
+      // Only an admin unlock or a completed recovery clears a lock.
+      const state = await getLockState(db, email)
+      if (state.locked) {
+        return res.status(423).json({
+          success: false,
+          locked: true,
+          message: 'This account is locked. Use account recovery to regain access.',
+        })
+      }
       await clearAttempts(db, email)
       return res.status(200).json({ success: true })
     }

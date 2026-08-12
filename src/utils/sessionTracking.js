@@ -26,11 +26,18 @@ export async function registerSession(idToken) {
       body: JSON.stringify({ sessionId }),
     })
     const data = await res.json().catch(() => ({}))
-    return { sessionId, otpRequired: !!data.otpRequired, otpReason: data.otpReason || null }
+    // 423 = account locked. This MUST be propagated: it was previously dropped
+    // here, so the caller navigated to the dashboard despite the server having
+    // refused the session — the lockout bypass.
+    if (res.status === 423 || data.error === 'account_locked') {
+      return { sessionId, otpRequired: false, otpReason: null, locked: true }
+    }
+    return { sessionId, otpRequired: !!data.otpRequired, otpReason: data.otpReason || null, locked: false }
   } catch (err) {
     console.error('Failed to register session:', err)
-    // Fail open: a session-registration outage must not block sign-in.
-    return { sessionId, otpRequired: false, otpReason: null }
+    // Fail open on NETWORK errors only — an outage must not block sign-in.
+    // A definite 423 above is never treated as an outage.
+    return { sessionId, otpRequired: false, otpReason: null, locked: false }
   }
 }
 
