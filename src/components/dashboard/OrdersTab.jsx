@@ -788,7 +788,9 @@ export default function OrdersTab({
       return
     }
     if (selectedProvider === 'topship') {
-      // TEMPORARY: staging testing bypasses Paystack for Topship — see bookTopshipDirect above.
+      // TEMPORARY (2026-08-12): payment-first is off for Topship even in production, so
+      // Nex can validate the live booking flow before wiring real payment collection —
+      // see bookTopshipDirect above and topship-create-shipment.js header.
       await bookTopshipDirect()
       return
     }
@@ -2144,7 +2146,7 @@ export default function OrdersTab({
                 ) : (
                   <>
                     <Check size={13} />
-                    {selectedProvider === 'topship' ? 'Book Shipment (No Payment — Staging)' : 'Confirm & Book Shipment'}
+                    {selectedProvider === 'topship' ? 'Book Shipment (No Payment)' : 'Confirm & Book Shipment'}
                   </>
                 )}
               </button>

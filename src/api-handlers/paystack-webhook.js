@@ -201,9 +201,9 @@ export default async function handler(req, res) {
   }
 
   // Topship safety net — mirrors the Sendbox branch above but for Topship-provider
-  // shipments. STAGING ONLY (see _lib/topship-booking.js). No separate Paystack verify
-  // call needed here: this webhook is already HMAC-verified by Paystack, same trust
-  // model as the Sendbox branch above.
+  // shipments. LIVE (see _lib/topship-booking.js). No separate Paystack verify call
+  // needed here: this webhook is already HMAC-verified by Paystack, same trust model
+  // as the Sendbox branch above.
   if (transactionType === "shipment" && data.metadata?.provider === "topship") {
     try {
       const { bookTopshipShipment, resolveShipmentRoute } = await import("./_lib/topship-booking.js")

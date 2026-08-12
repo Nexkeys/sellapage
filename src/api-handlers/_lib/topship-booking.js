@@ -1,9 +1,9 @@
 //src/api-handlers/_lib/topship-booking.js
 // Shared helper for Topship rate quotes, shipment booking, and tracking.
-// STAGING ONLY as of this writing — TOPSHIP_ENV defaults to 'staging' and only
-// TOPSHIP_STAGING_KEY is set. Topship will not issue a production key until they've
-// reviewed staging logs/reports. Flip TOPSHIP_ENV=production (and add
-// TOPSHIP_PRODUCTION_KEY) once that approval lands — no other code changes needed.
+// LIVE as of 2026-08-12 — TOPSHIP_ENV=production, TOPSHIP_PRODUCTION_KEY set (Topship
+// issued the production key after reviewing staging logs/reports). TOPSHIP_STAGING_KEY
+// stays commented out in .env rather than deleted, so flipping back to TOPSHIP_ENV=staging
+// for future testing is still a one-variable change with no code edits needed.
 
 // save-shipment and pay-from-wallet are real booking/payment operations (not quote
 // lookups), so they get a longer per-call budget than e.g. the geolocation timeout

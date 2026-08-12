@@ -1,5 +1,5 @@
 //src/api-handlers/topship-tracking.js
-// STAGING ONLY — see _lib/topship-booking.js header for the staging/production switch.
+// LIVE — see _lib/topship-booking.js header for the staging/production switch.
 import { getAdminAuth } from './_lib/firebase-admin.js'
 import { trackTopshipShipment } from './_lib/topship-booking.js'
 

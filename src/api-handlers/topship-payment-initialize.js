@@ -1,5 +1,5 @@
 //src/api-handlers/topship-payment-initialize.js
-// STAGING ONLY — see _lib/topship-booking.js header for the staging/production switch.
+// LIVE — see _lib/topship-booking.js header for the staging/production switch.
 // Deliberately a separate file from sendbox-payment-initialize.js rather than a shared
 // handler with a provider switch, so the existing Sendbox file stays untouched.
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'

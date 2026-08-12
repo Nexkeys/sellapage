@@ -1,5 +1,5 @@
 //src/api-handlers/topship-rates.js
-// STAGING ONLY — see _lib/topship-booking.js header for the staging/production switch.
+// LIVE — see _lib/topship-booking.js header for the staging/production switch.
 import { getTopshipRates } from './_lib/topship-booking.js'
 
 export default async function handler(req, res) {

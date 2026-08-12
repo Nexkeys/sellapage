@@ -1,13 +1,16 @@
 //src/api-handlers/topship-create-shipment.js
-// STAGING ONLY — see _lib/topship-booking.js header for the staging/production switch.
+// LIVE — TOPSHIP_ENV=production as of 2026-08-12 (Topship issued the production key
+// after reviewing staging logs/reports). See _lib/topship-booking.js header.
 //
-// TEMPORARY (2026-07-20): `reference` is optional. When absent, this handler skips the
-// Paystack verification step entirely and books directly, so staging testing doesn't
-// require completing a real Paystack checkout each time. This bypass is HARD-GATED to
-// non-production — see the `TOPSHIP_ENV === 'production'` check below — so it cannot
-// function even if this ships unmodified once a production key exists. See README.md
-// "Topship Payment-First Booking — Temporarily Bypassed for Staging Testing" for the
-// full log of what this replaced and how to fully re-enable payment-first booking.
+// !! PAYMENT-FIRST IS CURRENTLY OFF, INCLUDING IN PRODUCTION !! (2026-08-12, Nex's explicit
+// instruction: validate the production key/booking flow itself before wiring real customer
+// payment collection). `reference` is optional — when absent, this handler skips Paystack
+// verification and books directly against the LIVE Topship account, meaning it charges the
+// real Topship wallet balance with NO payment collected from anyone. The "Book Shipment (No
+// Payment)" button in OrdersTab.jsx is reachable by every vendor on the live dashboard, not
+// just Nex — there is currently no restriction. This must be re-locked (re-add the
+// `if (!reference && isProduction) return 400` block removed below) before this flow is
+// relied on for real vendor traffic. See Changelog-README.md 2026-08-12 entry.
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { bookTopshipShipment, resolveShipmentRoute } from './_lib/topship-booking.js'
@@ -44,10 +47,10 @@ export default async function handler(req, res) {
     })
   }
 
-  const isProduction = (process.env.TOPSHIP_ENV || 'staging').toLowerCase() === 'production'
-  if (!reference && isProduction) {
-    return res.status(400).json({ error: 'Payment reference is required' })
-  }
+  // Payment-first gate REMOVED here on 2026-08-12 per Nex's explicit instruction — see file
+  // header. To re-enable payment-first enforcement in production, reinstate:
+  //   const isProduction = (process.env.TOPSHIP_ENV || 'staging').toLowerCase() === 'production'
+  //   if (!reference && isProduction) return res.status(400).json({ error: 'Payment reference is required' })
   if (!reference && !shippingFee) {
     return res.status(400).json({ error: 'shippingFee is required when booking without a payment reference' })
   }
@@ -99,7 +102,7 @@ export default async function handler(req, res) {
       }
       resolvedShippingFee = Number(txn.metadata?.shippingFee) || resolvedShippingFee
     } else {
-      console.warn(`[topship-create-shipment] Booking WITHOUT payment verification (staging bypass) — order ${orderId}`)
+      console.warn(`[topship-create-shipment] Booking WITHOUT payment verification (LIVE, payment-first temporarily off) — order ${orderId}`)
     }
 
     const shipmentRoute = resolveShipmentRoute(senderDetails.countryCode, receiverDetails.countryCode)
@@ -188,7 +191,7 @@ export default async function handler(req, res) {
         status: 'dispatched',
         changedAt: now.toISOString(),
         changedBy: 'system',
-        changedByLabel: reference ? 'Shipment Booked (Topship)' : 'Shipment Booked (Topship, staging — payment bypassed)',
+        changedByLabel: reference ? 'Shipment Booked (Topship)' : 'Shipment Booked (Topship, payment bypassed)',
       }),
     })
 
