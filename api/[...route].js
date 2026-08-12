@@ -391,6 +391,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/phone-verify.js")
         return handler(req, res)
       }
+      case "login-verify": {
+        const { default: handler } = await import("../src/api-handlers/login-verify.js")
+        return handler(req, res)
+      }
 
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });

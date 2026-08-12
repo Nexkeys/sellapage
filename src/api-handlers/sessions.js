@@ -2,6 +2,7 @@
 import { randomUUID } from 'crypto'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveCallerStoreId } from './_lib/verify-store-access.js'
+import { evaluateLoginRisk, isLoginOtpEnabled } from './_lib/login-risk.js'
 
 function parseUserAgent(ua = '') {
   let os = 'Unknown OS'
@@ -127,6 +128,15 @@ export default async function handler(req, res) {
       const { os, browser, deviceType } = parseUserAgent(ua)
       const location = await lookupLocation(ip)
 
+      // Phase 2 risk evaluation. Reads the EXISTING record for this sessionId
+      // before overwriting it, so a returning device keeps its verified state
+      // and is not re-challenged on every sign-in.
+      const priorSnap = await sessionsRef.doc(sessionId).get()
+      const prior = priorSnap.exists ? priorSnap.data() : null
+      const risk = isLoginOtpEnabled()
+        ? evaluateLoginRisk({ sessionDoc: prior, currentCountry: location.country })
+        : { challenge: false, reason: null }
+
       await sessionsRef.doc(sessionId).set({
         os,
         browser,
@@ -139,11 +149,21 @@ export default async function handler(req, res) {
         actorUid: decoded.uid,
         actorLabel,
         revoked: false,
-        createdAt: new Date(),
+        // Carry the prior verification forward; only a challenge clears it.
+        otpVerifiedAt: risk.challenge ? null : (prior?.otpVerifiedAt || null),
+        otpPending: risk.challenge,
+        otpReason: risk.reason,
+        createdAt: prior?.createdAt || new Date(),
         lastActiveAt: new Date(),
       })
 
-      return res.status(200).json({ success: true, sessionId })
+      return res.status(200).json({
+        success: true,
+        sessionId,
+        // The client uses this to decide whether to show the login OTP step.
+        otpRequired: risk.challenge,
+        otpReason: risk.reason,
+      })
     }
 
     if (action === 'heartbeat' && req.method === 'POST') {
@@ -160,7 +180,13 @@ export default async function handler(req, res) {
       if (data.revoked) return res.status(200).json({ success: true, revoked: true })
 
       await docRef.update({ lastActiveAt: new Date() })
-      return res.status(200).json({ success: true, revoked: false })
+      // A session that still owes an OTP is reported to the 45s heartbeat so an
+      // abandoned challenge cannot simply be dismissed and left running.
+      return res.status(200).json({
+        success: true,
+        revoked: false,
+        otpPending: isLoginOtpEnabled() ? data.otpPending === true : false,
+      })
     }
 
     if (action === 'revoke' && req.method === 'POST') {

@@ -24,6 +24,9 @@ const TAB_ACCESS = {
   referrals:      ['super_admin', 'finance'],
   withdrawals:    ['super_admin', 'finance'],
   admins:         ['super_admin'],
+  // Approving a recovery request can reset an account's email AND password —
+  // account-takeover capability, so super_admin only, never support.
+  recovery:       ['super_admin'],
   cac:            ['super_admin', 'operations'],
   domains:        ['super_admin', 'operations'],
   flags:          ['super_admin'],

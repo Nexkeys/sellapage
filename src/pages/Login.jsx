@@ -2,8 +2,9 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
-import { loginSeller, registerSeller, resetPassword, auth } from '../firebase/auth'
-import { registerSession } from '../utils/sessionTracking'
+import { loginSeller, registerSeller, resetPassword, logoutSeller, auth } from '../firebase/auth'
+import { registerSession, confirmLoginOtp } from '../utils/sessionTracking'
+import OtpVerifyModal from '../components/OtpVerifyModal'
 import { isReservedSlug } from '../utils/reservedSlugs'
 
 const ERROR_MESSAGES = {
@@ -24,6 +25,8 @@ export default function Login() {
 
   const [mode, setMode] = useState('login')
   const [loading, setLoading] = useState(false)
+  // Phase 2 login challenge: { reason } while an emailed code is outstanding.
+  const [loginOtp, setLoginOtp] = useState(null)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [resetSent, setResetSent] = useState(false)
@@ -135,10 +138,21 @@ export default function Login() {
         const credential = await loginSeller(form.email, form.password)
         const token = await credential.user.getIdToken()
 
+        // Phase 2: registering the session also evaluates device/location risk.
+        // If this device isn't recognised (or the verification is stale, or the
+        // country changed) the vendor must clear an emailed code before the
+        // dashboard loads. Inert unless ENABLE_LOGIN_OTP is on server-side.
+        let sessionRisk = { otpRequired: false }
         try {
-          await registerSession(token)
+          sessionRisk = await registerSession(token)
         } catch (err) {
           console.error('Failed to register session:', err)
+        }
+
+        if (sessionRisk?.otpRequired) {
+          setLoginOtp({ reason: sessionRisk.otpReason })
+          setLoading(false)
+          return
         }
 
         try {
@@ -205,6 +219,38 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Login OTP challenge — blocks the dashboard until the emailed code clears.
+  // Cancelling signs out, so an unverified session never proceeds.
+  if (loginOtp) {
+    return (
+      <OtpVerifyModal
+        open
+        purpose="login"
+        title="Confirm it's you"
+        description={
+          loginOtp.reason === 'country_change'
+            ? "You're signing in from a new location, so we've emailed you a code."
+            : loginOtp.reason === 'stale_verification'
+              ? "It's been a while since we confirmed this device. We've emailed you a code."
+              : "We don't recognise this device, so we've emailed you a code."
+        }
+        onClose={async () => {
+          setLoginOtp(null)
+          await logoutSeller().catch(() => {})
+        }}
+        onVerified={async () => {
+          const user = auth.currentUser
+          if (user) {
+            const token = await user.getIdToken()
+            await confirmLoginOtp(token)
+          }
+          setLoginOtp(null)
+          navigate('/dashboard')
+        }}
+      />
+    )
   }
 
   if (mode === 'forgot') {

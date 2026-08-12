@@ -130,10 +130,17 @@ export default function DashboardLayout({
       if (!currentUser) return;
       try {
         const token = await currentUser.getIdToken();
-        const revoked = await sendHeartbeat(token);
+        const { revoked, otpPending } = await sendHeartbeat(token);
         if (revoked && !cancelled) {
           await logoutSeller();
           navigate("/login");
+          return;
+        }
+        // Login OTP challenge abandoned or still outstanding — send them back
+        // to sign in rather than leaving an unverified session running.
+        if (otpPending && !cancelled) {
+          await logoutSeller();
+          navigate("/login?verify=1");
         }
       } catch {
         // Silently ignore — a missed heartbeat is retried on the next interval.

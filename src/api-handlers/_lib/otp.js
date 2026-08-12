@@ -29,6 +29,8 @@ export const OTP_PURPOSES = {
   STAFF_REMOVE: 'staff_remove',
   // Phase 3 — SMS channel. Deliberately NOT tied to any bank/payout flow.
   PHONE_VERIFY: 'phone_verify',
+  // Phase 2 — new-device / country-change / stale-verification login challenge.
+  LOGIN: 'login',
 }
 
 /** Purposes that go over SMS rather than email. */
@@ -43,6 +45,7 @@ const PURPOSE_LABELS = {
   [OTP_PURPOSES.STAFF_ROLE_CHANGE]: "change a staff member's role",
   [OTP_PURPOSES.STAFF_REMOVE]: 'remove a staff member',
   [OTP_PURPOSES.PHONE_VERIFY]: 'verify your phone number',
+  [OTP_PURPOSES.LOGIN]: 'sign in from this device',
 }
 
 export function purposeLabel(purpose) {
