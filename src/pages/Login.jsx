@@ -499,6 +499,16 @@ export default function Login() {
               </div>
             )}
 
+            {/* Password reset emails the account address — useless if the vendor
+                has lost that inbox. This is the escape hatch for that case. */}
+            {mode === 'forgot' && (
+              <div className="text-center">
+                <Link to="/account-recovery" className="text-xs text-gray-500 hover:text-gray-700">
+                  Lost access to your email? <span className="font-semibold text-green-600">Recover your account</span>
+                </Link>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}

@@ -6,10 +6,12 @@ import { applyCors, getBearerToken, parseJsonBody } from './_lib/http.js'
 import { durableRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 import {
   createEmailChallenge,
+  createSmsChallenge,
   getResendCooldown,
   isValidPurpose,
   logAudit,
   verifyRecaptcha,
+  SMS_PURPOSES,
 } from './_lib/otp.js'
 
 export default async function handler(req, res) {
@@ -76,6 +78,62 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'captcha_failed', message: 'Verification check failed. Please try again.' })
     }
 
+    // ---- SMS channel (Phase 3) ----------------------------------------
+    // Phone verification proves control of a NEW number, so unlike the email
+    // channel the destination legitimately comes from the request. It is
+    // normalised and stored on the challenge as `pendingPhone`, and the
+    // completion handler reads it back from there — never from a later
+    // request — so a caller cannot verify one number and attach another.
+    if (SMS_PURPOSES.has(purpose)) {
+      // SMS costs real money per message, so the cap is much tighter than
+      // email and is enforced per-day as well as per-window.
+      const smsDaily = await durableRateLimit('otp_sms_uid_daily', uid, 10, 24 * 60 * 60 * 1000)
+      if (!smsDaily) {
+        await logAudit(db, { uid, action: 'otp_send', purpose, result: 'sms_daily_cap', ip, userAgent })
+        return tooManyRequests(res, 'Daily verification limit reached. Please try again tomorrow.')
+      }
+
+      const smsResult = await createSmsChallenge(db, {
+        uid,
+        purpose,
+        phone: body.phone,
+        ip,
+        sessionId: body.sessionId || null,
+        userAgent,
+      })
+
+      if (!smsResult.ok) {
+        await logAudit(db, {
+          uid, action: 'otp_send', purpose, result: 'failed', ip, userAgent,
+          meta: { channel: 'sms', reason: smsResult.error },
+        })
+        // Sender ID not yet approved / not configured is an EXPECTED state
+        // until Termii approves ours — report it as unavailable, not an error,
+        // so the UI can show "coming soon" rather than a scary failure.
+        const pending = String(smsResult.error || '').startsWith('sender_id') ||
+                        smsResult.error === 'not_configured'
+        return res.status(pending ? 503 : 400).json({
+          error: smsResult.error,
+          message: smsResult.message || 'Could not send the code.',
+          smsUnavailable: pending,
+        })
+      }
+
+      await logAudit(db, {
+        uid, action: 'otp_send', purpose, result: 'issued', ip, userAgent,
+        meta: { channel: 'sms' },
+      })
+
+      return res.status(200).json({
+        success: true,
+        channel: 'sms',
+        destinationMasked: smsResult.destinationMasked,
+        expiresAt: smsResult.expiresAt,
+        resendAfterSeconds: smsResult.resendAfterSeconds,
+      })
+    }
+
+    // ---- Email channel -------------------------------------------------
     // Destination is the account's own email, read server-side. Never taken
     // from the request body — otherwise a caller could redirect their own
     // step-up code to an inbox they control.

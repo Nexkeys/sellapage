@@ -27,7 +27,12 @@ export const OTP_PURPOSES = {
   STAFF_INVITE: 'staff_invite',
   STAFF_ROLE_CHANGE: 'staff_role_change',
   STAFF_REMOVE: 'staff_remove',
+  // Phase 3 — SMS channel. Deliberately NOT tied to any bank/payout flow.
+  PHONE_VERIFY: 'phone_verify',
 }
+
+/** Purposes that go over SMS rather than email. */
+export const SMS_PURPOSES = new Set([OTP_PURPOSES.PHONE_VERIFY])
 
 const VALID_PURPOSES = new Set(Object.values(OTP_PURPOSES))
 
@@ -37,6 +42,11 @@ const PURPOSE_LABELS = {
   [OTP_PURPOSES.STAFF_INVITE]: 'invite a new staff member',
   [OTP_PURPOSES.STAFF_ROLE_CHANGE]: "change a staff member's role",
   [OTP_PURPOSES.STAFF_REMOVE]: 'remove a staff member',
+  [OTP_PURPOSES.PHONE_VERIFY]: 'verify your phone number',
+}
+
+export function purposeLabel(purpose) {
+  return PURPOSE_LABELS[purpose] || 'confirm a sensitive action'
 }
 
 export const OTP_TTL_MS = 10 * 60 * 1000 // 10 minutes
@@ -326,4 +336,147 @@ export function otpErrorMessage(error) {
     case 'purpose_mismatch': return 'This code was issued for a different action.'
     default: return 'Verification failed. Please try again.'
   }
+}
+
+// ---------------------------------------------------------------------------
+// SMS channel (Phase 3 — Termii)
+//
+// Termii generates and holds the PIN, enforcing attempts and TTL on their side
+// (see _lib/termii.js). We therefore store their `pinId` instead of a codeHash,
+// but keep the SAME uid + purpose + session binding as the email channel:
+// Termii verifies THE CODE, only we can verify THE CONTEXT. Without this a
+// pinId issued for phone_verify could be replayed against another purpose.
+//
+// Everything else — deterministic doc id, single-use consume/redeem, resend
+// cooldown, audit logging — is shared with the email flow unchanged.
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates an SMS challenge by asking Termii to send a PIN, then records the
+ * returned pinId against uid+purpose.
+ * @returns {{ok:true,destinationMasked,expiresAt,resendAfterSeconds}|{ok:false,error,message}}
+ */
+export async function createSmsChallenge(db, { uid, purpose, phone, ip, sessionId, userAgent }) {
+  if (!isValidPurpose(purpose)) return { ok: false, error: 'invalid_purpose' }
+  if (!SMS_PURPOSES.has(purpose)) return { ok: false, error: 'not_an_sms_purpose' }
+
+  // Imported lazily so the email flow never pays for the Termii module and a
+  // misconfigured SMS setup cannot break Phase 1.
+  const { sendSmsOtp, normalisePhone, maskPhone } = await import('./termii.js')
+
+  const normalised = normalisePhone(phone)
+  if (!normalised) {
+    return { ok: false, error: 'invalid_phone', message: 'Enter a valid Nigerian phone number.' }
+  }
+
+  const sent = await sendSmsOtp({ to: normalised, purposeLabel: purposeLabel(purpose) })
+  if (!sent.ok) return { ok: false, error: sent.error, message: sent.message }
+
+  const now = Date.now()
+  const ttlMs = (sent.ttlMinutes || 5) * 60 * 1000
+
+  await db.collection(COLLECTION).doc(`${uid}_${purpose}`).set({
+    uid,
+    purpose,
+    channel: 'sms',
+    destinationMasked: maskPhone(normalised),
+    // Termii holds the code; we hold the context. No codeHash for SMS.
+    codeHash: null,
+    salt: null,
+    termiiPinId: sent.pinId,
+    // The number being proven — read back on redeem so a caller cannot verify
+    // one number then attach a different one to their account.
+    pendingPhone: normalised,
+    expiresAt: now + ttlMs,
+    createdAtMs: now,
+    attempts: 0,
+    maxAttempts: sent.attempts || 3,
+    consumedAt: null,
+    redeemedAt: null,
+    invalidatedAt: null,
+    ip: ip || null,
+    sessionId: sessionId || null,
+    userAgent: (userAgent || '').slice(0, 300),
+    createdAt: FieldValue.serverTimestamp(),
+  })
+
+  return {
+    ok: true,
+    destinationMasked: maskPhone(normalised),
+    expiresAt: now + ttlMs,
+    resendAfterSeconds: Math.ceil(OTP_RESEND_COOLDOWN_MS / 1000),
+  }
+}
+
+/**
+ * Verifies an SMS code with Termii, then marks our challenge consumed.
+ * Context checks (uid, purpose, expiry, single-use) happen HERE before the code
+ * is ever sent to Termii.
+ */
+export async function verifySmsChallenge(db, { code, uid, purpose }) {
+  if (!code) return { ok: false, error: 'missing_fields' }
+  if (!isValidPurpose(purpose) || !SMS_PURPOSES.has(purpose)) {
+    return { ok: false, error: 'invalid_purpose' }
+  }
+
+  const ref = db.collection(COLLECTION).doc(`${uid}_${purpose}`)
+  const snap = await ref.get()
+  if (!snap.exists) return { ok: false, error: 'not_found' }
+
+  const c = snap.data()
+  if (c.uid !== uid) return { ok: false, error: 'not_found' }
+  if (c.purpose !== purpose) return { ok: false, error: 'purpose_mismatch' }
+  if (c.channel !== 'sms' || !c.termiiPinId) return { ok: false, error: 'not_found' }
+  if (c.consumedAt) return { ok: false, error: 'already_used' }
+  if (Date.now() > (c.expiresAt || 0)) return { ok: false, error: 'expired' }
+  if ((c.attempts || 0) >= (c.maxAttempts || 3)) return { ok: false, error: 'too_many_attempts' }
+
+  const { verifySmsOtp } = await import('./termii.js')
+  const result = await verifySmsOtp({ pinId: c.termiiPinId, pin: code })
+
+  if (!result.ok) {
+    // A Termii outage must not burn one of the vendor's limited attempts.
+    if (result.error === 'unreachable') {
+      return { ok: false, error: 'unreachable', message: 'Could not reach the SMS provider. Try again shortly.' }
+    }
+    const attempts = (c.attempts || 0) + 1
+    const burned = attempts >= (c.maxAttempts || 3)
+    await ref.update({
+      attempts,
+      ...(burned ? { consumedAt: Date.now(), invalidatedAt: Date.now() } : {}),
+    })
+    return {
+      ok: false,
+      error: burned ? 'too_many_attempts' : 'invalid_code',
+      remainingAttempts: Math.max((c.maxAttempts || 3) - attempts, 0),
+    }
+  }
+
+  await ref.update({ consumedAt: Date.now(), attempts: (c.attempts || 0) + 1 })
+  return { ok: true, phone: c.pendingPhone || null }
+}
+
+/**
+ * Redeem variant that returns the challenge payload, so a handler can read the
+ * server-recorded pendingPhone rather than trusting a number from the request.
+ */
+export async function redeemProofWithData(db, { uid, purpose }) {
+  if (!isValidPurpose(purpose)) return { ok: false, error: 'invalid_purpose' }
+  const ref = db.collection(COLLECTION).doc(`${uid}_${purpose}`)
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return { ok: false, error: 'otp_required' }
+    const c = snap.data()
+
+    if (c.uid !== uid) return { ok: false, error: 'otp_required' }
+    if (c.purpose !== purpose) return { ok: false, error: 'purpose_mismatch' }
+    if (!c.consumedAt) return { ok: false, error: 'otp_not_verified' }
+    if (c.redeemedAt) return { ok: false, error: 'otp_already_used' }
+    if (c.invalidatedAt) return { ok: false, error: 'otp_required' }
+    if (Date.now() - c.consumedAt > OTP_PROOF_TTL_MS) return { ok: false, error: 'otp_expired' }
+
+    tx.update(ref, { redeemedAt: Date.now() })
+    return { ok: true, data: c }
+  })
 }

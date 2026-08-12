@@ -4,7 +4,7 @@ import {
   Lock, Loader2, RefreshCw, Database, Cloud, Globe,
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
-  Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3,
+  Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
   Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
@@ -27,6 +27,7 @@ const ADMIN_TABS = [
   { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },
   { id: 'blog', label: 'Blog', icon: BookOpen, short: 'Blog' },
   { id: 'reviews', label: 'Reviews', icon: Star, short: 'Reviews' },
+  { id: 'recovery', label: 'Account Recovery', icon: KeyRound, short: 'Recovery' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
@@ -62,6 +63,11 @@ export default function Admin() {
   }, [user]);
 
   const [termii, setTermii] = useState(null);
+  const [recovery, setRecovery] = useState([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState('');
+  const [recFilter, setRecFilter] = useState('pending');
+  const [recBusyId, setRecBusyId] = useState(null);
   const [healthData, setHealthData] = useState(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [healthError, setHealthError] = useState('');
@@ -174,6 +180,37 @@ export default function Admin() {
       setTermii(t.ok ? await t.json() : { success: false, error: 'unreachable' });
     } catch { setTermii({ success: false, error: 'unreachable' }); }
   }, []);
+
+  const fetchRecovery = useCallback(async (status = 'pending') => {
+    setRecLoading(true); setRecError('');
+    try {
+      const r = await fetch(`/api/admin-recovery?action=list&status=${status}`, { headers: await H() });
+      if (!r.ok) throw new Error('Failed to load recovery requests.');
+      setRecovery((await r.json()).requests || []);
+    } catch (e) { setRecError(e.message); } finally { setRecLoading(false); }
+  }, []);
+
+  const decideRecovery = useCallback(async (requestId, decision) => {
+    // Approving issues a single-use token that can change this account's email
+    // AND password, so make the consequence explicit before it happens.
+    const note = window.prompt(
+      decision === 'approve'
+        ? 'Approving emails a 30-minute, single-use recovery link to the requester and lets them reset the account email AND password. Confirm you have verified their identity out-of-band. Add a note for the audit log:'
+        : 'Reason for rejecting (recorded in the audit log):',
+    );
+    if (note === null) return;
+    setRecBusyId(requestId);
+    try {
+      const r = await fetch(`/api/admin-recovery?action=${decision}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await H()) },
+        body: JSON.stringify({ requestId, note }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || d.error || 'Failed');
+      fetchRecovery(recFilter);
+    } catch (e) { setRecError(e.message); } finally { setRecBusyId(null); }
+  }, [fetchRecovery, recFilter]);
 
   const fetchDirectory = useCallback(async (p = 1, q = '') => {
     setDirLoading(true); setDirError('');
@@ -440,6 +477,7 @@ export default function Admin() {
     if (!user || !adminRole) return;
     const m = {
       health: () => { if (!healthData) fetchHealth(); },
+      recovery: () => { fetchRecovery(recFilter); },
       directory: () => { if (!dirData) fetchDirectory(page, search); },
       referrals: () => { if (!refStats) fetchReferrals(); },
       withdrawals: () => fetchWithdrawals(wdStatusFilter),
@@ -516,6 +554,76 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* ACCOUNT RECOVERY — super_admin only. Approving grants account-takeover
+            capability, so identity must be verified out-of-band first. */}
+        {activeTab === 'recovery' && <div className="space-y-4 animate-in fade-in duration-200">
+          {recError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{recError}</div>}
+
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-xs text-amber-900 leading-relaxed">
+              <strong>Verify identity before approving.</strong> Approval emails a single-use link, valid 30 minutes, that lets the requester set a new email <em>and</em> password and signs out every device. Check CAC details, recent orders or the WhatsApp number against the account first. The store&apos;s current email is alerted at both request and approval.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 className="font-bold text-gray-800">Account Recovery</h2>
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {['pending', 'approved', 'completed', 'rejected', 'all'].map(s => (
+                <button key={s} onClick={() => { setRecFilter(s); fetchRecovery(s); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${recFilter === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                  {s[0].toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {recLoading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div> : (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="divide-y divide-gray-50">
+                {recovery.length === 0 ? <div className="p-6 text-center text-gray-400 text-sm">No {recFilter === 'all' ? '' : recFilter} recovery requests.</div> : recovery.map(r => (
+                  <div key={r.id} className="px-4 py-3 hover:bg-gray-50/50">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-gray-900 truncate">{r.businessName || r.storeName || 'Unknown store'}</p>
+                          {r.cacVerified && <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200">CAC ✓</span>}
+                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[r.plan] || PLAN_C.starter}`}>{r.plan}</span>
+                        </div>
+                        <div className="mt-1.5 space-y-0.5 text-[11px] text-gray-600">
+                          <p><span className="text-gray-400">Account email:</span> <span className="font-mono">{r.currentEmailMasked || '—'}</span></p>
+                          <p><span className="text-gray-400">Reach them at:</span> <span className="font-semibold text-gray-900">{r.contactEmail}</span></p>
+                          {r.contactPhone && <p className="flex items-center gap-1.5"><span className="text-gray-400">Phone:</span> <span className="font-semibold">{r.contactPhone}</span>
+                            <a href={`https://wa.me/${String(r.contactPhone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline inline-flex items-center gap-0.5"><ExternalLink size={9} /> WhatsApp</a></p>}
+                          <p className="text-[10px] text-gray-400">Store /{r.storeName} · from IP {r.requestIp || '—'} · {r.createdAtMs ? new Date(r.createdAtMs).toLocaleString('en-NG') : '—'}</p>
+                        </div>
+                        {r.reason && <p className="mt-2 text-xs text-gray-700 bg-gray-50 border border-gray-100 rounded-lg p-2 leading-relaxed whitespace-pre-wrap">{r.reason}</p>}
+                        {r.adminNote && <p className="mt-1.5 text-[11px] text-gray-500 italic">Note: {r.adminNote}</p>}
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                          r.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-200'
+                          : r.status === 'approved' ? 'bg-blue-50 text-blue-600 border-blue-200'
+                          : r.status === 'completed' ? 'bg-green-50 text-green-600 border-green-200'
+                          : 'bg-red-50 text-red-600 border-red-200'}`}>{r.status}</span>
+                        {r.status === 'pending' && (
+                          <div className="flex gap-1.5">
+                            <button onClick={() => decideRecovery(r.id, 'approve')} disabled={recBusyId === r.id}
+                              className="text-[10px] font-bold bg-green-600 text-white px-2.5 py-1 rounded-lg disabled:opacity-50">
+                              {recBusyId === r.id ? '...' : 'Approve'}
+                            </button>
+                            <button onClick={() => decideRecovery(r.id, 'reject')} disabled={recBusyId === r.id}
+                              className="text-[10px] font-bold bg-red-100 text-red-700 px-2.5 py-1 rounded-lg disabled:opacity-50">Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>}
+
         {/* HEALTH */}
         {activeTab === 'health' && <div className="space-y-4 animate-in fade-in duration-200">
           {healthError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{healthError}</div>}
@@ -550,9 +658,15 @@ export default function Admin() {
                 </div>
               )}
             </div>
-            {termii.success && termii.configured && termii.senderIds?.totalElements === 0 && (
-              <p className="mt-3 text-xs text-amber-800 bg-amber-100/60 border border-amber-200 rounded-lg p-2.5 leading-relaxed">
-                <strong>No approved sender ID.</strong> SMS OTP cannot be sent until one is approved — Termii requires an approved sender ID in the <code>from</code> field. Request one on the Termii dashboard; approval takes days.
+            {termii.success && termii.configured && termii.senderIdValid === false && (
+              <p className="mt-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg p-2.5 leading-relaxed">
+                <strong>TERMII_SENDER_ID is not a valid sender ID{termii.senderIdIssue === 'looks_like_uuid' ? ' — it looks like the application reference (a UUID), not the sender name' : ''}.</strong>{' '}
+                Termii expects the short alphanumeric name that appears as the SMS sender (max 11 chars, e.g. <code>Sellapage</code>). Sends will be rejected until this is corrected{termii.senderIdValue ? <> — currently <code>{String(termii.senderIdValue).slice(0, 40)}</code></> : null}.
+              </p>
+            )}
+            {termii.success && termii.configured && termii.senderIdApprovedCount === 0 && (
+              <p className="mt-2 text-xs text-amber-800 bg-amber-100/60 border border-amber-200 rounded-lg p-2.5 leading-relaxed">
+                <strong>No approved sender ID yet.</strong> Termii requires an <em>active</em> sender ID in the <code>from</code> field, so SMS OTP stays disabled until approval lands. Phone verification degrades to &quot;not available yet&quot; in the vendor UI rather than failing.
               </p>
             )}
             {termii.lowBalance && (

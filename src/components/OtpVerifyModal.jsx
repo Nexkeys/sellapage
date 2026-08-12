@@ -9,7 +9,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, ShieldCheck, Loader2, AlertCircle } from 'lucide-react'
 import { auth } from '../firebase/auth'
 
-export default function OtpVerifyModal({ open, purpose, title, description, onVerified, onClose }) {
+// `phone` is only used by SMS purposes (phone_verify) — the server ignores it
+// for email purposes, where the destination is always read from the account.
+export default function OtpVerifyModal({ open, purpose, title, description, phone, onVerified, onClose }) {
   const [code, setCode] = useState('')
   const [sending, setSending] = useState(false)
   const [verifying, setVerifying] = useState(false)
@@ -36,7 +38,7 @@ export default function OtpVerifyModal({ open, purpose, title, description, onVe
     setSending(true)
     setError('')
     try {
-      const { ok, data } = await authedFetch('/api/otp-send', { purpose })
+      const { ok, data } = await authedFetch('/api/otp-send', { purpose, phone })
       if (!ok) {
         setError(data.message || 'Could not send the code.')
         if (data.retryAfterSeconds) setCooldown(data.retryAfterSeconds)
@@ -49,7 +51,7 @@ export default function OtpVerifyModal({ open, purpose, title, description, onVe
     } finally {
       setSending(false)
     }
-  }, [authedFetch, purpose])
+  }, [authedFetch, purpose, phone])
 
   // Request one code per opening. requestedRef guards React StrictMode's
   // double-invoke in development, which would otherwise burn the 60s cooldown

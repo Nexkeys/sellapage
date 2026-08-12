@@ -36,6 +36,7 @@ import BlogPage from './pages/BlogPage'
 import SuccessStoriesPage from './pages/SuccessStoriesPage'
 import BlogPostPage from './pages/BlogPostPage'
 import JoinTeam from './pages/JoinTeam'
+import AccountRecovery from './pages/AccountRecovery'
 
 
 export default function App() {
@@ -49,6 +50,11 @@ export default function App() {
           <Route path="/register" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/join-team" element={<JoinTeam />} />
+          {/* Public: a locked-out vendor cannot authenticate, so both views
+              are unauthenticated. The redeem view requires an approved,
+              single-use token. See _lib/recovery.js for the threat model. */}
+          <Route path="/account-recovery" element={<AccountRecovery />} />
+          <Route path="/account-recovery/redeem" element={<AccountRecovery />} />
           <Route
             path="/dashboard"
             element={

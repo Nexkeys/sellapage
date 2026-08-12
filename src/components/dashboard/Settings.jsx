@@ -7,6 +7,7 @@ import {
 import { FREE_PLAN_LIMIT } from '../../firebase/products'
 import { PLAN_PRICES, formatPrice } from '../../utils/billingPlans'
 import SessionsPanel from './SessionsPanel'
+import PhoneVerifyCard from './PhoneVerifyCard'
 
 
 const getInitials = (name = '') => {
@@ -170,6 +171,10 @@ export default function SettingsTab({
         <p className="text-gray-400 text-xs mt-0.5">Manage your business page and account preferences.</p>
       </div>
 
+
+      {/* Renders nothing until the status endpoint answers, and shows a
+          "coming soon" state while the Termii sender ID is unapproved. */}
+      <PhoneVerifyCard store={store} />
 
       {/* ── Store Info ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">

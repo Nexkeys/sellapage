@@ -5,7 +5,14 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { applyCors, getBearerToken, parseJsonBody } from './_lib/http.js'
 import { durableRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
-import { verifyChallenge, isValidPurpose, logAudit, otpErrorMessage } from './_lib/otp.js'
+import {
+  verifyChallenge,
+  verifySmsChallenge,
+  isValidPurpose,
+  logAudit,
+  otpErrorMessage,
+  SMS_PURPOSES,
+} from './_lib/otp.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'POST,OPTIONS' })) return
@@ -49,7 +56,12 @@ export default async function handler(req, res) {
       return tooManyRequests(res, 'Too many attempts. Please wait a few minutes.')
     }
 
-    const result = await verifyChallenge(db, { code: String(code).trim(), uid, purpose })
+    // SMS codes are verified by Termii against the stored pinId; email codes
+    // against our own HMAC. Both apply identical uid/purpose/expiry/single-use
+    // context checks BEFORE the code is checked at all.
+    const result = SMS_PURPOSES.has(purpose)
+      ? await verifySmsChallenge(db, { code: String(code).trim(), uid, purpose })
+      : await verifyChallenge(db, { code: String(code).trim(), uid, purpose })
 
     if (!result.ok) {
       await logAudit(db, {

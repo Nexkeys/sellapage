@@ -13,6 +13,7 @@
 // browser in any response.
 import { applyCors } from './_lib/http.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
+import { validateSenderId } from './_lib/termii.js'
 
 // Below this, phone verification is at risk of failing outright.
 const LOW_BALANCE_THRESHOLD_NGN = 2000
@@ -83,6 +84,20 @@ export default async function handler(req, res) {
     const balance = Number(balanceRes.data?.balance ?? 0)
     const currency = balanceRes.data?.currency || 'NGN'
 
+    // Config-level check on TERMII_SENDER_ID. Termii's `from` must be the short
+    // alphanumeric sender NAME ("Sellapage"), not the UUID the application form
+    // returns — see validateSenderId(). Catching this here beats discovering it
+    // as silent send failures the day approval lands. The value itself is only
+    // echoed when it is INVALID, so a working sender ID is never disclosed.
+    const senderCheck = validateSenderId(process.env.TERMII_SENDER_ID)
+
+    // Termii lists pending sender IDs too (Docs:110-200 shows status "pending"),
+    // so surface both counts rather than implying any entry means "approved".
+    const entries = Array.isArray(senderRes.ok ? senderRes.data?.content : null)
+      ? senderRes.data.content
+      : []
+    const approvedCount = entries.filter(e => String(e.status || '').toLowerCase() === 'active').length
+
     return res.status(200).json({
       success: true,
       configured: true,
@@ -91,6 +106,13 @@ export default async function handler(req, res) {
       application: balanceRes.data?.application || '',
       lowBalance: balance < LOW_BALANCE_THRESHOLD_NGN,
       lowBalanceThreshold: LOW_BALANCE_THRESHOLD_NGN,
+      senderIdConfigured: !!process.env.TERMII_SENDER_ID,
+      senderIdValid: senderCheck.valid,
+      senderIdIssue: senderCheck.valid ? null : senderCheck.reason,
+      senderIdValue: senderCheck.valid ? null : (senderCheck.value || null),
+      senderIdApprovedCount: approvedCount,
+      // True only when config AND approval are both in place.
+      smsReady: senderCheck.valid && approvedCount > 0,
       // Non-fatal: a sender-ID lookup failure shouldn't hide the balance.
       senderIds: senderRes.ok ? senderRes.data : null,
       senderIdsError: senderRes.ok ? null : senderRes.error,
