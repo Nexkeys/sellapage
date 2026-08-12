@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, ShieldCheck, Loader2, AlertCircle } from 'lucide-react'
 import { auth } from '../firebase/auth'
+import { getRecaptchaToken } from '../utils/recaptcha'
 
 // `phone` is only used by SMS purposes (phone_verify) — the server ignores it
 // for email purposes, where the destination is always read from the account.
@@ -38,7 +39,8 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
     setSending(true)
     setError('')
     try {
-      const { ok, data } = await authedFetch('/api/otp-send', { purpose, phone })
+      const recaptchaToken = await getRecaptchaToken(`otp_send_${purpose}`)
+      const { ok, data } = await authedFetch('/api/otp-send', { purpose, phone, recaptchaToken })
       if (!ok) {
         setError(data.message || 'Could not send the code.')
         if (data.retryAfterSeconds) setCooldown(data.retryAfterSeconds)

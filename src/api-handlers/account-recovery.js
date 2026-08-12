@@ -10,7 +10,8 @@ import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { applyCors, parseJsonBody } from './_lib/http.js'
 import { durableRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 import { sendEmail, escapeHtml } from './_lib/send-email.js'
-import { logAudit } from './_lib/otp.js'
+import { logAudit, verifyRecaptcha } from './_lib/otp.js'
+import { clearAttempts } from './_lib/login-lockout.js'
 import {
   RECOVERY_COLLECTION,
   RECOVERY_STATUS,
@@ -53,7 +54,7 @@ export default async function handler(req, res) {
         return tooManyRequests(res, 'Too many recovery requests. Please try again later.')
       }
 
-      const { identifier, contactEmail, contactPhone, reason } = body
+      const { identifier, contactEmail, contactPhone, reason, recaptchaToken } = body
 
       // Validate shape, but ALWAYS return the generic response below regardless
       // of whether the account exists.
@@ -61,6 +62,27 @@ export default async function handler(req, res) {
         return res.status(400).json({
           error: 'invalid_input',
           message: 'Please provide your store link or account email, plus a valid email we can reach you on.',
+        })
+      }
+
+      // This is the one genuinely unauthenticated, document-creating endpoint,
+      // so it's the surface bot protection actually matters on. An INVALID
+      // token fails closed; a MISSING token is allowed and recorded, because a
+      // blocked/unreachable reCAPTCHA must not lock a stranded vendor out of
+      // the only route back to their account.
+      const captcha = await verifyRecaptcha(recaptchaToken, ip)
+      if (!captcha.ok) {
+        await logAudit(db, {
+          uid: null,
+          action: 'account_recovery_request',
+          result: 'captcha_failed',
+          ip,
+          userAgent,
+        })
+        // Generic wording — still no confirmation of whether the account exists.
+        return res.status(400).json({
+          error: 'captcha_failed',
+          message: 'We could not verify that request. Please try again.',
         })
       }
 
@@ -194,6 +216,12 @@ export default async function handler(req, res) {
       await db.collection('stores').doc(request.storeId).update({
         email: String(newEmail).trim().toLowerCase(),
       })
+
+      // Recovery is the documented way back from a lockout, so clear it for
+      // BOTH addresses — the old one (which was being attacked) and the new
+      // one. Without this the vendor would recover and still be locked out.
+      await clearAttempts(db, previousEmail)
+      await clearAttempts(db, String(newEmail).trim())
 
       // Kill every existing session — if the lockout was caused by a hijack,
       // the attacker's sessions must not survive the recovery.

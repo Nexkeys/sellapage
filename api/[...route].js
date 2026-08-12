@@ -395,6 +395,14 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/login-verify.js")
         return handler(req, res)
       }
+      case "public-config": {
+        const { default: handler } = await import("../src/api-handlers/public-config.js")
+        return handler(req, res)
+      }
+      case "login-attempt": {
+        const { default: handler } = await import("../src/api-handlers/login-attempt.js")
+        return handler(req, res)
+      }
 
       default:
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });

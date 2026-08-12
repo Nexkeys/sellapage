@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveCallerStoreId } from './_lib/verify-store-access.js'
 import { evaluateLoginRisk, isLoginOtpEnabled } from './_lib/login-risk.js'
+import { getLockState } from './_lib/login-lockout.js'
 
 function parseUserAgent(ua = '') {
   let os = 'Unknown OS'
@@ -125,6 +126,18 @@ export default async function handler(req, res) {
       const sessionId = body.sessionId || randomUUID()
       const ua = req.headers['user-agent'] || ''
       const ip = getClientIp(req)
+      // Enforcement point for the login lockout: even with a valid Firebase
+      // token, a locked account cannot start a usable dashboard session.
+      if (decoded.email) {
+        const lock = await getLockState(db, decoded.email)
+        if (lock.locked) {
+          return res.status(423).json({
+            error: 'account_locked',
+            message: 'This account is locked after repeated failed sign-ins. Use account recovery to regain access.',
+          })
+        }
+      }
+
       const { os, browser, deviceType } = parseUserAgent(ua)
       const location = await lookupLocation(ip)
 

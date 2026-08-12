@@ -1,7 +1,7 @@
 //src/pages/Login.jsx/
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft, ShieldAlert } from 'lucide-react'
 import { loginSeller, registerSeller, resetPassword, logoutSeller, auth } from '../firebase/auth'
 import { registerSession, confirmLoginOtp } from '../utils/sessionTracking'
 import OtpVerifyModal from '../components/OtpVerifyModal'
@@ -27,6 +27,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   // Phase 2 login challenge: { reason } while an emailed code is outstanding.
   const [loginOtp, setLoginOtp] = useState(null)
+  // Account locked after repeated failed sign-ins — recovery is the way back.
+  const [lockedOut, setLockedOut] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [resetSent, setResetSent] = useState(false)
@@ -213,12 +215,75 @@ export default function Login() {
           console.error('Failed to register session:', err)
         }
       }
+      // Successful sign-in clears any accumulated failed-attempt counter.
+      if (mode === 'login') {
+        fetch('/api/login-attempt?action=clear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email }),
+        }).catch(() => {})
+      }
       navigate('/dashboard')
     } catch (err) {
+      // Wrong password / unknown user — count it toward the lockout. Firebase
+      // has its own per-IP throttling; this adds an ACCOUNT-level lock the
+      // owner can actually see and recover from.
+      const isCredentialFailure = [
+        'auth/wrong-password', 'auth/invalid-credential',
+        'auth/user-not-found', 'auth/invalid-login-credentials',
+      ].includes(err.code)
+
+      if (mode === 'login' && isCredentialFailure) {
+        try {
+          const r = await fetch('/api/login-attempt?action=record', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: form.email }),
+          })
+          const d = await r.json().catch(() => ({}))
+          if (d.locked) { setLockedOut(true); setError(''); return }
+          if (d.warn) {
+            setError(`${ERROR_MESSAGES[err.code] || 'Incorrect email or password.'} ${d.remaining} attempt${d.remaining === 1 ? '' : 's'} left before this account is locked.`)
+            return
+          }
+        } catch { /* fail open — never block sign-in on the counter */ }
+      }
+
       setError(ERROR_MESSAGES[err.code] || 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  // Account locked after too many failed sign-ins. Deliberately a dead end
+  // except for recovery — offering "try again" here would defeat the lock.
+  if (lockedOut) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert size={22} className="text-red-600" />
+          </div>
+          <h1 className="font-bold text-gray-900 text-lg">Account locked</h1>
+          <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+            For your security, this account has been locked after too many failed sign-in attempts.
+            To get back in, request account recovery and our team will verify it&apos;s you.
+          </p>
+          <Link
+            to="/account-recovery"
+            className="inline-block w-full mt-5 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm"
+          >
+            Recover my account
+          </Link>
+          <button
+            onClick={() => { setLockedOut(false); setError('') }}
+            className="mt-3 text-xs font-semibold text-gray-500 hover:text-gray-700"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // Login OTP challenge — blocks the dashboard until the emailed code clears.

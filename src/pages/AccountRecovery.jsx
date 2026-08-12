@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { ShieldCheck, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { getRecaptchaToken } from '../utils/recaptcha'
 
 function Shell({ children }) {
   return (
@@ -37,10 +38,13 @@ function RequestView() {
     e.preventDefault()
     setBusy(true); setError('')
     try {
+      // Returns null if reCAPTCHA is unavailable (blocked, offline, v2 keys).
+      // The server allows a missing token but rejects an invalid one.
+      const recaptchaToken = await getRecaptchaToken('account_recovery_request')
       const res = await fetch('/api/account-recovery?action=request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, contactEmail, contactPhone, reason }),
+        body: JSON.stringify({ identifier, contactEmail, contactPhone, reason, recaptchaToken }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.message || 'Could not submit your request.'); return }
