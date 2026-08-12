@@ -265,6 +265,7 @@ export default function OrdersTab({
   const [topshipBookingDirect, setTopshipBookingDirect] = useState(false)
   const [SendboxRates, setSendboxRates] = useState([])
   const [loadingRates, setLoadingRates] = useState(false)
+  const [hasSearchedRates, setHasSearchedRates] = useState(false)
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
   const [bookingError, setBookingError] = useState('')
   const [bookingSuccess, setBookingSuccess] = useState('')
@@ -562,6 +563,7 @@ export default function OrdersTab({
     setBookingError('')
     setBookingSuccess('')
     setSendboxRates([])
+    setHasSearchedRates(false)
     setSelectedCourierId('')
     setSelectedServiceCode('')
     setPackageType('general')
@@ -684,6 +686,7 @@ export default function OrdersTab({
       setBookingError('Failed to fetch shipping rates. Please check your connection.')
     } finally {
       setLoadingRates(false)
+      setHasSearchedRates(true)
     }
   }
 
@@ -2075,7 +2078,9 @@ export default function OrdersTab({
                     </div>
                   ) : SendboxRates.length === 0 ? (
                     <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 font-medium bg-gray-50/20">
-                      No rates retrieved. Enter valid sender/receiver details and click Recalculate Rates.
+                      {hasSearchedRates
+                        ? `No couriers are currently available for this route${selectedProvider === 'topship' ? ' via Topship' : ''}. Try a different weight, address, or courier.`
+                        : 'Enter valid sender/receiver details and click Recalculate Rates.'}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">

@@ -161,13 +161,42 @@ export default async function handler(req, res) {
           }
         }
       } else {
-        // Log the miss (no uid) so brute-force patterns are still visible.
+        // No store matched — almost always a typo in the identifier. Record it
+        // as a visible no_match request so an admin can see WHAT was typed and
+        // reach out, rather than the vendor swearing they submitted while the
+        // tab stays empty. Admin-only collection (deny-by-default rules), and
+        // the endpoint is rate limited, so this is not an enumeration or spam
+        // vector. Auto-id: there is no store to key it to.
+        await db.collection(RECOVERY_COLLECTION).add({
+          storeId: null,
+          storeName: '',
+          businessName: '',
+          currentEmailMasked: '',
+          currentEmail: '',
+          // The exact text submitted — the whole point of this record.
+          submittedIdentifier: String(identifier).slice(0, 200),
+          contactEmail: String(contactEmail).trim().toLowerCase(),
+          contactPhone: String(contactPhone || '').trim().slice(0, 40),
+          reason: String(reason || '').trim().slice(0, 1000),
+          status: RECOVERY_STATUS.NO_MATCH,
+          cacVerified: false,
+          plan: '',
+          requestIp: ip,
+          requestUserAgent: userAgent.slice(0, 300),
+          tokenHash: null,
+          tokenExpiresAt: null,
+          tokenUsedAt: null,
+          createdAt: FieldValue.serverTimestamp(),
+          createdAtMs: Date.now(),
+        })
+
         await logAudit(db, {
           uid: null,
           action: 'account_recovery_request',
           result: 'no_match',
           ip,
           userAgent,
+          meta: { submittedIdentifier: String(identifier).slice(0, 200) },
         })
       }
 

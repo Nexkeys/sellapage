@@ -31,6 +31,11 @@ export const RECOVERY_STATUS = {
   REJECTED: 'rejected',
   COMPLETED: 'completed',
   EXPIRED: 'expired',
+  // Someone submitted the form but the identifier matched no store — almost
+  // always a typo. Recorded so an admin can SEE the attempt and the exact text
+  // typed, instead of the vendor insisting they submitted while the tab sits
+  // empty. Without this the anti-enumeration response hides real failures.
+  NO_MATCH: 'no_match',
 }
 
 /** 32 bytes, URL-safe. Far beyond guessing range, unlike a 6-digit OTP. */
@@ -89,16 +94,33 @@ export async function findStoreForRecovery(db, { identifier }) {
 
   const lower = raw.toLowerCase()
 
-  // Firestore equality is case-SENSITIVE and there is no normalised lowercase
-  // field on /stores, so a vendor who registered as "Nex@Gmail.com" would not
-  // match a lowercased lookup. Recovery is used by people who are already
-  // locked out and stressed — a silent miss here strands them permanently, so
-  // both the raw and lowercased forms are tried.
+  // Firestore equality is case-SENSITIVE with no normalised lowercase field on
+  // /stores, and it cannot do fuzzy matching at all. Recovery is used by people
+  // who are already locked out and stressed, and typos are the norm — a real
+  // request was lost to `funlola.1999gmail.com` (a missing "@"). Every miss is
+  // invisible to the vendor because the response is intentionally generic, so
+  // the candidate list is deliberately generous.
   // Single-field equality queries only: no composite index required.
-  const candidates = raw === lower ? [raw] : [lower, raw]
+  const candidates = new Set([raw, lower])
+
+  // Spaces: "funmi stores" -> "funmistores"
+  const despaced = lower.replace(/\s+/g, '')
+  if (despaced) candidates.add(despaced)
+
+  // Missing "@": "funlola.1999gmail.com" -> "funlola.1999@gmail.com".
+  // Only reconstructed for well-known mail hosts, so ordinary store handles are
+  // never mangled into fake addresses.
+  if (!lower.includes('@')) {
+    for (const host of ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'yahoo.co.uk']) {
+      if (lower.endsWith(host) && lower.length > host.length) {
+        candidates.add(`${lower.slice(0, -host.length)}@${host}`)
+      }
+    }
+  }
 
   for (const field of ['storeName', 'email']) {
     for (const value of candidates) {
+      if (!value) continue
       const snap = await db.collection('stores').where(field, '==', value).limit(1).get()
       if (!snap.empty) {
         const doc = snap.docs[0]

@@ -173,7 +173,20 @@ export async function getTopshipRates({ senderCity, senderCountryCode = 'NG', re
     console.error('[topship-booking] Rate quote error:', data)
     return { success: false, error: friendlyTopshipError(describeTopshipError(data, 'Failed to fetch Topship rates')), data }
   }
-  return { success: true, data: Array.isArray(data) ? data : [] }
+
+  const rates = Array.isArray(data) ? data : []
+  if (rates.length === 0) {
+    // TEMP DEBUG LOGGING (2026-08-12): a 200 response with zero rates is indistinguishable
+    // from "no couriers serviceable for this route" on our end right now — logging the exact
+    // request and raw response so a real occurrence tells us whether that's genuinely what
+    // Topship returned (in which case this is a Topship-account/coverage question, not a bug)
+    // or whether production's response is shaped differently than the array docs describe
+    // (same category of docs-vs-reality mismatch already hit on /save-shipment and
+    // /get-pickup-rates). Remove once confirmed either way.
+    console.warn('[topship-booking] get-shipment-rate returned zero rates. Request shipmentDetail was:', JSON.stringify(shipmentDetail))
+    console.warn('[topship-booking] get-shipment-rate raw response was:', JSON.stringify(data))
+  }
+  return { success: true, data: rates }
 }
 
 /**

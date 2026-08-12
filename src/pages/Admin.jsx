@@ -573,10 +573,10 @@ export default function Admin() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="font-bold text-gray-800">Account Recovery</h2>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
-              {['pending', 'approved', 'completed', 'rejected', 'all'].map(s => (
+              {['pending', 'no_match', 'approved', 'completed', 'rejected', 'all'].map(s => (
                 <button key={s} onClick={() => { setRecFilter(s); fetchRecovery(s); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${recFilter === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                  {s[0].toUpperCase() + s.slice(1)}
+                  {s === 'no_match' ? 'No match' : s[0].toUpperCase() + s.slice(1)}
                 </button>
               ))}
             </div>
@@ -594,8 +594,16 @@ export default function Admin() {
                           {r.cacVerified && <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200">CAC ✓</span>}
                           <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[r.plan] || PLAN_C.starter}`}>{r.plan}</span>
                         </div>
+                        {/* No-match rows: show exactly what was typed, so a
+                            typo can be identified and the vendor contacted. */}
+                        {r.status === 'no_match' && (
+                          <p className="mt-1.5 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-relaxed">
+                            <strong>No store matched.</strong> They typed: <span className="font-mono break-all">{r.submittedIdentifier || '—'}</span>
+                            <br />Likely a typo — contact them on the email/phone below and confirm their store handle.
+                          </p>
+                        )}
                         <div className="mt-1.5 space-y-0.5 text-[11px] text-gray-600">
-                          <p><span className="text-gray-400">Account email:</span> <span className="font-mono">{r.currentEmailMasked || '—'}</span></p>
+                          {r.status !== 'no_match' && <p><span className="text-gray-400">Account email:</span> <span className="font-mono">{r.currentEmailMasked || '—'}</span></p>}
                           <p><span className="text-gray-400">Reach them at:</span> <span className="font-semibold text-gray-900">{r.contactEmail}</span></p>
                           {r.contactPhone && <p className="flex items-center gap-1.5"><span className="text-gray-400">Phone:</span> <span className="font-semibold">{r.contactPhone}</span>
                             <a href={`https://wa.me/${String(r.contactPhone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline inline-flex items-center gap-0.5"><ExternalLink size={9} /> WhatsApp</a></p>}
@@ -609,7 +617,8 @@ export default function Admin() {
                           r.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-200'
                           : r.status === 'approved' ? 'bg-blue-50 text-blue-600 border-blue-200'
                           : r.status === 'completed' ? 'bg-green-50 text-green-600 border-green-200'
-                          : 'bg-red-50 text-red-600 border-red-200'}`}>{r.status}</span>
+                          : r.status === 'no_match' ? 'bg-gray-100 text-gray-600 border-gray-200'
+                          : 'bg-red-50 text-red-600 border-red-200'}`}>{r.status === 'no_match' ? 'no match' : r.status}</span>
                         {r.status === 'pending' && (
                           <div className="flex flex-col items-end gap-1.5">
                             <div className="flex gap-1.5">

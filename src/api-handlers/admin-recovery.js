@@ -58,6 +58,8 @@ export default async function handler(req, res) {
             storeId: x.storeId,
             storeName: x.storeName,
             businessName: x.businessName,
+            // Present only on no_match rows — the exact text the vendor typed.
+            submittedIdentifier: x.submittedIdentifier || null,
             currentEmailMasked: x.currentEmailMasked,
             contactEmail: x.contactEmail,
             contactPhone: x.contactPhone,
