@@ -73,14 +73,62 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'no_phone', message: 'Verification incomplete. Please start again.' })
       }
 
-      // Store the full number for operational use plus a masked copy for
-      // display. `phoneVerified` is the trust signal, alongside cacVerified.
-      await db.collection('stores').doc(uid).update({
-        verifiedPhone: phone,
-        phoneVerifiedMasked: maskPhone(phone),
-        phoneVerified: true,
-        phoneVerifiedAt: new Date().toISOString(),
-      })
+      // ONE NUMBER, ONE ACCOUNT — enforced atomically.
+      //
+      // A "query first, then write" check would race: two signups verifying the
+      // same number at the same moment would both see it free and both claim
+      // it. Instead the number itself is the document id in `verifiedPhones`,
+      // so the claim either succeeds or collides inside a transaction. No
+      // composite index, no race, and it doubles as a reverse lookup.
+      const claimRef = db.collection('verifiedPhones').doc(phone)
+      const storeRef = db.collection('stores').doc(uid)
+
+      try {
+        await db.runTransaction(async (tx) => {
+          const claim = await tx.get(claimRef)
+          if (claim.exists && claim.data().storeId !== uid) {
+            throw new Error('phone_taken')
+          }
+
+          // Release a different number this store previously held, so a vendor
+          // changing their number doesn't permanently squat the old one.
+          const storeSnap = await tx.get(storeRef)
+          const previous = storeSnap.exists ? storeSnap.data().verifiedPhone : null
+
+          tx.set(claimRef, {
+            storeId: uid,
+            claimedAt: new Date().toISOString(),
+          })
+
+          tx.update(storeRef, {
+            verifiedPhone: phone,
+            phoneVerifiedMasked: maskPhone(phone),
+            phoneVerified: true,
+            phoneVerifiedAt: new Date().toISOString(),
+          })
+
+          if (previous && previous !== phone) {
+            tx.delete(db.collection('verifiedPhones').doc(previous))
+          }
+        })
+      } catch (err) {
+        if (err.message === 'phone_taken') {
+          await logAudit(db, {
+            uid,
+            action: 'phone_verify',
+            purpose: OTP_PURPOSES.PHONE_VERIFY,
+            result: 'duplicate_number',
+            ip,
+            userAgent,
+            meta: { phoneMasked: maskPhone(phone) },
+          })
+          return res.status(409).json({
+            error: 'phone_taken',
+            message: 'That phone number is already linked to another Sellapage account.',
+          })
+        }
+        throw err
+      }
 
       await logAudit(db, {
         uid,

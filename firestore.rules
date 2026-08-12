@@ -7,6 +7,21 @@
 // into Firebase Console > Firestore > Rules, or run:
 //     firebase deploy --only firestore:rules
 //
+// 2026-08-12 UPDATE — phone verification fields are now locked. This change
+// only TIGHTENS an update path no legitimate client uses (they are written
+// server-side by phone-verify.js via the Admin SDK, which bypasses rules), so
+// it is safe to publish before or after the application code.
+//
+// ⚠️ SEPARATE, ORDER-CRITICAL: the storefront phone gate.
+// `ENABLE_STOREFRONT_PHONE_GATE=true` hides every store WITHOUT a verified
+// phone. Every store that exists today has no phoneVerified field, so enabling
+// it before grandfathering would hide the ENTIRE platform. Correct order:
+//     1. Fix TERMII_SENDER_ID (currently a UUID — must be the sender NAME)
+//     2. Wait for Termii approval, confirm a real SMS arrives
+//     3. node scripts/backfill-phone-gate-exempt.js --dry-run   (then for real)
+//     4. ONLY THEN set ENABLE_STOREFRONT_PHONE_GATE=true
+// The gate is OFF by default, so doing nothing changes nothing.
+//
 // ⚠️ DEPLOY ORDER MATTERS. Ship the application code FIRST, then these rules.
 // Two client writes were moved server-side to make the field locks below
 // possible, and deploying rules ahead of that code will break both flows:
@@ -59,13 +74,24 @@ service cloud.firestore {
       ];
     }
 
-    // Identity / verification. Written only by verify-cac.js and admin-cac.js.
+    // Identity / verification. Written only by verify-cac.js, admin-cac.js and
+    // phone-verify.js — all server-side.
+    //
+    // The phone* fields matter as much as the cac* ones: without them locked, a
+    // vendor could set `phoneVerified: true` from the browser console and award
+    // themselves the verified badge, skipping the SMS code entirely AND the
+    // one-number-one-account claim in verifiedPhones. Same hole, same fix.
     function verificationFields() {
       return [
         'cacVerified', 'cacVerifiedAt', 'cacBusinessName', 'cacRcNumber',
         'cacStatus', 'cacRegistrationDate', 'cacRetryCount', 'cacLastRetryAt',
         'cacRejectedAt', 'cacRejectionReason', 'cacAttempts', 'cacDocType',
-        'rcNumber'
+        'rcNumber',
+        'phoneVerified', 'phoneVerifiedAt', 'phoneVerifiedMasked', 'verifiedPhone',
+        // Grandfathers stores that existed before the storefront phone gate.
+        // MUST be server-only: if a client could set it, a bot would simply
+        // exempt itself and the gate would be decorative.
+        'phoneGateExempt'
       ];
     }
 

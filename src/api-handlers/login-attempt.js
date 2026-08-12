@@ -6,7 +6,7 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { applyCors, parseJsonBody } from './_lib/http.js'
 import { durableRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
-import { logAudit } from './_lib/otp.js'
+import { logAudit, verifyRecaptcha } from './_lib/otp.js'
 import {
   recordFailedAttempt,
   getLockState,
@@ -25,9 +25,25 @@ export default async function handler(req, res) {
   const ip = clientKey(req)
   const userAgent = req.headers['user-agent'] || ''
   const action = req.query.action || 'record'
-  const { email } = parseJsonBody(req) || {}
+  const { email, recaptchaToken } = parseJsonBody(req) || {}
 
   if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_input' })
+
+  // Pre-signup human check. Called by the register form BEFORE Firebase, so a
+  // scripted form-filler is stopped here. An INVALID token fails closed; a
+  // MISSING one is allowed and recorded, so a blocked reCAPTCHA never stops a
+  // real vendor registering.
+  if (action === 'verify-human') {
+    const captcha = await verifyRecaptcha(recaptchaToken, clientKey(req))
+    if (!captcha.ok) {
+      return res.status(400).json({
+        success: false,
+        error: 'captcha_failed',
+        message: "We couldn't verify that you're human. Please refresh and try again.",
+      })
+    }
+    return res.status(200).json({ success: true, reason: captcha.reason })
+  }
 
   try {
     const db = getAdminDb()

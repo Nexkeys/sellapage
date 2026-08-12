@@ -5,6 +5,7 @@ import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft, ShieldAlert 
 import { loginSeller, registerSeller, resetPassword, logoutSeller, auth } from '../firebase/auth'
 import { registerSession, confirmLoginOtp } from '../utils/sessionTracking'
 import OtpVerifyModal from '../components/OtpVerifyModal'
+import { getRecaptchaToken } from '../utils/recaptcha'
 import { isReservedSlug } from '../utils/reservedSlugs'
 
 const ERROR_MESSAGES = {
@@ -29,6 +30,8 @@ export default function Login() {
   const [loginOtp, setLoginOtp] = useState(null)
   // Account locked after repeated failed sign-ins — recovery is the way back.
   const [lockedOut, setLockedOut] = useState(false)
+  // Set only when SMS is live: the number to verify before finishing signup.
+  const [signupPhone, setSignupPhone] = useState(null)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [resetSent, setResetSent] = useState(false)
@@ -171,6 +174,23 @@ export default function Login() {
         }
       } else {
         // Validate referral code if provided
+        // Human check before creating anything. Invalid token stops the signup;
+        // an unavailable reCAPTCHA does not (see utils/recaptcha.js).
+        try {
+          const rcToken = await getRecaptchaToken('signup')
+          const rc = await fetch('/api/login-attempt?action=verify-human', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: form.email, recaptchaToken: rcToken }),
+          })
+          const rcData = await rc.json().catch(() => ({}))
+          if (!rc.ok && rcData.error === 'captcha_failed') {
+            setError(rcData.message || "We couldn't verify that you're human. Please refresh and try again.")
+            setLoading(false)
+            return
+          }
+        } catch { /* network issue — don't block a real signup */ }
+
         const codeToValidate = form.referralCode.trim() || localStorage.getItem('vendor_referral_code') || null
         let resolvedReferrerId = null
 
@@ -214,6 +234,22 @@ export default function Login() {
         } catch (err) {
           console.error('Failed to register session:', err)
         }
+
+        // Phone verification at signup — SELF-ACTIVATING.
+        //
+        // Reads smsAvailable from /api/public-config, which is false while the
+        // Termii sender ID is unapproved. So today this branch never runs and
+        // signup is byte-for-byte unchanged; the moment Termii is live it turns
+        // itself on with no redeploy. Checked AFTER the account exists so the
+        // authenticated OTP endpoints can be reused as-is.
+        try {
+          const cfg = await fetch('/api/public-config').then(r => r.ok ? r.json() : null).catch(() => null)
+          if (cfg?.smsAvailable && form.whatsappNumber.trim()) {
+            setSignupPhone(form.whatsappNumber.trim())
+            setLoading(false)
+            return
+          }
+        } catch { /* never block a signup on this check */ }
       }
       // Successful sign-in clears any accumulated failed-attempt counter.
       if (mode === 'login') {
@@ -235,10 +271,11 @@ export default function Login() {
 
       if (mode === 'login' && isCredentialFailure) {
         try {
+          const recaptchaToken = await getRecaptchaToken('login_failed')
           const r = await fetch('/api/login-attempt?action=record', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: form.email }),
+            body: JSON.stringify({ email: form.email, recaptchaToken }),
           })
           const d = await r.json().catch(() => ({}))
           if (d.locked) { setLockedOut(true); setError(''); return }
@@ -283,6 +320,40 @@ export default function Login() {
           </button>
         </div>
       </div>
+    )
+  }
+
+  // Signup phone verification. Only reachable when SMS is live, so it is
+  // unreachable today and cannot affect current signups.
+  if (signupPhone) {
+    return (
+      <OtpVerifyModal
+        open
+        purpose="phone_verify"
+        phone={signupPhone}
+        title="Verify your phone number"
+        description={`We sent a code by SMS to ${signupPhone}. Enter it to finish setting up your store.`}
+        onClose={() => {
+          // The account exists at this point, so don't strand them — let them
+          // in and let Settings prompt for verification instead of losing the
+          // signup entirely.
+          setSignupPhone(null)
+          navigate('/dashboard')
+        }}
+        onVerified={async () => {
+          try {
+            const token = await auth.currentUser?.getIdToken()
+            if (token) {
+              await fetch('/api/phone-verify?action=complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              })
+            }
+          } catch { /* verified either way; Settings can retry the write */ }
+          setSignupPhone(null)
+          navigate('/dashboard')
+        }}
+      />
     )
   }
 

@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../utils/staffDataFetch'
+import { isStorefrontHidden, filterVisibleStores, isStorefrontGateEnabled } from '../utils/storefrontGate'
 
 
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
@@ -271,7 +272,13 @@ export const getStoreBySlug = async (storeName) => {
   const snap = await getDocs(q)
   if (!snap.empty) {
     const d = snap.docs[0]
-    return { id: d.id, ...d.data() }
+    const store = { id: d.id, ...d.data() }
+    // Storefront phone gate — returns null (renders as "store not found") for
+    // an unverified store once the gate is on. Off by default, so this is a
+    // no-op until deliberately enabled. See utils/storefrontGate.js.
+    const gate = await isStorefrontGateEnabled()
+    if (isStorefrontHidden(store, gate)) return null
+    return store
   }
   return null
 }
@@ -320,7 +327,11 @@ export const getCustomCategories = async (storeId) => {
 export const getActiveStores = async () => {
   const q = query(collection(db, 'stores'), where('isActive', '==', true))
   const snap = await getDocs(q)
-  const stores = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  const gate = await isStorefrontGateEnabled()
+  const stores = filterVisibleStores(
+    snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    gate,
+  )
   stores.sort((a, b) => {
     const ta = a.createdAt?.seconds || a.createdAt?._seconds || 0
     const tb = b.createdAt?.seconds || b.createdAt?._seconds || 0

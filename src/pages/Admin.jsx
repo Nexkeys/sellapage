@@ -196,7 +196,9 @@ export default function Admin() {
     const note = window.prompt(
       decision === 'approve'
         ? 'Approving emails a 30-minute, single-use recovery link to the requester and lets them reset the account email AND password. Confirm you have verified their identity out-of-band. Add a note for the audit log:'
-        : 'Reason for rejecting (recorded in the audit log):',
+        : decision === 'unlock'
+          ? 'This only clears the failed-login lock — it does NOT change their email or password, so they must still know it. Use this when someone locked themselves out and then remembered. Add a note for the audit log:'
+          : 'Reason for rejecting (recorded in the audit log):',
     );
     if (note === null) return;
     setRecBusyId(requestId);
@@ -606,13 +608,21 @@ export default function Admin() {
                           : r.status === 'completed' ? 'bg-green-50 text-green-600 border-green-200'
                           : 'bg-red-50 text-red-600 border-red-200'}`}>{r.status}</span>
                         {r.status === 'pending' && (
-                          <div className="flex gap-1.5">
-                            <button onClick={() => decideRecovery(r.id, 'approve')} disabled={recBusyId === r.id}
-                              className="text-[10px] font-bold bg-green-600 text-white px-2.5 py-1 rounded-lg disabled:opacity-50">
-                              {recBusyId === r.id ? '...' : 'Approve'}
+                          <div className="flex flex-col items-end gap-1.5">
+                            <div className="flex gap-1.5">
+                              <button onClick={() => decideRecovery(r.id, 'approve')} disabled={recBusyId === r.id}
+                                className="text-[10px] font-bold bg-green-600 text-white px-2.5 py-1 rounded-lg disabled:opacity-50">
+                                {recBusyId === r.id ? '...' : 'Approve'}
+                              </button>
+                              <button onClick={() => decideRecovery(r.id, 'reject')} disabled={recBusyId === r.id}
+                                className="text-[10px] font-bold bg-red-100 text-red-700 px-2.5 py-1 rounded-lg disabled:opacity-50">Reject</button>
+                            </div>
+                            {/* Lighter option for "locked out but remembers the
+                                password" — no email/password reset needed. */}
+                            <button onClick={() => decideRecovery(r.id, 'unlock')} disabled={recBusyId === r.id}
+                              className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg disabled:opacity-50 whitespace-nowrap">
+                              Just unlock
                             </button>
-                            <button onClick={() => decideRecovery(r.id, 'reject')} disabled={recBusyId === r.id}
-                              className="text-[10px] font-bold bg-red-100 text-red-700 px-2.5 py-1 rounded-lg disabled:opacity-50">Reject</button>
                           </div>
                         )}
                       </div>

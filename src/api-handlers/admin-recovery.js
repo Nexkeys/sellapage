@@ -11,6 +11,7 @@ import { applyCors, parseJsonBody } from './_lib/http.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { sendEmail, escapeHtml } from './_lib/send-email.js'
 import { logAudit } from './_lib/otp.js'
+import { clearAttempts } from './_lib/login-lockout.js'
 import {
   RECOVERY_COLLECTION,
   RECOVERY_STATUS,
@@ -149,6 +150,35 @@ export default async function handler(req, res) {
       // The raw token is never returned to the browser — it only ever exists in
       // the email to the vendor, so an admin cannot capture it from a response.
       return res.status(200).json({ success: true, message: 'Approved. Recovery link emailed to the vendor.' })
+    }
+
+    // Direct unlock — for the common case where a vendor simply forgot their
+    // password, locked themselves out, and then remembered it. Full recovery
+    // (email + password reset) is overkill there; this just clears the lock so
+    // they can sign in with the password they already know.
+    if (action === 'unlock' && req.method === 'POST') {
+      const { email, requestId, note } = parseJsonBody(req) || {}
+
+      let target = String(email || '').trim()
+      if (!target && requestId) {
+        const snap = await db.collection(RECOVERY_COLLECTION).doc(requestId).get()
+        if (snap.exists) target = snap.data().currentEmail || ''
+      }
+      if (!target) return res.status(400).json({ error: 'email or requestId is required' })
+
+      await clearAttempts(db, target)
+
+      await logAudit(db, {
+        uid: null,
+        action: 'account_unlock',
+        result: 'unlocked',
+        meta: { adminUid: admin.uid, emailMasked: maskEmail(target), note: String(note || '').slice(0, 200) },
+      })
+
+      return res.status(200).json({
+        success: true,
+        message: 'Account unlocked. They can sign in with their existing password.',
+      })
     }
 
     if (action === 'reject' && req.method === 'POST') {
