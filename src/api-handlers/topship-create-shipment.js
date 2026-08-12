@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   const {
     storeId,
     orderId,
-    reference, // optional during the staging bypass — see file header
+    reference, // optional while payment-first is off — see file header
     pricingTier, // Topship enum: Budget / Express / FedEx / Premium / LastMileBudget
     shippingFee, // Naira — required when `reference` is absent
     senderDetails,

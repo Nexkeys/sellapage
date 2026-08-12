@@ -687,10 +687,11 @@ export default function OrdersTab({
     }
   }
 
-  // TEMPORARY (staging testing, logged in README.md "Topship Payment-First Booking —
-  // Temporarily Bypassed for Staging Testing"): books a Topship shipment directly,
-  // skipping Paystack entirely. Hard-gated server-side to non-production in
-  // topship-create-shipment.js — cannot fire once a production Topship key exists.
+  // TEMPORARY (2026-08-12, logged in Changelog-README.md "Topship: FLIPPED TO
+  // PRODUCTION"): books a Topship shipment directly, skipping Paystack entirely.
+  // Payment-first is currently off even in production (Nex's explicit instruction, to
+  // validate the live booking flow before wiring real payment collection) — see
+  // topship-create-shipment.js header for the exact one-line revert.
   const bookTopshipDirect = async () => {
     if (!bookingShipmentOrder || !store?.id) return
     const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
@@ -749,7 +750,7 @@ export default function OrdersTab({
         // JSON — res.json() throws in that case. Distinguish that from a genuine
         // network failure so the error message actually reflects what happened.
         if (res.status === 504) {
-          setBookingError('The booking took too long to complete — this usually means Topship\'s staging server is slow or the courier is temporarily unavailable right now. Please try again.')
+          setBookingError('The booking took too long to complete — this usually means Topship\'s server is slow or the courier is temporarily unavailable right now. Please try again.')
         } else {
           setBookingError('Could not connect to book the shipment. Please check your connection.')
         }
@@ -1738,7 +1739,6 @@ export default function OrdersTab({
                 <div>
                   <p className="text-sm font-bold text-gray-900">Topship</p>
                   <p className="text-xs text-gray-400 mt-0.5">Local + international shipping, 150+ countries.</p>
-                  <p className="text-[10px] font-bold text-amber-600 mt-1 uppercase tracking-wide">Staging — testing in progress</p>
                 </div>
               </button>
             </div>
@@ -1963,7 +1963,7 @@ export default function OrdersTab({
                 </div>
                 {selectedProvider === 'topship' && (senderCountryCode !== 'NG' || receiverCountryCode !== 'NG') && (
                   <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                    International shipment ({senderCountryCode} → {receiverCountryCode}). Rates and booking route to Topship's Export/Import handling — this corridor is untested on staging, verify the result carefully.
+                    International shipment ({senderCountryCode} → {receiverCountryCode}). Rates and booking route to Topship's Export/Import handling.
                   </p>
                 )}
               </div>

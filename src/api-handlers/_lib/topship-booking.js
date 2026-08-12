@@ -48,7 +48,7 @@ function describeTopshipError(data, fallback) {
   const raw = data?.message || data?.errors?.[0]?.message || fallback
   const looksLikeAuthIssue = /unauthorized|forbidden|not\s*allowed/i.test(raw || '')
   const hint = looksLikeAuthIssue
-    ? ' — this usually means the API key isn\'t enabled for this action on Topship\'s side (rate quotes can still work fine even when booking doesn\'t). Contact tech@topship.africa to confirm the staging key has write/booking access.'
+    ? ' — this usually means the API key isn\'t enabled for this action on Topship\'s side (rate quotes can still work fine even when booking doesn\'t). Contact tech@topship.africa to confirm the production key has write/booking access.'
     : ''
   return `${raw}${hint}`
 }
