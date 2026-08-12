@@ -68,8 +68,25 @@ export function maskEmail(email) {
  * generic response either way, or this becomes an enumeration oracle.
  */
 export async function findStoreForRecovery(db, { identifier }) {
-  const raw = String(identifier || '').trim()
-  if (!raw) return null
+  const input = String(identifier || '').trim()
+  if (!input) return null
+
+  // Vendors paste their store LINK, not the bare handle — "Your store link or
+  // account email" invites exactly that. Matching only the bare handle meant
+  // "sellapage.com.ng/denvermall" silently missed, and because the response is
+  // intentionally generic to prevent enumeration, the miss was invisible: the
+  // vendor saw "request received" and no request was ever created.
+  // Strip protocol, www, any host, query/hash, and slashes down to the slug.
+  const raw = input.includes('@')
+    ? input // emails must not be path-stripped
+    : (input
+        .replace(/^https?:\/\//i, '')
+        .replace(/^www\./i, '')
+        .split(/[?#]/)[0]
+        .split('/')
+        .filter(Boolean)
+        .pop() || input)
+
   const lower = raw.toLowerCase()
 
   // Firestore equality is case-SENSITIVE and there is no normalised lowercase

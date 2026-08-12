@@ -30,6 +30,11 @@ const APP_URL = process.env.APP_URL || 'https://www.sellapage.com.ng'
 export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'GET,POST,OPTIONS' })) return
 
+  // Never cache. Without this the browser/edge serves a 304 and the admin sees
+  // a stale list — a request submitted after the tab was first opened simply
+  // never appears, with no error anywhere. Same fix as admin-analytics.js:12.
+  res.setHeader('Cache-Control', 'no-store, max-age=0')
+
   // Account takeover capability — super_admin only, never a support role.
   const admin = await verifyAdmin(req, 'recovery')
   if (!admin) return res.status(403).json({ error: 'Forbidden' })

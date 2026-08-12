@@ -38,7 +38,10 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
   { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews'] },
-  { label: 'Team', ids: ['admins'] },
+  // 'recovery' belongs here — omitting it hid the tab entirely on mobile while
+  // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
+  // the mobile drawer iterates these groups. Any new tab must be added here too.
+  { label: 'Team', ids: ['admins', 'recovery'] },
 ];
 
 const PLAN_N = { premium: 0, pro: 1, growth: 2, starter: 3 };
