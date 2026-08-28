@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { HelpCircle, ArrowRight, Mail, MessageCircle, ExternalLink } from 'lucide-react'
+import { HelpCircle, ArrowRight, Mail, MessageCircle, ExternalLink, MapPin } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
@@ -97,7 +97,7 @@ export default function ContactUs() {
             <div>
               <p className="font-display font-bold text-gray-900 text-lg mb-1">Email Us</p>
               <p className="text-gray-500 text-sm leading-relaxed mb-3">
-                Prefer email? Send us a message and we'll get back to you within 1–2 business days.
+                Prefer email? Send us a message and we'll get back to you within 1-2 business days.
                 Tell us your store name and describe the issue clearly.
               </p>
               <a
@@ -130,6 +130,20 @@ export default function ContactUs() {
                 <MessageCircle size={15} />
                 Chat with Support
               </a>
+            </div>
+          </Reveal>
+
+          {/* Office Address */}
+          <Reveal delay={200} className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 flex items-start gap-5">
+            <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <MapPin size={22} className="text-orange-500" />
+            </div>
+            <div>
+              <p className="font-display font-bold text-gray-900 text-lg mb-1">Our Office</p>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Babatunde Street, Olodi Apapa,<br />
+                Lagos, Nigeria.
+              </p>
             </div>
           </Reveal>
 

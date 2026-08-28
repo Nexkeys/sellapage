@@ -20,7 +20,7 @@ const sections = [
     content: [
       'You can sell any legal product or service.',
       'You cannot list fake, counterfeit, or stolen products.',
-      'You cannot sell illegal items — drugs, weapons, or anything prohibited by Nigerian law.',
+      'You cannot sell illegal items - drugs, weapons, or anything prohibited by Nigerian law.',
       'You cannot use Sellapage to scam customers. Any fraudulent store will be removed immediately.',
       'You are fully responsible for the accuracy of your product listings and pricing.',
     ],
@@ -28,7 +28,7 @@ const sections = [
   {
     title: 'Your Store Content',
     content: [
-      'You own everything you upload — your product photos, descriptions, and store information.',
+      'You own everything you upload - your product photos, descriptions, and store information.',
       'By uploading content, you give Sellapage permission to display it on your store page.',
       'Do not upload content you do not own or have the right to use.',
       'We reserve the right to remove any content that violates these terms.',
@@ -100,7 +100,7 @@ export default function TermsOfService() {
           <p className="text-gray-400 text-sm">Last updated: {LAST_UPDATED}</p>
           <p className="text-gray-500 text-base mt-4 leading-relaxed max-w-xl">
             These are the rules for using Sellapage. They are written in plain English
-            so there is no confusion. Please read them — they are short.
+            so there is no confusion. Please read them - they are short.
           </p>
         </div>
       </section>

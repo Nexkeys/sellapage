@@ -18,9 +18,9 @@ function formatNaira(amount) {
 }
 
 function formatDate(dateValue) {
-  if (!dateValue) return '—'
+  if (!dateValue) return '-'
   const date = typeof dateValue?.toDate === 'function' ? dateValue.toDate() : new Date(dateValue)
-  if (Number.isNaN(date.getTime())) return '—'
+  if (Number.isNaN(date.getTime())) return '-'
   return date.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 

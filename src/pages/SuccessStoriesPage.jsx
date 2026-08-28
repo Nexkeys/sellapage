@@ -21,7 +21,7 @@ export default function SuccessStoriesPage() {
   const [loading, setLoading] = useState(true)
 
   useDocumentHead({
-    title: 'Success Stories — Sellapage',
+    title: 'Success Stories | Sellapage',
     description: 'Real Nigerian vendors sharing what selling on Sellapage has done for their business.',
   })
 
@@ -70,7 +70,7 @@ export default function SuccessStoriesPage() {
         ) : reviews.length === 0 ? (
           <div className="text-center py-24">
             <Quote size={32} className="mx-auto mb-4 text-gray-300" />
-            <p className="text-sm text-gray-500">No stories published yet — check back soon.</p>
+            <p className="text-sm text-gray-500">No stories published yet - check back soon.</p>
           </div>
         ) : (
           <>

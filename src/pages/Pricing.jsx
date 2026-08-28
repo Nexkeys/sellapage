@@ -27,14 +27,14 @@ const PLANS = [
       '3 images per listing',
       'Basic store page with hero, categories, search',
       'Lead capture enquiry form',
-      'Manual Ledger — log and track orders offline',
+      'Manual Ledger - log and track orders offline',
       'Download ledger as CSV or PDF',
       'Stock and category basics',
       'Offer & Name Lab tool',
       'Policy Generator tool',
       'Marketing tab with daily tasks',
       'Post up to 5 job listings',
-      'Referral Program — earn cash when referred businesses upgrade',
+      'Referral Program - earn cash when referred businesses upgrade',
     ],
     cta: 'Start for Free',
     popular: false,
@@ -49,7 +49,7 @@ const PLANS = [
       '10 images per listing',
       'Custom visual palette (colours, fonts, logo)',
       'Analytics & click tracking (store views, top clicks)',
-      'AI description generation — 20 per day',
+      'AI description generation - 20 per day',
       'Stock count management & out-of-stock sorting',
       'Categories for products and services',
       'Marketing tab with daily tasks & points',
@@ -77,7 +77,7 @@ const PLANS = [
       'Sendbox & Topship delivery integration (live rates, booking, tracking)',
       'Delivery zones setup for local areas',
       'Top-performing analytics (engagement rate, best sellers)',
-      'AI description generation — 50/day',
+      'AI description generation - 50/day',
       'Product export (PDF, CSV, Excel, downloadable files)',
       'Custom domain usage (yourbrand.com)',
       'CAC verification system',
@@ -180,11 +180,11 @@ const FAQS = [
   },
   {
     q: 'Is there a free trial for paid plans?',
-    a: 'The Starter plan is free forever — no trial needed. You can explore all Starter features without entering payment details. Paid plans activate immediately upon payment.'
+    a: 'The Starter plan is free forever - no trial needed. You can explore all Starter features without entering payment details. Paid plans activate immediately upon payment.'
   },
   {
     q: 'What happens if I exceed my plan limits?',
-    a: 'On Starter and Growth, you\'ll be prompted to upgrade when you hit listing or image limits. Your existing store and orders remain accessible — you just can\'t add new listings until you upgrade or free up space.'
+    a: 'On Starter and Growth, you\'ll be prompted to upgrade when you hit listing or image limits. Your existing store and orders remain accessible - you just can\'t add new listings until you upgrade or free up space.'
   },
   {
     q: 'Can I use my own domain name?',

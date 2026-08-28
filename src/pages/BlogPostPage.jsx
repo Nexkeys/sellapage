@@ -49,7 +49,7 @@ export default function BlogPostPage() {
   }, [slug])
 
   useDocumentHead({
-    title: post ? (post.metaTitle || post.title) : 'Blog — Sellapage',
+    title: post ? (post.metaTitle || post.title) : 'Blog | Sellapage',
     description: post ? (post.metaDescription || getExcerpt(post)) : undefined,
   })
 

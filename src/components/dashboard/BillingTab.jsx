@@ -199,7 +199,7 @@ export default function BillingTab({
 
       {plan === 'starter' && (
         <p className="text-center text-[11px] text-gray-400">
-          You are on the free Starter plan. Upgrade anytime — no lock-in.
+          You are on the free Starter plan. Upgrade anytime - no lock-in.
         </p>
       )}
     </div>

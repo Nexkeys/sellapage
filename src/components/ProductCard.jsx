@@ -410,7 +410,7 @@ export default function ProductCard({
                 <MessageCircle size={15} />
                 {isOutOfStock
                   ? "Out of Stock"
-                  : `Order — ₦${Number(product.price).toLocaleString()}`}
+                  : `Order: ₦${Number(product.price).toLocaleString()}`}
               </button>
             )}
           </div>

@@ -131,7 +131,7 @@ export default function VsWhatsAppBusiness() {
               <div className="w-8 h-1 bg-brand-200 rounded mb-4" />
               <p className="text-gray-600 text-sm leading-relaxed">
                 Your Sellapage link works in a browser, on Instagram, in WhatsApp status,
-                on Twitter — anywhere. Any customer can browse your catalogue, order, pay, and become part of your customer record.
+                on Twitter - anywhere. Any customer can browse your catalogue, order, pay, and become part of your customer record.
               </p>
             </Reveal>
           </div>

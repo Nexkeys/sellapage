@@ -131,7 +131,7 @@ export default function ReviewsAdmin({ authHeaders }) {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-bold text-gray-800">Success Stories — Reviews</h2>
+          <h2 className="font-bold text-gray-800">Success Stories - Reviews</h2>
           <p className="text-xs text-gray-400 mt-0.5">Moderate vendor reviews of Sellapage before they appear publicly.</p>
         </div>
         <div className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5">

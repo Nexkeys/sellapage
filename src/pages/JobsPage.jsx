@@ -88,7 +88,7 @@ export default function JobsPage() {
             Find Work. Get Hired Fast.
           </h1>
           <p className="text-sm sm:text-base text-white/80 max-w-lg mx-auto leading-relaxed mb-6">
-            Real openings posted directly by Sellapage vendors — contract, part-time, full-time, freelance, and gig work across Nigeria.
+            Real openings posted directly by Sellapage vendors - contract, part-time, full-time, freelance, and gig work across Nigeria.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a href="#job-listings" className="w-full sm:w-auto px-5 py-2.5 bg-white text-brand-700 rounded-xl text-sm font-bold hover:bg-white/90 transition-all">

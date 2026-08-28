@@ -62,7 +62,7 @@ export default function VsLinktree() {
             check prices, order, and enter your customer workflow.
           </p>
           <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
-            Sellapage replaces your Linktree with a full commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one dashboard.
+            Sellapage replaces your Linktree with a full commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains - all from one dashboard.
           </p>
         </div>
       </section>
@@ -121,7 +121,7 @@ export default function VsLinktree() {
               <p className="font-bold text-gray-400 text-sm mb-1">With Linktree</p>
               <div className="w-8 h-1 bg-gray-200 rounded mb-4" />
               <p className="text-gray-500 text-sm leading-relaxed">
-                Customer sees your bio link. They click it. They see a list — "DM to order", "Visit my page",
+                Customer sees your bio link. They click it. They see a list - "DM to order", "Visit my page",
                 "Follow on Instagram". They have to do more work. Most will close and move on.
               </p>
             </Reveal>

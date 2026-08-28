@@ -27,7 +27,7 @@ export default function BlogPage() {
   const sentinelRef = useRef(null)
 
   useDocumentHead({
-    title: 'Blog — Sellapage',
+    title: 'Blog | Sellapage',
     description: 'Tips, guides, and stories to help Nigerian entrepreneurs sell more with Sellapage.',
   })
 
@@ -144,7 +144,7 @@ export default function BlogPage() {
         {!loading && posts.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center"><BookOpen size={24} className="text-gray-300" /></div>
-            <p className="text-sm font-semibold text-gray-500">{search.trim() || category !== 'all' || tag !== 'all' ? 'No articles match your filters' : 'No articles yet — check back soon'}</p>
+            <p className="text-sm font-semibold text-gray-500">{search.trim() || category !== 'all' || tag !== 'all' ? 'No articles match your filters' : 'No articles yet - check back soon'}</p>
           </div>
         )}
 

@@ -53,7 +53,7 @@ export default function VsShopify() {
             We built Sellapage for everyday Nigerian sellers who want to start now, not next month.
           </p>
           <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
-            Sellapage gives you a live commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one Nigerian-built dashboard. No developer required.
+            Sellapage gives you a live commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains - all from one Nigerian-built dashboard. No developer required.
           </p>
         </div>
       </section>
@@ -66,9 +66,9 @@ export default function VsShopify() {
             <div>
               <p className="font-bold text-amber-800 text-sm mb-1">The real cost of Shopify for Nigerian businesses</p>
               <p className="text-amber-700 text-sm leading-relaxed">
-                Shopify Basic starts at $29/month — roughly <strong>₦47,000+ monthly</strong> at current rates.
-                Add domain (₦15,000+/yr), essential apps (₦10,000–₦50,000/mo), and 2% transaction fees on top of Paystack fees.
-                For a Nigerian SME, that's ₦60,000–₦100,000+ monthly before you sell a single item.
+                Shopify Basic starts at $29/month - roughly <strong>₦47,000+ monthly</strong> at current rates.
+                Add domain (₦15,000+/yr), essential apps (₦10,000-₦50,000/mo), and 2% transaction fees on top of Paystack fees.
+                For a Nigerian SME, that's ₦60,000-₦100,000+ monthly before you sell a single item.
               </p>
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function VsShopify() {
               <div className="w-8 h-1 bg-gray-200 rounded mb-4" />
               <p className="text-gray-500 text-sm leading-relaxed">
                 You sign up. Then you need to pick a theme, buy a domain, connect a payment gateway,
-                set up product pages, configure shipping settings. Two weeks later, you're still figuring it out —
+                set up product pages, configure shipping settings. Two weeks later, you're still figuring it out -
                 and you've already paid ₦47,000.
               </p>
             </Reveal>

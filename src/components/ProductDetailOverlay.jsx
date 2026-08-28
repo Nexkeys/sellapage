@@ -414,7 +414,7 @@ function MobileContent({
             className={`w-full flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all ${btnClasses}`}
             style={!btnClasses.includes('bg-') ? { backgroundColor: btnBg } : undefined}
           >
-            <MessageCircle size={15} /> Order — ₦{Number(product.price).toLocaleString()}
+            <MessageCircle size={15} /> Order: ₦{Number(product.price).toLocaleString()}
           </button>
         )}
       </div>
@@ -543,7 +543,7 @@ function DesktopDetails({
             className={`w-full flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all ${btnClasses}`}
             style={!btnClasses.includes('bg-') ? { backgroundColor: btnBg } : undefined}
           >
-            <MessageCircle size={15} /> Order — ₦{Number(product.price).toLocaleString()}
+            <MessageCircle size={15} /> Order: ₦{Number(product.price).toLocaleString()}
           </button>
         )}
       </div>

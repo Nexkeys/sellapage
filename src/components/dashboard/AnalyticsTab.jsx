@@ -21,7 +21,7 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
             <Lock size={20} className="text-gray-400" />
           </div>
           <div>
-            <h2 className="font-bold text-gray-900 text-sm mb-1">Analytics — Growth+ Feature</h2>
+            <h2 className="font-bold text-gray-900 text-sm mb-1">Analytics - Growth+ Feature</h2>
             <p className="text-gray-400 text-xs max-w-xs mx-auto leading-relaxed">
               Store visit tracking and product click analytics are available on the Growth and Pro plans.
             </p>
@@ -198,7 +198,7 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
           <p className="font-semibold text-gray-800 text-xs">Top Performing Products</p>
-          <p className="text-gray-400 text-[11px] mt-0.5">By product page clicks — all time</p>
+          <p className="text-gray-400 text-[11px] mt-0.5">By product page clicks - all time</p>
         </div>
 
         {topProducts.length === 0 ? (
@@ -207,7 +207,7 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
               <BarChart2 size={18} className="text-gray-300" />
             </div>
             <p className="text-gray-400 text-xs max-w-xs">
-              No click data yet — share your store to start tracking.
+              No click data yet - share your store to start tracking.
             </p>
           </div>
         ) : (
@@ -239,7 +239,7 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="font-semibold text-gray-800 text-xs">Top Performing Services</p>
-            <p className="text-gray-400 text-[11px] mt-0.5">By booking requests — all time</p>
+            <p className="text-gray-400 text-[11px] mt-0.5">By booking requests - all time</p>
           </div>
 
           {topServices.length === 0 ? (
@@ -248,7 +248,7 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
                 <Calendar size={18} className="text-gray-300" />
               </div>
               <p className="text-gray-400 text-xs max-w-xs">
-                No booking data yet — share your store to start tracking.
+                No booking data yet - share your store to start tracking.
               </p>
             </div>
           ) : (

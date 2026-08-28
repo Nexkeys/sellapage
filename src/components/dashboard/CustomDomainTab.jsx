@@ -346,7 +346,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
               </button>
             </div>
             <p className="text-[11px] text-gray-400">
-              Enter without http:// — works with any domain or subdomain you own, e.g. <span className="font-mono">mybusiness.com</span> or <span className="font-mono">shop.brand.ng</span>
+              Enter without http:// - works with any domain or subdomain you own, e.g. <span className="font-mono">mybusiness.com</span> or <span className="font-mono">shop.brand.ng</span>
             </p>
           </div>
         </div>

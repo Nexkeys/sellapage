@@ -92,9 +92,9 @@ export default function About() {
                 'Discounts & promo codes with usage limits and expiry (Pro+)',
                 'Product export to PDF, CSV, Excel, and downloadable files (Pro+)',
                 'Custom domain usage and CAC verification (Pro+)',
-                'Job Listings board — post openings on any plan (5/25/50/unlimited by tier); public applicants apply via WhatsApp or email',
+                'Job Listings board - post openings on any plan (5/25/50/unlimited by tier); public applicants apply via WhatsApp or email',
                 'Sellapage Blog with public reader comments',
-                'Referral Program — earn cash when businesses you refer upgrade to a paid plan',
+                'Referral Program - earn cash when businesses you refer upgrade to a paid plan',
               ].map((capability, i) => (
                 <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
                   <p className="text-gray-700 text-sm leading-relaxed flex items-start gap-2">
@@ -160,7 +160,7 @@ export default function About() {
               </div>
               <h3 className="font-display font-bold text-white text-lg mb-3">Our Mission</h3>
               <p className="text-brand-100 text-sm leading-relaxed">
-                Make professional online selling accessible to every Nigerian business owner or service provider regardless of their technical ability or budget. We started with the simplest possible product and we are building from there, one real seller at a time — products, services, checkout, delivery, customers, analytics, and growth from one dashboard.
+                Make professional online selling accessible to every Nigerian business owner or service provider regardless of their technical ability or budget. We started with the simplest possible product and we are building from there, one real seller at a time - products, services, checkout, delivery, customers, analytics, and growth from one dashboard.
               </p>
             </Reveal>
           </div>
@@ -179,15 +179,15 @@ export default function About() {
 
           <Reveal delay={100} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {[
-              { label: 'Business Registration', status: 'CAC Registered — BN - 9689086' },
-              { label: 'Payment Processing',    status: 'Paystack — CBN licensed' },
-              { label: 'Data Storage',          status: 'Google Firebase — encrypted at rest' },
-              { label: 'Image Hosting',         status: 'Cloudinary — global CDN' },
-              { label: 'Hosting',               status: 'Vercel — SOC 2 certified' },
+              { label: 'Business Registration', status: 'CAC Registered - BN - 9689086' },
+              { label: 'Payment Processing',    status: 'Paystack - CBN licensed' },
+              { label: 'Data Storage',          status: 'Google Firebase - encrypted at rest' },
+              { label: 'Image Hosting',         status: 'Cloudinary - global CDN' },
+              { label: 'Hosting',               status: 'Vercel - SOC 2 certified' },
               { label: 'Push Notifications',    status: 'Firebase Cloud Messaging (FCM)' },
               { label: 'Email Delivery',        status: 'Resend' },
               { label: 'Support',               status: 'sellapage.ng@gmail.com' },
-              { label: 'Security',              status: 'ISO/IEC 27001 guidance — reviewed by co-founder' },
+              { label: 'Security',              status: 'ISO/IEC 27001 guidance - reviewed by co-founder' },
             ].map((item, i, arr) => (
               <div
                 key={item.label}

@@ -44,7 +44,7 @@ const sections = [
       'All data is encrypted in transit using TLS/SSL encryption between your device and our servers.',
       'All data at rest is stored in Firebase Firestore with server-side encryption managed by Google Cloud.',
       'API keys, OAuth refresh tokens, and payment credentials are stored server-side only and are never exposed to browsers or client-side code.',
-      'Firebase Authentication handles all identity verification — we do not store raw passwords.',
+      'Firebase Authentication handles all identity verification - we do not store raw passwords.',
       'Access to your store data is restricted to your authenticated account only. No other vendor or user can access your data.',
       'We perform regular security monitoring and follow industry best practices for web application security.',
     ],
@@ -52,7 +52,7 @@ const sections = [
   {
     title: 'Where Your Data Is Stored',
     content: [
-      'All data is stored securely on Google Firebase — a trusted cloud platform used by millions of apps worldwide.',
+      'All data is stored securely on Google Firebase - a trusted cloud platform used by millions of apps worldwide.',
       'Firebase complies with GDPR and international data protection standards.',
       'Product images are stored on Cloudinary, a secure media cloud service.',
     ],

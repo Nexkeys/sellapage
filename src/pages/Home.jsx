@@ -52,7 +52,7 @@ const features = [
   {
     icon: Share2,
     title: 'One Link That Works Everywhere',
-    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram, flyers — anywhere you promote yourself.',
+    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram, flyers - anywhere you promote yourself.',
   },
   {
     icon: TrendingUp,
@@ -142,7 +142,7 @@ const features = [
   {
     icon: BookOpen,
     title: 'Sellapage Blog',
-    description: 'Guides, tips, and stories to help you sell more — read and comment on the public blog.',
+    description: 'Guides, tips, and stories to help you sell more - read and comment on the public blog.',
   },
   {
     icon: Gift,
@@ -195,7 +195,7 @@ const faqs = [
   },
   {
     q: 'Is it really free right now?',
-    a: 'Yes — the Starter plan is permanently free. Paid plans are also available: Growth at ₦5,000/month, Pro at ₦12,000/month and Premium at ₦25,000 with more features as you grow.',
+    a: 'Yes - the Starter plan is permanently free. Paid plans are also available: Growth at ₦5,000/month, Pro at ₦12,000/month and Premium at ₦25,000 with more features as you grow.',
   },
 ]
 
@@ -238,8 +238,8 @@ const plans = [
       { text: 'Manage store settings easily', available: true },
       { text: 'Responsive support', available: true },
       { text: 'Product on/off toggle', available: true },
-      { text: 'AI product descriptions — 20 per day', available: true },
-      { text: 'Structured cart — multi-item orders in one flow', available: true },
+      { text: 'AI product descriptions - 20 per day', available: true },
+      { text: 'Structured cart - multi-item orders in one flow', available: true },
       { text: 'Stock count management & out-of-stock sorting', available: true },
       { text: 'Product categories for easy browsing', available: true },
     ],
@@ -259,8 +259,8 @@ const plans = [
       { text: 'Hot leads list', available: true },
       { text: 'Full analytics dashboard', available: true },
       { text: 'Store badge (Pro tag)', available: true },
-      { text: '20 Premium Store Themes — full visual customisation', available: true },
-      { text: 'AI product descriptions — 50 per day', available: true },
+      { text: '20 Premium Store Themes - full visual customisation', available: true },
+      { text: 'AI product descriptions - 50 per day', available: true },
       { text: 'Priority same-day support', available: true },
       { text: 'Early access to new features', available: true },
     ],
@@ -331,7 +331,7 @@ const platformFeatures = [
   { icon: Shield, title: 'CAC Verification', desc: 'Verify your business with Corporate Affairs Commission for added trust and credibility.' },
   { icon: MessageCircle, title: 'Business Messaging', desc: 'Automate order confirmations and customer support from the same commerce flow.' },
   { icon: Briefcase, title: 'Job Listings', desc: 'Post job openings from your dashboard on any plan. Approved listings go live on the public Sellapage Jobs board.' },
-  { icon: BookOpen, title: 'Sellapage Blog', desc: 'Guides, tips, and stories to help you sell more — read and comment on the public blog.' },
+  { icon: BookOpen, title: 'Sellapage Blog', desc: 'Guides, tips, and stories to help you sell more - read and comment on the public blog.' },
   { icon: Gift, title: 'Referral Program', desc: 'Share your referral code and earn cash when the businesses you refer upgrade to a paid plan.' },
   { icon: Sparkles, title: 'AI Business Partner (Premium)', desc: 'A context-aware assistant that reads your whole dashboard and helps you run your business, hands-free.' },
   { icon: BarChart2, title: 'Google Ads Integration (Premium)', desc: 'Run and track Google Ads campaigns yourself, or let Sellapage manage them for you.' },
@@ -377,10 +377,10 @@ export default function Home() {
               </h1>
 
               <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-7 max-w-lg">
-                Set up a professional store page for your products or services. Accept payments, manage delivery, track customers in your CRM, run discounts, collect reviews, and grow with analytics — all from one dashboard.
+                Set up a professional store page for your products or services. Accept payments, manage delivery, track customers in your CRM, run discounts, collect reviews, and grow with analytics - all from one dashboard.
                 <br></br> 
                 <br></br>
-                Share one link anywhere — Instagram, Facebook, TikTok, WhatsApp, Twitter, flyers, or DMs — and let customers browse, order, pay, and reach you directly. 
+                Share one link anywhere - Instagram, Facebook, TikTok, WhatsApp, Twitter, flyers, or DMs - and let customers browse, order, pay, and reach you directly. 
                 <br></br>
                 <br></br>
                 No coding. No stress.
@@ -690,7 +690,7 @@ export default function Home() {
           </div>
 
           <p className="text-center text-gray-500 text-sm mt-8 max-w-2xl mx-auto">
-            After going live, your dashboard gives you: order management, delivery booking, customer CRM, analytics, discounts, reviews, payouts, and growth tools — all in one place.
+            After going live, your dashboard gives you: order management, delivery booking, customer CRM, analytics, discounts, reviews, payouts, and growth tools - all in one place.
           </p>
         </div>
       </section>
@@ -809,7 +809,7 @@ export default function Home() {
                     className="w-10 h-10 rounded-full object-cover border-2 border-brand-100"
                   />
                   <div>
-                    <p className="font-display font-bold text-gray-900 text-sm">— {t.name}</p>
+                    <p className="font-display font-bold text-gray-900 text-sm">- {t.name}</p>
                     <p className="text-gray-400 text-xs">{t.role}</p>
                   </div>
                 </div>
@@ -828,7 +828,7 @@ export default function Home() {
               Built for the full selling workflow
             </h2>
             <p className="text-gray-500 text-base max-w-2xl mx-auto">
-              From checkout to delivery, customers, reviews, discounts, analytics, and growth — Sellapage gives Nigerian businesses the operating layer to sell with confidence. Pro and Premium unlock the full suite.
+              From checkout to delivery, customers, reviews, discounts, analytics, and growth - Sellapage gives Nigerian businesses the operating layer to sell with confidence. Pro and Premium unlock the full suite.
             </p>
           </Reveal>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
@@ -888,7 +888,7 @@ export default function Home() {
                   Run Your Entire Business from One Dashboard.
                 </h2>
                 <p className="text-brand-100 text-sm leading-relaxed">
-                  Create your free store in minutes. Manage products, services, checkout, delivery, customers, analytics, and growth — all in one place.
+                  Create your free store in minutes. Manage products, services, checkout, delivery, customers, analytics, and growth - all in one place.
                 </p>
               </div>
             </div>

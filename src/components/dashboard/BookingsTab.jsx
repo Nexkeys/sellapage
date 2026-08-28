@@ -123,7 +123,7 @@ function BookingStatusTimeline({ booking }) {
             <span className={`absolute -left-[18px] top-1 h-2 w-2 rounded-full ring-2 ring-white ${config.dot || 'bg-gray-400'}`} />
             <p className="text-[11px] font-bold text-gray-700">
               {config.label}
-              {entry.status === 'rescheduled' && entry.newDate ? ` — ${entry.newDate} ${entry.newTime || ''}`.trim() : ''}
+              {entry.status === 'rescheduled' && entry.newDate ? ` - ${entry.newDate} ${entry.newTime || ''}`.trim() : ''}
             </p>
             <p className="text-[10px] text-gray-400">
               {formatLogDate(entry.changedAt)} · {entry.changedByLabel || 'System'}
@@ -375,7 +375,7 @@ export default function BookingsTab({
               Automated Bookings
             </h1>
             <p className="mx-auto mb-5 max-w-sm text-xs leading-relaxed text-gray-500">
-              You're on Growth. Bookings are automatically created when customers pay via Paystack in-app checkout — a Pro feature.
+              You're on Growth. Bookings are automatically created when customers pay via Paystack in-app checkout - a Pro feature.
             </p>
             <button
               type="button"
@@ -789,7 +789,7 @@ export default function BookingsTab({
       <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
         <Info size={13} className="flex-shrink-0 text-gray-400 mt-0.5" />
         <p className="text-[11px] text-gray-400 leading-relaxed">
-          <span className="font-semibold text-gray-600">Booking status guide:</span> "Refunded" is a manual bookkeeping label only — it does not process a refund through Paystack. Cancelling a booking emails the customer a link to contact you directly on WhatsApp about a refund.
+          <span className="font-semibold text-gray-600">Booking status guide:</span> "Refunded" is a manual bookkeeping label only - it does not process a refund through Paystack. Cancelling a booking emails the customer a link to contact you directly on WhatsApp about a refund.
         </p>
       </div>
 

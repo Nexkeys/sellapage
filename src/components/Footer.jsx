@@ -189,7 +189,7 @@ export default function Footer() {
             >
               NexKeys Agency
             </a>{' '}
-            — Made for Nigerians
+            - Made for Nigerians
           </p>
         </div>
       </div>

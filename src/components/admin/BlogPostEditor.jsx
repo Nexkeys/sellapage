@@ -314,7 +314,7 @@ export default function BlogPostEditor({ authHeaders, adminUid, postId, onClose,
 
       <div>
         <label className="block text-xs font-semibold text-gray-700 mb-1.5">Excerpt (optional)</label>
-        <textarea value={form.excerpt} onChange={e => setForm(prev => ({ ...prev, excerpt: e.target.value }))} rows={2} placeholder="Short summary shown on cards — auto-generated from the post if left blank" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none" />
+        <textarea value={form.excerpt} onChange={e => setForm(prev => ({ ...prev, excerpt: e.target.value }))} rows={2} placeholder="Short summary shown on cards - auto-generated from the post if left blank" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none" />
       </div>
 
       <div>

@@ -242,7 +242,7 @@ export default function ServiceCard({
               className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg transition-all"
             >
               <MessageCircle size={15} />
-              Book — ₦{Number(service.price).toLocaleString()}
+              Book: ₦{Number(service.price).toLocaleString()}
             </button>
           </div>
         </div>

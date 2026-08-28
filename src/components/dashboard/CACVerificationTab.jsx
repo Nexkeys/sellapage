@@ -260,7 +260,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
               </button>
             </div>
             <p className="text-[11px] text-gray-400">
-              You can enter with or without the prefix — RC1234567, BN1234567, and 1234567 all work.
+              You can enter with or without the prefix - RC1234567, BN1234567, and 1234567 all work.
             </p>
           </div>
 
@@ -270,7 +270,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
               <div className="flex items-start gap-2.5">
                 <CheckCircle size={14} className="mt-0.5 flex-shrink-0 text-amber-600" />
                 <div>
-                  <p className="text-xs font-bold text-amber-800">Business Found — Please Confirm</p>
+                  <p className="text-xs font-bold text-amber-800">Business Found - Please Confirm</p>
                   <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
                     We found a business registered under RC {verifyResult.rcNumber}. Is this your business?
                   </p>
@@ -343,7 +343,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
           {[
             'Builds trust with customers who want to shop from registered businesses',
             'Displays a verified badge on your storefront',
-            'One-time verification — no renewals needed',
+            'One-time verification - no renewals needed',
             'Powered by the Corporate Affairs Commission (CAC) database',
           ].map((item, idx) => (
             <div key={idx} className="flex items-start gap-2.5">

@@ -15,7 +15,7 @@ export default function SEO({
   jsonLd,
   noIndex = false,
 }) {
-  const fullTitle = title ? `${title} — ${SITE_NAME}` : `${SITE_NAME} — Run Your Entire Business from One Dashboard`
+  const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - Run Your Entire Business from One Dashboard`
   const desc = description || DEFAULT_DESCRIPTION
   const img = image || DEFAULT_IMAGE
   const pageUrl = url ? `${SITE_URL}${url}` : SITE_URL

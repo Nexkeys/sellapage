@@ -61,7 +61,7 @@ export default function VsInstagramBio() {
             Sellapage gives you a full commerce page with products, services, prices, direct ordering, customer records, and payments.
           </p>
           <p className="text-gray-600 text-base max-w-xl mx-auto leading-relaxed">
-            Sellapage gives your Instagram a real commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains — all from one dashboard.
+            Sellapage gives your Instagram a real commerce workspace: store pages for products and services, Paystack checkout, Sendbox delivery, customer CRM, verified reviews, discounts, analytics, AI descriptions, and custom domains - all from one dashboard.
           </p>
         </div>
       </section>
@@ -144,7 +144,7 @@ export default function VsInstagramBio() {
             Use Instagram to Promote, Sellapage to Sell
           </h2>
           <p className="text-gray-600 text-base leading-relaxed max-w-xl mx-auto">
-            Keep your Instagram for content — photos, reels, stories. Put your Sellapage link
+            Keep your Instagram for content - photos, reels, stories. Put your Sellapage link
             in your bio. When people want to buy, they click through to your real commerce workspace.
             Instagram brings the audience. Sellapage closes the sale.
           </p>
