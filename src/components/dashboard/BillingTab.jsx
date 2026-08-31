@@ -34,6 +34,34 @@ export default function BillingTab({
 
   const periodLabel = PLAN_PERIODS.find(p => p.id === billingPeriod)?.label || 'Monthly'
 
+  // Mirrors paystack-webhook.js:349 exactly. If the current plan still has time
+  // left, a new purchase starts from the existing end date rather than from
+  // today, so renewing early stacks the period on top instead of discarding the
+  // remainder. Shown in the confirm dialog so a vendor can see they lose nothing
+  // by paying ahead of expiry. `monthly` has no `months` key in PLAN_PERIODS,
+  // hence the same `|| 1` fallback the server uses.
+  const projectedEndDate = (periodId) => {
+    const months = PLAN_PERIODS.find(p => p.id === periodId)?.months || 1
+    const nowMillis = Date.now()
+    const existingEnd = planEndDate ? planEndDate.getTime() : 0
+    const base = new Date(existingEnd > nowMillis ? existingEnd : nowMillis)
+    base.setMonth(base.getMonth() + months)
+    return base.toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  // Renewing is a repeat charge on a plan the vendor already has, so it gets a
+  // confirmation showing the new end date. Upgrades to a different plan keep
+  // going straight through, as before.
+  const handlePlanClick = (planId, isRenewal) => {
+    if (isRenewal) {
+      const confirmed = window.confirm(
+        `Renew your ${planId} plan?\n\nYour access will run until ${projectedEndDate(selectedPeriod)}.`
+      )
+      if (!confirmed) return
+    }
+    onUpgrade(planId, selectedPeriod)
+  }
+
   return (
     <div className="p-4 sm:p-5 max-w-4xl mx-auto space-y-4">
       <div>
@@ -123,6 +151,15 @@ export default function BillingTab({
           const meta = PLAN_META[planId]
           const PlanIcon = meta.icon
           const isCurrent = currentPlan === planId
+          // `isSamePlan` uses `plan` rather than `currentPlan` so it still matches
+          // once the plan has expired (currentPlan is nulled in that case).
+          // This is what makes early renewal reachable: previously `isCurrent`
+          // disabled the button outright, so a vendor on an active plan had no way
+          // to pay until it had already lapsed, despite the warning email telling
+          // them to renew. The server has always accepted this (billing-initialize
+          // has no same-plan guard, and the webhook extends from the existing end
+          // date), so only this button was in the way.
+          const isSamePlan = plan === planId
           const isDowngrade = (planId === 'growth' && (isPro || isPremium)) || (planId === 'pro' && isPremium)
           const price = prices[selectedPeriod]
           const monthlyEquiv = getMonthlyEquivalent(planId, selectedPeriod)
@@ -172,26 +209,27 @@ export default function BillingTab({
               </ul>
 
               <button
-                onClick={() => onUpgrade(planId, selectedPeriod)}
-                disabled={upgradeLoading === planId || isCurrent || isDowngrade}
+                onClick={() => handlePlanClick(planId, isSamePlan)}
+                disabled={upgradeLoading === planId || isDowngrade}
                 className={`w-full py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                  isCurrent
-                    ? 'bg-gray-100 text-gray-400 cursor-default'
-                    : isDowngrade
+                  isDowngrade
                     ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     : 'bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white'
                 }`}
               >
                 {upgradeLoading === planId
                   ? <><Loader2 size={13} className="animate-spin" /> Redirecting...</>
-                  : isCurrent
-                  ? 'Current Plan'
-                  : isGrace || isExpired
+                  : isSamePlan || isGrace || isExpired
                   ? `Renew ${planId.charAt(0).toUpperCase() + planId.slice(1)}`
                   : `Upgrade to ${planId.charAt(0).toUpperCase() + planId.slice(1)}`
                 }
-                {!isCurrent && upgradeLoading !== planId && <ArrowRight size={13} />}
+                {upgradeLoading !== planId && !isDowngrade && <ArrowRight size={13} />}
               </button>
+              {isCurrent && (
+                <p className="text-[10px] text-gray-400 text-center -mt-1">
+                  Renew any time. Remaining days are added on, not lost.
+                </p>
+              )}
             </div>
           )
         })}
