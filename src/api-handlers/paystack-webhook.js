@@ -4,6 +4,7 @@ import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail } from "./_lib/send-email.js";
 import { sendPush } from "./_lib/send-push.js";
+import { setStoreCardsFrozen } from "./_lib/loyalty.js";
 
 async function getRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -385,6 +386,18 @@ export default async function handler(req, res) {
   });
 
   await batch.commit();
+
+  // Unfreezes loyalty cards frozen by expiry-cron when this store's plan lapsed.
+  // Without this the balances stay locked forever and the vendor's customers
+  // silently lose access to points they legitimately earned. Only meaningful on
+  // Premium, since that is the only tier where loyalty runs at all.
+  if (plan === "premium") {
+    try {
+      await setStoreCardsFrozen(db, storeId, false);
+    } catch (err) {
+      console.error("[paystack-webhook] loyalty unfreeze failed", err);
+    }
+  }
 
   // --- Referral Reward Creation (incremental, one-time-per-tier, immediately available) ---
   // Commission is keyed to the HIGHEST plan tier the referred vendor has reached, not

@@ -4,6 +4,7 @@ import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { sendEmail, escapeHtml } from './_lib/send-email.js'
 import { sendPush } from './_lib/send-push.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
+import { reverseOrderLoyalty } from './_lib/loyalty.js'
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -110,6 +111,28 @@ export default async function handler(req, res) {
     }
 
     await orderRef.update(updatePayload)
+
+    // Cancelling reverses this order's loyalty effect: take back what it earned,
+    // give back what it spent. `loyaltyReversed` guards it, because a vendor can
+    // set the same status twice and without the flag the second pass would pay
+    // the points back a second time. Wrapped so a loyalty failure can never stop
+    // a vendor cancelling an order.
+    if (newStatus === 'cancelled' && orderData.loyaltyReversed !== true) {
+      const earned = Number(orderData.loyaltyEarned) || 0
+      const redeemed = Number(orderData.loyaltyRedeemed) || 0
+      if (orderData.loyaltyCode && (earned > 0 || redeemed > 0)) {
+        try {
+          await reverseOrderLoyalty(db, storeId, {
+            code: orderData.loyaltyCode,
+            earned,
+            redeemed,
+          })
+          await orderRef.update({ loyaltyReversed: true })
+        } catch (err) {
+          console.error('[update-order-status] loyalty reversal failed', err)
+        }
+      }
+    }
 
     if (newStatus === 'delivered') {
       try {

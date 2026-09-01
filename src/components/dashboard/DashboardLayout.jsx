@@ -32,6 +32,7 @@ import {
   CalendarDays,
   Receipt,
   UserPlus,
+  Gift,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -59,6 +60,7 @@ const NAV_ITEMS = [
   { id: "marketing", label: "Marketing", icon: Megaphone },
   { id: "discounts", label: "Discounts", icon: Percent },
   { id: "reviews", label: "Reviews", icon: Star },
+  { id: "loyalty", label: "Loyalty", icon: Gift },
   { id: "referral-program", label: "Referral Program", icon: Share2 },
   { id: "google-ads", label: "Google Ads", icon: Target },
   { id: "job-listings", label: "Job Listings", icon: Briefcase },
@@ -195,6 +197,10 @@ export default function DashboardLayout({
         if (item.id === 'orders' && vendorType === 'services') return false;
         if (item.id === 'bookings' && vendorType === 'products') return false;
         if (item.id === 'team' && !isPremiumPlan) return false;
+        // Premium only, and gated in BOTH this list and the mobile drawer below.
+        // Gating only one of the two leaves the tab reachable on phones after a
+        // plan lapses, which has already shipped as a bug twice on admin tabs.
+        if (item.id === 'loyalty' && !isPremiumPlan) return false;
         if (item.id === 'team' && isStaffIdentity) return false;
         if (isStaffIdentity && item.id !== 'team' && !staffTabAccess(item.id)) return false;
         return true;
@@ -283,6 +289,8 @@ export default function DashboardLayout({
           if (id === 'orders' && vendorType === 'services') return null;
           if (id === 'bookings' && vendorType === 'products') return null;
           if (id === 'team' && !isPremiumPlan) return null;
+          // Mirror of the desktop gate above. Both are required.
+          if (id === 'loyalty' && !isPremiumPlan) return null;
           if (id === 'team' && isStaffIdentity) return null;
           if (isStaffIdentity && id !== 'team' && !staffTabAccess(id)) return null;
           const active = activeTab === id;

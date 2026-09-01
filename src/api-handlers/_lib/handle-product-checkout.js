@@ -2,6 +2,7 @@
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
+import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
 // Moved verbatim out of paystack-webhook.js's former single checkout branch — logic
@@ -22,6 +23,9 @@ export async function handleProductCheckout(db, data, res) {
     orderType,
     promoCode,
     discountAmount,
+    subtotal,
+    loyaltyCode,
+    pointsRedeemed,
   } = data.metadata || {};
 
   if (!storeId) {
@@ -195,6 +199,84 @@ export async function handleProductCheckout(db, data, res) {
   // Send notifications
   const storeSnap = await db.collection("stores").doc(storeId).get();
   const storeData = storeSnap.data() || {};
+
+  // ------------------------------------------------------------------
+  // Loyalty points. Runs after the order exists and is wrapped whole, because
+  // nothing here is worth failing a paid order over. Every branch inside
+  // earnPointsForOrder / commitRedemption exits immediately unless the store is
+  // Premium AND has loyalty switched on, so for every other vendor this block
+  // costs one already-fetched store document and nothing else.
+  //
+  // Points come off HERE, at confirmation, not at checkout start, so an
+  // abandoned checkout never burns a customer's balance.
+  // ------------------------------------------------------------------
+  let loyaltyResult = null;
+  let loyaltySpent = 0;
+  try {
+    if (loyaltyCode && Number(pointsRedeemed) > 0) {
+      loyaltySpent = await commitRedemption(db, storeId, loyaltyCode, Number(pointsRedeemed));
+    }
+
+    loyaltyResult = await earnPointsForOrder(db, storeId, storeData, {
+      customerName,
+      customerEmail,
+      customerPhone,
+      subtotal,
+    });
+
+    // Persisted on the order so a cancellation can reverse exactly what this
+    // order did, rather than recomputing it from rates that may have changed.
+    if (loyaltyResult || loyaltySpent > 0) {
+      await orderRef.update({
+        loyaltyCode: loyaltyResult?.code || loyaltyCode || "",
+        loyaltyEarned: loyaltyResult?.earned || 0,
+        loyaltyRedeemed: loyaltySpent,
+      });
+    }
+  } catch (err) {
+    console.error("[handle-product-checkout] loyalty failed", err);
+  }
+
+  // The code also renders on the success screen, but the Paystack redirect
+  // usually beats this webhook, so on a first order that screen may load before
+  // the card exists. Email is the guaranteed delivery path; the screen is only
+  // the fast one. Fire and forget, never awaited into the payment path.
+  if (loyaltyResult && customerEmail) {
+    const pretty = formatCode(loyaltyResult.code);
+    const brand = escapeHtml(storeData.businessName || "Sellapage");
+    sendEmail(
+      customerEmail,
+      loyaltyResult.isNew
+        ? `Your ${storeData.businessName || "loyalty"} points card`
+        : `You earned ${loyaltyResult.earned} points`,
+      `
+        <div style="max-width:600px;margin:0 auto;background:#fff;font-family:Arial,sans-serif;">
+          <div style="background:#16a34a;padding:24px;">
+            <h1 style="color:#fff;font-size:22px;margin:0;font-weight:bold;">${brand}</h1>
+          </div>
+          <div style="padding:32px;color:#111827;">
+            <h2 style="font-size:20px;margin:0 0 12px 0;">
+              ${loyaltyResult.isNew ? "Here is your points card" : "Points added"}
+            </h2>
+            <p style="color:#6b7280;font-size:14px;margin:0 0 20px 0;">
+              Hi ${escapeHtml(customerName || "there")}, you earned
+              <strong>${loyaltyResult.earned} points</strong> on this order.
+            </p>
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;text-align:center;margin:0 0 20px 0;">
+              <p style="margin:0 0 6px 0;font-size:11px;color:#16a34a;font-weight:bold;letter-spacing:1px;">YOUR CODE</p>
+              <p style="margin:0;font-size:26px;font-weight:bold;letter-spacing:3px;color:#111827;">${pretty}</p>
+              <p style="margin:10px 0 0 0;font-size:13px;color:#6b7280;">Balance: ${loyaltyResult.points} points</p>
+            </div>
+            <p style="color:#6b7280;font-size:13px;margin:0;">
+              Save this code. Enter it at checkout next time you shop with ${brand}
+              to spend your points. If you lose it, use the "lost your code" link
+              at checkout and we will email it again.
+            </p>
+          </div>
+        </div>
+      `,
+    ).catch(() => {});
+  }
 
   try {
     await Promise.all([

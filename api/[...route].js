@@ -320,6 +320,18 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/jobs-public.js")
         return handler(req, res)
       }
+
+      // Loyalty. Public (storefront checkout) and vendor (dashboard tab) are
+      // separate handlers on purpose, so the unauthenticated path can never
+      // share a file with the authenticated one.
+      case "loyalty-public": {
+        const { default: handler } = await import("../src/api-handlers/loyalty-public.js")
+        return handler(req, res)
+      }
+      case "loyalty-vendor": {
+        const { default: handler } = await import("../src/api-handlers/loyalty-vendor.js")
+        return handler(req, res)
+      }
       case "admin-jobs": {
         const { default: handler } = await import("../src/api-handlers/admin-jobs.js")
         return handler(req, res)

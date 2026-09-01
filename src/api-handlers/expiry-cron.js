@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { setStoreCardsFrozen } from './_lib/loyalty.js'
 
 // Constant-time secret comparison — a plain !== leaks how many leading bytes of
 // a guess were correct.
@@ -161,6 +162,19 @@ export default async function handler(req, res) {
       else {
         batch.update(storeDoc.ref, STARTER_RESET)
         summary.expired++
+
+        // Loyalty cards are frozen rather than deleted: the customer did nothing
+        // wrong, so their balance is preserved and returns intact if the vendor
+        // resubscribes. Frozen means cannot earn, cannot spend.
+        // Only runs for stores that actually had loyalty on, since this is a per
+        // store fan out and writes are the scarcer resource on the free tier.
+        if (data.loyaltyEnabled === true) {
+          try {
+            await setStoreCardsFrozen(db, storeDoc.id, true)
+          } catch (freezeErr) {
+            console.error(`Failed to freeze loyalty cards for ${storeDoc.id}:`, freezeErr.message)
+          }
+        }
 
         if (vendorEmail) {
           try {

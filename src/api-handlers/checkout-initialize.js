@@ -2,6 +2,7 @@
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
+import { resolveRedemption } from './_lib/loyalty.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -61,6 +62,8 @@ export default async function handler(req, res) {
       locationType,
       locationPref,
       customerNotes,
+      loyaltyCode,
+      redeemPoints,
     } = body;
 
     const kind = orderType === "booking" ? "booking" : "product";
@@ -283,9 +286,33 @@ export default async function handler(req, res) {
       }
     }
 
+    // Loyalty redemption. Deliberately skipped when a promo code is in play:
+    // stacking both against the same subtotal drives an order toward the .max(1)
+    // floor below and the vendor absorbs it. Products only for now, since
+    // bookings run through their own totals in handle-booking-checkout.js.
+    //
+    // Read only here. The balance is not touched until Paystack confirms, so an
+    // abandoned checkout cannot burn a customer's points.
+    let loyalty = null;
+    if (kind === "product" && !promoCode && loyaltyCode) {
+      try {
+        loyalty = await resolveRedemption(db, storeId, store, {
+          code: loyaltyCode,
+          requestedPoints: redeemPoints,
+          subtotal,
+        });
+      } catch (err) {
+        // An unusable code is never a reason to block a sale. Worst case the
+        // customer pays full price and contacts the vendor.
+        console.error("[checkout-initialize] loyalty lookup failed", err);
+        loyalty = null;
+      }
+    }
+    const loyaltyValue = loyalty?.value || 0;
+
     const processingFee = calcProcessingFee(subtotal);
     const grandTotal = Math.max(
-      subtotal + verifiedDeliveryFee + processingFee - parsedDiscountAmount,
+      subtotal + verifiedDeliveryFee + processingFee - parsedDiscountAmount - loyaltyValue,
       1,
     );
     const amountKobo = Math.round(grandTotal * 100);
@@ -315,6 +342,13 @@ export default async function handler(req, res) {
               grandTotal,
               promoCode,
               discountAmount: parsedDiscountAmount,
+              // Carried explicitly so the webhook can award points on the
+              // products total. Reconstructing it there by arithmetic works
+              // today and breaks silently the day any fee changes.
+              subtotal,
+              ...(loyalty
+                ? { loyaltyCode: loyalty.code, pointsRedeemed: loyalty.points, loyaltyValue }
+                : {}),
               transactionType: "checkout",
               orderType: kind === "booking" ? "booking" : "checkout",
               ...(kind === "product"

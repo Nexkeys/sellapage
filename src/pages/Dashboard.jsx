@@ -111,6 +111,7 @@ import ReferralTab from "../components/dashboard/ReferralTab";
 import GoogleAdsTab from "../components/dashboard/GoogleAdsTab";
 import JobListingsTab from "../components/dashboard/JobListingsTab";
 import TeamTab from "../components/dashboard/TeamTab";
+import LoyaltyTab from "../components/dashboard/LoyaltyTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -2099,6 +2100,14 @@ export default function Dashboard() {
       )}
       {activeTab === 'team' && (
         <TeamTab store={store} />
+      )}
+      {activeTab === 'loyalty' && (
+        <LoyaltyTab
+          store={store}
+          user={user}
+          isPremium={isPremium}
+          navigateTo={setActiveTab}
+        />
       )}
       {activeTab === 'google-ads' && (
         <GoogleAdsTab

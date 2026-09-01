@@ -15,6 +15,7 @@ import {
   Loader2,
   CreditCard,
   AlertCircle,
+  Gift,
 } from "lucide-react";
 import { getStoreBySlug, getProducts } from "../firebase/products";
 import { db } from "../firebase/config";
@@ -245,13 +246,28 @@ function StoreCheckoutModal({
   setPromoLoading,
   promoError,
   setPromoError,
+  loyaltyCode,
+  setLoyaltyCode,
+  loyaltyCard,
+  setLoyaltyCard,
+  loyaltyLoading,
+  setLoyaltyLoading,
+  loyaltyError,
+  setLoyaltyError,
+  storeId,
   verifyError,
 }) {
   const subtotal = calcSubtotal(cart);
   const deliveryFee = selectedZone ? Number(selectedZone.price) : 0;
   const processingFee = calcProcessingFee(subtotal);
   const discountAmount = calcDiscountAmount(subtotal, appliedDiscount);
-  const grandTotal = subtotal + deliveryFee + processingFee - discountAmount;
+  // Mirrors the server's cap in resolveRedemption: points never eat the delivery
+  // or processing fee. Display only; checkout-initialize recomputes it.
+  const loyaltyValue = appliedDiscount
+    ? 0
+    : Math.min(loyaltyCard?.value || 0, subtotal);
+  const grandTotal =
+    subtotal + deliveryFee + processingFee - discountAmount - loyaltyValue;
   const deliveryZones = store?.deliveryZones || [];
 
   const steps = [
@@ -286,6 +302,73 @@ function StoreCheckoutModal({
   const handleContinueDelivery = () => {
     if (!selectedZone || !form.deliveryAddress.trim()) return
     setStep("payment")
+  };
+
+  const handleApplyLoyalty = async () => {
+    const code = (loyaltyCode || "").trim();
+    if (!code || !storeId) return;
+    setLoyaltyLoading(true);
+    setLoyaltyError("");
+    try {
+      const res = await fetch("/api/loyalty-public?action=lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId, code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.enabled) {
+        setLoyaltyError("This store is not running a points programme.");
+      } else if (!data.found) {
+        setLoyaltyError("We could not find that code.");
+      } else if (!data.eligible) {
+        setLoyaltyError(
+          `You need at least ${data.minRedeem} points to spend. You have ${data.points}.`,
+        );
+      } else {
+        // Spend the whole balance by default, capped at the subtotal so the
+        // customer is never shown a discount larger than their own basket.
+        const usablePoints = Math.min(
+          data.points,
+          Math.floor(subtotal / (data.redeemValue || 1)),
+        );
+        setLoyaltyCard({
+          code: data.code,
+          points: usablePoints,
+          balance: data.points,
+          value: Math.floor(usablePoints * (data.redeemValue || 1)),
+        });
+      }
+    } catch {
+      setLoyaltyError("Could not check that code. Please try again.");
+    } finally {
+      setLoyaltyLoading(false);
+    }
+  };
+
+  const handleRecoverLoyalty = async () => {
+    const email = (form.customerEmail || "").trim();
+    if (!email) {
+      setLoyaltyError("Enter your email above first, then tap this again.");
+      return;
+    }
+    setLoyaltyLoading(true);
+    setLoyaltyError("");
+    try {
+      await fetch("/api/loyalty-public?action=recover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId, email }),
+      });
+    } catch {
+      /* the message below is intentionally identical either way */
+    } finally {
+      setLoyaltyLoading(false);
+      // Same message regardless of outcome. The endpoint deliberately does not
+      // reveal whether that email has a card, so neither does this.
+      setLoyaltyError(
+        "If that email has a card with this store, we have sent the code to it.",
+      );
+    }
   };
 
   const handleApplyPromo = async () => {
@@ -572,6 +655,12 @@ function StoreCheckoutModal({
                     <span>−₦{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
+                {loyaltyValue > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Points ({loyaltyCard.points})</span>
+                    <span>−₦{loyaltyValue.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Processing fee</span>
                   <span>₦{processingFee.toLocaleString()}</span>
@@ -634,6 +723,61 @@ function StoreCheckoutModal({
               )}
               {promoError && (
                 <p className="text-red-500 text-xs">{promoError}</p>
+              )}
+
+              {/* Loyalty. Hidden entirely while a promo code is applied, because
+                  the server refuses to stack the two and showing an input that
+                  silently does nothing is worse than not showing it. */}
+              {!appliedDiscount && (
+                loyaltyCard ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-green-700 font-semibold">
+                      <Gift size={14} />
+                      {loyaltyCard.points} points
+                      <span className="text-green-600 font-normal">
+                        −₦{loyaltyValue.toLocaleString()}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setLoyaltyCard(null); setLoyaltyCode(""); setLoyaltyError(""); }}
+                      className="p-1 rounded-lg hover:bg-green-100 text-green-600"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={loyaltyCode}
+                        onChange={(e) => setLoyaltyCode(e.target.value.toUpperCase().slice(0, 12))}
+                        placeholder="Loyalty code"
+                        onKeyDown={(e) => e.key === "Enter" && handleApplyLoyalty()}
+                        className="flex-1 px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyLoyalty}
+                        disabled={!loyaltyCode.trim() || loyaltyLoading}
+                        className="px-5 py-3 text-sm font-bold text-green-600 border border-green-500 rounded-xl hover:bg-green-50 disabled:opacity-50 transition-all"
+                      >
+                        {loyaltyLoading ? <Loader2 size={14} className="animate-spin" /> : "Use"}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRecoverLoyalty}
+                      className="text-[11px] text-gray-400 hover:text-green-600 underline"
+                    >
+                      Lost your code?
+                    </button>
+                  </div>
+                )
+              )}
+              {loyaltyError && (
+                <p className="text-gray-500 text-xs">{loyaltyError}</p>
               )}
 
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-sm">
@@ -733,6 +877,32 @@ function StoreCheckoutModal({
                   Thank you for shopping with {store.businessName}.
                 </p>
               </div>
+
+              {/* Points card. Only present once the webhook has run; the redirect
+                  often beats it, in which case this simply does not render and
+                  the emailed copy is how the customer gets their code. */}
+              {completedOrder.loyalty && (
+                <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-4 text-left">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Gift size={15} className="text-green-600" />
+                    <p className="text-sm font-bold text-green-800">
+                      You earned {completedOrder.loyalty.earned} points
+                    </p>
+                  </div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-green-600">
+                    Your code
+                  </p>
+                  <p className="text-2xl font-bold tracking-[0.2em] text-gray-900 my-1">
+                    {completedOrder.loyalty.code}
+                  </p>
+                  <p className="text-xs text-green-700">
+                    Balance: {completedOrder.loyalty.balance} points. Save this code
+                    and enter it at checkout next time to spend them. We have emailed
+                    it to you as well.
+                  </p>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={onDownloadReceipt}
@@ -788,6 +958,12 @@ export default function StorePage() {
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
+  // Loyalty. `loyaltyCard` holds the server's answer for an applied code; points
+  // are only ever deducted server side once Paystack confirms.
+  const [loyaltyCode, setLoyaltyCode] = useState("");
+  const [loyaltyCard, setLoyaltyCard] = useState(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [loyaltyError, setLoyaltyError] = useState("");
 
   const allProdsRef = useRef(null);
   const viewCountedRef = useRef(false);
@@ -1008,7 +1184,40 @@ export default function StorePage() {
       }
     }
 
-    if (usedSnapshot) return;
+    if (usedSnapshot) {
+      // The snapshot is written before the Paystack redirect, so it cannot carry
+      // the loyalty card: that is created by the webhook after payment confirms.
+      // Without this the code would never appear on screen for the majority of
+      // customers (whose sessionStorage survives the round trip) and only the
+      // emailed copy would reach them.
+      //
+      // Gated on the store actually running loyalty, so no other vendor's
+      // customers spend a read on this. Purely additive and fully optional: if
+      // the webhook is slow and this never resolves, the email still arrives.
+      if (store?.loyaltyEnabled === true) {
+        let tries = 0;
+        const pollLoyalty = async () => {
+          tries += 1;
+          try {
+            const res = await fetch(
+              `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(ref)}`,
+            );
+            const data = await res.json();
+            if (res.ok && data.type === "order" && data.order?.loyalty) {
+              setCompletedOrder((prev) =>
+                prev ? { ...prev, loyalty: data.order.loyalty } : prev,
+              );
+              return;
+            }
+          } catch {
+            // Never surfaced. The emailed code is the reliable path.
+          }
+          if (tries < 3) setTimeout(pollLoyalty, 2500);
+        };
+        setTimeout(pollLoyalty, 1500);
+      }
+      return;
+    }
 
     // sessionStorage snapshot is gone — happens whenever the Paystack redirect
     // lands in a different browsing context than the one that left (common in
@@ -1091,6 +1300,11 @@ export default function StorePage() {
           notes: checkoutForm.notes.trim(),
           promoCode: appliedDiscount?.code || "",
           discountAmount: discountAmount || 0,
+          // Sent only as a request. checkout-initialize re-reads the card and
+          // decides the real naira value, and ignores this entirely when a promo
+          // code is present, so nothing here can be used to invent a discount.
+          loyaltyCode: loyaltyCard?.code || "",
+          redeemPoints: loyaltyCard?.points || 0,
         }),
       });
 
@@ -1595,6 +1809,15 @@ export default function StorePage() {
           setPromoLoading={setPromoLoading}
           promoError={promoError}
           setPromoError={setPromoError}
+          loyaltyCode={loyaltyCode}
+          setLoyaltyCode={setLoyaltyCode}
+          loyaltyCard={loyaltyCard}
+          setLoyaltyCard={setLoyaltyCard}
+          loyaltyLoading={loyaltyLoading}
+          setLoyaltyLoading={setLoyaltyLoading}
+          loyaltyError={loyaltyError}
+          setLoyaltyError={setLoyaltyError}
+          storeId={store.id}
           onClose={handleCloseCheckout}
           onPay={handleCheckoutPay}
           onDownloadReceipt={handleDownloadReceipt}

@@ -1,4 +1,5 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
+import { formatCode } from './_lib/loyalty.js'
 
 // Public, read-only lookup used by the storefront success modal (StorePage.jsx,
 // ServiceStorePage.jsx) as a fallback when the client-side sessionStorage snapshot
@@ -30,6 +31,29 @@ export default async function handler(req, res) {
     if (!orderSnap.empty) {
       const doc = orderSnap.docs[0]
       const d = doc.data()
+
+      // Loyalty code for the success screen. This endpoint is already the place
+      // the frontend polls after the redirect, and finding the order here is
+      // itself proof the payment completed, so no extra verification is needed
+      // to justify handing the code back. Costs one read, and only when the
+      // order actually earned points.
+      let loyalty = null
+      if (d.loyaltyCode) {
+        try {
+          const cardSnap = await storeRef.collection('loyalty').doc(d.loyaltyCode).get()
+          if (cardSnap.exists) {
+            loyalty = {
+              code: formatCode(d.loyaltyCode),
+              earned: Number(d.loyaltyEarned) || 0,
+              redeemed: Number(d.loyaltyRedeemed) || 0,
+              balance: Number(cardSnap.data().points) || 0,
+            }
+          }
+        } catch {
+          // Never block a receipt over the points card.
+        }
+      }
+
       return res.status(200).json({
         type: 'order',
         order: {
@@ -43,6 +67,7 @@ export default async function handler(req, res) {
           processingFee: d.processingFee || 0,
           grandTotal: d.grandTotal || 0,
           createdAt: d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : null,
+          loyalty,
         },
       })
     }

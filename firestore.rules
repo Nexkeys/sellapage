@@ -273,6 +273,14 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // Loyalty cards - server only (Admin SDK via the loyalty-*.js handlers).
+      // This one matters more than the others: the document id IS the customer's
+      // loyalty code, and that code is a bearer token for money. Without this
+      // rule, anyone could list the collection and read every code in the store.
+      match /loyalty/{code} {
+        allow read, write: if false;
+      }
+
       // Sella AI Business Partner - server-only (written/read via Admin SDK,
       // which bypasses these rules). Clients are blocked from tampering with
       // their own daily usage count or reading any chat history directly.
