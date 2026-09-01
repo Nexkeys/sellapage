@@ -115,6 +115,9 @@ export default function LoyaltyTab({ store, user, isPremium, navigateTo }) {
   // that is an order of magnitude off before it goes live.
   const examplePoints = Math.floor(10000 / (Number(earnRate) || 100))
   const exampleValue = Math.floor(examplePoints * (Number(redeemValue) || 1))
+  // Total spend required to reach the minimum redemption threshold. This is the
+  // number that catches a settings mistake, because the two inputs multiply.
+  const spendToUnlock = (Number(minRedeem) || 0) * (Number(earnRate) || 100)
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-5">
@@ -169,12 +172,32 @@ export default function LoyaltyTab({ store, user, isPremium, navigateTo }) {
           </div>
         </div>
 
-        <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3">
+        <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3 space-y-1">
           <p className="text-xs text-green-800">
             <strong>Example:</strong> a {naira(10000)} order earns{' '}
             <strong>{examplePoints} points</strong>, worth <strong>{naira(exampleValue)}</strong> off a future order.
           </p>
+          <p className="text-xs text-green-800">
+            A customer must spend <strong>{naira(spendToUnlock)}</strong> with you in
+            total before they can redeem anything.
+          </p>
         </div>
+
+        {/* The minimum is set in POINTS, but what a vendor actually cares about
+            is the naira spend it implies. Those two numbers multiply, so a
+            reasonable looking minimum can quietly put redemption out of reach
+            forever. Flagged rather than blocked, since it is their call. */}
+        {spendToUnlock > 100000 && (
+          <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+            <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800">
+              That is a high bar. At these settings a customer needs to spend{' '}
+              <strong>{naira(spendToUnlock)}</strong> before their points become
+              usable, so most will never reach it. Lower the minimum, or the naira
+              per point, if you want the programme to actually get used.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 text-xs font-medium text-red-600">

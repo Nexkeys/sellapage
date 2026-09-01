@@ -266,6 +266,12 @@ function StoreCheckoutModal({
   const loyaltyValue = appliedDiscount
     ? 0
     : Math.min(loyaltyCard?.value || 0, subtotal);
+  const [showLoyaltyInput, setShowLoyaltyInput] = useState(false);
+  // What this order would earn. Read straight off the public store document, so
+  // it costs nothing, and mirrors earnPointsForOrder's floor division exactly.
+  const loyaltyEarnPreview = Math.floor(
+    subtotal / (Number(store?.loyaltyEarnRate) || 100),
+  );
   const grandTotal =
     subtotal + deliveryFee + processingFee - discountAmount - loyaltyValue;
   const deliveryZones = store?.deliveryZones || [];
@@ -725,10 +731,14 @@ function StoreCheckoutModal({
                 <p className="text-red-500 text-xs">{promoError}</p>
               )}
 
-              {/* Loyalty. Hidden entirely while a promo code is applied, because
-                  the server refuses to stack the two and showing an input that
-                  silently does nothing is worse than not showing it. */}
-              {!appliedDiscount && (
+              {/* Loyalty. Two gates before anything renders:
+                  1. The store must actually run the programme. Without this the
+                     code box appeared on EVERY storefront on the platform,
+                     including the vendors who have never heard of it.
+                  2. Not while a promo code is applied, because the server refuses
+                     to stack the two and an input that silently does nothing is
+                     worse than no input at all. */}
+              {store?.loyaltyEnabled === true && !appliedDiscount && (
                 loyaltyCard ? (
                   <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                     <div className="flex items-center gap-2 text-sm text-green-700 font-semibold">
@@ -746,7 +756,7 @@ function StoreCheckoutModal({
                       <X size={14} />
                     </button>
                   </div>
-                ) : (
+                ) : showLoyaltyInput ? (
                   <div className="space-y-1.5">
                     <div className="flex gap-2">
                       <input
@@ -766,13 +776,53 @@ function StoreCheckoutModal({
                         {loyaltyLoading ? <Loader2 size={14} className="animate-spin" /> : "Use"}
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleRecoverLoyalty}
-                      className="text-[11px] text-gray-400 hover:text-green-600 underline"
-                    >
-                      Lost your code?
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {/* Only offered to someone who has said they have a code.
+                          Showing it to a first time customer is asking them to
+                          recover something they never had. */}
+                      <button
+                        type="button"
+                        onClick={handleRecoverLoyalty}
+                        className="text-[11px] text-gray-400 hover:text-green-600 underline"
+                      >
+                        Lost your code?
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowLoyaltyInput(false); setLoyaltyError(""); }}
+                        className="text-[11px] text-gray-400 hover:text-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // Default state. A first time customer has no code and needs to
+                  // know the programme exists at all, so this leads with what they
+                  // are about to earn rather than demanding something they do not
+                  // have. The code box is one tap away for returning customers.
+                  <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+                    <div className="flex items-start gap-2">
+                      <Gift size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-green-800">
+                          {loyaltyEarnPreview > 0
+                            ? `You will earn ${loyaltyEarnPreview} point${loyaltyEarnPreview === 1 ? "" : "s"} on this order`
+                            : "Earn points when you shop here"}
+                        </p>
+                        <p className="text-[11px] text-green-700 mt-0.5">
+                          We will email your points card after checkout. Spend the
+                          points on a future order.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowLoyaltyInput(true)}
+                          className="text-[11px] font-bold text-green-700 underline mt-1.5"
+                        >
+                          I already have a code
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )
               )}

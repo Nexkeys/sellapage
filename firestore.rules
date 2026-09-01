@@ -1,7 +1,15 @@
 // ============================================================================
 // SELLAPAGE — FIRESTORE SECURITY RULES
 // ============================================================================
-// Last updated: 2026-08-09 (security review remediation — C-06, H-07, M-05)
+// Last updated: 2026-09-01 (loyalty cards)
+//
+// CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-01  Added `match /loyalty/{code}` inside /stores/{storeId}.
+//               NOT YET PUBLISHED as of writing. Must go live BEFORE any store
+//               switches loyalty on, because the document id is the customer's
+//               loyalty code and that code spends money.
+//   2026-08-12  Locked the phone verification fields (see the note below).
+//   2026-08-09  Security review remediation: C-06, H-07, M-05.
 //
 // DEPLOYMENT: copy this file's contents (everything below the header block)
 // into Firebase Console > Firestore > Rules, or run:
