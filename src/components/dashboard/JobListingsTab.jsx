@@ -12,6 +12,7 @@ import {
 import { auth } from '../../firebase/auth'
 import { uploadSingleImage } from '../../firebase/products'
 import { JOB_CATEGORIES, JOB_TYPES, JOB_TYPE_BADGE, JOB_STATUS_BADGE, getCategoryLabel, getJobTypeLabel } from '../../utils/jobCategories'
+import { SkeletonRows } from '../Skeleton'
 
 const JOB_LISTING_LIMITS = { starter: 5, growth: 25, pro: 50, premium: 999999 }
 const PER_PAGE = 10
@@ -388,9 +389,7 @@ export default function JobListingsTab({ store }) {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={24} className="text-green-500 animate-spin" />
-        </div>
+        <SkeletonRows count={4} />
       ) : jobs.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-14 gap-3">
           <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center">

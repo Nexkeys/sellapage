@@ -1,8 +1,9 @@
 // src/components/dashboard/ReviewsTab.jsx
 import { useState, useEffect } from 'react'
-import { Lock, Star, ChevronDown, MessageSquare, Calendar, ShieldCheck, Layers, Loader2 } from 'lucide-react'
+import { Lock, Star, ChevronDown, MessageSquare, Calendar, ShieldCheck, Layers } from 'lucide-react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import { SkeletonRows } from '../Skeleton'
 
 export default function ReviewsTab({ store, orders, isPro, navigateTo }) {
   const [loading, setLoading] = useState(true)
@@ -84,10 +85,7 @@ export default function ReviewsTab({ store, orders, isPro, navigateTo }) {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
-          <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
-          <p className="text-xs font-semibold text-gray-400">Compiling customer feedback...</p>
-        </div>
+        <SkeletonRows count={4} />
       ) : reviewGroups.length === 0 ? (
         /* Clean Empty Feedback State */
         <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 sm:p-10 text-center shadow-sm shadow-gray-100/40">

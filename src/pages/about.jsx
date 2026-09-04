@@ -102,9 +102,8 @@ export default function About() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
-              { value: '200+',     label: 'Active Nigerian Stores' },
               { value: '2026', label: 'Launched' },
               { value: '₦0',       label: 'To Get Started' },
             ].map((stat, i) => (

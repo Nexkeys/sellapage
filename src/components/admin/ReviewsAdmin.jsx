@@ -4,9 +4,10 @@
 // the dashboard's full-screen review-prompt popup (on/off, platform-wide).
 import { useState, useCallback, useEffect } from 'react'
 import {
-  Star, Check, X, Trash2, Loader2, AlertCircle, Film,
+  Star, Check, X, Trash2, AlertCircle, Film,
   ChevronLeft, ChevronRight, Sparkles,
 } from 'lucide-react'
+import { SkeletonRows } from '../Skeleton'
 
 // `authHeaders`: async fn returning the caller's Bearer ID token - see BlogAdmin.jsx.
 async function callReviewsAdmin(action, authHeaders, { method = 'GET', body, query = '' } = {}) {
@@ -168,9 +169,7 @@ export default function ReviewsAdmin({ authHeaders }) {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center rounded-2xl border border-gray-100 bg-white py-16">
-          <Loader2 size={24} className="animate-spin text-green-600" />
-        </div>
+        <SkeletonRows count={5} />
       ) : reviews.length === 0 ? (
         <div className="rounded-2xl border border-gray-100 bg-white py-16 text-center text-sm text-gray-400">
           No {statusFilter !== 'all' ? statusFilter : ''} reviews.

@@ -3,13 +3,14 @@
 // editorial cards (thumbnail, category, title, excerpt, author/date/read-time).
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Search, BookOpen, ArrowRight, Loader2, Clock } from 'lucide-react'
+import { Search, BookOpen, ArrowRight, Loader2, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { getExcerpt, formatBlogDate, getCategoryBadgeClass } from '../utils/blogHelpers'
+import { SkeletonCardGrid } from '../components/Skeleton'
 
 const PAGE_SIZE = 20
 
@@ -21,6 +22,7 @@ export default function BlogPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [search, setSearch] = useState('')
   const category = searchParams.get('category') || 'all'
   const tag = searchParams.get('tag') || 'all'
@@ -41,6 +43,7 @@ export default function BlogPage() {
   const fetchPosts = useCallback(async (pageNum, replace) => {
     if (replace) setLoading(true)
     else setLoadingMore(true)
+    setLoadError(false)
     try {
       const params = new URLSearchParams({ action: 'list', page: String(pageNum), limit: String(PAGE_SIZE), category, tag, search })
       const res = await fetch(`/api/blog-public?${params.toString()}`)
@@ -50,6 +53,7 @@ export default function BlogPage() {
       setPage(pageNum)
     } catch (err) {
       console.error('[BlogPage] load error:', err)
+      setLoadError(true)
     } finally {
       setLoading(false)
       setLoadingMore(false)
@@ -135,20 +139,33 @@ export default function BlogPage() {
         </div>
 
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 size={24} className="animate-spin text-brand-500" />
-            <p className="text-sm text-gray-400">Loading articles...</p>
+          <SkeletonCardGrid count={8} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" />
+        )}
+
+        {!loading && loadError && (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 px-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
+              <AlertCircle size={24} className="text-red-300" />
+            </div>
+            <p className="text-sm font-semibold text-gray-700">We could not load the articles</p>
+            <p className="text-xs text-gray-400 max-w-xs">Check your connection and try again.</p>
+            <button
+              onClick={() => fetchPosts(1, true)}
+              className="mt-1 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-700"
+            >
+              <RefreshCw size={13} /> Try again
+            </button>
           </div>
         )}
 
-        {!loading && posts.length === 0 && (
+        {!loading && !loadError && posts.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center"><BookOpen size={24} className="text-gray-300" /></div>
             <p className="text-sm font-semibold text-gray-500">{search.trim() || category !== 'all' || tag !== 'all' ? 'No articles match your filters' : 'No articles yet - check back soon'}</p>
           </div>
         )}
 
-        {!loading && posts.length > 0 && (
+        {!loading && !loadError && posts.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {posts.map(post => (
               <PostCard

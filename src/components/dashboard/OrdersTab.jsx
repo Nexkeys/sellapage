@@ -28,6 +28,7 @@ import {
   Download
 } from 'lucide-react'
 import { generateOrderReceipt } from '../../utils/generateReceipt'
+import { SkeletonRows } from '../Skeleton'
 
 // The 5 statuses a vendor can manually pick from the dropdown.
 const STATUS_OPTIONS = [
@@ -1141,9 +1142,7 @@ export default function OrdersTab({
       )}
 
       {ordersLoading && (
-        <div className="flex items-center justify-center rounded-2xl border border-gray-100 bg-white py-20">
-          <Loader2 size={28} className="animate-spin text-green-600" />
-        </div>
+        <SkeletonRows count={5} />
       )}
 
       {!ordersLoading && orders.length === 0 && (

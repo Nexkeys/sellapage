@@ -1,5 +1,6 @@
 //src/components/dashboard/LeadsTab.jsx/
-import { Users, Phone, Calendar, Tag, Loader2, MessageSquare, Lock } from 'lucide-react'
+import { Users, Phone, Calendar, Tag, MessageSquare, Lock } from 'lucide-react'
+import { SkeletonRows } from '../Skeleton'
 
 const STATUS_STYLES = {
   new:       'bg-blue-50 text-blue-700 border border-blue-200',
@@ -50,9 +51,7 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
       </div>
 
       {leadsLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={24} className="text-green-500 animate-spin" />
-        </div>
+        <SkeletonRows count={5} />
       ) : leads.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center py-16 gap-3">
           <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center">

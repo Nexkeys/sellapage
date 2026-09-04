@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, Download, X, AlertTriangle,
 } from 'lucide-react'
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-pdf/renderer'
+import { SkeletonRows } from '../Skeleton'
 
 const NIGERIAN_BANKS = [
   { name: 'GTBank', code: '057' },
@@ -820,10 +821,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, bookings, boo
           </div>
 
           {(ordersLoading || bookingsLoading) ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
-              <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
-              <p className="text-xs font-semibold text-gray-400">Compiling ledger receipts...</p>
-            </div>
+            <SkeletonRows count={5} />
           ) : filteredTransactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-50 border border-gray-100/60 text-gray-300">

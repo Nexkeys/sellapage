@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { uploadSingleImage } from '../../firebase/products'
 import { slugify } from '../../utils/slugify'
+import Skeleton, { SkeletonRegion } from '../Skeleton'
 
 const EMPTY_FORM = {
   title: '', slug: '', excerpt: '', featuredImageUrl: '', category: '', tags: [],
@@ -228,9 +229,11 @@ export default function BlogPostEditor({ authHeaders, adminUid, postId, onClose,
 
   if (loadingPost || !editor) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 size={22} className="animate-spin text-green-500" />
-      </div>
+      <SkeletonRegion label="Loading editor" className="space-y-4 py-6">
+        <Skeleton className="h-10 w-full rounded-xl" />
+        <Skeleton className="h-9 w-1/3 rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </SkeletonRegion>
     )
   }
 

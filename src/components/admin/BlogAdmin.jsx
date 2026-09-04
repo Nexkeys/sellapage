@@ -9,6 +9,7 @@ import {
   ToggleLeft, ToggleRight, Tag,
 } from 'lucide-react'
 import BlogPostEditor from './BlogPostEditor'
+import { SkeletonRows } from '../Skeleton'
 
 // `authHeaders` is an async function returning an Authorization header carrying
 // the caller's Firebase ID token (see Admin.jsx). It replaces the old static
@@ -236,7 +237,7 @@ export default function BlogAdmin({ authHeaders, adminUid }) {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16"><Loader2 size={24} className="text-green-500 animate-spin" /></div>
+        <SkeletonRows count={5} />
       ) : posts.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-14 gap-3">
           <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center"><BookOpen size={20} className="text-green-400" /></div>

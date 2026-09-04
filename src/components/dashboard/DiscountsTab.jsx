@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from "../../utils/staffDataFetch";
+import { SkeletonRows } from '../Skeleton'
 
 const formatExpiryDate = (expiryDate) => {
   if (!expiryDate) return "";
@@ -449,10 +450,7 @@ export default function DiscountsTab({ store, isPro, navigateTo }) {
       )}
 
       {loading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 px-6 flex flex-col items-center justify-center gap-3 text-center">
-          <Loader2 size={24} className="animate-spin text-green-500" />
-          <p className="text-sm text-gray-500">Loading discount codes...</p>
-        </div>
+        <SkeletonRows count={4} />
       ) : discounts.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 px-6 flex flex-col items-center justify-center gap-4 text-center">
           <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center">

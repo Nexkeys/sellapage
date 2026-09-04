@@ -3,12 +3,13 @@
 // reviews of Sellapage (text + optional photos/videos), featured ones first.
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Quote, Film, ArrowRight, Loader2 } from 'lucide-react'
+import { Star, Quote, Film, ArrowRight } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 import { useDocumentHead } from '../hooks/useDocumentHead'
+import { SkeletonCardGrid } from '../components/Skeleton'
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
@@ -64,9 +65,7 @@ export default function SuccessStoriesPage() {
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 size={28} className="animate-spin text-green-600" />
-          </div>
+          <SkeletonCardGrid count={6} className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" />
         ) : reviews.length === 0 ? (
           <div className="text-center py-24">
             <Quote size={32} className="mx-auto mb-4 text-gray-300" />

@@ -30,6 +30,7 @@ import ProductDetailOverlay from "../components/ProductDetailOverlay";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import SEO from '../components/SEO';
+import { SkeletonStorefront } from "../components/Skeleton";
 
 const EMPTY_CHECKOUT_FORM = {
   customerName: "",
@@ -1451,12 +1452,7 @@ export default function StorePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-stone-400 text-sm font-medium">Loading store...</p>
-        </div>
-      </div>
+      <SkeletonStorefront />
     );
   }
 

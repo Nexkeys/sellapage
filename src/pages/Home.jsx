@@ -281,7 +281,7 @@ const trustBadges = [
 ]
 
 const stats = [
-  { value: '200+', label: 'Active Nigerian Stores' },
+  { value: 'No code', label: 'Nothing To Install' },
   { value: '₦0', label: 'To Get Started' },
   { value: '< 2 min', label: 'To Go Live' },
   { value: '24/7', label: 'Always Online' },
@@ -384,7 +384,7 @@ export default function Home() {
                     <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
                   <span className="text-sm font-semibold text-gray-700 ml-1">5.0</span>
-                  <span className="text-sm text-gray-400 ml-1">Trusted by 200+ Nigerian businesses</span>
+                  <span className="text-sm text-gray-400 ml-1">Trusted by Nigerian businesses</span>
                 </div>
               </div>
             </div>
@@ -821,7 +821,7 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <span className="text-brand-100 text-xs">200+ active Nigerian stores use Sellapage</span>
+                <span className="text-brand-100 text-xs">Nigerian businesses sell with Sellapage every day</span>
               </div>
             </div>
           </Reveal>

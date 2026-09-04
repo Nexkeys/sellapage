@@ -1,9 +1,10 @@
 // src/components/dashboard/CustomersTab.jsx/
 import { useState, useEffect, useMemo } from 'react'
-import { Lock, Loader2, ChevronDown, MessageCircle, Users, Mail, CreditCard } from 'lucide-react'
+import { Lock, ChevronDown, MessageCircle, Users, Mail, CreditCard } from 'lucide-react'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../../utils/staffDataFetch'
+import { SkeletonRows } from '../Skeleton'
 
 function getInitials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -129,9 +130,7 @@ export default function CustomersTab({ store, isPro, navigateTo }) {
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl p-4 sm:p-6">
-        <div className="flex items-center justify-center py-24">
-          <Loader2 size={36} className="animate-spin text-green-600" />
-        </div>
+        <SkeletonRows count={6} />
       </div>
     )
   }

@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Loader2, MapPin, Wallet, Clock, Tag, Briefcase, Share2, Check,
+  ArrowLeft, MapPin, Wallet, Clock, Tag, Briefcase, Share2, Check,
   MessageCircle, Mail, ExternalLink, X,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
@@ -13,6 +13,7 @@ import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import { JOB_TYPE_BADGE, getCategoryLabel, getJobTypeLabel } from '../utils/jobCategories'
 import SEO from '../components/SEO'
+import { SkeletonArticle } from '../components/Skeleton'
 
 export default function JobDetailPage() {
   const { jobId } = useParams()
@@ -89,9 +90,7 @@ export default function JobDetailPage() {
     return (
       <div className="min-h-screen bg-gray-50/50">
         <Navbar />
-        <div className="flex items-center justify-center py-24">
-          <Loader2 size={24} className="animate-spin text-brand-500" />
-        </div>
+        <SkeletonArticle />
         <Footer />
       </div>
     )

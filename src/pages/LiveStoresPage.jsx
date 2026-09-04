@@ -9,12 +9,15 @@ import {
   Loader2,
   ArrowRight,
   Package,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import { getActiveStores } from '../firebase/products'
 import SEO from '../components/SEO'
+import { SkeletonCardGrid } from '../components/Skeleton'
 
 const PAGE_SIZE = 20
 
@@ -30,6 +33,7 @@ export default function LiveStoresPage() {
   const [loading, setLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const sentinelRef = useRef(null)
 
   useEffect(() => {
@@ -40,6 +44,7 @@ export default function LiveStoresPage() {
         if (!cancelled) setAllStores(data)
       } catch (err) {
         console.error('[LiveStoresPage] load error:', err)
+        if (!cancelled) setLoadError(true)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -126,23 +131,31 @@ export default function LiveStoresPage() {
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-white text-sm text-gray-900 shadow-lg shadow-gray-200/50 outline-none transition-all placeholder:text-gray-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
-          {search.trim() && (
-            <p className="text-xs text-gray-400 mt-2 text-center">
-              {filtered.length} {filtered.length === 1 ? 'store' : 'stores'} found
-            </p>
-          )}
         </div>
 
         {/* Loading State */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 size={24} className="animate-spin text-brand-500" />
-            <p className="text-sm text-gray-400">Loading stores...</p>
-          </div>
+          <SkeletonCardGrid count={8} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" />
         )}
 
         {/* Empty State */}
-        {!loading && filtered.length === 0 && (
+        {!loading && loadError && (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 px-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
+              <AlertCircle size={24} className="text-red-300" />
+            </div>
+            <p className="text-sm font-semibold text-gray-700">We could not load the stores</p>
+            <p className="text-xs text-gray-400 max-w-xs">Check your connection and try again.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-1 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-700"
+            >
+              <RefreshCw size={13} /> Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
               <Store size={24} className="text-gray-300" />

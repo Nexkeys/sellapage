@@ -10,6 +10,7 @@ import {
   Lock, CreditCard, Save, CheckCircle2, Snowflake,
 } from 'lucide-react'
 import { updateStore } from '../../firebase/auth'
+import { SkeletonRows } from '../Skeleton'
 
 const INPUT_CLASS =
   'w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
@@ -250,9 +251,7 @@ export default function LoyaltyTab({ store, user, isPremium, navigateTo }) {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 size={22} className="animate-spin text-green-600" />
-          </div>
+          <SkeletonRows count={4} />
         ) : cards.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400 px-6">
             {search

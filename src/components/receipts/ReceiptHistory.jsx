@@ -10,6 +10,7 @@ import ReceiptPDF from './ReceiptPDF'
 import ReceiptTemplateRenderer from './ReceiptTemplateRenderer'
 import { getTemplateById, formatNGN } from '../../utils/receiptTemplates'
 import { generateWhatsAppLink } from '../../utils/whatsapp'
+import { SkeletonRows } from '../Skeleton'
 
 const RECEIPTS_PER_PAGE = 9
 
@@ -148,9 +149,7 @@ export default function ReceiptHistory({ receipts, loading, onEdit, onDelete, ca
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center rounded-2xl border border-gray-100 bg-white py-16">
-          <Loader2 size={26} className="animate-spin text-green-600" />
-        </div>
+        <SkeletonRows count={5} />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white px-6 py-14 text-center">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-50 text-gray-300">

@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Loader2, Clock, BookOpen, Check, Share2, Twitter, Facebook,
+  ArrowLeft, Clock, BookOpen, Check, Share2, Twitter, Facebook,
   Linkedin, MessageCircle,
 } from 'lucide-react'
 // Plain browser DOMPurify - NOT isomorphic-dompurify, which drags jsdom into
@@ -19,6 +19,7 @@ import BlogCommentSection from '../components/BlogCommentSection'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { getExcerpt, formatBlogDate, getCategoryBadgeClass } from '../utils/blogHelpers'
 import SEO from '../components/SEO'
+import { SkeletonArticle } from '../components/Skeleton'
 
 export default function BlogPostPage() {
   const { slug } = useParams()
@@ -70,7 +71,7 @@ export default function BlogPostPage() {
     return (
       <div className="min-h-screen bg-gray-50/50">
         <Navbar />
-        <div className="flex items-center justify-center py-24"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+        <SkeletonArticle />
         <Footer />
       </div>
     )

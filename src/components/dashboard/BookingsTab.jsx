@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { generateBookingReceipt } from '../../utils/generateReceipt'
 import BookingsCalendar from './BookingsCalendar'
+import { SkeletonRows } from '../Skeleton'
 
 const BOOKING_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' },
@@ -520,9 +521,7 @@ export default function BookingsTab({
       )}
 
       {bookingsLoading && (
-        <div className="flex items-center justify-center rounded-2xl border border-gray-100 bg-white py-20">
-          <Loader2 size={28} className="animate-spin text-green-600" />
-        </div>
+        <SkeletonRows count={5} />
       )}
 
       {!bookingsLoading && bookings.length === 0 && (

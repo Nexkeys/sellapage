@@ -128,3 +128,31 @@ input[type=number]::-webkit-outer-spin-button {
   pointer-events: none;
   height: 0;
 }
+
+
+/* Sideways scroll guard.
+   Reveal slides elements in from the side, so a block that has not been
+   revealed yet sits translate-x-6 (24px) outside the viewport, which lets a
+   narrow phone screen drag sideways until it reveals.
+
+   `clip` not `hidden`: `hidden` would turn body into a scroll container and
+   break the `sticky top-0` headers. `clip` cuts the overflow without one. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* Respect the OS "reduce motion" setting. This lived in App.css, which is not
+   imported anywhere and therefore never shipped, so until now nothing outside
+   useInView honoured the preference. It matters for the skeleton pulse and
+   every Tailwind transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

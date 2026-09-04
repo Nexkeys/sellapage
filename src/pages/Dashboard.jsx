@@ -45,6 +45,7 @@ import { initFCM, requestFCMPermission } from "../firebase/messaging";
 import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
 import OtpVerifyModal from "../components/OtpVerifyModal";
 import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
+import { SkeletonDashboard } from "../components/Skeleton";
 
 // Features unlocked at each plan, shown in the post-upgrade welcome modal.
 const PLAN_WELCOME = {
@@ -1637,9 +1638,7 @@ export default function Dashboard() {
   // ── Loading guard ──────────────────────────────────────────────────────────
   if (!store) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <SkeletonDashboard />
     );
   }
 

@@ -5,6 +5,7 @@ import {
   ChevronDown, GripVertical, Search, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { NIGERIAN_MARKET_CATEGORIES, VARIATION_DISPLAY_TYPES } from '../../utils/categories'
+import { SkeletonCardGrid } from '../Skeleton'
 
 const LISTINGS_PER_PAGE = 10
 
@@ -425,9 +426,7 @@ export default function ProductsTab({
 
       {/* Product list */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={24} className="text-green-500 animate-spin" />
-        </div>
+        <SkeletonCardGrid count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" />
       ) : products.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-14 gap-3">
           <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center">

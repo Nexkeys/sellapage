@@ -1,12 +1,13 @@
 //src/components/dashboard/LedgerTab.jsx/
 import { useState, useMemo, useEffect } from 'react'
-import { Trash2, Plus, Download, FileText, BookOpen, Search, X, Pencil, Check, ChevronLeft, ChevronRight, Calendar, TrendingUp, ArrowUpRight, ArrowDownRight, Minus, ChevronDown, Loader2 } from 'lucide-react'
+import { Trash2, Plus, Download, FileText, BookOpen, Search, X, Pencil, Check, ChevronLeft, ChevronRight, Calendar, TrendingUp, ArrowUpRight, ArrowDownRight, Minus, ChevronDown } from 'lucide-react'
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-pdf/renderer'
 
 // Firebase Cloud Sync Imports
 import { db } from '../../firebase/config'
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../../utils/staffDataFetch'
+import { SkeletonRows } from '../Skeleton'
 
 const INPUT_CLASS = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
 
@@ -845,10 +846,7 @@ export default function LedgerTab({ store }) {
 
         {/* Sync Loader State */}
         {loadingEntries ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
-            <p className="text-xs font-medium text-gray-500">Securing real-time cloud data stream...</p>
-          </div>
+          <SkeletonRows count={6} />
         ) : filteredEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
