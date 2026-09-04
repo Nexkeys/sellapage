@@ -21,7 +21,6 @@ import { getStoreBySlug, getProducts } from "../firebase/products";
 import { db } from "../firebase/config";
 import { doc, setDoc, updateDoc, increment } from "firebase/firestore";
 import { buildEnquiryURL } from "../utils/whatsapp";
-import { generateOrderReceipt } from "../utils/generateReceipt";
 import LeadForm from "../components/LeadForm";
 import ProductCard from "../components/ProductCard";
 import StoreNavbar from "../components/StoreNavbar";
@@ -1403,6 +1402,10 @@ export default function StorePage() {
     if (!completedOrder || !store) return;
     setReceiptDownloading(true);
     try {
+      // @react-pdf is ~476 kB gzipped. Pulled in only when a receipt is actually
+      // requested, so storefront visitors do not pay for it up front. The existing
+      // receiptDownloading spinner covers the fetch and the catch below covers failure.
+      const { generateOrderReceipt } = await import("../utils/generateReceipt");
       const blobUrl = await generateOrderReceipt(completedOrder, store);
       if (receiptLinkRef.current) {
         receiptLinkRef.current.href = blobUrl;

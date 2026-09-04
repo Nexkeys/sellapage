@@ -287,36 +287,6 @@ const stats = [
   { value: '24/7', label: 'Always Online' },
 ]
 
-const storeExamples = [
-  {
-    name: 'Jenny Wines – Premium Wine Store',
-    desc: 'Exquisite wines and spirits delivered straight to your door across Lagos.',
-    image: '/seehowotherssell-projectimage1.png',
-    tag: 'Jenny Wines',
-    tagline: 'Premium wines & spirits, uncorked',
-    btnLabel: 'Order Now',
-    url: 'https://sellapage.com.ng/jennywines'
-  },
-  {
-    name: 'The Trend Plug – Premium Clothing Store',
-    desc: 'The ultimate destination for trending streetwear and fashion outfits.',
-    image: '/seehowotherssell-projectimage2.png',
-    tag: 'The Trend Plug',
-    tagline: 'Your plug for premium outfits',
-    btnLabel: 'Shop Now',
-    url: 'https://sellapage.com.ng/thetrendplug'
-  },
-  {
-    name: 'Chioma Fashion – Luxury Fashion Store',
-    desc: 'Bespoke designs and elegant traditional styles for all premium occasions.',
-    image: '/seehowotherssell-projectimage3.png',
-    tag: 'Chioma Fashion',
-    tagline: 'Elegance in every stitch',
-    btnLabel: 'Shop Now',
-    url: 'https://sellapage.com.ng/chioma-fashion'
-  },
-]
-
 const platformFeatures = [
   { icon: Settings, title: 'Structured Checkout', desc: 'Give customers a clear path from browsing to payment confirmation and order follow-up.' },
   { icon: CreditCard, title: 'In-App Paystack Checkout', desc: 'Accept card, bank transfer, and USSD payments directly on your store. Orders create automatically.' },
@@ -394,13 +364,6 @@ export default function Home() {
                   Create Your Free Store
                   <ArrowRight className="w-4 h-4" />
                 </button>
-                <a
-                  href="#examples"
-                  className="inline-flex items-center justify-center gap-2 text-gray-600 hover:text-brand-600 font-semibold text-sm px-5 py-3.5 rounded-xl border border-gray-200 hover:border-brand-300 bg-white transition-all duration-200"
-                >
-                  See Real Stores
-                  <span className="text-base">👁</span>
-                </a>
               </div>
 
               {/* Social proof row */}
@@ -716,65 +679,6 @@ export default function Home() {
                 <h3 className="font-display font-bold text-gray-900 text-sm mb-1.5">{f.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{f.description}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── REAL STORES (EXAMPLES) ──────────────────────────────────────── */}
-      <section id="examples" className="py-14 sm:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="flex flex-wrap items-end justify-between gap-4 mb-12">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Real Stores on Sellapage™</span>
-              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900">
-                See How Others Sell with Ease
-              </h2>
-              <p className="text-gray-500 text-base mt-2 max-w-xl">
-                Live Nigerian businesses using Sellapage for products, services, and bookings.
-              </p>
-            </div>
-          </Reveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
-            {storeExamples.map((store, i) => (
-              <Reveal
-                as="a"
-                key={store.name}
-                delay={i * 120}
-                href={store.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100/80 hover:shadow-xl hover:shadow-brand-100/50 transition-all duration-300 transform hover:-translate-y-1"
-              >
-                {/* image with overlay */}
-                <div className="relative overflow-hidden h-64 sm:h-72 lg:h-80 w-full bg-gray-50">
-                  <img
-                    src={store.image}
-                    alt={`${store.name} store page on Sellapage`}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  {/* overlay label */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center justify-between gap-3 shadow-md">
-                      <div>
-                        <p className="font-display font-bold text-gray-900 text-sm leading-tight">{store.tag}</p>
-                        <p className="text-brand-600 text-xs font-medium mt-0.5">{store.tagline}</p>
-                      </div>
-                      <span className="bg-brand-600 text-white text-xs font-bold px-3 py-2 rounded-lg group-hover:bg-brand-700 transition-colors flex-shrink-0">
-                        {store.btnLabel}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {/* card footer */}
-                <div className="p-5 bg-white">
-                  <p className="font-display font-bold text-gray-900 text-base leading-snug group-hover:text-brand-600 transition-colors">{store.name}</p>
-                  <p className="text-gray-500 text-sm mt-2 leading-relaxed">{store.desc}</p>
-                </div>
-              </Reveal>
             ))}
           </div>
         </div>

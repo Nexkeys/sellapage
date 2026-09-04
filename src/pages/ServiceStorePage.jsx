@@ -20,7 +20,6 @@ import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
-import { generateBookingReceipt } from "../utils/generateReceipt";
 
 const getInitials = (name = "") => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -565,6 +564,10 @@ export default function ServiceStorePage() {
     if (!completedBooking || !store) return;
     setReceiptDownloading(true);
     try {
+      // @react-pdf is ~476 kB gzipped. Pulled in only when a receipt is actually
+      // requested, so storefront visitors do not pay for it up front. The existing
+      // receiptDownloading spinner covers the fetch and the catch below covers failure.
+      const { generateBookingReceipt } = await import("../utils/generateReceipt");
       const blobUrl = await generateBookingReceipt(completedBooking, store);
       const link = document.createElement("a");
       link.href = blobUrl;
