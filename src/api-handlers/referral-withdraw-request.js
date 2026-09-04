@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  // No minimum withdrawal — a vendor can withdraw any positive amount up to their
+  // No minimum withdrawal - a vendor can withdraw any positive amount up to their
   // available balance (validated below against referralAvailable).
   // Must be a whole number of kobo: floats let a caller probe rounding behaviour,
   // and an unbounded value could overflow downstream formatting.
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Store not found' })
     }
 
-    // Full account number lives in stores/{uid}/private/referralBank — read it
+    // Full account number lives in stores/{uid}/private/referralBank - read it
     // server-side and denormalize onto the request so the admin can actually
     // pay it. withdrawal_requests has no client-readable rule, so it stays safe.
     // Read before the transaction: it's not a consistency-critical value, and
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
     // The balance check and the balance mutation MUST be atomic. Previously
     // these were separate operations, so N concurrent requests could each read
     // the same balance, each pass the check, and each create a payable request
-    // while the balance decremented only once — a straightforward double-spend.
+    // while the balance decremented only once - a straightforward double-spend.
     try {
       await db.runTransaction(async (tx) => {
         // ---- all reads first ----

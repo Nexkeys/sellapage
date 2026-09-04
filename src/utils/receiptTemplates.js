@@ -1,6 +1,6 @@
 // src/utils/receiptTemplates.js
 // Six named template identities, each a config object rather than a bespoke
-// component — one renderer (on-screen) and one PDF document consume this
+// component - one renderer (on-screen) and one PDF document consume this
 // same config, so a field/bug fix never needs repeating six times.
 
 export const RECEIPT_TEMPLATES = [
@@ -8,7 +8,7 @@ export const RECEIPT_TEMPLATES = [
     id: 'template-1',
     name: 'Classic',
     category: 'Standard',
-    description: 'Traditional receipt layout — colored header band, table body, totals at the bottom.',
+    description: 'Traditional receipt layout - colored header band, table body, totals at the bottom.',
     defaultColors: { primary: '#22c55e', secondary: '#0f172a', background: '#ffffff' },
     defaultFont: 'Helvetica',
     layout: { headerStyle: 'band', itemsStyle: 'table', totalsAlign: 'right', cardStyle: 'square', showSignatureLine: false, thermal: false },
@@ -53,14 +53,14 @@ export const RECEIPT_TEMPLATES = [
     id: 'template-6',
     name: 'Compact Thermal',
     category: 'Thermal',
-    description: '80mm-style narrow layout optimized for POS/thermal printers — dense, no waste.',
+    description: '80mm-style narrow layout optimized for POS/thermal printers - dense, no waste.',
     defaultColors: { primary: '#111827', secondary: '#374151', background: '#ffffff' },
     defaultFont: 'Courier',
     layout: { headerStyle: 'stacked', itemsStyle: 'list', totalsAlign: 'right', cardStyle: 'flat', showSignatureLine: false, thermal: true },
   },
 ]
 
-// What Free/Starter vendors get — deliberately monochrome, no template
+// What Free/Starter vendors get - deliberately monochrome, no template
 // flourish, matching "Plain white/black simple receipt" in the plan.
 export const PLAIN_TEMPLATE = {
   id: null,
@@ -78,7 +78,7 @@ export function getTemplateById(id) {
 }
 
 // react-pdf only ships Helvetica/Times-Roman/Courier natively (with Bold/
-// Oblique variants) — registering arbitrary web fonts needs font-file URLs,
+// Oblique variants) - registering arbitrary web fonts needs font-file URLs,
 // which this codebase doesn't load anywhere today. Font choice is scoped to
 // what react-pdf can render out of the box rather than adding that infra.
 export const PDF_FONT_OPTIONS = [
@@ -100,7 +100,7 @@ export const STAMP_PRESETS = [
 
 export const STAMP_POSITIONS = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center']
 
-// Explicit "NGN" prefix, never the ₦ glyph — some printers/fonts render it
+// Explicit "NGN" prefix, never the ₦ glyph - some printers/fonts render it
 // as a broken box character, which is exactly what this feature was asked
 // to avoid.
 export function formatNGN(amount) {
@@ -111,7 +111,7 @@ export function calcItemsSubtotal(items) {
   return (items || []).reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.unitPrice) || 0), 0)
 }
 
-// Single source of truth for subtotal/total/balanceDue — called after every
+// Single source of truth for subtotal/total/balanceDue - called after every
 // items/discount/tax/amountPaid edit so the draft's totals are never stale.
 export function recalcTotals(draft) {
   const subtotal = calcItemsSubtotal(draft.items)

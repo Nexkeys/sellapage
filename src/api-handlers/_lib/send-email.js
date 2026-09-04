@@ -4,12 +4,12 @@
  * Escape a value for safe interpolation into an HTML email body.
  *
  * Email templates across the handlers are built with template literals, and
- * several interpolate attacker-influenced values — `customerName` and
+ * several interpolate attacker-influenced values - `customerName` and
  * `reviewText` originate from the public checkout and review forms. Unescaped,
  * an attacker can inject markup into an email the vendor trusts because it
  * genuinely came from Sellapage: a convincing fake "confirm your payout" button
  * pointing at a credential-harvesting page, for example. Mail clients strip
- * <script>, so this is phishing/HTML injection rather than XSS — still worth
+ * <script>, so this is phishing/HTML injection rather than XSS - still worth
  * closing, and free to do.
  *
  * Use for every interpolated value that did not originate server-side.

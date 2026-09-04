@@ -101,7 +101,7 @@ function LedgerPDF({ entries, storeName, dateRange }) {
     if (!dateRange) return null
     const fromLabel = dateRange.from === 'earliest' ? null : new Date(dateRange.from).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
     const toLabel = dateRange.to === 'latest' ? null : new Date(dateRange.to).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
-    if (fromLabel && toLabel) return `${fromLabel} – ${toLabel}`
+    if (fromLabel && toLabel) return `${fromLabel} - ${toLabel}`
     if (fromLabel) return `From ${fromLabel}`
     if (toLabel) return `Up to ${toLabel}`
     return null
@@ -118,7 +118,7 @@ function LedgerPDF({ entries, storeName, dateRange }) {
       <Page size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.header}>
           <View style={pdfStyles.titleRow}>
-            <Text style={pdfStyles.title}>{storeName ? storeName + ' — Ledger' : 'Ledger Report'}</Text>
+            <Text style={pdfStyles.title}>{storeName ? storeName + ' - Ledger' : 'Ledger Report'}</Text>
             <Text style={pdfStyles.subtitle}>Generated {generatedDate}</Text>
           </View>
           {dateRangeText && (
@@ -192,7 +192,7 @@ export default function LedgerTab({ store }) {
   const [pdfStartDate, setPdfStartDate] = useState('')
   const [pdfEndDate, setPdfEndDate] = useState('')
 
-  // Firestore Real-time Sync (owner) — a staff member's uid has no
+  // Firestore Real-time Sync (owner) - a staff member's uid has no
   // stores/{uid} doc and is blocked by rules from reading another store's
   // ledger directly, so staff get a one-time fetch through the server proxy
   // instead of a live listener (no real-time updates, but functional).
@@ -228,7 +228,7 @@ export default function LedgerTab({ store }) {
     setCurrentPage(1)
   }, [searchQuery, filterMonth, filterYear])
 
-  // DYNAMIC SUMMARY — responds to active filter, not hardcoded to today
+  // DYNAMIC SUMMARY - responds to active filter, not hardcoded to today
   const activePeriodSummary = useMemo(() => {
     if (filterMonth !== 'all' || filterYear !== 'all') {
       const targetYear = filterYear !== 'all' ? Number(filterYear) : new Date().getFullYear()
@@ -331,7 +331,7 @@ export default function LedgerTab({ store }) {
     return years.sort((a, b) => b - a)
   }, [entries])
 
-  // Sort by TRANSACTION DATE ascending (chronological) — proper ledger behavior
+  // Sort by TRANSACTION DATE ascending (chronological) - proper ledger behavior
   const filteredEntries = useMemo(() => {
     let sorted = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date))
     if (searchQuery.trim()) {
@@ -399,7 +399,7 @@ export default function LedgerTab({ store }) {
         }
         if (isStaff) {
           await writeStoreDocAsStaff({ type: 'ledger', storeId: store.id, op: 'update', docId: editingId, data: patch })
-          // No live listener for staff — reflect the change locally.
+          // No live listener for staff - reflect the change locally.
           setEntries(prev => prev.map(e => (e.id === editingId ? { ...e, ...patch } : e)))
         } else {
           await updateDoc(doc(db, 'stores', store.id, 'ledger', editingId), patch)
@@ -530,7 +530,7 @@ export default function LedgerTab({ store }) {
         </button>
       </div>
 
-      {/* Summary Cards — now dynamic */}
+      {/* Summary Cards - now dynamic */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-gray-100 bg-white p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -592,7 +592,7 @@ export default function LedgerTab({ store }) {
         </div>
       </div>
 
-      {/* Log Order Form — collapsible */}
+      {/* Log Order Form - collapsible */}
       {showForm && (
         <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
@@ -895,7 +895,7 @@ export default function LedgerTab({ store }) {
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-xs font-semibold text-gray-700 whitespace-nowrap text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatNaira(entry.runningBalance)}</td>
-                      <td className="px-4 py-3.5 text-xs text-gray-400 max-w-[120px] truncate">{entry.notes || '—'}</td>
+                      <td className="px-4 py-3.5 text-xs text-gray-400 max-w-[120px] truncate">{entry.notes || '-'}</td>
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button type="button" onClick={() => handleEdit(entry)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" aria-label="Edit entry">
@@ -949,7 +949,7 @@ export default function LedgerTab({ store }) {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3.5 border-t border-gray-100 bg-gray-50/40">
                 <p className="text-[11px] text-gray-400">
-                  Showing {((currentPage - 1) * ENTRIES_PER_PAGE) + 1}–{Math.min(currentPage * ENTRIES_PER_PAGE, filteredEntries.length)} of {filteredEntries.length}
+                  Showing {((currentPage - 1) * ENTRIES_PER_PAGE) + 1}-{Math.min(currentPage * ENTRIES_PER_PAGE, filteredEntries.length)} of {filteredEntries.length}
                 </p>
                 <div className="flex items-center gap-1">
                   <button

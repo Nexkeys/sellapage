@@ -2,7 +2,7 @@
 // A full-screen overlay (deliberately not a small banner, per Nex's request)
 // asking the vendor to leave a Sellapage review. Deliberately reappears on
 // every fresh dashboard load (reload, sign in, sign up) rather than being
-// dismissed-for-session — the only things that permanently stop it are the
+// dismissed-for-session - the only things that permanently stop it are the
 // admin turning the prompt off platform-wide, or the vendor having already
 // submitted a review. "Maybe Later" only hides it for the current page view.
 import { useEffect, useState } from 'react'
@@ -61,7 +61,7 @@ export default function ReviewPromptModal({ store, navigateTo }) {
           </div>
           <h2 className="text-xl font-black">Enjoying Sellapage?</h2>
           <p className="mt-2 text-sm leading-relaxed text-green-50">
-            Tell other vendors about your experience — your story could be featured on our Success Stories page.
+            Tell other vendors about your experience - your story could be featured on our Success Stories page.
           </p>
         </div>
 

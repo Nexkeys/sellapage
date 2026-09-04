@@ -1,7 +1,7 @@
 // src/api-handlers/store-write.js
 // Write counterpart to store-data.js. Products/Categories/Services/Discounts/
 // Ledger writes normally go straight from the client to Firestore, gated by
-// rules requiring `request.auth.uid == storeId` — true for the owner, never
+// rules requiring `request.auth.uid == storeId` - true for the owner, never
 // for staff. This proxies those writes through firebase-admin (bypasses rules)
 // after checking the caller actually holds WRITE access on that tab.
 //
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         tab_not_granted: 'Your role does not have access to this section.',
         owner_only_tab: 'Only the store owner can make this change.',
         not_a_staff_member: 'You do not have access to this store.',
-        role_not_found: 'Your role no longer exists — ask the store owner to reassign you.',
+        role_not_found: 'Your role no longer exists - ask the store owner to reassign you.',
       }
       return res.status(403).json({ error: messages[access.reason] || 'You do not have permission to make this change.' })
     }

@@ -180,7 +180,7 @@ export default async function handler(req, res) {
 
       const providerCampaignId = campaignResourceName.split('/').pop()
 
-      // A campaign with no ad group/ad/keywords can never serve — Google requires all three.
+      // A campaign with no ad group/ad/keywords can never serve - Google requires all three.
       // Best-effort: campaign + budget already exist by this point, so a failure here shouldn't
       // undo them. Surface it as a warning so the vendor knows to finish setup themselves.
       let adGroupResourceName = null
@@ -211,7 +211,7 @@ export default async function handler(req, res) {
           adSetupWarning = `Campaign created, but ad setup failed: ${adErr.message}. Finish adding your ad group, ad, and keywords directly in Google Ads.`
         }
       } else if (channelType === 'SEARCH') {
-        adSetupWarning = 'Campaign created with no ad group yet — add at least 3 headlines, 2 descriptions, and a final URL, or finish setup directly in Google Ads, before it can serve.'
+        adSetupWarning = 'Campaign created with no ad group yet - add at least 3 headlines, 2 descriptions, and a final URL, or finish setup directly in Google Ads, before it can serve.'
       }
 
       const docRef = await db.collection('googleAdsCampaigns').add({

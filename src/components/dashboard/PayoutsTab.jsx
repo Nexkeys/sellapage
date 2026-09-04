@@ -39,9 +39,9 @@ const MONTHS = [
 
 const TRANSACTIONS_PER_PAGE = 10
 
-// Statuses that mean the money is no longer real earnings — Paystack
+// Statuses that mean the money is no longer real earnings - Paystack
 // captured the payment, but the vendor cancelled/refunded outside the
-// platform (manual, over WhatsApp — nothing here reverses paymentStatus).
+// platform (manual, over WhatsApp - nothing here reverses paymentStatus).
 const EXCLUDED_STATUSES = new Set(['cancelled', 'refunded'])
 
 const STATUS_STYLES = {
@@ -128,7 +128,7 @@ function PayoutsPDF({ transactions, storeName, dateRange }) {
     if (!dateRange) return null
     const fromLabel = dateRange.from === 'earliest' ? null : new Date(dateRange.from).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
     const toLabel = dateRange.to === 'latest' ? null : new Date(dateRange.to).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
-    if (fromLabel && toLabel) return `${fromLabel} – ${toLabel}`
+    if (fromLabel && toLabel) return `${fromLabel} - ${toLabel}`
     if (fromLabel) return `From ${fromLabel}`
     if (toLabel) return `Up to ${toLabel}`
     return null
@@ -139,7 +139,7 @@ function PayoutsPDF({ transactions, storeName, dateRange }) {
       <Page size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.header}>
           <View style={pdfStyles.titleRow}>
-            <Text style={pdfStyles.title}>{storeName ? storeName + ' — Payouts' : 'Payouts Report'}</Text>
+            <Text style={pdfStyles.title}>{storeName ? storeName + ' - Payouts' : 'Payouts Report'}</Text>
             <Text style={pdfStyles.subtitle}>Generated {generatedDate}</Text>
           </View>
           {dateRangeText && <Text style={pdfStyles.dateRange}>{dateRangeText}</Text>}
@@ -221,7 +221,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, bookings, boo
     if (!accountNumber || accountNumber.length !== 10 || !bankCode) return
     setResolveLoading(true)
     try {
-      // resolve-account is authenticated and rate-limited now — it used to be
+      // resolve-account is authenticated and rate-limited now - it used to be
       // an open proxy to Paystack's bank-name lookup, callable by anyone.
       const idToken = await user?.getIdToken()
       const res = await fetch('/api/resolve-account', {
@@ -373,7 +373,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, bookings, boo
     return years.sort((a, b) => b - a)
   }, [transactions])
 
-  // Period summary — defaults to current month, responds to filterMonth/filterYear,
+  // Period summary - defaults to current month, responds to filterMonth/filterYear,
   // shows a trend vs the equivalent prior period. Mirrors LedgerTab's activePeriodSummary.
   const periodSummary = useMemo(() => {
     const now = new Date()
@@ -907,7 +907,7 @@ export default function PayoutsTab({ store, orders, ordersLoading, bookings, boo
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-3.5 border-t border-gray-100 bg-gray-50/40">
                   <p className="text-[11px] text-gray-400">
-                    {((safeCurrentPage - 1) * TRANSACTIONS_PER_PAGE) + 1}–{Math.min(safeCurrentPage * TRANSACTIONS_PER_PAGE, filteredTransactions.length)} of {filteredTransactions.length}
+                    {((safeCurrentPage - 1) * TRANSACTIONS_PER_PAGE) + 1}-{Math.min(safeCurrentPage * TRANSACTIONS_PER_PAGE, filteredTransactions.length)} of {filteredTransactions.length}
                   </p>
                   <div className="flex items-center gap-1.5">
                     <button

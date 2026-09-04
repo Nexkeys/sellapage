@@ -195,7 +195,7 @@ export default function StoreNavbar({
               <Search size={18} />
             </button>
 
-            {/* Desktop cart button — only for Growth/Pro */}
+            {/* Desktop cart button - only for Growth/Pro */}
             {onCartOpen !== null && (
               <button
                 onClick={onCartOpen}
@@ -300,7 +300,7 @@ export default function StoreNavbar({
             </button>
           ))}
 
-          {/* Cart tab — only for Growth/Pro */}
+          {/* Cart tab - only for Growth/Pro */}
           {onCartOpen !== null && (
             <button
               onClick={onCartOpen}

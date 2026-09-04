@@ -138,14 +138,14 @@ export default function DashboardLayout({
           navigate("/login");
           return;
         }
-        // Login OTP challenge abandoned or still outstanding — send them back
+        // Login OTP challenge abandoned or still outstanding - send them back
         // to sign in rather than leaving an unverified session running.
         if (otpPending && !cancelled) {
           await logoutSeller();
           navigate("/login?verify=1");
         }
       } catch {
-        // Silently ignore — a missed heartbeat is retried on the next interval.
+        // Silently ignore - a missed heartbeat is retried on the next interval.
       }
     };
 
@@ -311,7 +311,7 @@ export default function DashboardLayout({
         })}
       </nav>
 
-      {/* Upgrade Banner — hidden for Pro, and for staff (billing is owner-only) */}
+      {/* Upgrade Banner - hidden for Pro, and for staff (billing is owner-only) */}
       {!effectiveIsPro && !isStaffIdentity && (
         <div className="mx-3 mb-3 p-3.5 rounded-2xl bg-white/5 border border-white/8">
           <div className="flex items-center gap-2 mb-1">
@@ -334,7 +334,7 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* User Profile — shows the currently logged-in identity: the staff
+      {/* User Profile - shows the currently logged-in identity: the staff
           member's own account when acting as staff, not the store owner's,
           so it's visually clear staff have their own separate login. */}
       <div className="px-3 pb-4">
@@ -547,7 +547,7 @@ export default function DashboardLayout({
         </main>
       </div>
 
-      {/* Sella AI — movable Business Partner, persistent across every tab (Premium only) */}
+      {/* Sella AI - movable Business Partner, persistent across every tab (Premium only) */}
       <SellaAI store={store} />
       <CalculatorFAB />
       <ReviewPromptModal store={store} navigateTo={setActiveTab} />

@@ -1,7 +1,7 @@
 // src/api-handlers/otp-verify.js
 // Verifies a step-up OTP. On success the challenge is marked consumed; the
 // action handler then burns it via redeemProof(). Verifying alone authorises
-// nothing — see _lib/otp.js.
+// nothing - see _lib/otp.js.
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { applyCors, getBearerToken, parseJsonBody } from './_lib/http.js'
 import { durableRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'

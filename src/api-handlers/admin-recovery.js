@@ -1,6 +1,6 @@
 // src/api-handlers/admin-recovery.js
 // Admin review of account-recovery requests. Approving one issues a single-use
-// token that can change an account's email AND password — this is the most
+// token that can change an account's email AND password - this is the most
 // privileged action in the Operations Console, so it is super_admin only and
 // every decision is attributed to the acting admin in auditLogs.
 //
@@ -31,11 +31,11 @@ export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'GET,POST,OPTIONS' })) return
 
   // Never cache. Without this the browser/edge serves a 304 and the admin sees
-  // a stale list — a request submitted after the tab was first opened simply
+  // a stale list - a request submitted after the tab was first opened simply
   // never appears, with no error anywhere. Same fix as admin-analytics.js:12.
   res.setHeader('Cache-Control', 'no-store, max-age=0')
 
-  // Account takeover capability — super_admin only, never a support role.
+  // Account takeover capability - super_admin only, never a support role.
   const admin = await verifyAdmin(req, 'recovery')
   if (!admin) return res.status(403).json({ error: 'Forbidden' })
 
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   try {
     if (action === 'list' && req.method === 'GET') {
       const status = req.query.status
-      // Single-field equality only — no composite index.
+      // Single-field equality only - no composite index.
       let query = db.collection(RECOVERY_COLLECTION)
       if (status && status !== 'all') query = query.where('status', '==', status)
 
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
             storeId: x.storeId,
             storeName: x.storeName,
             businessName: x.businessName,
-            // Present only on no_match rows — the exact text the vendor typed.
+            // Present only on no_match rows - the exact text the vendor typed.
             submittedIdentifier: x.submittedIdentifier || null,
             currentEmailMasked: x.currentEmailMasked,
             contactEmail: x.contactEmail,
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
         </div>`,
       )
 
-      // Second tripwire on the ORIGINAL address — the real owner gets a chance
+      // Second tripwire on the ORIGINAL address - the real owner gets a chance
       // to object during the 30-minute window.
       if (data.currentEmail) {
         try {
@@ -154,12 +154,12 @@ export default async function handler(req, res) {
         meta: { adminUid: admin.uid, requestId, contactEmail: maskEmail(data.contactEmail) },
       })
 
-      // The raw token is never returned to the browser — it only ever exists in
+      // The raw token is never returned to the browser - it only ever exists in
       // the email to the vendor, so an admin cannot capture it from a response.
       return res.status(200).json({ success: true, message: 'Approved. Recovery link emailed to the vendor.' })
     }
 
-    // Direct unlock — for the common case where a vendor simply forgot their
+    // Direct unlock - for the common case where a vendor simply forgot their
     // password, locked themselves out, and then remembered it. Full recovery
     // (email + password reset) is overkill there; this just clears the lock so
     // they can sign in with the password they already know.

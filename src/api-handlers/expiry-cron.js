@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { setStoreCardsFrozen } from './_lib/loyalty.js'
 
-// Constant-time secret comparison — a plain !== leaks how many leading bytes of
+// Constant-time secret comparison - a plain !== leaks how many leading bytes of
 // a guess were correct.
 function timingSafeMatch(provided, expected) {
   if (!provided || !expected) return false

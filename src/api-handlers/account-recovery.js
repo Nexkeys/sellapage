@@ -1,6 +1,6 @@
 // src/api-handlers/account-recovery.js
 // PUBLIC endpoints for a vendor locked out of their account email. Both are
-// unauthenticated by necessity — a locked-out user cannot sign in — so both are
+// unauthenticated by necessity - a locked-out user cannot sign in - so both are
 // rate limited and neither ever confirms whether an account exists.
 //
 // A request grants nothing on its own. Only an admin, after out-of-band
@@ -24,11 +24,11 @@ import {
 import { FieldValue } from 'firebase-admin/firestore'
 
 // Identical for every request, whether or not the account exists. Do not make
-// this conditional — the wording IS the anti-enumeration control.
+// this conditional - the wording IS the anti-enumeration control.
 const GENERIC_REQUEST_RESPONSE = {
   success: true,
   message:
-    'If an account matches those details, our team will review your request and contact you. This usually takes 1–2 business days.',
+    'If an account matches those details, our team will review your request and contact you. This usually takes 1-2 business days.',
 }
 
 export default async function handler(req, res) {
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
           ip,
           userAgent,
         })
-        // Generic wording — still no confirmation of whether the account exists.
+        // Generic wording - still no confirmation of whether the account exists.
         return res.status(400).json({
           error: 'captcha_failed',
           message: 'We could not verify that request. Please try again.',
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
       const store = await findStoreForRecovery(db, { identifier })
 
       if (store) {
-        // One open request at a time, keyed deterministically — no composite
+        // One open request at a time, keyed deterministically - no composite
         // index, and a repeat submission updates rather than piling up.
         const ref = db.collection(RECOVERY_COLLECTION).doc(store.id)
         const existing = await ref.get()
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
                     asking us to contact <strong>${escapeHtml(maskEmail(contactEmail))}</strong>.
                   </p>
                   <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 12px;">
-                    <strong>If this was you</strong>, no action is needed — our team will review it.
+                    <strong>If this was you</strong>, no action is needed - our team will review it.
                   </p>
                   <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;margin:0 0 12px;">
                     <p style="margin:0;font-size:13px;color:#991b1b;line-height:1.6;">
@@ -161,7 +161,7 @@ export default async function handler(req, res) {
           }
         }
       } else {
-        // No store matched — almost always a typo in the identifier. Record it
+        // No store matched - almost always a typo in the identifier. Record it
         // as a visible no_match request so an admin can see WHAT was typed and
         // reach out, rather than the vendor swearing they submitted while the
         // tab stays empty. Admin-only collection (deny-by-default rules), and
@@ -173,7 +173,7 @@ export default async function handler(req, res) {
           businessName: '',
           currentEmailMasked: '',
           currentEmail: '',
-          // The exact text submitted — the whole point of this record.
+          // The exact text submitted - the whole point of this record.
           submittedIdentifier: String(identifier).slice(0, 200),
           contactEmail: String(contactEmail).trim().toLowerCase(),
           contactPhone: String(contactPhone || '').trim().slice(0, 40),
@@ -247,12 +247,12 @@ export default async function handler(req, res) {
       })
 
       // Recovery is the documented way back from a lockout, so clear it for
-      // BOTH addresses — the old one (which was being attacked) and the new
+      // BOTH addresses - the old one (which was being attacked) and the new
       // one. Without this the vendor would recover and still be locked out.
       await clearAttempts(db, previousEmail)
       await clearAttempts(db, String(newEmail).trim())
 
-      // Kill every existing session — if the lockout was caused by a hijack,
+      // Kill every existing session - if the lockout was caused by a hijack,
       // the attacker's sessions must not survive the recovery.
       try {
         await auth.revokeRefreshTokens(request.storeId)

@@ -141,7 +141,7 @@ export default function ReceiptPDF({
             <Text style={[s.muted, { fontSize: 7, marginTop: 1 }]}>{receipt?.vendorAddress}</Text>
           </View>
         ) : (
-          // minimal / asymmetric — same simplified treatment in PDF
+          // minimal / asymmetric - same simplified treatment in PDF
           <View>
             <View style={s.row}>
               <View>

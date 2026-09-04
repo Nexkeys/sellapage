@@ -15,7 +15,7 @@ const TAB_ACCESS = {
   referrals: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.FINANCE],
   withdrawals: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.FINANCE],
   admins: [ADMIN_ROLES.SUPER_ADMIN],
-  // Approving a recovery request can change an account's email AND password —
+  // Approving a recovery request can change an account's email AND password -
   // account-takeover capability. Super admin only, never a support role.
   recovery: [ADMIN_ROLES.SUPER_ADMIN],
   cac: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.OPERATIONS],

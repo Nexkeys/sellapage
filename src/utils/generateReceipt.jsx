@@ -110,7 +110,7 @@ function ReceiptFooter({ store }) {
   return (
     <Text style={styles.footer}>
       Thank you for shopping{'\n'}
-      WhatsApp: {store.whatsappNumber || '—'}
+      WhatsApp: {store.whatsappNumber || '-'}
     </Text>
   )
 }
@@ -135,7 +135,7 @@ function ReceiptDocument({ order, store }) {
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Order ID</Text>
-          <Text>{order.reference || order.id || '—'}</Text>
+          <Text>{order.reference || order.id || '-'}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Date</Text>
@@ -198,7 +198,7 @@ function BookingReceiptDocument({ booking, store }) {
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Booking ID</Text>
-          <Text>{booking.paystackReference || booking.reference || booking.id || '—'}</Text>
+          <Text>{booking.paystackReference || booking.reference || booking.id || '-'}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Date</Text>

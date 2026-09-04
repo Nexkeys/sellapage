@@ -1,5 +1,5 @@
 //src/pages/JobsPage.jsx/
-// Public "Jobs & Opportunities" listing page — /jobs. Built on the same
+// Public "Jobs & Opportunities" listing page - /jobs. Built on the same
 // hero-gradient + overlapping-search-card + infinite-scroll-grid structure as
 // LiveStoresPage.jsx, adapted for server-paginated/filtered job data.
 import { useState, useEffect, useRef, useCallback } from 'react'

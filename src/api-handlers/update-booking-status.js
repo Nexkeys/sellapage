@@ -96,7 +96,7 @@ export default async function handler(req, res) {
 
     const bookingData = bookingSnap.data()
 
-    // No hard status lock, unlike orders' delivered-lock — service businesses need
+    // No hard status lock, unlike orders' delivered-lock - service businesses need
     // to correct a mis-click (e.g. cancelled -> refunded) after the fact.
 
     const changedAtIso = new Date().toISOString()
@@ -120,12 +120,12 @@ export default async function handler(req, res) {
       statusLogEntry.newTime = newBookingTime
       updatePayload.bookingDate = newBookingDate
       updatePayload.bookingTime = newBookingTime
-      // A reminder may already have fired for the old time — reset so the
+      // A reminder may already have fired for the old time - reset so the
       // booking-reminder-cron job reminds again ahead of the new time.
       updatePayload.reminderSent = false
     }
 
-    // Booking is no longer happening (or already happened) — stop the
+    // Booking is no longer happening (or already happened) - stop the
     // reminder cron from ever considering it, regardless of reminderSent.
     if (['cancelled', 'completed', 'no_show', 'refunded'].includes(newStatus)) {
       updatePayload.reminderSent = true
@@ -198,7 +198,7 @@ export default async function handler(req, res) {
       try {
         await sendEmail(
           customerEmail,
-          `Update on your booking with ${storeName} — ${statusLabel}`,
+          `Update on your booking with ${storeName} - ${statusLabel}`,
           `
             <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
               <div style="background-color: ${statusColor}; padding: 24px;">

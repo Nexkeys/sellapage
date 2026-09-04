@@ -6,7 +6,7 @@
 import { getAdminDb } from './firebase-admin.js'
 import { OWNER_ONLY_TABS } from '../../utils/staffRoles.js'
 
-// Single-field equality query (staffUid) — deliberately avoids a composite
+// Single-field equality query (staffUid) - deliberately avoids a composite
 // index (staffUid + active) given this codebase's history of missing-index
 // production errors. Result set is small (bounded by how many stores one
 // person has ever worked for), filtered in memory instead.
@@ -42,7 +42,7 @@ export async function resolveStoreAccess(callerUid, requestedStoreId, tabId, nee
   }
 
   if (!tabId) {
-    // Store-level-only check (no specific tab) — used for things like
+    // Store-level-only check (no specific tab) - used for things like
     // session register/heartbeat/revoke that any active staff member needs
     // regardless of role.
     return { allowed: true, role: membership.roleId, staffName: membership.name, staffUid: callerUid, membership }

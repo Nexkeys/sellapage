@@ -14,7 +14,7 @@ import { sendEmail } from './send-email.js'
 const money = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`
 
 // ---------------------------------------------------------------------------
-// Live web research (Tavily) — its own key, separate from every other feature.
+// Live web research (Tavily) - its own key, separate from every other feature.
 // ---------------------------------------------------------------------------
 export async function webSearch(query) {
   if (!process.env.TAVILY_API_KEY) {
@@ -60,7 +60,7 @@ export async function webSearch(query) {
 }
 
 // ---------------------------------------------------------------------------
-// Write executor — one case per supported dashboard surface.
+// Write executor - one case per supported dashboard surface.
 // Add a new `case` here to let Sella AI write to a newly added tab.
 // ---------------------------------------------------------------------------
 const SAFE_SETTINGS_FIELDS = [
@@ -167,7 +167,7 @@ export async function executeWriteAction(db, storeId, action) {
         createdAt: new Date().toISOString(),
       })
       const label = dtype === 'percentage' ? `${value}% off` : `${money(value)} off`
-      return { ok: true, message: `Created promo code ${code} — ${label}.` }
+      return { ok: true, message: `Created promo code ${code} - ${label}.` }
     }
 
     // ------------------------------------------------------------- ORDER STATUS
@@ -236,7 +236,7 @@ export async function executeWriteAction(db, storeId, action) {
       const snap = await bookingRef.get()
       if (!snap.exists) return { ok: false, message: 'That booking was not found.' }
       const booking = snap.data()
-      // No hard status lock, unlike orders — service bookings allow post-hoc correction.
+      // No hard status lock, unlike orders - service bookings allow post-hoc correction.
       const changedAtIso = new Date().toISOString()
       const statusLogEntry = {
         status: newStatus, changedAt: changedAtIso, changedBy: storeId, changedByLabel: 'Sella AI',
@@ -320,7 +320,7 @@ export async function executeWriteAction(db, storeId, action) {
     default:
       return {
         ok: false,
-        message: `I can't directly edit that yet. I've noted what you want — please make this change from the ${action?.tabHint || 'relevant'} tab, and I can guide you through it.`,
+        message: `I can't directly edit that yet. I've noted what you want - please make this change from the ${action?.tabHint || 'relevant'} tab, and I can guide you through it.`,
       }
   }
 }

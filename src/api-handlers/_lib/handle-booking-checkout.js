@@ -4,7 +4,7 @@ import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
 
 // Service-booking branch of the paystack-webhook "checkout" dispatcher.
-// Writes to stores/{storeId}/bookings — a collection separate from stores/{storeId}/orders,
+// Writes to stores/{storeId}/bookings - a collection separate from stores/{storeId}/orders,
 // so a booking never carries product/shipping fields (deliveryFee, deliveryAddress, cartItems)
 // and never shares the product fulfillment status vocabulary.
 export async function handleBookingCheckout(db, data, res) {
@@ -108,7 +108,7 @@ export async function handleBookingCheckout(db, data, res) {
     }
   }
 
-  // Customer upsert (best-effort) — same customers collection shared with product orders
+  // Customer upsert (best-effort) - same customers collection shared with product orders
   try {
     const rawPhone = (customerPhone || "").toString();
     let customerId = rawPhone.replace(/\D+/g, "");
@@ -223,14 +223,14 @@ export async function handleBookingCheckout(db, data, res) {
         ? sendPush(
             storeData.fcmToken,
             "New Booking Received 📅",
-            `${escapeHtml(customerName)} just booked ${serviceName || "a service"} — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+            `${escapeHtml(customerName)} just booked ${serviceName || "a service"} - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             { bookingId: bookingRef.id, type: "new_booking" },
           )
         : Promise.resolve(),
       storeData.email
         ? sendEmail(
             storeData.email,
-            `New booking received — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+            `New booking received - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             `
               <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
                 <div style="background-color: #16a34a; padding: 24px;">

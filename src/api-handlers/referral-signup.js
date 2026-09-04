@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     const db = getAdminDb()
     const referrerRef = db.collection('stores').doc(referrerId)
 
-    // One signup credit per referred user, ever — enforced by using the
+    // One signup credit per referred user, ever - enforced by using the
     // referred user's uid as the attribution document ID, which makes a repeat
     // call a no-op rather than another increment.
     const attributionRef = db.collection('referralAttributions').doc(decoded.uid)

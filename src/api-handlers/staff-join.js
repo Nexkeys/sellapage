@@ -1,5 +1,5 @@
 // src/api-handlers/staff-join.js
-// Public (no auth required going in) invite-redemption endpoint — creates a
+// Public (no auth required going in) invite-redemption endpoint - creates a
 // brand-new, independent Firebase Auth identity for the staff member and
 // links it to the inviting store. Mirrors admin-manage.js's createUser
 // precedent for server-side account provisioning.
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       if (invite.revoked) return res.status(400).json({ error: 'This invite has been revoked.' })
       if (invite.usedByUid) return res.status(400).json({ error: 'This invite has already been used.' })
       if ((invite.expiresAt?.toDate?.()?.getTime() || 0) < Date.now()) {
-        return res.status(400).json({ error: 'This invite has expired — ask the store owner for a new code.' })
+        return res.status(400).json({ error: 'This invite has expired - ask the store owner for a new code.' })
       }
       const roleSnap = await db.collection('stores').doc(invite.storeId).collection('staffRoles').doc(invite.roleId).get()
       const storeSnap = await db.collection('stores').doc(invite.storeId).get()
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
         not_found: 'Invite code not found.',
         revoked: 'This invite has been revoked.',
         already_used: 'This invite has already been used.',
-        expired: 'This invite has expired — ask the store owner for a new code.',
+        expired: 'This invite has expired - ask the store owner for a new code.',
       }
       return res.status(400).json({ error: messages[txErr.message] || 'Could not redeem invite.' })
     }

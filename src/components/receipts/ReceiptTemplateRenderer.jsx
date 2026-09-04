@@ -100,7 +100,7 @@ const ReceiptTemplateRenderer = forwardRef(function ReceiptTemplateRenderer(
         />
       )}
 
-      {/* Header — visually distinct per template */}
+      {/* Header - visually distinct per template */}
       {layout.headerStyle === 'band' && (
         <div className="px-5 py-5 text-white sm:px-8 sm:py-6" style={{ backgroundColor: primary }}>
           <div className="flex items-center justify-between gap-3">

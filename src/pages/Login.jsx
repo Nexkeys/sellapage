@@ -29,14 +29,14 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   // Phase 2 login challenge: { reason } while an emailed code is outstanding.
   const [loginOtp, setLoginOtp] = useState(null)
-  // Account locked after repeated failed sign-ins — recovery is the way back.
+  // Account locked after repeated failed sign-ins - recovery is the way back.
   const [lockedOut, setLockedOut] = useState(false)
   // Set only when SMS is live: the number to verify before finishing signup.
   const [signupPhone, setSignupPhone] = useState(null)
   // Visible reCAPTCHA v2 checkbox state.
   const [captchaToken, setCaptchaToken] = useState(null)
   const [captchaSiteKey, setCaptchaSiteKey] = useState(null)
-  // True when the widget can't render (v3 key, blocked, offline) — the form
+  // True when the widget can't render (v3 key, blocked, offline) - the form
   // then stops requiring it rather than trapping a real vendor.
   const [captchaUnavailable, setCaptchaUnavailable] = useState(false)
 
@@ -156,7 +156,7 @@ export default function Login() {
       if (mode === 'login') {
         // Check the lock BEFORE authenticating. Doing it after meant a correct
         // password produced a real Firebase session first, which is precisely
-        // what a lock must prevent — knowing the password is what's locked out.
+        // what a lock must prevent - knowing the password is what's locked out.
         try {
           const lockRes = await fetch('/api/login-attempt?action=status', {
             method: 'POST',
@@ -169,7 +169,7 @@ export default function Login() {
             setLoading(false)
             return
           }
-        } catch { /* network only — don't block sign-in on this check */ }
+        } catch { /* network only - don't block sign-in on this check */ }
 
         const credential = await loginSeller(form.email, form.password)
         const token = await credential.user.getIdToken()
@@ -186,7 +186,7 @@ export default function Login() {
         }
 
         // Server refused the session because the account is locked. Sign the
-        // Firebase session straight back out — leaving a valid token alive
+        // Firebase session straight back out - leaving a valid token alive
         // would let the dashboard load before the heartbeat caught up.
         if (sessionRisk?.locked) {
           await logoutSeller().catch(() => {})
@@ -230,7 +230,7 @@ export default function Login() {
             setLoading(false)
             return
           }
-        } catch { /* network issue — don't block a real signup */ }
+        } catch { /* network issue - don't block a real signup */ }
 
         const codeToValidate = form.referralCode.trim() || localStorage.getItem('vendor_referral_code') || null
         let resolvedReferrerId = null
@@ -276,7 +276,7 @@ export default function Login() {
           console.error('Failed to register session:', err)
         }
 
-        // Phone verification at signup — SELF-ACTIVATING.
+        // Phone verification at signup - SELF-ACTIVATING.
         //
         // Reads smsAvailable from /api/public-config, which is false while the
         // Termii sender ID is unapproved. So today this branch never runs and
@@ -302,7 +302,7 @@ export default function Login() {
       }
       navigate('/dashboard')
     } catch (err) {
-      // Wrong password / unknown user — count it toward the lockout. Firebase
+      // Wrong password / unknown user - count it toward the lockout. Firebase
       // has its own per-IP throttling; this adds an ACCOUNT-level lock the
       // owner can actually see and recover from.
       const isCredentialFailure = [
@@ -324,7 +324,7 @@ export default function Login() {
             setError(`${ERROR_MESSAGES[err.code] || 'Incorrect email or password.'} ${d.remaining} attempt${d.remaining === 1 ? '' : 's'} left before this account is locked.`)
             return
           }
-        } catch { /* fail open — never block sign-in on the counter */ }
+        } catch { /* fail open - never block sign-in on the counter */ }
       }
 
       setError(ERROR_MESSAGES[err.code] || 'Something went wrong. Please try again.')
@@ -334,7 +334,7 @@ export default function Login() {
   }
 
   // Account locked after too many failed sign-ins. Deliberately a dead end
-  // except for recovery — offering "try again" here would defeat the lock.
+  // except for recovery - offering "try again" here would defeat the lock.
   if (lockedOut) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
@@ -375,7 +375,7 @@ export default function Login() {
         title="Verify your phone number"
         description={`We sent a code by SMS to ${signupPhone}. Enter it to finish setting up your store.`}
         onClose={() => {
-          // The account exists at this point, so don't strand them — let them
+          // The account exists at this point, so don't strand them - let them
           // in and let Settings prompt for verification instead of losing the
           // signup entirely.
           setSignupPhone(null)
@@ -398,7 +398,7 @@ export default function Login() {
     )
   }
 
-  // Login OTP challenge — blocks the dashboard until the emailed code clears.
+  // Login OTP challenge - blocks the dashboard until the emailed code clears.
   // Cancelling signs out, so an unverified session never proceeds.
   if (loginOtp) {
     return (
@@ -722,7 +722,7 @@ export default function Login() {
               </div>
             )}
 
-            {/* Password reset emails the account address — useless if the vendor
+            {/* Password reset emails the account address - useless if the vendor
                 has lost that inbox. This is the escape hatch for that case. */}
             {mode === 'forgot' && (
               <div className="text-center">

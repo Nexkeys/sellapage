@@ -1,7 +1,7 @@
 // src/api-handlers/_lib/sella-ai-context.js
 // Builds a compact, whole-store context snapshot for the Sella AI Business Partner.
-// Reads every relevant vendor collection but returns AGGREGATES + recent items only —
-// never full raw dumps — to keep token usage and latency sane.
+// Reads every relevant vendor collection but returns AGGREGATES + recent items only -
+// never full raw dumps - to keep token usage and latency sane.
 //
 // Designed to be forward-compatible: adding a new dashboard tab usually means adding
 // one more block here (and, if writable, one more case in sella-ai-tools.js). Nothing
@@ -94,7 +94,7 @@ export async function buildStoreContext(db, storeId, store) {
     .map((o) => ({
       id: o.id,
       customer: o.customerName || 'Unknown',
-      item: o.itemName || o.items || '—',
+      item: o.itemName || o.items || '-',
       total: Number(o.grandTotal || o.total || 0),
       status: o.status || 'pending',
     }))
@@ -120,7 +120,7 @@ export async function buildStoreContext(db, storeId, store) {
     .map((b) => ({
       id: b.id,
       customer: b.customerName || 'Unknown',
-      service: b.serviceName || '—',
+      service: b.serviceName || '-',
       total: Number(b.grandTotal || 0),
       status: b.status || 'pending',
       scheduledFor: b.bookingDate ? `${b.bookingDate} ${b.bookingTime || ''}`.trim() : null,
@@ -132,7 +132,7 @@ export async function buildStoreContext(db, storeId, store) {
     .map((b) => ({
       id: b.id,
       customer: b.customerName || 'Unknown',
-      service: b.serviceName || '—',
+      service: b.serviceName || '-',
       scheduledFor: `${b.bookingDate} ${b.bookingTime || ''}`.trim(),
       status: b.status || 'pending',
     }))
@@ -186,7 +186,7 @@ export async function buildStoreContext(db, storeId, store) {
     : 0
 
   return {
-    // Store profile / plan / trust / integrations status — the "Settings / Business / CAC / Ads" tabs at a glance
+    // Store profile / plan / trust / integrations status - the "Settings / Business / CAC / Ads" tabs at a glance
     store: {
       businessName: store.businessName || store.storeName || 'the store',
       storeName: store.storeName || null,

@@ -1,6 +1,6 @@
 // src/components/dashboard/CalculatorFAB.jsx
 // A movable floating calculator, available on every dashboard screen for
-// every plan (unlike Sella AI, which is Premium-only) — mounted once in
+// every plan (unlike Sella AI, which is Premium-only) - mounted once in
 // DashboardLayout, same drag-to-reposition pattern as the Sella AI orb but
 // anchored to the opposite corner by default so the two never start stacked.
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -52,7 +52,7 @@ export default function CalculatorFAB() {
   const [expression, setExpression] = useState('')
   const [accumulator, setAccumulator] = useState(null)
   const [pendingOp, setPendingOp] = useState(null)
-  // True right after "=" OR right after an operator is pressed — in both
+  // True right after "=" OR right after an operator is pressed - in both
   // cases the next digit typed must start a fresh number, not append to
   // whatever's on screen.
   const [awaitingOperand, setAwaitingOperand] = useState(false)
@@ -127,14 +127,14 @@ export default function CalculatorFAB() {
   const inputOperator = (op) => {
     const current = Number(display)
     if (accumulator !== null && pendingOp && !awaitingOperand) {
-      // Chained operation (e.g. "5 + 3 +") — evaluate the pending one first.
+      // Chained operation (e.g. "5 + 3 +") - evaluate the pending one first.
       const result = applyOp(accumulator, current, pendingOp)
       setAccumulator(result)
       setExpression(`${formatDisplay(result)} ${op}`)
       setDisplay(formatDisplay(result))
     } else {
       // Either the first operator typed, or the operator was just changed
-      // (e.g. "12 ×" then tapping "+" instead) — display is left as-is.
+      // (e.g. "12 ×" then tapping "+" instead) - display is left as-is.
       setAccumulator(current)
       setExpression(`${formatDisplay(current)} ${op}`)
     }

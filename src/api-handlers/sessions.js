@@ -36,7 +36,7 @@ function getClientIp(req) {
 }
 
 // X-Forwarded-For is client-supplied, so `ip` reaching this function is
-// attacker-controlled. The host is fixed, so this was never SSRF — but an
+// attacker-controlled. The host is fixed, so this was never SSRF - but an
 // unvalidated value is still interpolated into a URL path, and the resulting
 // city/region/country is stored on the session record. Validate the shape.
 const IPV4 = /^(\d{1,3}\.){3}\d{1,3}$/
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
     const sessionsRef = db.collection('stores').doc(storeId).collection('sessions')
 
     if (action === 'list' && req.method === 'GET') {
-      // Self-service view — only the caller's own sessions, whether owner or
+      // Self-service view - only the caller's own sessions, whether owner or
       // staff (a staff member's "log out this device" screen shouldn't be
       // able to see the owner's or other staff's devices).
       const snap = await sessionsRef.orderBy('lastActiveAt', 'desc').limit(100).get()

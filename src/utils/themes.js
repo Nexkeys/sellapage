@@ -12,7 +12,7 @@ export const getOptimizedImageUrl = (url, width = 800) => {
 }
 
 /**
- * Classic Default — exact replica of the original SellaPage business page.
+ * Classic Default - exact replica of the original SellaPage business page.
  * This theme is used for free-tier users and any store without a storeTheme set.
  * Its primary color dynamically yields to store.themeColor when present.
  */

@@ -1,5 +1,5 @@
 //src/pages/JobDetailPage.jsx/
-// Public job detail page — /jobs/:jobId. A full page (never a modal, per spec),
+// Public job detail page - /jobs/:jobId. A full page (never a modal, per spec),
 // with an editorial structural rhythm (breadcrumb → title → meta → hero image →
 // content + sidebar) and an inline WhatsApp/Mail "apply" composer.
 import { useState, useEffect, useCallback } from 'react'

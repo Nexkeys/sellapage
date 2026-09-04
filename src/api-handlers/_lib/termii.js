@@ -8,7 +8,7 @@
 // WHY TERMII GENERATES THE PIN: their Token product enforces pin_attempts and
 // pin_time_to_live server-side, so for SMS we store their `pinId` rather than a
 // hash of our own code. We still keep our own otpChallenges record binding that
-// pinId to uid + purpose + session — Termii verifies THE CODE, only we can
+// pinId to uid + purpose + session - Termii verifies THE CODE, only we can
 // verify THE CONTEXT. Without that binding a pinId issued for phone_verify
 // could be replayed against another purpose.
 //
@@ -25,7 +25,7 @@ function base() {
 }
 
 /**
- * Termii sender IDs are short alphanumeric NAMES ("Sellapage"), max 11 chars —
+ * Termii sender IDs are short alphanumeric NAMES ("Sellapage"), max 11 chars -
  * see the sample responses at Docs/TERMII_API_DOCS.md:110-200 ("Tommy",
  * "WisdomTooth"). A UUID in this variable is almost certainly the application
  * reference from the submission form rather than the sender ID itself, and
@@ -79,7 +79,7 @@ async function termiiPost(path, payload) {
     })
     const data = await res.json().catch(() => null)
     if (!res.ok) {
-      // Never log the payload — it contains the destination number.
+      // Never log the payload - it contains the destination number.
       console.error(`[termii] ${path} HTTP ${res.status}: ${data?.message || 'error'}`)
       return { ok: false, error: 'termii_error', status: res.status, message: data?.message, data }
     }
@@ -171,7 +171,7 @@ export async function sendSmsOtp({ to, purposeLabel }) {
 
 /**
  * Verifies a code against a pinId. Termii returns `verified` as the STRING
- * "True"/"False" (Docs:1324) — compare loosely and case-insensitively rather
+ * "True"/"False" (Docs:1324) - compare loosely and case-insensitively rather
  * than truthiness, or a "False" string would read as verified.
  */
 export async function verifySmsOtp({ pinId, pin }) {

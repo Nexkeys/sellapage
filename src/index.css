@@ -13,7 +13,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    /* Matches the design system declared in tailwind.config.js (display ->
+       Bricolage Grotesque). This rule previously set a third family,
+       Plus Jakarta Sans, which appeared nowhere else in the system and left
+       209 of 275 headings rendering in a different font to the 66 that use
+       the font-display utility. */
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   }
 }
 

@@ -65,7 +65,7 @@ function RequestView() {
         <h1 className="font-bold text-gray-900 text-lg">Request received</h1>
         <p className="text-sm text-gray-500 mt-2 leading-relaxed">
           If an account matches those details, our team will review your request and contact you.
-          This usually takes 1–2 business days.
+          This usually takes 1-2 business days.
         </p>
         <p className="text-xs text-gray-400 mt-4 leading-relaxed">
           For security, we also alert the account&apos;s current email address about every recovery request.
@@ -117,7 +117,7 @@ function RequestView() {
           <label className="block text-xs font-bold text-gray-700 mb-1.5">What happened?</label>
           <textarea
             rows={3} value={reason} onChange={e => setReason(e.target.value)}
-            placeholder="Anything that helps us confirm the store is yours — CAC name, recent orders, etc."
+            placeholder="Anything that helps us confirm the store is yours - CAC name, recent orders, etc."
             className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 resize-none"
           />
         </div>
@@ -249,7 +249,7 @@ export default function AccountRecovery() {
   const isRedeem = location.pathname.endsWith('/redeem')
 
   useEffect(() => {
-    document.title = isRedeem ? 'Recover your account — Sellapage' : 'Account recovery — Sellapage'
+    document.title = isRedeem ? 'Recover your account - Sellapage' : 'Account recovery - Sellapage'
   }, [isRedeem])
 
   return (

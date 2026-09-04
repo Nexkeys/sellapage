@@ -181,7 +181,7 @@ export default function ReceiptsTab({ store, user, isGrowthOrPro, isPro, isPremi
         <div>
           <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">Free For Every Plan</p>
           <h1 className="text-xl font-bold tracking-tight text-gray-900">Receipts</h1>
-          <p className="mt-0.5 text-xs text-gray-400">Build a fully custom receipt — log whatever your business needs, however you want to print it.</p>
+          <p className="mt-0.5 text-xs text-gray-400">Build a fully custom receipt - log whatever your business needs, however you want to print it.</p>
         </div>
         {view === 'history' ? (
           <button
@@ -240,7 +240,7 @@ export default function ReceiptsTab({ store, user, isGrowthOrPro, isPro, isPremi
             <TemplateSelector
               selectedId={draft.templateId}
               onSelect={(id) => {
-                // Picking a template applies its signature palette/font too —
+                // Picking a template applies its signature palette/font too -
                 // otherwise the layout changes but the color stays whatever
                 // was left over from the previous template, which looks broken.
                 const t = getTemplateById(id)

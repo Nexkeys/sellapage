@@ -20,11 +20,11 @@ export default async function handler(req, res) {
       const page = Math.max(1, parseInt(req.query.page) || 1)
       const limit = Math.min(50, parseInt(req.query.limit) || 20)
 
-      // No `where` + `orderBy` on different fields — that combination needs
+      // No `where` + `orderBy` on different fields - that combination needs
       // a composite index Firestore doesn't have here (this exact query
       // shape was throwing FAILED_PRECONDITION / error 9 in production).
       // Collection is small enough to fetch unfiltered and do
-      // filter/sort/paginate/count all in memory — same approach already
+      // filter/sort/paginate/count all in memory - same approach already
       // used elsewhere in this codebase (e.g. admin-referrals.js) to avoid
       // needing new indexes.
       const snap = await db.collection('platformReviews').limit(500).get()

@@ -1,5 +1,5 @@
 //src/pages/BlogPostPage.jsx/
-// Public blog post detail page — /blog/:slug. Emulates the "Execora" reference
+// Public blog post detail page - /blog/:slug. Emulates the "Execora" reference
 // screenshot's structural rhythm (breadcrumb -> title -> meta row -> hero image
 // -> body + sidebar with share/tags/related), adapted to Sellapage's own brand.
 import { useState, useEffect } from 'react'
@@ -8,7 +8,7 @@ import {
   ArrowLeft, Loader2, Clock, BookOpen, Check, Share2, Twitter, Facebook,
   Linkedin, MessageCircle,
 } from 'lucide-react'
-// Plain browser DOMPurify — NOT isomorphic-dompurify, which drags jsdom into
+// Plain browser DOMPurify - NOT isomorphic-dompurify, which drags jsdom into
 // the dependency tree (see the note in blog-admin.js). This runs in the
 // browser where a real DOM already exists.
 import DOMPurify from 'dompurify'

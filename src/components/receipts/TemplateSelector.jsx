@@ -7,7 +7,7 @@ export default function TemplateSelector({ selectedId, onSelect, locked }) {
     <div className="space-y-2">
       {locked && (
         <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-3.5 py-2.5 text-xs font-semibold text-amber-800">
-          Templates are a Growth+ feature. Upgrade to unlock all 6 — Free/Starter receipts use a plain layout.
+          Templates are a Growth+ feature. Upgrade to unlock all 6 - Free/Starter receipts use a plain layout.
         </div>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

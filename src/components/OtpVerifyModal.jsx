@@ -1,5 +1,5 @@
 // src/components/OtpVerifyModal.jsx
-// Step-up verification prompt for sensitive actions (Phase 1 — see
+// Step-up verification prompt for sensitive actions (Phase 1 - see
 // Docs/OTP-Verification-Plan.md).
 //
 // This modal is a UX affordance, NOT the security boundary. The server derives
@@ -10,7 +10,7 @@ import { X, ShieldCheck, Loader2, AlertCircle } from 'lucide-react'
 import { auth } from '../firebase/auth'
 import { getRecaptchaToken } from '../utils/recaptcha'
 
-// `phone` is only used by SMS purposes (phone_verify) — the server ignores it
+// `phone` is only used by SMS purposes (phone_verify) - the server ignores it
 // for email purposes, where the destination is always read from the account.
 export default function OtpVerifyModal({ open, purpose, title, description, phone, onVerified, onClose }) {
   const [code, setCode] = useState('')

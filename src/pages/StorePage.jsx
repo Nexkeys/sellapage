@@ -208,7 +208,7 @@ function CartSummary({ cart, subtotal, collapsible = false }) {
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700"
       >
         <span>
-          Cart ({cart.length} item{cart.length !== 1 ? "s" : ""}) — ₦
+          Cart ({cart.length} item{cart.length !== 1 ? "s" : ""}) - ₦
           {subtotal.toLocaleString()}
         </span>
         <ChevronDown
@@ -514,7 +514,7 @@ function StoreCheckoutModal({
               {deliveryZones.length === 0 ? (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
                   <p>
-                    This seller hasn&apos;t set up delivery zones yet — contact
+                    This seller hasn&apos;t set up delivery zones yet - contact
                     them on WhatsApp to arrange delivery.
                   </p>
                   {store.showWhatsApp !== false && (
@@ -652,7 +652,7 @@ function StoreCheckoutModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Delivery fee</span>
-                  <span>{deliveryFee > 0 ? `₦${deliveryFee.toLocaleString()}` : '—'}</span>
+                  <span>{deliveryFee > 0 ? `₦${deliveryFee.toLocaleString()}` : '-'}</span>
                 </div>
                 {appliedDiscount && (
                   <div className="flex justify-between text-green-600">
@@ -1268,7 +1268,7 @@ export default function StorePage() {
       return;
     }
 
-    // sessionStorage snapshot is gone — happens whenever the Paystack redirect
+    // sessionStorage snapshot is gone - happens whenever the Paystack redirect
     // lands in a different browsing context than the one that left (common in
     // WhatsApp/Instagram in-app browsers). Fall back to a server-verified
     // lookup by reference so the customer still gets their receipt, retrying
@@ -1292,7 +1292,7 @@ export default function StorePage() {
           return;
         }
       } catch {
-        // network hiccup — fall through to retry
+        // network hiccup - fall through to retry
       }
       if (cancelled) return;
       if (attempt < 5) {
@@ -1473,7 +1473,7 @@ export default function StorePage() {
     >
       <SEO
         title={store.storeName || store.name}
-        description={store.description || `${store.storeName || store.name} — products, services, and more on Sellapage.`}
+        description={store.description || `${store.storeName || store.name} - products, services, and more on Sellapage.`}
         url={`/${store.slug || store.storeName}`}
         image={store.logo || store.coverImage}
         jsonLd={store.id ? {

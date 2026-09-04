@@ -53,7 +53,7 @@ export default function GoogleAdsConnect({ store, onError, onSuccess }) {
               {[
                 { icon: Target, text: 'Create campaigns on your own Google Ads account' },
                 { icon: BarChart3, text: 'Full control over budget and targeting' },
-                { icon: Wallet, text: 'Pay Google directly — no commission' },
+                { icon: Wallet, text: 'Pay Google directly - no commission' },
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <item.icon size={12} className="text-gray-400 mt-0.5 shrink-0" />

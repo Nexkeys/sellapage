@@ -52,7 +52,7 @@ const PLAN_WELCOME = {
     label: "Growth",
     features: [
       "Analytics & click tracking (store views, top clicks)",
-      "AI product descriptions — 20 per day",
+      "AI product descriptions - 20 per day",
       "Custom colours, fonts, and logo",
       "Up to 50 listings + structured multi-item cart",
       "Stock count management & categories",
@@ -253,7 +253,7 @@ export default function Dashboard() {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [bookingsSynced, setBookingsSynced] = useState(false);
 
-  // Analytics — lifted here so Overview and AnalyticsTab share the same data
+  // Analytics - lifted here so Overview and AnalyticsTab share the same data
   const [analyticsData, setAnalyticsData] = useState({
     totalViews: 0,
     totalClicks: 0,
@@ -327,7 +327,7 @@ export default function Dashboard() {
   }, [activeTab, isGrowthOrPro]);
 
   useEffect(() => {
-    // Orders/bookings back all four of these tabs — not just their own —
+    // Orders/bookings back all four of these tabs - not just their own -
     // so each one must be able to trigger the fetch itself, not rely on the
     // vendor having already visited Orders/Bookings first in this session.
     if (
@@ -359,7 +359,7 @@ export default function Dashboard() {
     setBookings([]);
   }, [store?.id]);
 
-  // Analytics — real-time listener for the owner; staff get a one-time fetch
+  // Analytics - real-time listener for the owner; staff get a one-time fetch
   // through the server proxy since their uid can't pass the analytics
   // collection's `request.auth.uid == storeId` read rule.
   useEffect(() => {
@@ -463,7 +463,7 @@ export default function Dashboard() {
             planFields.planStatus = data.planStatus ?? "active";
             planFields.productCount = data.productCount ?? 0;
 
-            // Derived in memory only — no longer written back. Plan/entitlement
+            // Derived in memory only - no longer written back. Plan/entitlement
             // fields are locked in firestore.rules (a client that could write
             // them could self-upgrade to premium), and these values are purely
             // a function of `plan`, so recomputing them per session is
@@ -657,7 +657,7 @@ export default function Dashboard() {
     const deletedIndex = orders.findIndex((order) => order.id === orderId);
     if (!deletedOrder) return;
     if (deletedOrder.status === "delivered") {
-      throw new Error("This order is delivered and locked — it can no longer be deleted.");
+      throw new Error("This order is delivered and locked - it can no longer be deleted.");
     }
 
     setOrders((prev) => prev.filter((order) => order.id !== orderId));
@@ -740,7 +740,7 @@ export default function Dashboard() {
     const deletedIndex = bookings.findIndex((booking) => booking.id === bookingId);
     if (!deletedBooking) return;
     if (deletedBooking.status === "completed") {
-      throw new Error("This booking is completed and locked — it can no longer be deleted.");
+      throw new Error("This booking is completed and locked - it can no longer be deleted.");
     }
 
     setBookings((prev) => prev.filter((booking) => booking.id !== bookingId));
@@ -1501,7 +1501,7 @@ export default function Dashboard() {
 
   // Runs only after the emailed code has been verified. The server independently
   // re-checks and burns that verification inside /api/delete-account, so this
-  // ordering is for UX — it is not what makes the guard hold.
+  // ordering is for UX - it is not what makes the guard hold.
   const performAccountDeletion = async () => {
     setDeleteLoading(true);
     try {
@@ -1536,7 +1536,7 @@ export default function Dashboard() {
       const credential = EmailAuthProvider.credential(user.email, password);
       await reauthenticateWithCredential(user, credential);
 
-      // Password proven — now require the emailed code before anything is
+      // Password proven - now require the emailed code before anything is
       // destroyed. Deletion itself is deferred until the code is verified,
       // so a failed/abandoned check leaves the account fully intact.
       setDeleteLoading(false);
@@ -1622,7 +1622,7 @@ export default function Dashboard() {
             JSON.stringify({ plan: selectedPlan }),
           );
         }
-      } catch { /* sessionStorage unavailable — welcome modal simply won't show */ }
+      } catch { /* sessionStorage unavailable - welcome modal simply won't show */ }
       window.location.href = data.authorization_url;
     } catch (err) {
       console.error("Billing initialize failed", err);
@@ -2122,7 +2122,7 @@ export default function Dashboard() {
               <Wallet size={24} className="text-green-500" />
             </div>
             <h2 className="font-extrabold text-gray-900 text-lg mb-2">
-              Payouts — Pro Feature
+              Payouts - Pro Feature
             </h2>
             <p className="text-gray-400 text-sm leading-relaxed max-w-sm mx-auto mb-5">
               Connect your bank account and receive automatic settlements from

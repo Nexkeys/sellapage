@@ -1,12 +1,12 @@
 // src/api-handlers/staff-identity.js
 // Called once after login when the client's direct `stores/{uid}` read comes
-// back empty — resolves whether this uid is an active staff member of some
+// back empty - resolves whether this uid is an active staff member of some
 // store, and if so returns the linked store id + role's tab grants so the
 // dashboard can gate its nav without a second round-trip. Routed through a
 // server handler (not a direct client Firestore query) deliberately: there is
 // no Firestore rule permitting a client to query `staffMemberships` by uid,
 // and that rule can't be added/verified from this repo (see
-// Docs/Staff-Team-Accounts-Plan.md's second key finding) — firebase-admin
+// Docs/Staff-Team-Accounts-Plan.md's second key finding) - firebase-admin
 // here bypasses rules entirely, so no rule change is needed at all.
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, isStaff: false })
     }
     if (storeSnap.data().plan !== 'premium') {
-      // Downgrade lock — lazy-enforced, matches this codebase's existing style.
+      // Downgrade lock - lazy-enforced, matches this codebase's existing style.
       return res.status(200).json({ success: true, isStaff: false, lockedReason: 'store_downgraded' })
     }
 

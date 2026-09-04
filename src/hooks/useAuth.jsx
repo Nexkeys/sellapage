@@ -18,11 +18,11 @@ export function AuthProvider({ children }) {
         try {
           const ownStore = await getSellerStore(firebaseUser.uid)
           if (ownStore) {
-            // Owner — never route reads through the staff proxy.
+            // Owner - never route reads through the staff proxy.
             clearActiveStaffStore()
             setStore(ownStore)
           } else {
-            // Not an owner — check if this uid is an active staff member of
+            // Not an owner - check if this uid is an active staff member of
             // some store. Routed through a server handler (firebase-admin,
             // bypasses rules) rather than a direct client query, since no
             // Firestore rule permits querying staffMemberships by uid and
@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
             const idRes = await fetch('/api/staff-identity', { headers: { Authorization: `Bearer ${token}` } })
             const idData = await idRes.json().catch(() => ({}))
             if (idData.isStaff) {
-              // Confirmed staff membership — only now may reads for THIS store
+              // Confirmed staff membership - only now may reads for THIS store
               // go through the server proxy. Public storefronts for any other
               // store still use the direct (publicly readable) Firestore path.
               setActiveStaffStore(idData.storeId)
@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
               } : null)
             } else {
               // Signed in but neither an owner nor staff (e.g. a customer
-              // browsing storefronts) — must use the direct public read path.
+              // browsing storefronts) - must use the direct public read path.
               clearActiveStaffStore()
               setStore(null)
             }

@@ -3,17 +3,17 @@
 //
 // WHY TWO TIERS
 // Spark allows 50,000 reads and 20,000 writes per day, and with no Blaze/PAYG
-// billing attached, exceeding those does not cost money — it stops the database
+// billing attached, exceeding those does not cost money - it stops the database
 // until midnight Pacific. A limiter that writes a Firestore document on every
 // request would therefore consume the very quota it exists to protect, and
 // under a flood it would *accelerate* the outage it is meant to prevent.
 //
-//   Tier 1 (memoryRateLimit) — per-instance in-memory counter. Costs nothing.
+//   Tier 1 (memoryRateLimit) - per-instance in-memory counter. Costs nothing.
 //     Imperfect: Vercel runs several concurrent instances and cold starts reset
 //     the map, so it under-counts. That's an acceptable trade: it absorbs the
 //     bulk of naive floods for free, which is what matters on a free tier.
 //
-//   Tier 2 (durableRateLimit) — Firestore-backed, accurate across instances.
+//   Tier 2 (durableRateLimit) - Firestore-backed, accurate across instances.
 //     Costs 1 read + 1 write per call, so it is reserved for endpoints where a
 //     bypass is genuinely expensive (paid third-party APIs, money movement,
 //     credential brute force).
@@ -37,7 +37,7 @@ export function clientKey(req) {
 const buckets = new Map()
 
 /**
- * Tier 1 — free, in-memory, per warm instance.
+ * Tier 1 - free, in-memory, per warm instance.
  * @returns {boolean} true if the call is allowed
  */
 export function memoryRateLimit(bucket, key, max, windowMs) {
@@ -60,7 +60,7 @@ export function memoryRateLimit(bucket, key, max, windowMs) {
 }
 
 /**
- * Tier 2 — durable and accurate across instances. Costs 1 read + 1 write.
+ * Tier 2 - durable and accurate across instances. Costs 1 read + 1 write.
  * Use sparingly; see the note at the top of this file.
  * @returns {Promise<boolean>} true if the call is allowed
  */

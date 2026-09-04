@@ -1,6 +1,6 @@
 //src/components/BlogCommentSection.jsx/
 // Public comment section for a blog post. Mobile-first, paginated (10/page).
-// Renders nothing at all — no header, no count, no form — when comments are
+// Renders nothing at all - no header, no count, no form - when comments are
 // disabled for the post, per spec.
 import { useState, useEffect, useCallback } from 'react'
 import { MessageSquare, Loader2, AlertCircle, Send } from 'lucide-react'

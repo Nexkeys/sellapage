@@ -30,7 +30,7 @@ export default function OverviewTab({
 
   let engagementRateNum = totalViews > 0 ? (engagedViews / totalViews) * 100 : 0;
   if (engagementRateNum > 100) engagementRateNum = 100;
-  const engagementRate = totalViews > 0 ? `${engagementRateNum.toFixed(0)}%` : '—';
+  const engagementRate = totalViews > 0 ? `${engagementRateNum.toFixed(0)}%` : '-';
 
   const PLAN_LABEL = {
     starter: { text: 'Free Plan',    cls: 'bg-gray-100 text-gray-600' },
@@ -88,7 +88,7 @@ export default function OverviewTab({
         </div>
 
 
-        {/* Store Views — Growth/Pro only */}
+        {/* Store Views - Growth/Pro only */}
         <div className="bg-white rounded-2xl border border-gray-100 p-4 relative overflow-hidden transition-all">
           {!isGrowthOrPro && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 z-10">
@@ -100,14 +100,14 @@ export default function OverviewTab({
             <Eye size={14} className="text-blue-600" />
           </div>
           <p className="text-2xl font-bold text-gray-900 mt-0.5">
-            {isGrowthOrPro ? totalViews.toLocaleString() : '—'}
+            {isGrowthOrPro ? totalViews.toLocaleString() : '-'}
           </p>
           <p className="text-gray-400 text-[11px] mt-0.5">Store Views</p>
           <p className="text-[10px] text-gray-400 mt-1.5">all time</p>
         </div>
 
 
-        {/* Conversion — Pro only */}
+        {/* Conversion - Pro only */}
         <div className="bg-white rounded-2xl border border-gray-100 p-4 relative overflow-hidden transition-all">
           {!isPro && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 z-10">
@@ -121,7 +121,7 @@ export default function OverviewTab({
           <p className="text-2xl font-bold text-gray-900 mt-0.5">
             {isPro && totalViews > 0
               ? `${((engagedViews / totalViews) * 100).toFixed(1)}%`
-              : '—'}
+              : '-'}
           </p>
           <p className="text-gray-400 text-[11px] mt-0.5">Engagement Rate</p>
           <p className="text-[10px] text-gray-400 mt-1.5">of visitors who interacted</p>
@@ -183,7 +183,7 @@ export default function OverviewTab({
       </div>
 
 
-      {/* Top Performing — Pro only */}
+      {/* Top Performing - Pro only */}
       {isPro && (
         <div className="space-y-4">
           {(vendorType === 'products' || vendorType === 'both') && (
@@ -214,7 +214,7 @@ export default function OverviewTab({
                   ))}
                 {products.filter(p => (p.clicks || 0) > 0).length === 0 && (
                   <div className="px-4 py-8 text-center text-gray-400 text-xs">
-                    No clicks yet — share your store link to get started.
+                    No clicks yet - share your store link to get started.
                   </div>
                 )}
               </div>
@@ -249,7 +249,7 @@ export default function OverviewTab({
                   ))}
                 {services.filter(s => (s.bookingRequests || 0) > 0).length === 0 && (
                   <div className="px-4 py-8 text-center text-gray-400 text-xs">
-                    No booking requests yet — promote your services to get bookings.
+                    No booking requests yet - promote your services to get bookings.
                   </div>
                 )}
               </div>

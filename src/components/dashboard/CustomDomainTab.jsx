@@ -194,7 +194,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
             </button>
           </div>
 
-          {/* DNS Instructions — only show when not active and DNS info is available */}
+          {/* DNS Instructions - only show when not active and DNS info is available */}
           {domainStatus !== 'active' && dnsType && (
             <div className="space-y-3">
               <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-3">
@@ -297,7 +297,7 @@ export default function CustomDomainTab({ store, user, isPro, navigateTo }) {
             </div>
           )}
 
-          {/* Active domain — visit link */}
+          {/* Active domain - visit link */}
           {domainStatus === 'active' && (
             <div className="flex items-center gap-2">
               <a

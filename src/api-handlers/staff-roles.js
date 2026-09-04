@@ -1,5 +1,5 @@
 // src/api-handlers/staff-roles.js
-// Owner-only role management (Role Builder). Staff members never call this —
+// Owner-only role management (Role Builder). Staff members never call this -
 // role/staff administration stays owner-only regardless of any role's tab grants.
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { OWNER_ONLY_TABS, PRESET_ROLES, MAX_STAFF_ROLES } from '../utils/staffRoles.js'
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
       const { roleId } = body
       if (!roleId) return res.status(400).json({ error: 'roleId is required' })
 
-      // Single-field query (storeId only) filtered in memory for roleId+active —
+      // Single-field query (storeId only) filtered in memory for roleId+active -
       // avoids requiring a composite index; a store's staff count is capped
       // small (MAX_ACTIVE_STAFF) so this stays cheap.
       const inUse = await db.collection('staffMemberships')
@@ -101,7 +101,7 @@ export default async function handler(req, res) {
         .get()
       const activeCount = inUse.docs.filter((d) => d.data().active === true && d.data().roleId === roleId).length
       if (activeCount > 0) {
-        return res.status(400).json({ error: `${activeCount} active staff member${activeCount === 1 ? ' is' : 's are'} on this role — reassign or remove them first.` })
+        return res.status(400).json({ error: `${activeCount} active staff member${activeCount === 1 ? ' is' : 's are'} on this role - reassign or remove them first.` })
       }
 
       await rolesRef.doc(roleId).delete()

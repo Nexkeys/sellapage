@@ -5,7 +5,7 @@
 // Admin endpoints used to authenticate on a single static shared secret sent as
 // `x-admin-token`, read client-side from `import.meta.env.VITE_ADMIN_SECRET_TOKEN`.
 // Vite inlines every VITE_-prefixed variable into the production bundle, so that
-// secret shipped to every visitor's browser — anyone could read it from DevTools
+// secret shipped to every visitor's browser - anyone could read it from DevTools
 // and call admin-manage?action=create-user to mint themselves a super_admin.
 // It also meant admin sub-roles were enforced only in the UI (any admin could
 // call any endpoint) and that audit fields like `approvedBy` were self-asserted
@@ -15,7 +15,7 @@
 // document, and a role that actually grants the tab being used.
 import { getAdminAuth, getAdminDb } from './firebase-admin.js'
 
-// Mirrors TAB_ACCESS in src/utils/adminRoles.js. Keep the two in sync — the
+// Mirrors TAB_ACCESS in src/utils/adminRoles.js. Keep the two in sync - the
 // client copy decides which tabs render, this copy decides what is permitted.
 // If they drift, the client one is cosmetic and this one wins.
 const TAB_ACCESS = {
@@ -24,7 +24,7 @@ const TAB_ACCESS = {
   referrals:      ['super_admin', 'finance'],
   withdrawals:    ['super_admin', 'finance'],
   admins:         ['super_admin'],
-  // Approving a recovery request can reset an account's email AND password —
+  // Approving a recovery request can reset an account's email AND password -
   // account-takeover capability, so super_admin only, never support.
   recovery:       ['super_admin'],
   cac:            ['super_admin', 'operations'],
@@ -42,7 +42,7 @@ const TAB_ACCESS = {
 }
 
 /**
- * MIGRATION SHIM — remove once the admin frontend ships Bearer tokens.
+ * MIGRATION SHIM - remove once the admin frontend ships Bearer tokens.
  *
  * While true, a valid legacy `x-admin-token` is still accepted so the server can
  * be deployed before the client without locking admins out. It grants
@@ -57,8 +57,8 @@ const TAB_ACCESS = {
 const ALLOW_LEGACY_ADMIN_TOKEN = false
 
 /**
- * Verifies the caller is an active platform admin, and — when `requiredTab` is
- * given — that their role grants that tab.
+ * Verifies the caller is an active platform admin, and - when `requiredTab` is
+ * given - that their role grants that tab.
  *
  * @param {import('http').IncomingMessage} req
  * @param {string|null} requiredTab  tab id from TAB_ACCESS, or null for any admin
@@ -92,7 +92,7 @@ export async function verifyAdmin(req, requiredTab = null) {
     const legacyToken = req.headers['x-admin-token']
     const expected = process.env.ADMIN_SECRET_TOKEN
     if (expected && legacyToken && safeEqual(String(legacyToken), expected)) {
-      console.warn('[verify-admin] legacy x-admin-token accepted — migrate this caller to a Bearer ID token')
+      console.warn('[verify-admin] legacy x-admin-token accepted - migrate this caller to a Bearer ID token')
       return { uid: 'legacy-token', role: 'super_admin', legacy: true }
     }
   }

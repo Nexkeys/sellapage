@@ -2,12 +2,12 @@
 // VISIBLE reCAPTCHA v2 "I'm not a robot" checkbox.
 //
 // This is the tick-box Nex asked for. An earlier pass used reCAPTCHA v3, which
-// is invisible by design and therefore showed nothing on the page — that was
+// is invisible by design and therefore showed nothing on the page - that was
 // the wrong choice for the requirement.
 //
 // ⚠️ KEY TYPE MATTERS: v2 keys and v3 keys are NOT interchangeable. This widget
 // needs a key created as "reCAPTCHA v2 → I'm not a robot Checkbox". If the
-// configured key is v3, the widget cannot render — onUnavailable() fires and
+// configured key is v3, the widget cannot render - onUnavailable() fires and
 // the form stays usable rather than trapping real vendors behind a box that
 // will never appear.
 import { useEffect, useRef, useState } from 'react'
@@ -33,7 +33,7 @@ function loadScript() {
 
 /**
  * @param {(token: string|null) => void} onChange fires with the token, or null
- *        when it expires — the parent should clear its stored token on null.
+ *        when it expires - the parent should clear its stored token on null.
  * @param {() => void} [onUnavailable] fires when the widget cannot render, so
  *        the parent can stop requiring it.
  */
@@ -52,7 +52,7 @@ export default function RecaptchaCheckbox({ siteKey, onChange, onUnavailable }) 
       if (!loaded || !window.grecaptcha?.render || !containerRef.current) {
         setFailed(true); onUnavailable?.(); return
       }
-      // Already rendered (StrictMode double-invoke in dev) — don't duplicate.
+      // Already rendered (StrictMode double-invoke in dev) - don't duplicate.
       if (widgetIdRef.current !== null) return
 
       try {

@@ -31,14 +31,14 @@ const ADMIN_TABS = [
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
 
-// Grouping used only by the mobile nav drawer — purely presentational, does not affect
+// Grouping used only by the mobile nav drawer - purely presentational, does not affect
 // ADMIN_TABS, role filtering (canAccessTab), or any tab's content/logic.
 const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
   { label: 'Engagement', ids: ['announcements', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews'] },
-  // 'recovery' belongs here — omitting it hid the tab entirely on mobile while
+  // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
   // the mobile drawer iterates these groups. Any new tab must be added here too.
   { label: 'Team', ids: ['admins', 'recovery'] },
@@ -53,7 +53,7 @@ export default function Admin() {
   const [roleLoading, setRoleLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('health');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Admin endpoints authenticate the *person* now — a Firebase ID token plus an
+  // Admin endpoints authenticate the *person* now - a Firebase ID token plus an
   // active admins/{uid} document, checked server-side by _lib/verify-admin.js.
   // This replaces VITE_ADMIN_SECRET_TOKEN, which Vite inlined into the public
   // JS bundle, handing every visitor the platform's master admin credential.
@@ -200,7 +200,7 @@ export default function Admin() {
       decision === 'approve'
         ? 'Approving emails a 30-minute, single-use recovery link to the requester and lets them reset the account email AND password. Confirm you have verified their identity out-of-band. Add a note for the audit log:'
         : decision === 'unlock'
-          ? 'This only clears the failed-login lock — it does NOT change their email or password, so they must still know it. Use this when someone locked themselves out and then remembered. Add a note for the audit log:'
+          ? 'This only clears the failed-login lock - it does NOT change their email or password, so they must still know it. Use this when someone locked themselves out and then remembered. Add a note for the audit log:'
           : 'Reason for rejecting (recorded in the audit log):',
     );
     if (note === null) return;
@@ -369,7 +369,7 @@ export default function Admin() {
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true); setAnalyticsError('');
     // Each call is diagnosed individually and labeled, rather than a single
-    // generic "Failed." for all three — that's what was hiding the real
+    // generic "Failed." for all three - that's what was hiding the real
     // cause: a non-JSON response (routing miss, 403, etc.) from any one of
     // these throws inside .json() with no indication of which endpoint or why.
     const load = async (label, url) => {
@@ -377,16 +377,16 @@ export default function Admin() {
       try {
         res = await fetch(url, { headers: await H() });
       } catch (err) {
-        throw new Error(`${label}: network error — ${err.message}`);
+        throw new Error(`${label}: network error - ${err.message}`);
       }
       const bodyText = await res.text();
       if (!res.ok) {
-        throw new Error(`${label}: HTTP ${res.status} — ${bodyText.slice(0, 200)}`);
+        throw new Error(`${label}: HTTP ${res.status} - ${bodyText.slice(0, 200)}`);
       }
       try {
         return JSON.parse(bodyText);
       } catch {
-        throw new Error(`${label}: non-JSON response (status ${res.status}) — ${bodyText.slice(0, 200)}`);
+        throw new Error(`${label}: non-JSON response (status ${res.status}) - ${bodyText.slice(0, 200)}`);
       }
     };
     try {
@@ -559,7 +559,7 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* ACCOUNT RECOVERY — super_admin only. Approving grants account-takeover
+        {/* ACCOUNT RECOVERY - super_admin only. Approving grants account-takeover
             capability, so identity must be verified out-of-band first. */}
         {activeTab === 'recovery' && <div className="space-y-4 animate-in fade-in duration-200">
           {recError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{recError}</div>}
@@ -598,16 +598,16 @@ export default function Admin() {
                             typo can be identified and the vendor contacted. */}
                         {r.status === 'no_match' && (
                           <p className="mt-1.5 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-relaxed">
-                            <strong>No store matched.</strong> They typed: <span className="font-mono break-all">{r.submittedIdentifier || '—'}</span>
-                            <br />Likely a typo — contact them on the email/phone below and confirm their store handle.
+                            <strong>No store matched.</strong> They typed: <span className="font-mono break-all">{r.submittedIdentifier || '-'}</span>
+                            <br />Likely a typo - contact them on the email/phone below and confirm their store handle.
                           </p>
                         )}
                         <div className="mt-1.5 space-y-0.5 text-[11px] text-gray-600">
-                          {r.status !== 'no_match' && <p><span className="text-gray-400">Account email:</span> <span className="font-mono">{r.currentEmailMasked || '—'}</span></p>}
+                          {r.status !== 'no_match' && <p><span className="text-gray-400">Account email:</span> <span className="font-mono">{r.currentEmailMasked || '-'}</span></p>}
                           <p><span className="text-gray-400">Reach them at:</span> <span className="font-semibold text-gray-900">{r.contactEmail}</span></p>
                           {r.contactPhone && <p className="flex items-center gap-1.5"><span className="text-gray-400">Phone:</span> <span className="font-semibold">{r.contactPhone}</span>
                             <a href={`https://wa.me/${String(r.contactPhone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline inline-flex items-center gap-0.5"><ExternalLink size={9} /> WhatsApp</a></p>}
-                          <p className="text-[10px] text-gray-400">Store /{r.storeName} · from IP {r.requestIp || '—'} · {r.createdAtMs ? new Date(r.createdAtMs).toLocaleString('en-NG') : '—'}</p>
+                          <p className="text-[10px] text-gray-400">Store /{r.storeName} · from IP {r.requestIp || '-'} · {r.createdAtMs ? new Date(r.createdAtMs).toLocaleString('en-NG') : '-'}</p>
                         </div>
                         {r.reason && <p className="mt-2 text-xs text-gray-700 bg-gray-50 border border-gray-100 rounded-lg p-2 leading-relaxed whitespace-pre-wrap">{r.reason}</p>}
                         {r.adminNote && <p className="mt-1.5 text-[11px] text-gray-500 italic">Note: {r.adminNote}</p>}
@@ -630,7 +630,7 @@ export default function Admin() {
                                 className="text-[10px] font-bold bg-red-100 text-red-700 px-2.5 py-1 rounded-lg disabled:opacity-50">Reject</button>
                             </div>
                             {/* Lighter option for "locked out but remembers the
-                                password" — no email/password reset needed. */}
+                                password" - no email/password reset needed. */}
                             <button onClick={() => decideRecovery(r.id, 'unlock')} disabled={recBusyId === r.id}
                               className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg disabled:opacity-50 whitespace-nowrap">
                               Just unlock
@@ -650,7 +650,7 @@ export default function Admin() {
         {activeTab === 'health' && <div className="space-y-4 animate-in fade-in duration-200">
           {healthError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{healthError}</div>}
 
-          {/* Termii SMS — wallet + sender ID. An empty wallet or a missing
+          {/* Termii SMS - wallet + sender ID. An empty wallet or a missing
               sender ID makes phone verification fail for every vendor with no
               obvious cause, so both are surfaced explicitly rather than left
               to be discovered from failed sends. */}
@@ -659,7 +659,7 @@ export default function Admin() {
               <div className="min-w-0">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Termii SMS</p>
                 {!termii.success ? (
-                  <p className="text-sm font-bold text-red-600 mt-1">Unreachable — {termii.error || 'error'}</p>
+                  <p className="text-sm font-bold text-red-600 mt-1">Unreachable - {termii.error || 'error'}</p>
                 ) : !termii.configured ? (
                   <p className="text-sm font-bold text-gray-500 mt-1">Not configured on this environment</p>
                 ) : (
@@ -675,15 +675,15 @@ export default function Admin() {
                 <div className="text-right flex-shrink-0">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Sender IDs</p>
                   <p className={`text-lg font-black ${termii.senderIds?.totalElements ? 'text-green-600' : 'text-amber-600'}`}>
-                    {termii.senderIds?.totalElements ?? '—'}
+                    {termii.senderIds?.totalElements ?? '-'}
                   </p>
                 </div>
               )}
             </div>
             {termii.success && termii.configured && termii.senderIdValid === false && (
               <p className="mt-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg p-2.5 leading-relaxed">
-                <strong>TERMII_SENDER_ID is not a valid sender ID{termii.senderIdIssue === 'looks_like_uuid' ? ' — it looks like the application reference (a UUID), not the sender name' : ''}.</strong>{' '}
-                Termii expects the short alphanumeric name that appears as the SMS sender (max 11 chars, e.g. <code>Sellapage</code>). Sends will be rejected until this is corrected{termii.senderIdValue ? <> — currently <code>{String(termii.senderIdValue).slice(0, 40)}</code></> : null}.
+                <strong>TERMII_SENDER_ID is not a valid sender ID{termii.senderIdIssue === 'looks_like_uuid' ? ' - it looks like the application reference (a UUID), not the sender name' : ''}.</strong>{' '}
+                Termii expects the short alphanumeric name that appears as the SMS sender (max 11 chars, e.g. <code>Sellapage</code>). Sends will be rejected until this is corrected{termii.senderIdValue ? <> - currently <code>{String(termii.senderIdValue).slice(0, 40)}</code></> : null}.
               </p>
             )}
             {termii.success && termii.configured && termii.senderIdApprovedCount === 0 && (
@@ -693,7 +693,7 @@ export default function Admin() {
             )}
             {termii.lowBalance && (
               <p className="mt-2 text-xs text-amber-800 leading-relaxed">
-                Balance is below {termii.currency || 'NGN'} {Number(termii.lowBalanceThreshold || 0).toLocaleString()} — top up before enabling phone verification.
+                Balance is below {termii.currency || 'NGN'} {Number(termii.lowBalanceThreshold || 0).toLocaleString()} - top up before enabling phone verification.
               </p>
             )}
           </div>}
@@ -712,7 +712,7 @@ export default function Admin() {
               { l: 'Paying', v: (healthData?.platform?.growthStores||0)+(healthData?.platform?.proStores||0)+(healthData?.platform?.premiumStores||0), i: <Users size={12} /> },
               { l: 'Premium', v: healthData?.platform?.premiumStores||0, i: <Star size={12} /> },
               { l: 'Products', v: healthData?.platform?.totalProducts, i: <Package size={12} /> },
-            ].map((s,i) => <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><div className="flex items-center justify-between text-gray-400 mb-1"><span className="text-[9px] font-bold uppercase tracking-wider">{s.l}</span>{s.i}</div><p className="text-xl font-black text-green-600">{s.v?.toLocaleString()??'—'}</p></div>)}
+            ].map((s,i) => <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><div className="flex items-center justify-between text-gray-400 mb-1"><span className="text-[9px] font-bold uppercase tracking-wider">{s.l}</span>{s.i}</div><p className="text-xl font-black text-green-600">{s.v?.toLocaleString()??'-'}</p></div>)}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4">
@@ -725,8 +725,8 @@ export default function Admin() {
             <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4">
               <h3 className="text-[10px] font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5 mb-3"><Globe size={12} className="text-gray-400" /> Vercel</h3>
               {healthData?.vercel ? <div className="space-y-2">
-                {['status','region','environment'].map(k=><div key={k} className="flex justify-between text-[11px]"><span className="font-bold text-gray-700 capitalize">{k}</span><span className={`font-mono ${k==='status'?'text-green-600 font-bold':'text-gray-500'}`}>{healthData.vercel[k]||'—'}</span></div>)}
-                {healthData.vercel.recentDeployments?.length>0 && <div className="mt-2 pt-2 border-t border-gray-50 space-y-1.5"><p className="text-[9px] font-bold text-gray-400 uppercase">Recent</p>{healthData.vercel.recentDeployments.slice(0,3).map((d,i)=><div key={i} className="flex items-center gap-1.5 text-[10px]"><CircleDot size={8} className={d.state==='READY'?'text-green-500':'text-amber-500'} /><span className="text-gray-700 truncate flex-1">{d.commitMessage||'—'}</span><span className="text-gray-400">{d.branch}</span></div>)}</div>}
+                {['status','region','environment'].map(k=><div key={k} className="flex justify-between text-[11px]"><span className="font-bold text-gray-700 capitalize">{k}</span><span className={`font-mono ${k==='status'?'text-green-600 font-bold':'text-gray-500'}`}>{healthData.vercel[k]||'-'}</span></div>)}
+                {healthData.vercel.recentDeployments?.length>0 && <div className="mt-2 pt-2 border-t border-gray-50 space-y-1.5"><p className="text-[9px] font-bold text-gray-400 uppercase">Recent</p>{healthData.vercel.recentDeployments.slice(0,3).map((d,i)=><div key={i} className="flex items-center gap-1.5 text-[10px]"><CircleDot size={8} className={d.state==='READY'?'text-green-500':'text-amber-500'} /><span className="text-gray-700 truncate flex-1">{d.commitMessage||'-'}</span><span className="text-gray-400">{d.branch}</span></div>)}</div>}
               </div> : <p className="text-xs text-gray-300 italic">Unavailable</p>}
             </div>
           </div>
@@ -739,14 +739,14 @@ export default function Admin() {
           <div className="flex gap-1.5 overflow-x-auto pb-1">{['all','unverified'].map(f=><button key={f} onClick={()=>{setPayoutFilter(f);setPage(1);fetchDirectory(1,search);}} className={`text-[11px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap ${payoutFilter===f?'bg-gray-900 text-white':'bg-gray-100 text-gray-600'}`}>{f==='all'?'All':'Unverified Payouts'}</button>)}</div>
           <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
             <div className="hidden lg:block overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="bg-gray-50/80 border-b border-gray-100 text-[9px] font-black uppercase text-gray-400 tracking-wider"><th className="px-4 py-3">Merchant</th><th className="px-4 py-3">Plan</th><th className="px-4 py-3">Source</th><th className="px-4 py-3">Dates</th></tr></thead><tbody className="divide-y divide-gray-50">
-              {(dirData?.stores||[]).map(s=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-3"><p className="font-bold text-gray-900">{s.storeName||'Unnamed'}</p><p className="text-[10px] text-gray-400 font-mono">@{s.handle}</p><div className="flex items-center gap-1 mt-1 text-[10px] text-gray-500"><span className="text-gray-400 font-bold w-4">W</span><span className="truncate max-w-[120px]">{s.whatsappNumber||'—'}</span></div>{s.subaccountCode&&<div className="mt-1.5 pt-1.5 border-t border-gray-100 text-[10px]"><span className="text-gray-400 font-bold">Payout:</span> {s.payoutsVerified?<span className="text-green-600 font-bold">Verified</span>:<span className="text-amber-600 font-bold">Pending</span>}{!s.payoutsVerified&&s.subaccountCode&&<button onClick={()=>tpv(s.id,true)} disabled={approvingId===s.id} className="ml-2 text-[9px] bg-green-600 text-white px-2 py-0.5 rounded-lg">{approvingId===s.id?'...':'Approve'}</button>}</div>}</td>
+              {(dirData?.stores||[]).map(s=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-3"><p className="font-bold text-gray-900">{s.storeName||'Unnamed'}</p><p className="text-[10px] text-gray-400 font-mono">@{s.handle}</p><div className="flex items-center gap-1 mt-1 text-[10px] text-gray-500"><span className="text-gray-400 font-bold w-4">W</span><span className="truncate max-w-[120px]">{s.whatsappNumber||'-'}</span></div>{s.subaccountCode&&<div className="mt-1.5 pt-1.5 border-t border-gray-100 text-[10px]"><span className="text-gray-400 font-bold">Payout:</span> {s.payoutsVerified?<span className="text-green-600 font-bold">Verified</span>:<span className="text-amber-600 font-bold">Pending</span>}{!s.payoutsVerified&&s.subaccountCode&&<button onClick={()=>tpv(s.id,true)} disabled={approvingId===s.id} className="ml-2 text-[9px] bg-green-600 text-white px-2 py-0.5 rounded-lg">{approvingId===s.id?'...':'Approve'}</button>}</div>}</td>
               <td className="px-4 py-3 align-top"><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span>{s.isPlanExpired&&<span className="text-[8px] font-bold text-red-600 ml-1">Expired</span>}</td>
-              <td className="px-4 py-3 align-top">{!s.referredBy?<span className="text-[10px] text-gray-400 italic">Not Referred</span>:<span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">{s.referredByReferralCode||s.referredByStoreName?`${s.referredByReferralCode||'—'} · ${s.referredByStoreName||'Unknown'}`:s.referredBy}</span>}</td>
-              <td className="px-4 py-3 align-top text-[10px] text-gray-500"><p>Start: {s.planStartDate?new Date(s.planStartDate).toLocaleDateString('en-NG'):'—'}</p><p className={s.isPlanExpired?'text-red-500 font-bold':''}>End: {s.planEndDate?new Date(s.planEndDate).toLocaleDateString('en-NG'):'Lifetime'}</p></td>
+              <td className="px-4 py-3 align-top">{!s.referredBy?<span className="text-[10px] text-gray-400 italic">Not Referred</span>:<span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">{s.referredByReferralCode||s.referredByStoreName?`${s.referredByReferralCode||'-'} · ${s.referredByStoreName||'Unknown'}`:s.referredBy}</span>}</td>
+              <td className="px-4 py-3 align-top text-[10px] text-gray-500"><p>Start: {s.planStartDate?new Date(s.planStartDate).toLocaleDateString('en-NG'):'-'}</p><p className={s.isPlanExpired?'text-red-500 font-bold':''}>End: {s.planEndDate?new Date(s.planEndDate).toLocaleDateString('en-NG'):'Lifetime'}</p></td>
               </tr>)}
               {!dirLoading&&(dirData?.stores||[]).length===0&&<tr><td colSpan="4" className="p-8 text-center text-gray-400 text-sm">No merchants found.</td></tr>}
             </tbody></table></div>
-            <div className="block lg:hidden divide-y divide-gray-100">{(dirData?.stores||[]).map(s=><div key={s.id} className="p-3 space-y-2"><div className="flex justify-between items-start"><div className="min-w-0 flex-1"><p className="font-bold text-gray-900 text-sm truncate">{s.storeName||'Unnamed'}</p><p className="text-[10px] text-gray-400 font-mono">@{s.handle}</p></div><span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border flex-shrink-0 ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></div><div className="grid grid-cols-2 gap-1 text-[10px]"><span className="text-gray-500">W: {s.whatsappNumber||'—'}</span>{s.subaccountCode&&<span>{s.payoutsVerified?<span className="text-green-600 font-bold">Payout ✓</span>:<span className="text-amber-600 font-bold">Payout pending</span>}</span>}</div></div>)}</div>
+            <div className="block lg:hidden divide-y divide-gray-100">{(dirData?.stores||[]).map(s=><div key={s.id} className="p-3 space-y-2"><div className="flex justify-between items-start"><div className="min-w-0 flex-1"><p className="font-bold text-gray-900 text-sm truncate">{s.storeName||'Unnamed'}</p><p className="text-[10px] text-gray-400 font-mono">@{s.handle}</p></div><span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border flex-shrink-0 ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></div><div className="grid grid-cols-2 gap-1 text-[10px]"><span className="text-gray-500">W: {s.whatsappNumber||'-'}</span>{s.subaccountCode&&<span>{s.payoutsVerified?<span className="text-green-600 font-bold">Payout ✓</span>:<span className="text-amber-600 font-bold">Payout pending</span>}</span>}</div></div>)}</div>
             <div className="bg-gray-50/80 px-3 py-2 border-t border-gray-100 flex items-center justify-between">
               <button onClick={()=>{const p=Math.max(1,page-1);setPage(p);fetchDirectory(p,search);}} disabled={page===1||dirLoading} className="flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50"><ChevronLeft size={12} /> Prev</button>
               <span className="text-[10px] font-semibold text-gray-500">Page {dirData?.meta?.currentPage||1}/{dirData?.meta?.totalPages||1}</span>
@@ -787,7 +787,7 @@ export default function Admin() {
                         <div><p className="text-[8px] text-gray-400 font-bold uppercase">Paid</p><p className="text-xs font-black text-green-600">NGN {(rf.paidOutAmount/100).toLocaleString()}</p></div>
                       </div>
                     </button>
-                    {isOpen&&<div className="bg-gray-50/60 px-4 py-2 border-t border-gray-100"><div className="divide-y divide-gray-100">{rf.referredVendors.map((v,i)=><div key={i} className="py-2 flex items-center justify-between gap-2"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-gray-800 truncate">{v.storeName}</p><p className="text-[10px] text-gray-500">{v.plan} · {v.createdAt?new Date(v.createdAt).toLocaleDateString('en-NG'):'—'}</p></div><div className="text-right flex-shrink-0"><p className="text-xs font-bold text-green-600">NGN {(v.rewardAmount/100).toLocaleString()}</p><span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full ${v.status==='pending'?'bg-amber-100 text-amber-700':'bg-green-100 text-green-700'}`}>{v.status}</span></div></div>)}</div></div>}
+                    {isOpen&&<div className="bg-gray-50/60 px-4 py-2 border-t border-gray-100"><div className="divide-y divide-gray-100">{rf.referredVendors.map((v,i)=><div key={i} className="py-2 flex items-center justify-between gap-2"><div className="min-w-0 flex-1"><p className="text-xs font-bold text-gray-800 truncate">{v.storeName}</p><p className="text-[10px] text-gray-500">{v.plan} · {v.createdAt?new Date(v.createdAt).toLocaleDateString('en-NG'):'-'}</p></div><div className="text-right flex-shrink-0"><p className="text-xs font-bold text-green-600">NGN {(v.rewardAmount/100).toLocaleString()}</p><span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full ${v.status==='pending'?'bg-amber-100 text-amber-700':'bg-green-100 text-green-700'}`}>{v.status}</span></div></div>)}</div></div>}
                   </div>
                 })}
               </div>
@@ -800,7 +800,7 @@ export default function Admin() {
         {activeTab === 'withdrawals' && <div className="space-y-4 animate-in fade-in duration-200">
           {wdError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{wdError}</div>}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><h2 className="font-bold text-gray-800">Withdrawal Queue</h2><div className="flex gap-1.5 overflow-x-auto pb-1">{['pending','completed','rejected','all'].map(s=><button key={s} onClick={()=>{setWdStatusFilter(s);fetchWithdrawals(s);}} className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${wdStatusFilter===s?'bg-gray-900 text-white':'bg-gray-100 text-gray-600'}`}>{s[0].toUpperCase()+s.slice(1)}</button>)}</div></div>
-          {wdLoading?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{withdrawals.length===0?<div className="p-6 text-center text-gray-400 text-sm">No withdrawal requests.</div>:withdrawals.map(w=><div key={w.id} className="px-4 py-3 hover:bg-gray-50/50"><div className="flex items-start justify-between gap-2"><div className="min-w-0 flex-1"><p className="text-sm font-bold text-gray-900 truncate">{w.storeName||'Unknown'}</p><div className="mt-1 space-y-0.5"><p className="flex items-center gap-1.5 text-[11px]"><span className="font-bold text-gray-900 font-mono">{w.bankAccount||'—'}</span>{w.bankAccount&&<button onClick={()=>cp(w.bankAccount,'wd-'+w.id)} className="text-gray-400 hover:text-green-600" title="Copy account number">{copiedId==='wd-'+w.id?<Check size={12} className="text-green-600" />:<Copy size={12} />}</button>}</p><p className="text-[11px] text-gray-600">{w.bankName||'—'}</p><p className="text-[11px] text-gray-600 font-medium">{w.bankAccountName||'—'}</p></div><p className="text-[10px] text-gray-400 mt-1">{w.createdAt?new Date(w.createdAt).toLocaleString('en-NG'):'—'}</p></div><div className="text-right flex-shrink-0"><p className="text-base font-black text-gray-900">NGN {((w.amount||0)/100).toLocaleString()}</p><span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full inline-block mt-0.5 ${w.status==='completed'?'bg-green-100 text-green-700':w.status==='rejected'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{w.status}</span>{w.status==='pending'&&<div className="flex gap-1.5 mt-1.5 justify-end"><button onClick={()=>processWithdrawal(w.id,'completed')} disabled={processingWd===w.id} className="text-[10px] font-bold bg-green-600 text-white px-2.5 py-0.5 rounded-lg disabled:opacity-50">{processingWd===w.id?'...':'Mark as Paid'}</button><button onClick={()=>{const reason=window.prompt('Reason for rejecting this payout (optional — the vendor will see it, and their balance will be restored):');if(reason!==null)processWithdrawal(w.id,'rejected',reason);}} disabled={processingWd===w.id} className="text-[10px] font-bold bg-red-100 text-red-700 px-2.5 py-0.5 rounded-lg disabled:opacity-50">Reject</button></div>}</div></div></div>)}</div></div>}
+          {wdLoading?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{withdrawals.length===0?<div className="p-6 text-center text-gray-400 text-sm">No withdrawal requests.</div>:withdrawals.map(w=><div key={w.id} className="px-4 py-3 hover:bg-gray-50/50"><div className="flex items-start justify-between gap-2"><div className="min-w-0 flex-1"><p className="text-sm font-bold text-gray-900 truncate">{w.storeName||'Unknown'}</p><div className="mt-1 space-y-0.5"><p className="flex items-center gap-1.5 text-[11px]"><span className="font-bold text-gray-900 font-mono">{w.bankAccount||'-'}</span>{w.bankAccount&&<button onClick={()=>cp(w.bankAccount,'wd-'+w.id)} className="text-gray-400 hover:text-green-600" title="Copy account number">{copiedId==='wd-'+w.id?<Check size={12} className="text-green-600" />:<Copy size={12} />}</button>}</p><p className="text-[11px] text-gray-600">{w.bankName||'-'}</p><p className="text-[11px] text-gray-600 font-medium">{w.bankAccountName||'-'}</p></div><p className="text-[10px] text-gray-400 mt-1">{w.createdAt?new Date(w.createdAt).toLocaleString('en-NG'):'-'}</p></div><div className="text-right flex-shrink-0"><p className="text-base font-black text-gray-900">NGN {((w.amount||0)/100).toLocaleString()}</p><span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full inline-block mt-0.5 ${w.status==='completed'?'bg-green-100 text-green-700':w.status==='rejected'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{w.status}</span>{w.status==='pending'&&<div className="flex gap-1.5 mt-1.5 justify-end"><button onClick={()=>processWithdrawal(w.id,'completed')} disabled={processingWd===w.id} className="text-[10px] font-bold bg-green-600 text-white px-2.5 py-0.5 rounded-lg disabled:opacity-50">{processingWd===w.id?'...':'Mark as Paid'}</button><button onClick={()=>{const reason=window.prompt('Reason for rejecting this payout (optional - the vendor will see it, and their balance will be restored):');if(reason!==null)processWithdrawal(w.id,'rejected',reason);}} disabled={processingWd===w.id} className="text-[10px] font-bold bg-red-100 text-red-700 px-2.5 py-0.5 rounded-lg disabled:opacity-50">Reject</button></div>}</div></div></div>)}</div></div>}
         </div>}
 
         {/* CAC */}
@@ -863,8 +863,8 @@ export default function Admin() {
               {l:'Paid Stores',v:analyticsData.paidStores,c:'text-green-600'},
               {l:'Total Products',v:analyticsData.totalProducts,c:'text-blue-600'},
               {l:'Open Tickets',v:analyticsData.openTickets,c:'text-red-600'},
-            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{s.value?.toLocaleString?.()??s.value??'—'}</p></div>)}</div>
-            {topStores.length>0&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Most Viewed Stores (Top {topStores.length})</h3></div><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Views</th><th className="px-4 py-2 text-right">Clicks</th><th className="px-4 py-2 text-right">Engagement</th></tr></thead><tbody className="divide-y divide-gray-50">{topStores.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[140px]">{s.storeName||'Unnamed'}</p><p className="text-[9px] text-gray-400 font-mono">@{s.handle}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[120px]">{s.email||'—'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline flex items-center gap-0.5"><ExternalLink size={7} /> WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalViews.toLocaleString()}</td><td className="px-4 py-2 text-right text-gray-600">{s.totalClicks.toLocaleString()}</td><td className="px-4 py-2 text-right"><span className={`font-bold ${s.engagementRate>=50?'text-green-600':s.engagementRate>=20?'text-amber-600':'text-gray-500'}`}>{s.engagementRate}%</span></td></tr>)}</tbody></table></div></div>}
+            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{s.value?.toLocaleString?.()??s.value??'-'}</p></div>)}</div>
+            {topStores.length>0&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Most Viewed Stores (Top {topStores.length})</h3></div><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Views</th><th className="px-4 py-2 text-right">Clicks</th><th className="px-4 py-2 text-right">Engagement</th></tr></thead><tbody className="divide-y divide-gray-50">{topStores.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[140px]">{s.storeName||'Unnamed'}</p><p className="text-[9px] text-gray-400 font-mono">@{s.handle}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[120px]">{s.email||'-'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline flex items-center gap-0.5"><ExternalLink size={7} /> WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalViews.toLocaleString()}</td><td className="px-4 py-2 text-right text-gray-600">{s.totalClicks.toLocaleString()}</td><td className="px-4 py-2 text-right"><span className={`font-bold ${s.engagementRate>=50?'text-green-600':s.engagementRate>=20?'text-amber-600':'text-gray-500'}`}>{s.engagementRate}%</span></td></tr>)}</tbody></table></div></div>}
             {signupSeries.length>0&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><h3 className="text-[10px] font-bold text-gray-900 uppercase tracking-wider mb-3">Signups (Last 30 Days)</h3><div className="flex items-end gap-0.5 h-24">{signupSeries.map((d,i)=>{const mx=Math.max(...signupSeries.map(s=>s.count),1);return <div key={i} className="flex-1 flex flex-col items-center" title={`${d.date}: ${d.count}`}><div className="w-full bg-green-500 rounded-t" style={{height:`${(d.count/mx)*100}%`,minHeight:2}} /></div>;})}</div><div className="flex justify-between mt-1"><span className="text-[8px] text-gray-400">{signupSeries[0]?.date?.slice(5)}</span><span className="text-[8px] text-gray-400">{signupSeries[signupSeries.length-1]?.date?.slice(5)}</span></div></div>}
           </>}
         </div>}
@@ -878,13 +878,13 @@ export default function Admin() {
             {revenueTab==='platform'&&revenueData&&<div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Paystack Balance</p><p className="text-2xl font-black text-green-600 mt-1">{revenueData.hasApiKey?revenueData.balanceFormatted:'No API key'}</p></div>
-                <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Total Volume</p><p className="text-2xl font-black text-gray-900 mt-1">{revenueData.hasApiKey?revenueData.totalVolumeFormatted:'—'}</p></div>
+                <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Total Volume</p><p className="text-2xl font-black text-gray-900 mt-1">{revenueData.hasApiKey?revenueData.totalVolumeFormatted:'-'}</p></div>
               </div>
               {revenueData.hasApiKey&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Total Transactions</p><p className="text-xl font-black text-gray-900 mt-1">{revenueData.totalTransactions.toLocaleString()}</p></div>}
             </div>}
             {revenueTab==='stores'&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
               {storeRevenues.length===0?<div className="p-6 text-center text-gray-400 text-sm">No store revenue data yet.</div>:<>
-                <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50 bg-gray-50/80"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Orders</th><th className="px-4 py-2 text-right">Revenue</th></tr></thead><tbody className="divide-y divide-gray-50">{storeRevenues.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[120px]">{s.storeName||'Unnamed'}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[100px]">{s.email||'—'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline">WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalOrders}</td><td className="px-4 py-2 text-right font-bold text-green-600">{s.totalRevenueFormatted}</td></tr>)}</tbody></table></div>
+                <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50 bg-gray-50/80"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Orders</th><th className="px-4 py-2 text-right">Revenue</th></tr></thead><tbody className="divide-y divide-gray-50">{storeRevenues.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[120px]">{s.storeName||'Unnamed'}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[100px]">{s.email||'-'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline">WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalOrders}</td><td className="px-4 py-2 text-right font-bold text-green-600">{s.totalRevenueFormatted}</td></tr>)}</tbody></table></div>
               </>}
             </div>}
           </>}
@@ -893,14 +893,14 @@ export default function Admin() {
         {/* SELLA AI USAGE */}
         {activeTab === 'sella-ai' && <div className="space-y-4 animate-in fade-in duration-200">
           {sellaError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{sellaError}</div>}
-          <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Sella AI — Business Partner Usage</h2><button onClick={fetchSella} disabled={sellaLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{sellaLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>
+          <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Sella AI - Business Partner Usage</h2><button onClick={fetchSella} disabled={sellaLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{sellaLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>
           {sellaLoading?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:sellaData&&<>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[
               {l:'Requests Today',v:sellaData.summary?.todayTotal,c:'text-green-600'},
               {l:'All-Time Requests',v:sellaData.summary?.allTimeTotal,c:'text-gray-900'},
               {l:'Active Vendors Today',v:sellaData.summary?.activeVendorsToday,c:'text-blue-600'},
               {l:'Vendors Ever Used',v:sellaData.summary?.vendorsEverUsed,c:'text-purple-600'},
-            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{s.v?.toLocaleString?.()??s.v??'—'}</p></div>)}</div>
+            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{s.v?.toLocaleString?.()??s.v??'-'}</p></div>)}</div>
             <p className="text-[11px] text-gray-400">Daily limit per vendor: <span className="font-bold text-gray-600">{sellaData.dailyLimit}</span> requests.</p>
             <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
               <div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Per-Vendor Usage (Top {sellaData.stores?.length||0})</h3></div>
@@ -1031,7 +1031,7 @@ export default function Admin() {
           {adminError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{adminError}</div>}
           <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Admin Team</h2><div className="flex gap-2"><button onClick={()=>setShowCreateAdmin(!showCreateAdmin)} className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-xl text-xs font-bold">{showCreateAdmin?'Cancel':'+ New Admin'}</button><button onClick={fetchAdmins} disabled={adminLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{adminLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />}</button></div></div>
           {showCreateAdmin&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4 space-y-3"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Create New Admin</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><input type="text" placeholder="Full Name" value={newAdminName} onChange={e=>setNewAdminName(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><input type="email" placeholder="Email" value={newAdminEmail} onChange={e=>setNewAdminEmail(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><input type="password" placeholder="Password (min 6 chars)" value={newAdminPass} onChange={e=>setNewAdminPass(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><select value={newAdminRole} onChange={e=>setNewAdminRole(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"><option value="super_admin">Super Admin</option><option value="finance">Finance</option><option value="support">Support</option><option value="operations">Operations</option><option value="marketing">Marketing</option></select></div><button onClick={createAdmin} disabled={creatingAdmin||!newAdminEmail.trim()||!newAdminPass} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50">{creatingAdmin?'Creating...':'Create Admin'}</button></div>}
-          {adminLoading&&adminList.length===0?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{adminList.length===0?<div className="p-6 text-center text-gray-400 text-sm">No admins found.</div>:adminList.map(a=><div key={a.id} className="px-4 py-3 hover:bg-gray-50/50"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><div className="min-w-0"><p className="text-xs font-bold text-gray-900 font-mono truncate">{a.id}</p>{a.email&&<p className="text-[10px] text-gray-500 mt-0.5">{a.email}</p>}<p className="text-[10px] text-gray-400">By {a.assignedBy||'—'} · {a.assignedAt?new Date(a.assignedAt).toLocaleDateString('en-NG'):''}</p></div><div className="flex items-center gap-2 flex-shrink-0"><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${a.role==='super_admin'?'bg-gray-900 text-white border-gray-900':a.role==='finance'?'bg-green-50 text-green-700 border-green-200':a.role==='operations'?'bg-purple-50 text-purple-700 border-purple-200':a.role==='support'?'bg-cyan-50 text-cyan-700 border-cyan-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{getRoleLabel(a.role)}</span><span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${a.active!==false?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{a.active!==false?'Active':'Off'}</span></div></div></div>)}</div></div>}
+          {adminLoading&&adminList.length===0?<div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-600" size={24} /></div>:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{adminList.length===0?<div className="p-6 text-center text-gray-400 text-sm">No admins found.</div>:adminList.map(a=><div key={a.id} className="px-4 py-3 hover:bg-gray-50/50"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><div className="min-w-0"><p className="text-xs font-bold text-gray-900 font-mono truncate">{a.id}</p>{a.email&&<p className="text-[10px] text-gray-500 mt-0.5">{a.email}</p>}<p className="text-[10px] text-gray-400">By {a.assignedBy||'-'} · {a.assignedAt?new Date(a.assignedAt).toLocaleDateString('en-NG'):''}</p></div><div className="flex items-center gap-2 flex-shrink-0"><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${a.role==='super_admin'?'bg-gray-900 text-white border-gray-900':a.role==='finance'?'bg-green-50 text-green-700 border-green-200':a.role==='operations'?'bg-purple-50 text-purple-700 border-purple-200':a.role==='support'?'bg-cyan-50 text-cyan-700 border-cyan-200':'bg-blue-50 text-blue-700 border-blue-200'}`}>{getRoleLabel(a.role)}</span><span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${a.active!==false?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{a.active!==false?'Active':'Off'}</span></div></div></div>)}</div></div>}
         </div>}
       </div>
 

@@ -4,7 +4,7 @@ import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 
 // The OAuth `state` parameter previously carried the raw storeId, taken from a
 // query string on an unauthenticated endpoint. Store IDs are public (the stores
-// collection is world-readable), so anyone could start a flow for any store —
+// collection is world-readable), so anyone could start a flow for any store -
 // and google-ads-callback.js wrote the resulting refresh token to whatever
 // store `state` named. A victim clicking a crafted link would hand their
 // Google Ads refresh token to the attacker's store, giving persistent access to
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // Authenticate the initiator. storeId is derived from the verified token —
+  // Authenticate the initiator. storeId is derived from the verified token -
   // never from the query string.
   const header = req.headers.authorization || ''
   if (!header.startsWith('Bearer ')) {

@@ -2,7 +2,7 @@
 // Risk evaluation for login-time OTP (OTP plan, Phase 2).
 //
 // POLICY (chosen by Nex): challenge on an unrecognised device, a country
-// change, or a verification older than 30 days. NOT on every login — see
+// change, or a verification older than 30 days. NOT on every login - see
 // Docs/OTP-Verification-Plan.md Part A for why every-login OTP would tax the
 // daily path while adding little.
 //
@@ -11,14 +11,14 @@
 // country, lastActiveAt), so "is this a known device" is an existing fact
 // rather than new infrastructure.
 //
-// ENFORCEMENT — read this before assuming the gate holds:
+// ENFORCEMENT - read this before assuming the gate holds:
 // signInWithEmailAndPassword returns a fully valid ID token immediately, so a
 // client-side OTP screen proves nothing on its own. The durable part is the
 // session record: a session that needs OTP is written with otpPending=true, and
 // sessions.js's 45s heartbeat treats that as not-yet-trusted. Server handlers
 // can additionally call requireTrustedSession(). Full coverage of the owner's
 // DIRECT Firestore writes (products/services/etc.) would need a Firebase custom
-// claim consulted from firestore.rules — deliberately not done here, and called
+// claim consulted from firestore.rules - deliberately not done here, and called
 // out as the remaining gap rather than implied to be covered.
 
 export const LOGIN_OTP_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -35,7 +35,7 @@ export const RISK_REASONS = {
  * @returns {{challenge: boolean, reason: string|null, existing: boolean}}
  */
 export function evaluateLoginRisk({ sessionDoc, currentCountry }) {
-  // Unknown device/browser — the primary trigger.
+  // Unknown device/browser - the primary trigger.
   if (!sessionDoc) {
     return { challenge: true, reason: RISK_REASONS.NEW_DEVICE, existing: false }
   }
@@ -48,7 +48,7 @@ export function evaluateLoginRisk({ sessionDoc, currentCountry }) {
     return { challenge: true, reason: RISK_REASONS.NEW_DEVICE, existing: true }
   }
 
-  // Country change on a known device. Only compare when BOTH sides are known —
+  // Country change on a known device. Only compare when BOTH sides are known -
   // ipapi.co returns '' for private/unresolvable IPs, and treating unknown as a
   // mismatch would challenge people for no reason.
   const known = String(sessionDoc.country || '').trim()
@@ -95,7 +95,7 @@ export async function isSessionTrusted(db, storeId, sessionId) {
     if (s.otpPending) return false
     return !!s.otpVerifiedAt && Date.now() - s.otpVerifiedAt <= LOGIN_OTP_MAX_AGE_MS
   } catch {
-    // Fail open on infrastructure errors — a Firestore blip must not lock
+    // Fail open on infrastructure errors - a Firestore blip must not lock
     // every vendor out of their own dashboard.
     return true
   }

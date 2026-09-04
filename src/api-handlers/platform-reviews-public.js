@@ -1,6 +1,6 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 
-// Public, unauthenticated — powers the public Success Stories page and the
+// Public, unauthenticated - powers the public Success Stories page and the
 // dashboard's "should I show the review prompt?" check. Only ever exposes
 // approved reviews; pending/rejected content never reaches this endpoint.
 export default async function handler(req, res) {
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     if (action === 'list') {
       const limit = Math.min(100, parseInt(req.query.limit) || 50)
       // `where` + `orderBy` on different fields needs a composite index
-      // Firestore doesn't have — same bug found (and fixed the same way) in
+      // Firestore doesn't have - same bug found (and fixed the same way) in
       // platform-reviews-admin.js. Fetch by status only, sort in memory.
       // Fetch a generous cap (not the caller's `limit`) so sorting-then-
       // slicing in memory still surfaces the true most-recent reviews,

@@ -108,7 +108,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Paystack did not return a subaccount code' })
     }
 
-    // Map of top 20 banks (code -> readable name) — keep in sync with frontend list
+    // Map of top 20 banks (code -> readable name) - keep in sync with frontend list
     const BANK_MAP = {
       '057': 'GTBank',
       '044': 'Access Bank',

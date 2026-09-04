@@ -154,13 +154,13 @@ export default async function handler(req, res) {
     }
 
     // ------------------------------------------------------------------
-    // AUTHORITATIVE PRICING — every figure below is read from Firestore.
+    // AUTHORITATIVE PRICING - every figure below is read from Firestore.
     //
     // This block previously computed the charge from `item.price`,
     // `servicePrice`, `deliveryFee` and `discountAmount` as supplied in the
     // request body. Since the body is fully attacker-controlled, anyone could
     // buy any product for ₦1 (the Math.max floor) and the resulting Paystack
-    // webhook would be genuinely signed — indistinguishable from a real sale
+    // webhook would be genuinely signed - indistinguishable from a real sale
     // to the vendor. Client values are now used only to identify WHAT is being
     // bought; never HOW MUCH it costs.
     // ------------------------------------------------------------------
@@ -254,7 +254,7 @@ export default async function handler(req, res) {
     }
 
     // Re-validate the promo code server-side and recompute the discount.
-    // `discountAmount` from the body is ignored entirely — validate-discount.js
+    // `discountAmount` from the body is ignored entirely - validate-discount.js
     // was advisory only, so a client could previously claim any discount.
     let parsedDiscountAmount = 0;
     if (promoCode) {
@@ -353,7 +353,7 @@ export default async function handler(req, res) {
               orderType: kind === "booking" ? "booking" : "checkout",
               ...(kind === "product"
                 ? {
-                    // Server-verified line items and fee — the webhook builds
+                    // Server-verified line items and fee - the webhook builds
                     // the order record from this metadata, so it must not carry
                     // client-claimed prices.
                     cartItems: JSON.stringify(verifiedCartItems),

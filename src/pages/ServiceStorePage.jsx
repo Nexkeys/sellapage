@@ -283,7 +283,7 @@ export default function ServiceStorePage() {
 
     if (usedSnapshot) return;
 
-    // sessionStorage snapshot is gone — happens whenever the Paystack redirect
+    // sessionStorage snapshot is gone - happens whenever the Paystack redirect
     // lands in a different browsing context than the one that left (common in
     // WhatsApp/Instagram in-app browsers). Fall back to a server-verified
     // lookup by reference so the customer still gets their receipt, retrying
@@ -307,7 +307,7 @@ export default function ServiceStorePage() {
           return;
         }
       } catch {
-        // network hiccup — fall through to retry
+        // network hiccup - fall through to retry
       }
       if (cancelled) return;
       if (attempt < 5) {

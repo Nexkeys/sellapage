@@ -30,10 +30,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing storeId' })
   }
   if (!senderDetails?.state) {
-    return res.status(400).json({ error: 'Incomplete sender details — state is required' })
+    return res.status(400).json({ error: 'Incomplete sender details - state is required' })
   }
   if (!receiverDetails?.state) {
-    return res.status(400).json({ error: 'Incomplete receiver details — state is required' })
+    return res.status(400).json({ error: 'Incomplete receiver details - state is required' })
   }
 
   try {

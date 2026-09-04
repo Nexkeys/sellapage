@@ -1,7 +1,7 @@
 // src/api-handlers/staff-invites.js
 // Owner-only invite code management. Uses denormalized counters on the store
 // doc (staffPendingInviteCount, staffInviteWindowCount/staffInviteWindowStart)
-// for rate-limit/cap enforcement instead of range/compound queries — avoids
+// for rate-limit/cap enforcement instead of range/compound queries - avoids
 // needing a new Firestore composite index, consistent with this codebase's
 // established counter pattern (referralTotalClicks etc.) and its documented
 // history of production issues from missing composite indexes.
@@ -20,7 +20,7 @@ import {
 const RATE_WINDOW_MS = 60 * 60 * 1000
 
 // crypto.randomBytes, not Math.random. Math.random is V8's xorshift128+, whose
-// internal state is recoverable from a handful of consecutive outputs — and
+// internal state is recoverable from a handful of consecutive outputs - and
 // redeeming an invite creates a staff account with real access to a store's
 // data, against an unauthenticated endpoint (staff-join.js). Widened from 6 to
 // 8 characters at the same time: 32^8 ≈ 1.1e12 instead of 32^6 ≈ 1.1e9.
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
 
       // Step-up verification: an invite code grants a stranger access to this
       // store's data, so it needs a freshly verified email OTP bound to this
-      // uid and to the staff_invite purpose. Burned here — one code, one invite.
+      // uid and to the staff_invite purpose. Burned here - one code, one invite.
       const proof = await redeemProof(db, { uid: ownerUid, purpose: OTP_PURPOSES.STAFF_INVITE })
       if (!proof.ok) {
         await logAudit(db, {
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
 
       const pendingCount = storeData.staffPendingInviteCount || 0
       if (pendingCount >= MAX_PENDING_INVITES) {
-        return res.status(400).json({ error: `Maximum of ${MAX_PENDING_INVITES} pending invites at once — revoke an unused one first.` })
+        return res.status(400).json({ error: `Maximum of ${MAX_PENDING_INVITES} pending invites at once - revoke an unused one first.` })
       }
 
       const now = Date.now()
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
       const windowStale = now - windowStart > RATE_WINDOW_MS
       const windowCount = windowStale ? 0 : (storeData.staffInviteWindowCount || 0)
       if (windowCount >= INVITE_RATE_LIMIT_PER_HOUR) {
-        return res.status(429).json({ error: `Maximum of ${INVITE_RATE_LIMIT_PER_HOUR} invites per hour — try again shortly.` })
+        return res.status(429).json({ error: `Maximum of ${INVITE_RATE_LIMIT_PER_HOUR} invites per hour - try again shortly.` })
       }
 
       let code = generateCode()

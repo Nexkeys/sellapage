@@ -1,6 +1,6 @@
 // src/components/Reveal.jsx
 // Scroll-reveal wrapper for public marketing pages only (Home, Pricing,
-// Blog, Jobs, Success Stories, compare pages, etc.) — not the dashboard,
+// Blog, Jobs, Success Stories, compare pages, etc.) - not the dashboard,
 // admin, or vendor storefronts. Fades + slides an element in once, the
 // first time it scrolls into view. Built on plain Tailwind transition/
 // opacity/translate utilities (no animation library) so it works

@@ -3,7 +3,7 @@
 // succeeded for the phone_verify purpose.
 //
 // The number written to the store is read from the CHALLENGE (`pendingPhone`,
-// recorded server-side when the SMS was sent), never from this request — so a
+// recorded server-side when the SMS was sent), never from this request - so a
 // caller cannot verify one number and then attach a different one.
 //
 // `action=status` lets the UI ask whether SMS is usable at all, so it can show
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         available: sms.available,
-        // Config-level reason only — never leaks the key or the sender value.
+        // Config-level reason only - never leaks the key or the sender value.
         unavailableReason: sms.available ? null : sms.reason,
         phoneVerified: s.phoneVerified === true,
         phoneVerifiedMasked: s.phoneVerifiedMasked || null,
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'no_phone', message: 'Verification incomplete. Please start again.' })
       }
 
-      // ONE NUMBER, ONE ACCOUNT — enforced atomically.
+      // ONE NUMBER, ONE ACCOUNT - enforced atomically.
       //
       // A "query first, then write" check would race: two signups verifying the
       // same number at the same moment would both see it free and both claim

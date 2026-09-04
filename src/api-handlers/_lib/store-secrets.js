@@ -1,13 +1,13 @@
 // src/api-handlers/_lib/store-secrets.js
-// Credentials and full bank details must never live on stores/{storeId} —
+// Credentials and full bank details must never live on stores/{storeId} -
 // that document is world-readable (`allow read: if true` in firestore.rules,
 // required by public store pages), and Firestore has no field-level security,
 // so anything on it is public. These live in stores/{storeId}/private/* which
-// has `allow read, write: if false` — reachable only via the Admin SDK.
+// has `allow read, write: if false` - reachable only via the Admin SDK.
 //
 // Each getter lazily migrates any legacy value still sitting on the public
 // store doc: it copies the value into the private doc and deletes it from the
-// public one, then returns it. Idempotent, no migration script needed —
+// public one, then returns it. Idempotent, no migration script needed -
 // matches the lazy-sweep pattern already used for referral pending balances.
 import { FieldValue } from 'firebase-admin/firestore'
 
@@ -27,7 +27,7 @@ export function maskAccountNumber(accountNumber) {
 
 // ------------------------------------------------------------------- Contact
 // GROUNDWORK for the vendor-PII relocation (security review H-02). NOT YET
-// WIRED — see the migration note below before using these.
+// WIRED - see the migration note below before using these.
 //
 // stores/{storeId} is world-readable AND listable: getStoreBySlug()
 // (src/firebase/products.js:270) and getActiveStores() (:321) are collection
@@ -35,7 +35,7 @@ export function maskAccountNumber(accountNumber) {
 // firestore.rules. That means anyone can page the whole collection and harvest
 // every vendor's email, phone, whatsappNumber, address and rcNumber. Because
 // the rules layer cannot fix it, the only real fix is moving those fields off
-// the public document — which is what these helpers are for.
+// the public document - which is what these helpers are for.
 //
 // MIGRATION SEQUENCE (do not collapse into one deploy):
 //   1. Write to both: call setStoreContact() alongside the existing public
@@ -83,7 +83,7 @@ export async function getGoogleAdsRefreshToken(db, storeId) {
   const snap = await ref.get()
   if (snap.exists && snap.data().refreshToken) return snap.data().refreshToken
 
-  // Legacy fallback: still on the public store doc — migrate it off.
+  // Legacy fallback: still on the public store doc - migrate it off.
   const storeRef = db.collection('stores').doc(storeId)
   const storeSnap = await storeRef.get()
   const legacy = storeSnap.exists ? storeSnap.data().googleAdsRefreshToken : null
@@ -116,7 +116,7 @@ export async function clearGoogleAdsRefreshToken(db, storeId) {
 
 /**
  * Returns { bankName, bankCode, accountNumber, accountName, verified } with the
- * FULL account number — server-side callers only (e.g. denormalizing onto a
+ * FULL account number - server-side callers only (e.g. denormalizing onto a
  * withdrawal request so an admin can actually pay it).
  */
 export async function getReferralBank(db, storeId) {
@@ -137,7 +137,7 @@ export async function getReferralBank(db, storeId) {
     }
   }
 
-  // Legacy fallback: full number still on the public store doc — migrate it off.
+  // Legacy fallback: full number still on the public store doc - migrate it off.
   const legacyNumber = store.referralBankAccount
   if (!legacyNumber) {
     return {

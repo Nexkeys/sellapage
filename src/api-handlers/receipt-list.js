@@ -1,6 +1,6 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
-// Returns the full receipt history for a store — client handles search and
+// Returns the full receipt history for a store - client handles search and
 // pagination in-memory, matching the convention already used for Orders,
 // Bookings, Ledger, and Payouts in this app (no cursor-based pagination
 // infrastructure needed at this data scale).

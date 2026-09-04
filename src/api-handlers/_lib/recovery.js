@@ -3,10 +3,10 @@
 //
 // WHY THIS EXISTS: Phase 2 of the OTP plan gates login behind an emailed code.
 // Without a recovery path, a vendor who loses their inbox loses their store
-// permanently — including a paying one. Docs/OTP-Verification-Plan.md Part H
+// permanently - including a paying one. Docs/OTP-Verification-Plan.md Part H
 // lists this as a hard blocker on Phase 2, so it ships FIRST.
 //
-// THREAT MODEL — this flow can hand over an account, so it is deliberately the
+// THREAT MODEL - this flow can hand over an account, so it is deliberately the
 // most conservative code in the repo:
 //   - Requests are PUBLIC (a locked-out user cannot authenticate) and therefore
 //     rate limited, and the response is always identical so the endpoint cannot
@@ -31,7 +31,7 @@ export const RECOVERY_STATUS = {
   REJECTED: 'rejected',
   COMPLETED: 'completed',
   EXPIRED: 'expired',
-  // Someone submitted the form but the identifier matched no store — almost
+  // Someone submitted the form but the identifier matched no store - almost
   // always a typo. Recorded so an admin can SEE the attempt and the exact text
   // typed, instead of the vendor insisting they submitted while the tab sits
   // empty. Without this the anti-enumeration response hides real failures.
@@ -69,14 +69,14 @@ export function maskEmail(email) {
 
 /**
  * Finds the store a recovery request refers to, by handle or email.
- * Returns null when nothing matches — callers MUST still return the same
+ * Returns null when nothing matches - callers MUST still return the same
  * generic response either way, or this becomes an enumeration oracle.
  */
 export async function findStoreForRecovery(db, { identifier }) {
   const input = String(identifier || '').trim()
   if (!input) return null
 
-  // Vendors paste their store LINK, not the bare handle — "Your store link or
+  // Vendors paste their store LINK, not the bare handle - "Your store link or
   // account email" invites exactly that. Matching only the bare handle meant
   // "sellapage.com.ng/denvermall" silently missed, and because the response is
   // intentionally generic to prevent enumeration, the miss was invisible: the
@@ -96,7 +96,7 @@ export async function findStoreForRecovery(db, { identifier }) {
 
   // Firestore equality is case-SENSITIVE with no normalised lowercase field on
   // /stores, and it cannot do fuzzy matching at all. Recovery is used by people
-  // who are already locked out and stressed, and typos are the norm — a real
+  // who are already locked out and stressed, and typos are the norm - a real
   // request was lost to `funlola.1999gmail.com` (a missing "@"). Every miss is
   // invisible to the vendor because the response is intentionally generic, so
   // the candidate list is deliberately generous.
@@ -146,7 +146,7 @@ export async function consumeRecoveryToken(db, rawToken) {
     return { ok: false, error: 'not_configured' }
   }
 
-  // Look up by hash — the raw token is never stored, so this is the only handle.
+  // Look up by hash - the raw token is never stored, so this is the only handle.
   const snap = await db
     .collection(RECOVERY_COLLECTION)
     .where('tokenHash', '==', tokenHash)

@@ -1,5 +1,5 @@
 //src/pages/BlogPage.jsx/
-// Public blog listing — /blog. Structural clone of JobsPage.jsx, adapted for
+// Public blog listing - /blog. Structural clone of JobsPage.jsx, adapted for
 // editorial cards (thumbnail, category, title, excerpt, author/date/read-time).
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'

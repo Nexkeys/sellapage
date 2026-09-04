@@ -229,7 +229,7 @@ export default function ReceiptHistory({ receipts, loading, onEdit, onDelete, ca
           {totalPages > 1 && (
             <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-4 py-3">
               <p className="text-[11px] text-gray-400">
-                {((safePage - 1) * RECEIPTS_PER_PAGE) + 1}–{Math.min(safePage * RECEIPTS_PER_PAGE, filtered.length)} of {filtered.length}
+                {((safePage - 1) * RECEIPTS_PER_PAGE) + 1}-{Math.min(safePage * RECEIPTS_PER_PAGE, filtered.length)} of {filtered.length}
               </p>
               <div className="flex items-center gap-1.5">
                 <button

@@ -44,7 +44,6 @@ export default function VsShopify() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-brand-50 via-white to-emerald-50 pt-28 pb-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <p className="section-tag mb-4">SELLAPAGE VS SHOPIFY</p>
           <h1 className="font-display text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
             Shopify is expensive and complex.<br />Sellapage gets you selling today.
           </h1>

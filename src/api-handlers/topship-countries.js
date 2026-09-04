@@ -1,5 +1,5 @@
 //src/api-handlers/topship-countries.js
-// LIVE — see _lib/topship-booking.js header for the staging/production switch.
+// LIVE - see _lib/topship-booking.js header for the staging/production switch.
 import { getTopshipCountries } from './_lib/topship-booking.js'
 
 export default async function handler(req, res) {
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     if (!result.success) {
       return res.status(502).json({ error: result.error })
     }
-    // Topship's /get-countries returns them in no particular order — sort alphabetically
+    // Topship's /get-countries returns them in no particular order - sort alphabetically
     // so the (now-searchable) country picker is actually easy to scan.
     const sorted = [...result.data].sort((a, b) => (a?.name || '').localeCompare(b?.name || ''))
     return res.status(200).json({ countries: sorted })

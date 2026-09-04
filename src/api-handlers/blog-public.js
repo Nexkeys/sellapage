@@ -146,7 +146,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Comments are disabled for this post.' })
       }
 
-      // Optional authorship: never reject on a missing/invalid token — fail open to Anonymous.
+      // Optional authorship: never reject on a missing/invalid token - fail open to Anonymous.
       let authorName = 'Anonymous'
       let authorStoreId = null
       let isAnonymous = true
@@ -163,7 +163,7 @@ export default async function handler(req, res) {
             isAnonymous = false
           }
         } catch {
-          // invalid/expired token — fall through to Anonymous
+          // invalid/expired token - fall through to Anonymous
         }
       }
 

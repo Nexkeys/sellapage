@@ -1,6 +1,6 @@
 // src/components/admin/ReviewsAdmin.jsx
 // Self-contained Admin Reviews tab (own fetches/state, same shape as
-// BlogAdmin.jsx) — moderates vendor-submitted platform reviews and controls
+// BlogAdmin.jsx) - moderates vendor-submitted platform reviews and controls
 // the dashboard's full-screen review-prompt popup (on/off, platform-wide).
 import { useState, useCallback, useEffect } from 'react'
 import {
@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, Sparkles,
 } from 'lucide-react'
 
-// `authHeaders`: async fn returning the caller's Bearer ID token — see BlogAdmin.jsx.
+// `authHeaders`: async fn returning the caller's Bearer ID token - see BlogAdmin.jsx.
 async function callReviewsAdmin(action, authHeaders, { method = 'GET', body, query = '' } = {}) {
   const res = await fetch(`/api/platform-reviews-admin?action=${action}${query}`, {
     method,

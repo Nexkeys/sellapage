@@ -1,6 +1,6 @@
 // src/components/dashboard/LeaveReviewTab.jsx
 // Reached only via ReviewPromptModal's "Leave a Review" button (not a nav
-// tab) — Dashboard.jsx renders this when activeTab === 'leave-review'.
+// tab) - Dashboard.jsx renders this when activeTab === 'leave-review'.
 import { useState } from 'react'
 import { Star, Loader2, UploadCloud, X, CheckCircle2, AlertCircle, Film, ArrowLeft } from 'lucide-react'
 import { uploadSingleImage, uploadVideo, MAX_VIDEO_UPLOAD_BYTES } from '../../firebase/products'

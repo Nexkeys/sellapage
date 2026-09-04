@@ -7,14 +7,14 @@ import { CheckCircle } from 'lucide-react'
  * Where to send the customer after a successful checkout.
  *
  * Product orders live on the storefront (`/:storeName`, StorePage.jsx) and
- * service bookings on `/:storeName/services` (ServiceStorePage.jsx) — each page
+ * service bookings on `/:storeName/services` (ServiceStorePage.jsx) - each page
  * reads its own sessionStorage snapshot and renders its own success modal with
  * the downloadable receipt.
  *
  * This used to always return the product page. A service booking therefore
  * landed on StorePage, which looked for an *order* with that reference, found a
  * *booking* instead, and rendered an empty "Order complete" modal with no
- * receipt — while the equivalent product flow worked fine.
+ * receipt - while the equivalent product flow worked fine.
  *
  * The snapshot shape is the discriminator: ServiceStorePage stores `booking`,
  * StorePage stores `order`.

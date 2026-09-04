@@ -7,7 +7,7 @@ import { applyCors as applyCorsOrigin } from './_lib/http.js'
 // (account number, bank code) into the account holder's real name. It used to be
 // completely unauthenticated with `Access-Control-Allow-Origin: *`, which made it
 // a free, internet-wide Nigerian bank-account-name lookup oracle billed to
-// Sellapage's Paystack account — usable for mass PII harvesting and for
+// Sellapage's Paystack account - usable for mass PII harvesting and for
 // exhausting the Paystack rate limit that legitimate bank setup depends on.
 //
 // It is now authenticated and capped per user per day: this is a one-time

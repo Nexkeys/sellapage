@@ -41,7 +41,7 @@ export default async function handler(req, res) {
 
     // Lazy sweep: referral earnings are now immediately available (no holding period),
     // but the old webhook stranded earnings in `referralPending` with no release
-    // mechanism. Heal that on read — atomically move any leftover pending balance into
+    // mechanism. Heal that on read - atomically move any leftover pending balance into
     // available. Idempotent: once referralPending is 0 this never runs again.
     if ((storeData.referralPending || 0) > 0) {
       try {
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
         storeData = refreshed.data()
       } catch (sweepErr) {
         console.error('[referral-stats] pending sweep failed:', sweepErr)
-        // Non-fatal — fall through and return the un-swept snapshot.
+        // Non-fatal - fall through and return the un-swept snapshot.
       }
     }
 

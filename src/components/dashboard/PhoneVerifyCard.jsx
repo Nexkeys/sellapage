@@ -1,7 +1,7 @@
 // src/components/dashboard/PhoneVerifyCard.jsx
 // Self-service phone verification (OTP plan, Phase 3).
 //
-// Deliberately NOT attached to any payout/bank flow — those are out of scope.
+// Deliberately NOT attached to any payout/bank flow - those are out of scope.
 // This is a vendor-initiated trust signal that sits alongside CAC verification,
 // so the capability is live and testable the moment Termii approves our sender
 // ID, without wiring SMS into a money path.
@@ -42,7 +42,7 @@ export default function PhoneVerifyCard({ store }) {
 
   useEffect(() => { loadStatus() }, [loadStatus])
 
-  // Prefill from the store's existing WhatsApp number — most vendors will
+  // Prefill from the store's existing WhatsApp number - most vendors will
   // verify the number they already trade on.
   useEffect(() => {
     if (!phone && store?.whatsappNumber) setPhone(store.whatsappNumber)
@@ -90,7 +90,7 @@ export default function PhoneVerifyCard({ store }) {
           ) : !status.available ? (
             <>
               <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                Phone verification isn&apos;t available yet — we&apos;re completing setup with our SMS provider. It&apos;ll appear here automatically once it&apos;s ready.
+                Phone verification isn&apos;t available yet - we&apos;re completing setup with our SMS provider. It&apos;ll appear here automatically once it&apos;s ready.
               </p>
               <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
                 Coming soon

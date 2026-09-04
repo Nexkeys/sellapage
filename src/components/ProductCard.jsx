@@ -311,7 +311,7 @@ export default function ProductCard({
                 </div>
               )
             ) : (
-              // Starter: single full-width Order button — unchanged
+              // Starter: single full-width Order button - unchanged
               <button
                 onClick={handleOrder}
                 className={`w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold transition-all shadow-sm hover:shadow-md ${buttonStyle || "bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white rounded-xl"}`}

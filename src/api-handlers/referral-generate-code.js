@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
-// CSPRNG rather than Math.random — see the note in staff-invites.js. Referral
+// CSPRNG rather than Math.random - see the note in staff-invites.js. Referral
 // codes are lower-risk than invite codes (they attribute credit rather than
 // grant access), but predictable codes still allow enumeration of other
 // vendors' codes, and the fix is free.

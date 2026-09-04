@@ -267,7 +267,7 @@ const plans = [
   },
 ]
 // Note: this `plans` array is currently unused (no .map() over it anywhere in
-// this file) — Home links out to /pricing for full plan details rather than
+// this file) - Home links out to /pricing for full plan details rather than
 // rendering cards inline. Left at 3 tiers matching that inactive state;
 // Premium-tier capabilities are instead surfaced in `platformFeatures` below,
 // which IS rendered.
@@ -336,11 +336,9 @@ export default function Home() {
 
             {/* Left */}
             <div className="max-w-2xl py-8 sm:py-10 lg:py-16">
-              {/* pill badge */}
-              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 text-brand-700 text-[10px] font-bold px-3 py-1.5 rounded-full mb-5 uppercase tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-              For Nigerian Business Owners & Service Providers
-              </div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-600 mb-4">
+                For Nigerian Business Owners and Service Providers
+              </p>
 
               <h1 className="font-display text-[2rem] sm:text-[2.6rem] lg:text-[3.2rem] font-extrabold leading-[1.1] tracking-tight text-gray-950 mb-5 max-w-xl">
                 Run Your Entire Business from One Dashboard. <br className="hidden sm:block" />
@@ -391,7 +389,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right — hero images */}
+            {/* Right - hero images */}
               <div className="relative flex justify-center items-end lg:items-center lg:justify-end h-[280px] sm:h-[420px] lg:h-[540px]">
               {/* Main laptop */}
               <img
@@ -411,7 +409,7 @@ export default function Home() {
                 loading="eager"
                 className="absolute bottom-0 right-0 lg:-right-4 z-20 w-[28%] sm:w-[24%] lg:w-[30%] max-w-[180px] object-contain drop-shadow-xl animate-float"
               />
-              {/* Floating badge — New Order */}
+              {/* Floating badge - New Order */}
               <div className="absolute top-8 left-4 sm:left-0 z-30 flex items-center gap-2 bg-white rounded-2xl shadow-xl shadow-gray-200/70 px-3 py-2 border border-gray-100 animate-float-delayed">
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
                 <div>
@@ -477,7 +475,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── MID-PAGE SHOWCASE — why choose sellapage ────────────────────── */}
+      {/* ── MID-PAGE SHOWCASE - why choose sellapage ────────────────────── */}
       <section className="py-14 sm:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">

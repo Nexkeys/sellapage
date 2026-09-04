@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 
-// Constant-time secret comparison — a plain !== leaks how many leading bytes of
+// Constant-time secret comparison - a plain !== leaks how many leading bytes of
 // a guess were correct.
 function timingSafeMatch(provided, expected) {
   if (!provided || !expected) return false
@@ -13,10 +13,10 @@ function timingSafeMatch(provided, expected) {
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
 
-// Triggered by an external cron-job.org job (same pattern as expiry-cron.js —
+// Triggered by an external cron-job.org job (same pattern as expiry-cron.js -
 // this project has no Vercel Cron, so scheduling lives outside the codebase).
 // Sends the vendor one email per booking that's starting within the next
-// REMINDER_WINDOW_MS — deliberately one email per booking, not a digest, so a
+// REMINDER_WINDOW_MS - deliberately one email per booking, not a digest, so a
 // vendor with 3 bookings coming up gets 3 separate emails, each with that
 // booking's own details.
 const REMINDER_WINDOW_MS = 2 * 60 * 60 * 1000 // 2 hours, fixed platform-wide
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     const db = getAdminDb()
     const now = Date.now()
 
-    // Single-field collection-group query — only needs a collection-group
+    // Single-field collection-group query - only needs a collection-group
     // index on `reminderSent`, not a composite one. Status/time-window
     // filtering happens in-memory below. Capped well under Firestore's
     // 500-write batch limit since we also mark docs processed in this run.
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
 
       const bookingStart = new Date(`${booking.bookingDate}T${booking.bookingTime || '00:00'}`)
       if (Number.isNaN(bookingStart.getTime()) || bookingStart.getTime() < now) {
-        // Malformed date, or the window already passed — too late to remind.
+        // Malformed date, or the window already passed - too late to remind.
         batch.update(doc.ref, { reminderSent: true })
         batchHasWrites = true
         summary.skipped++
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
       }
 
       if (bookingStart.getTime() - now > REMINDER_WINDOW_MS) {
-        // Still further than 2 hours out — leave reminderSent:false, a later
+        // Still further than 2 hours out - leave reminderSent:false, a later
         // cron run will pick it up once it enters the window.
         continue
       }
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
         if (storeData?.email) {
           await sendEmail(
             storeData.email,
-            `⏰ Upcoming booking: ${booking.customerName || 'A customer'} — ${formatScheduled(booking.bookingDate, booking.bookingTime)}`,
+            `⏰ Upcoming booking: ${booking.customerName || 'A customer'} - ${formatScheduled(booking.bookingDate, booking.bookingTime)}`,
             `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333333; line-height: 1.6;">
                 <h2 style="color: #16a34a;">Upcoming Booking Reminder ⏰</h2>

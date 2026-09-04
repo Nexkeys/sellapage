@@ -268,7 +268,7 @@ export default async function handler(req, res) {
       try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body; } catch {}
       // `adminUid` is deliberately NOT read from the body any more. It used to
       // be self-asserted, so any admin could attribute an approval to a
-      // colleague — and with the old shared token there was no way to tell who
+      // colleague - and with the old shared token there was no way to tell who
       // really acted. It now comes from the verified identity.
       const { withdrawalId, status, note } = body
       if (!withdrawalId || !['completed', 'rejected'].includes(status)) {
@@ -278,7 +278,7 @@ export default async function handler(req, res) {
       const withdrawalRef = db.collection('withdrawal_requests').doc(withdrawalId)
 
       // Transactional: the old code read the withdrawal, checked its status,
-      // then committed a batch — a check-then-act window in which two admins
+      // then committed a batch - a check-then-act window in which two admins
       // clicking Approve at once could both pass the `pending` guard and both
       // refund the balance on rejection.
       let withdrawalData
@@ -308,7 +308,7 @@ export default async function handler(req, res) {
             // Reverse the request-time balance move: the vendor handler did
             // referralAvailable -= amount and referralWithdrawn += amount when the
             // request was created, so a rejection must restore BOTH (increment, not
-            // overwrite — the old code hard-set referralAvailable = amount, which
+            // overwrite - the old code hard-set referralAvailable = amount, which
             // clobbered any other available balance and never restored referralWithdrawn).
             const storeRef = db.collection('stores').doc(data.userId)
             tx.update(storeRef, {

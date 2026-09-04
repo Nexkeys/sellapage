@@ -20,10 +20,6 @@ export default function About() {
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="pt-24 pb-16 bg-white text-center px-4">
         <div className="max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 uppercase tracking-wide">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-            Our Story
-          </div>
           <h1 className="font-display text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
             The Commerce Platform Nigerian Businesses Trust
           </h1>
@@ -155,9 +151,6 @@ export default function About() {
 
             {/* The Mission */}
             <Reveal direction="right" delay={150} className="bg-brand-600 rounded-2xl p-8">
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-5">
-                <span className="text-white font-display font-extrabold text-sm">🎯</span>
-              </div>
               <h3 className="font-display font-bold text-white text-lg mb-3">Our Mission</h3>
               <p className="text-brand-100 text-sm leading-relaxed">
                 Make professional online selling accessible to every Nigerian business owner or service provider regardless of their technical ability or budget. We started with the simplest possible product and we are building from there, one real seller at a time - products, services, checkout, delivery, customers, analytics, and growth from one dashboard.

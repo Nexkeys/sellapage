@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     }
 
     // Fetch approved, active job listings
-    // NOTE: collection is `jobListings`, not `jobs` — the previous version of
+    // NOTE: collection is `jobListings`, not `jobs` - the previous version of
     // this query targeted a nonexistent collection and always returned zero
     // results silently (no error), so individual job URLs were never actually
     // in the sitemap despite the code appearing to handle them.
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
       console.error('[sitemap] jobs fetch error:', err.message)
     }
 
-    // Fetch live merchant storefronts — previously entirely absent from the
+    // Fetch live merchant storefronts - previously entirely absent from the
     // sitemap despite being the highest-volume public pages on the site.
     try {
       const storesSnapshot = await db.collection('stores')

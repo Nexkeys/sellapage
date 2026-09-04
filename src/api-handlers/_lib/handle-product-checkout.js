@@ -5,7 +5,7 @@ import { sendPush } from "./send-push.js";
 import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
-// Moved verbatim out of paystack-webhook.js's former single checkout branch — logic
+// Moved verbatim out of paystack-webhook.js's former single checkout branch - logic
 // unchanged, only relocated so the booking branch (handle-booking-checkout.js) has
 // its own file instead of both flows sharing one code path.
 export async function handleProductCheckout(db, data, res) {
@@ -45,7 +45,7 @@ export async function handleProductCheckout(db, data, res) {
   // Reconciliation: what Paystack actually charged (data.amount, in kobo) must
   // match the total recorded in the transaction metadata. checkout-initialize.js
   // now prices everything server-side, so a mismatch means metadata tampering or
-  // a pricing bug — flagged on the order rather than silently accepted.
+  // a pricing bug - flagged on the order rather than silently accepted.
   const expectedKobo = Math.round(Number(grandTotal) * 100);
   const chargedKobo = Number(data.amount);
   const amountMismatch =
@@ -340,14 +340,14 @@ export async function handleProductCheckout(db, data, res) {
         ? sendPush(
             storeData.fcmToken,
             "New Order Received 🛍️",
-            `${escapeHtml(customerName)} just placed an order — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+            `${escapeHtml(customerName)} just placed an order - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             { orderId: orderRef.id, type: "new_order" },
           )
         : Promise.resolve(),
       storeData.email
         ? sendEmail(
             storeData.email,
-            `New order received — ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+            `New order received - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             `
               <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
                 <div style="background-color: #16a34a; padding: 24px;">

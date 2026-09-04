@@ -1,10 +1,10 @@
 // src/components/dashboard/SellaAI.jsx
-// Sella AI — full-context AI Business Partner.
+// Sella AI - full-context AI Business Partner.
 // Renders as a MOVABLE floating action button that lives on every dashboard tab
 // (mounted once in DashboardLayout). Premium only. Chat memory persists across tab
 // switches and page refreshes via Firestore-backed sessions + a localStorage cursor.
 //
-// Design: a dark, premium, brand-green AI console — deliberately NOT a white support
+// Design: a dark, premium, brand-green AI console - deliberately NOT a white support
 // widget. Every rendered control is functional; there are no placeholder buttons.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -260,7 +260,7 @@ export default function SellaAI({ store }) {
     }
   };
   const cancelAction = () => {
-    setMessages((m) => [...m, { role: "assistant", content: "No problem — I won't make that change.", kind: "action-result", ok: false }]);
+    setMessages((m) => [...m, { role: "assistant", content: "No problem - I won't make that change.", kind: "action-result", ok: false }]);
     setPending(null);
   };
 
@@ -311,7 +311,7 @@ export default function SellaAI({ store }) {
 
   return (
     <>
-      {/* Floating action button (movable) — an AI orb, not a help bubble */}
+      {/* Floating action button (movable) - an AI orb, not a help bubble */}
       {!open && (
         <button
           onPointerDown={onPointerDown}
@@ -363,7 +363,7 @@ export default function SellaAI({ store }) {
               </div>
             </div>
 
-            {/* Usage meter — slim + tasteful */}
+            {/* Usage meter - slim + tasteful */}
             <div className="relative px-4 py-2 flex items-center gap-2.5 flex-shrink-0 border-b border-white/5">
               <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full ${meterColor} transition-all`} style={{ width: `${pct}%` }} />
@@ -385,7 +385,7 @@ export default function SellaAI({ store }) {
                       </div>
                       <h3 className="text-xl font-bold tracking-tight">Hi, I'm {assistantName}.</h3>
                       <p className="text-[13px] text-gray-400 mt-1.5 leading-relaxed">
-                        I can see your whole store — orders, products, ledger, customers and more — do live
+                        I can see your whole store - orders, products, ledger, customers and more - do live
                         market research, and make changes on your say-so. What are we working on?
                       </p>
                       <div className="grid grid-cols-2 gap-2 mt-5">
@@ -488,7 +488,7 @@ export default function SellaAI({ store }) {
                       {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
                   </div>
-                  <p className="text-[10px] text-gray-600 text-center mt-1.5">{assistantName} can make changes — it always asks you to confirm first.</p>
+                  <p className="text-[10px] text-gray-600 text-center mt-1.5">{assistantName} can make changes - it always asks you to confirm first.</p>
                 </div>
               </>
             )}
@@ -536,7 +536,7 @@ export default function SellaAI({ store }) {
 
                 <div className="rounded-2xl bg-green-500/10 border border-green-500/25 p-4">
                   <p className="text-[12px] text-gray-300 leading-relaxed">
-                    <span className="font-bold text-green-400">{assistantName}</span> can read your entire dashboard and make changes on your request —
+                    <span className="font-bold text-green-400">{assistantName}</span> can read your entire dashboard and make changes on your request -
                     but it always shows you a confirmation before saving anything.
                   </p>
                 </div>

@@ -232,7 +232,7 @@ export default async function handler(req, res) {
 
       const prompt = isJobMode
         ? [
-            'You are a job-post copywriter for Nigerian small business employers. Expand the rough notes below into a polished, well-structured job description for a job listing. Include what the role involves and what is expected of the candidate, written in 2-4 short paragraphs. Use plain, professional, friendly English. Do not invent a salary or pay figure. Do not use markdown formatting or bullet points — plain paragraphs only.',
+            'You are a job-post copywriter for Nigerian small business employers. Expand the rough notes below into a polished, well-structured job description for a job listing. Include what the role involves and what is expected of the candidate, written in 2-4 short paragraphs. Use plain, professional, friendly English. Do not invent a salary or pay figure. Do not use markdown formatting or bullet points - plain paragraphs only.',
             '',
             `Job title: ${String(jobTitle).trim()}`,
             `Employer's rough notes: ${String(notes).trim()}`,
@@ -279,7 +279,7 @@ export default async function handler(req, res) {
             const retryMatch = msg.match(/retry in ([\d.]+)s/i)
             retryAfter = retryMatch ? Math.ceil(Number(retryMatch[1])) : 15
           } catch (parseErr) {
-            // Non-JSON error body (HTML or text) — fall back to default retryAfter
+            // Non-JSON error body (HTML or text) - fall back to default retryAfter
           }
 
           if (usageReserved && usageRef) {
@@ -304,7 +304,7 @@ export default async function handler(req, res) {
           })
         }
 
-        // Non-429 error — include short snippet for debugging in logs, but return specific provider error to frontend
+        // Non-429 error - include short snippet for debugging in logs, but return specific provider error to frontend
         let errorDetail = 'Unknown API error'
         try {
           const parsedError = JSON.parse(errorText)

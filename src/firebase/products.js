@@ -68,7 +68,7 @@ export const uploadSingleImage = async (imageFile, folder = 'sellapage/logos') =
   return await uploadToCloudinary(imageFile, folder)
 }
 
-// Videos need Cloudinary's /video/upload endpoint — /image/upload (used
+// Videos need Cloudinary's /video/upload endpoint - /image/upload (used
 // above) rejects video files outright. Same unsigned preset/cloud name;
 // the Cloudinary preset must have video allowed as a resource type for
 // this to succeed (an account/dashboard-side setting, not something this
@@ -82,7 +82,7 @@ export const uploadVideo = async (videoFile, folder = 'sellapage/reviews/videos'
     )
   }
   if (videoFile.size > MAX_VIDEO_UPLOAD_BYTES) {
-    throw new Error('Video is too large — each video must be 10MB or smaller.')
+    throw new Error('Video is too large - each video must be 10MB or smaller.')
   }
 
   const formData = new FormData()
@@ -273,7 +273,7 @@ export const getStoreBySlug = async (storeName) => {
   if (!snap.empty) {
     const d = snap.docs[0]
     const store = { id: d.id, ...d.data() }
-    // Storefront phone gate — returns null (renders as "store not found") for
+    // Storefront phone gate - returns null (renders as "store not found") for
     // an unverified store once the gate is on. Off by default, so this is a
     // no-op until deliberately enabled. See utils/storefrontGate.js.
     const gate = await isStorefrontGateEnabled()

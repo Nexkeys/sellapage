@@ -218,7 +218,7 @@ export default function ReceiptForm({ draft, onChange, plan = 'starter' }) {
         </div>
 
         {!canCustomFields ? (
-          <p className="text-xs text-gray-400">Add whatever your business needs — "Warranty Period", "Sales Rep", "Order ID" — on Growth and above.</p>
+          <p className="text-xs text-gray-400">Add whatever your business needs - "Warranty Period", "Sales Rep", "Order ID" - on Growth and above.</p>
         ) : (
           <>
             <div className="space-y-2">

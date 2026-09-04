@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     }
     const uid = decoded.uid
 
-    // Works for owners and staff alike — staff sessions live under the store
+    // Works for owners and staff alike - staff sessions live under the store
     // they act on, not under their own uid.
     const access = await resolveCallerStoreId(uid)
     if (!access?.storeId) return res.status(403).json({ error: 'Forbidden' })

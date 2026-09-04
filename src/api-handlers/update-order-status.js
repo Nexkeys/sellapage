@@ -166,7 +166,7 @@ export default async function handler(req, res) {
       try {
         await sendEmail(
           customerEmail,
-          `Update on your order from ${storeName} — ${statusLabel}`,
+          `Update on your order from ${storeName} - ${statusLabel}`,
           `
             <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
               <div style="background-color: ${statusColor}; padding: 24px;">

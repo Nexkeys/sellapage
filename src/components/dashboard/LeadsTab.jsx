@@ -80,21 +80,21 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
                     <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                       <span className="text-green-700 font-bold text-xs">{(lead.name || '?')[0].toUpperCase()}</span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 truncate">{lead.name || '—'}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{lead.name || '-'}</p>
                     <LeadTypeBadge leadType={lead.leadType} />
                   </div>
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Phone size={11} className="text-gray-400 flex-shrink-0 mt-1" />
-                    <p className="text-sm text-gray-600 break-words min-w-0">{lead.phone || lead.whatsapp || '—'}</p>
+                    <p className="text-sm text-gray-600 break-words min-w-0">{lead.phone || lead.whatsapp || '-'}</p>
                   </div>
                   <p className="text-sm text-gray-500 whitespace-pre-wrap break-words leading-relaxed">
-                    {lead.interest || lead.message || '—'}
+                    {lead.interest || lead.message || '-'}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">{lead.productName || lead.productId || '—'}</p>
+                  <p className="text-xs text-gray-400 truncate">{lead.productName || lead.productId || '-'}</p>
                   <p className="text-xs text-gray-400">
                     {lead.createdAt?.toDate
                       ? lead.createdAt.toDate().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
-                      : '—'}
+                      : '-'}
                   </p>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full w-fit capitalize ${STATUS_STYLES[lead.status || 'new']}`}>
                     {lead.status || 'new'}
@@ -108,14 +108,14 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <p className="font-bold text-gray-900 text-sm truncate">{lead.name || '—'}</p>
+                        <p className="font-bold text-gray-900 text-sm truncate">{lead.name || '-'}</p>
                         <LeadTypeBadge leadType={lead.leadType} />
                       </div>
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize flex-shrink-0 ${STATUS_STYLES[lead.status || 'new']}`}>
                         {lead.status || 'new'}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{lead.phone || lead.whatsapp || '—'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{lead.phone || lead.whatsapp || '-'}</p>
                     {(lead.interest || lead.message) && (
                       <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap break-words leading-relaxed">
                         {lead.interest || lead.message}

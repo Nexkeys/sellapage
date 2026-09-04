@@ -7,7 +7,7 @@
 // against Firebase directly, so this counter cannot see an attacker who scripts
 // Firebase's API rather than using our form. Firebase's own built-in throttling
 // (auth/too-many-requests) covers that case. What this adds is an ACCOUNT-level
-// lock — Firebase's protection is per-IP and temporary, and never tells the
+// lock - Firebase's protection is per-IP and temporary, and never tells the
 // owner anything. This does: it stops the account being usable, and it leaves a
 // trail the vendor and an admin can both see.
 //
@@ -83,7 +83,7 @@ export async function getLockState(db, email) {
     if (!snap.exists) return { locked: false, attempts: 0, lockedAt: null }
     const d = snap.data()
 
-    // A lock does NOT decay — only recovery or a successful sign-in clears it.
+    // A lock does NOT decay - only recovery or a successful sign-in clears it.
     // Letting it expire on its own would defeat the point.
     if (d.locked) return { locked: true, attempts: d.attempts || 0, lockedAt: d.lockedAt || null }
 

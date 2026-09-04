@@ -26,19 +26,19 @@ const LAYOUT_OPTIONS = [
     id: 'grid',
     label: 'Grid Layout',
     icon: LayoutGrid,
-    description: 'Products shown in a 2-column card grid — best for visual products like fashion, food, and accessories.',
+    description: 'Products shown in a 2-column card grid - best for visual products like fashion, food, and accessories.',
   },
   {
     id: 'list',
     label: 'List Layout',
     icon: LayoutList,
-    description: 'Products shown in a single full-width row with image on the left — best for services or detailed listings.',
+    description: 'Products shown in a single full-width row with image on the left - best for services or detailed listings.',
   },
   {
     id: 'compact',
     label: 'Compact Layout',
     icon: Rows3,
-    description: 'Dense rows with small thumbnails — best for stores with many products.',
+    description: 'Dense rows with small thumbnails - best for stores with many products.',
   },
 ]
 
@@ -225,7 +225,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
           </div>
         </div>
 
-        {/* Copy String Matrix — Fluid Stack on Mobile */}
+        {/* Copy String Matrix - Fluid Stack on Mobile */}
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1 flex items-center bg-gray-50 border border-gray-200/80 rounded-xl px-3.5 py-3 min-w-0 shadow-inner">
             <p className="text-xs sm:text-sm text-gray-600 truncate font-semibold select-all w-full">{url}</p>
@@ -242,7 +242,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
           </button>
         </div>
 
-        {/* Distribution Share Triggers — Responsive Button Grid Block */}
+        {/* Distribution Share Triggers - Responsive Button Grid Block */}
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:flex sm:flex-wrap gap-2 pt-1">
           <a
             href={`https://wa.me/?text=${encodeURIComponent(`Shop from ${store?.businessName || 'my store'} 🛍️ ${url}`)}`}
@@ -616,7 +616,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
           </div>
           <div>
             <p className="font-bold text-gray-900 text-sm tracking-tight">WhatsApp Community</p>
-            <p className="text-gray-400 text-[11px] mt-0.5">Add your WhatsApp community link — customers can join directly from your storefront.</p>
+            <p className="text-gray-400 text-[11px] mt-0.5">Add your WhatsApp community link - customers can join directly from your storefront.</p>
           </div>
         </div>
 

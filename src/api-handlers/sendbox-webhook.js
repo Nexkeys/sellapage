@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb } from './_lib/firebase-admin.js'
 
 // Sendbox does not document any webhook signing mechanism (checked against
-// docs.sendbox.co — the WooCommerce webhook guide covers OAuth setup but no
+// docs.sendbox.co - the WooCommerce webhook guide covers OAuth setup but no
 // HMAC header or shared signing secret). So instead of signature verification
 // this uses a secret embedded in the callback URL registered with Sendbox:
 //     https://sellapage.com.ng/api/sendbox-webhook?key=<SENDBOX_WEBHOOK_SECRET>
@@ -14,7 +14,7 @@ import { getAdminDb } from './_lib/firebase-admin.js'
 //
 // ENFORCED since 2026-08-09. The staged "watch mode" rollout was skipped
 // deliberately: there were no active shipments at the time (no vendors on a
-// paid plan), so there was no live traffic that enforcing could disrupt — and
+// paid plan), so there was no live traffic that enforcing could disrupt - and
 // leaving it permissive indefinitely was the greater risk.
 //
 // If order statuses ever stop updating from Sendbox, check the Vercel logs for
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
   const authorized = keyMatches(req.query.key, process.env.SENDBOX_WEBHOOK_SECRET)
   if (!authorized) {
-    console.warn('[sendbox-webhook] UNAUTHENTICATED CALL — no valid ?key=', {
+    console.warn('[sendbox-webhook] UNAUTHENTICATED CALL - no valid ?key=', {
       hasKey: !!req.query.key,
       secretConfigured: !!process.env.SENDBOX_WEBHOOK_SECRET,
     })
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     const statusLabel = body?.data?.status || body?.status || ''
 
     if (!code) {
-      console.log('[sendbox-webhook] No shipment code in payload — ignoring')
+      console.log('[sendbox-webhook] No shipment code in payload - ignoring')
       return res.status(200).json({ received: true })
     }
 
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
     }
     const firestoreStatus = STATUS_MAP[statusCode]
     if (!firestoreStatus) {
-      console.log(`[sendbox-webhook] Unknown status_code "${statusCode}" — ignoring`)
+      console.log(`[sendbox-webhook] Unknown status_code "${statusCode}" - ignoring`)
       return res.status(200).json({ received: true })
     }
 
@@ -106,7 +106,7 @@ export default async function handler(req, res) {
       }),
     })
 
-    console.log(`[sendbox-webhook] Updated order ${orderDoc.id} — status: ${statusCode}`)
+    console.log(`[sendbox-webhook] Updated order ${orderDoc.id} - status: ${statusCode}`)
     return res.status(200).json({ received: true })
   } catch (err) {
     console.error('[sendbox-webhook] Error:', err)

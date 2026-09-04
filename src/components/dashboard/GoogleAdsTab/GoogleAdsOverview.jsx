@@ -48,7 +48,7 @@ export default function GoogleAdsOverview({ store, campaigns, reports, loading, 
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">{store?.googleAdsAccountName || 'Google Ads Account'}</p>
-            <p className="text-[11px] text-gray-400">ID: {store?.googleAdsCustomerId || '—'} · {currencyCode}</p>
+            <p className="text-[11px] text-gray-400">ID: {store?.googleAdsCustomerId || '-'} · {currencyCode}</p>
           </div>
         </div>
       </div>

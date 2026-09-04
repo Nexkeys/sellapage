@@ -16,13 +16,13 @@ export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'GET,OPTIONS' })) return
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  // Small and rarely-changing — let the edge cache it so this doesn't add a
+  // Small and rarely-changing - let the edge cache it so this doesn't add a
   // blocking round-trip to every page load.
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
 
   // Whether SMS is usable RIGHT NOW. The signup form reads this to decide
   // whether to require phone verification, so the requirement switches itself
-  // on the moment Termii's sender ID is corrected and approved — no code change
+  // on the moment Termii's sender ID is corrected and approved - no code change
   // and no redeploy. While it's false, signup behaves exactly as it does today.
   // Config-only check: reveals a boolean, never the key or the sender value.
   const sms = getSmsConfigStatus()
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     smsAvailable: sms.available === true,
     // Separate from smsAvailable ON PURPOSE. Enabling this before every
     // existing store is marked phoneGateExempt would hide the whole platform,
-    // so it must be turned on deliberately AFTER the backfill script has run —
+    // so it must be turned on deliberately AFTER the backfill script has run -
     // never as a side effect of Termii going live.
     storefrontGate: String(process.env.ENABLE_STOREFRONT_PHONE_GATE || '').toLowerCase() === 'true',
   })

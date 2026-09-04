@@ -10,8 +10,8 @@ function getCurrencySymbol(currencyCode) {
 const CAMPAIGN_TYPES = [
   { id: 'SEARCH', label: 'Search', desc: 'Text ads on Google search results', icon: Target, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', activeBg: 'bg-blue-50', activeBorder: 'border-blue-400' },
   { id: 'DISPLAY', label: 'Display', desc: 'Visual ads across Google websites', icon: Eye, bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200', activeBg: 'bg-purple-50', activeBorder: 'border-purple-400' },
-  { id: 'SHOPPING', label: 'Shopping', desc: 'Coming soon — requires Google Merchant Center', icon: ShoppingCart, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-400', disabled: true },
-  { id: 'PERFORMANCE_MAX', label: 'Performance Max', desc: 'Coming soon — requires Google Merchant Center', icon: Zap, bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200', activeBg: 'bg-orange-50', activeBorder: 'border-orange-400', disabled: true },
+  { id: 'SHOPPING', label: 'Shopping', desc: 'Coming soon - requires Google Merchant Center', icon: ShoppingCart, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-400', disabled: true },
+  { id: 'PERFORMANCE_MAX', label: 'Performance Max', desc: 'Coming soon - requires Google Merchant Center', icon: Zap, bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200', activeBg: 'bg-orange-50', activeBorder: 'border-orange-400', disabled: true },
 ]
 
 export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onError }) {
@@ -213,7 +213,7 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
           <h4 className="text-xs font-semibold text-gray-900">Keywords & Ad Copy</h4>
           <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
             <p className="text-[11px] text-amber-700">
-              Fill in at least 3 headlines, 2 descriptions, and your final URL below — Google requires an ad group and an ad before a campaign can serve. Without these, the campaign is created but won't run until you finish setup directly in Google Ads.
+              Fill in at least 3 headlines, 2 descriptions, and your final URL below - Google requires an ad group and an ad before a campaign can serve. Without these, the campaign is created but won't run until you finish setup directly in Google Ads.
             </p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
@@ -293,7 +293,7 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-400">Final URL</span>
-              <span className="font-medium text-gray-900 truncate ml-4">{form.finalUrl || '—'}</span>
+              <span className="font-medium text-gray-900 truncate ml-4">{form.finalUrl || '-'}</span>
             </div>
             {form.type === 'SEARCH' && (
               <>

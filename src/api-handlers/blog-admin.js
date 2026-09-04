@@ -14,16 +14,16 @@ import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 // Blog HTML is stored raw and rendered with dangerouslySetInnerHTML in
 // BlogPostPage.jsx, so anything persisted here executes in every visitor's
-// browser on the sellapage.com.ng origin — where vendor and admin Firebase
+// browser on the sellapage.com.ng origin - where vendor and admin Firebase
 // sessions live. Sanitizing on write makes the stored value the safe one.
 //
 // The allowlist matches what the TipTap editor can actually produce
 // (@tiptap/starter-kit + extension-image + extension-link). If a post loses
-// formatting after this change, add the missing tag here — never re-allow
+// formatting after this change, add the missing tag here - never re-allow
 // script/iframe/style or on* handlers.
 //
 // Uses `sanitize-html` (htmlparser2-based, pure JS) rather than DOMPurify.
-// DOMPurify needs a DOM, so on the server it pulls in jsdom — whose
+// DOMPurify needs a DOM, so on the server it pulls in jsdom - whose
 // transitive dep @exodus/bytes is ESM-only and cannot be require()d by
 // Vercel's CommonJS serverless bundle. That threw ERR_REQUIRE_ESM at import
 // time and took down the ENTIRE catch-all router, not just this handler.

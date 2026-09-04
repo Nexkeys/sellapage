@@ -1,6 +1,6 @@
 //src/components/dashboard/JobListingsTab.jsx/
 // Self-contained dashboard tab (fetches/mutates its own data, like SellaAI.jsx)
-// rather than being fully prop-drilled through Dashboard.jsx's state machine —
+// rather than being fully prop-drilled through Dashboard.jsx's state machine -
 // keeps this large new module isolated from the existing 2000+ line dashboard
 // state without touching it beyond the single render line.
 import { useCallback, useEffect, useState } from 'react'
@@ -358,7 +358,7 @@ export default function JobListingsTab({ store }) {
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
           <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-amber-800 font-semibold text-xs">Plan limit reached — {maxJobs}/{maxJobs} listings</p>
+            <p className="text-amber-800 font-semibold text-xs">Plan limit reached - {maxJobs}/{maxJobs} listings</p>
             <p className="text-amber-700 text-xs mt-0.5">You've used all {maxJobs} job listing slots. Upgrade your plan to post more.</p>
           </div>
         </div>
@@ -532,7 +532,7 @@ export default function JobListingsTab({ store }) {
   )
 }
 
-// Defined at module scope (not inside JobListingsTab) — nesting this as a local
+// Defined at module scope (not inside JobListingsTab) - nesting this as a local
 // function previously meant a brand-new component reference was created on
 // every keystroke's re-render, so React unmounted/remounted the whole form
 // (and its focused input) on every character typed.
@@ -601,13 +601,13 @@ function JobForm({
             </button>
           ) : (
             <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold px-2 py-1 rounded-lg bg-gray-50 border border-gray-200">
-              <Lock size={10} /> AI — Growth+
+              <Lock size={10} /> AI - Growth+
             </span>
           )}
         </div>
         {showAiNotes && canUseAI && (
           <div className="mb-2 p-3 bg-green-50/50 border border-green-100 rounded-xl space-y-2">
-            <p className="text-[11px] text-gray-500">Type at least 10 sentences of rough notes about the role — the AI will turn it into a polished description.</p>
+            <p className="text-[11px] text-gray-500">Type at least 10 sentences of rough notes about the role - the AI will turn it into a polished description.</p>
             <textarea value={aiNotes} onChange={e => setAiNotes(e.target.value)} rows={4} placeholder="This role involves... The ideal candidate should..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs outline-none bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 resize-none transition-all" />
             {aiError && <p className="text-red-500 text-xs font-medium">{aiError}</p>}
             <button type="button" onClick={onGenerateDescription} disabled={generating} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white transition-all">

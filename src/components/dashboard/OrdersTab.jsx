@@ -38,7 +38,7 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled', color: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
 ]
 
-// 'in_transit' is courier-driven only (set by the Sendbox webhook) — vendors never pick it manually,
+// 'in_transit' is courier-driven only (set by the Sendbox webhook) - vendors never pick it manually,
 // but it must still render a correct badge/timeline entry instead of being coerced to "Pending".
 const COURIER_ONLY_STATUS = { value: 'in_transit', label: 'In Transit', color: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' }
 const ALL_STATUSES = [...STATUS_OPTIONS, COURIER_ONLY_STATUS]
@@ -175,7 +175,7 @@ function PaymentMethodLabel({ method }) {
   return getOption(PAYMENT_METHOD_OPTIONS, normalizePaymentMethod(method), 'bank_transfer').label
 }
 
-// Searchable country picker for Topship international shipments — the plain <select> this
+// Searchable country picker for Topship international shipments - the plain <select> this
 // replaces had no search and rendered countries in whatever order Topship's /get-countries
 // returns them in (not alphabetical), which made finding one painful with 150+ countries.
 function CountrySelect({ value, onChange, countries }) {
@@ -693,7 +693,7 @@ export default function OrdersTab({
   // TEMPORARY (2026-08-12, logged in Changelog-README.md "Topship: FLIPPED TO
   // PRODUCTION"): books a Topship shipment directly, skipping Paystack entirely.
   // Payment-first is currently off even in production (Nex's explicit instruction, to
-  // validate the live booking flow before wiring real payment collection) — see
+  // validate the live booking flow before wiring real payment collection) - see
   // topship-create-shipment.js header for the exact one-line revert.
   const bookTopshipDirect = async () => {
     if (!bookingShipmentOrder || !store?.id) return
@@ -750,10 +750,10 @@ export default function OrdersTab({
         data = await res.json()
       } catch {
         // A hard platform timeout (Vercel 504) returns a plain-text/HTML body, not
-        // JSON — res.json() throws in that case. Distinguish that from a genuine
+        // JSON - res.json() throws in that case. Distinguish that from a genuine
         // network failure so the error message actually reflects what happened.
         if (res.status === 504) {
-          setBookingError('The booking took too long to complete — this usually means Topship\'s server is slow or the courier is temporarily unavailable right now. Please try again.')
+          setBookingError('The booking took too long to complete - this usually means Topship\'s server is slow or the courier is temporarily unavailable right now. Please try again.')
         } else {
           setBookingError('Could not connect to book the shipment. Please check your connection.')
         }
@@ -793,7 +793,7 @@ export default function OrdersTab({
     }
     if (selectedProvider === 'topship') {
       // TEMPORARY (2026-08-12): payment-first is off for Topship even in production, so
-      // Nex can validate the live booking flow before wiring real payment collection —
+      // Nex can validate the live booking flow before wiring real payment collection -
       // see bookTopshipDirect above and topship-create-shipment.js header.
       await bookTopshipDirect()
       return
@@ -990,7 +990,7 @@ export default function OrdersTab({
               Upgrade to Pro
             </button>
             <p className="mt-4 text-xs text-gray-400">
-              Manual order logging is available in the Ledger tab — free for all plans.
+              Manual order logging is available in the Ledger tab - free for all plans.
             </p>
           </div>
         </div>
@@ -1013,7 +1013,7 @@ export default function OrdersTab({
               Automated Orders
             </h1>
             <p className="mx-auto mb-5 max-w-sm text-xs leading-relaxed text-gray-500">
-              You're on Growth. Orders are automatically created when customers pay via Paystack in-app checkout — a Pro feature. Log offline sales in your Ledger tab instead.
+              You're on Growth. Orders are automatically created when customers pay via Paystack in-app checkout - a Pro feature. Log offline sales in your Ledger tab instead.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
@@ -2035,7 +2035,7 @@ export default function OrdersTab({
                         <option value="food">Food items</option>
                       </select>
                       {packageType === 'food' && (
-                        <p className="text-xs text-amber-600 mt-1">Food items can only be dropped off — pickup is not available.</p>
+                        <p className="text-xs text-amber-600 mt-1">Food items can only be dropped off - pickup is not available.</p>
                       )}
                     </div>
                   )}
@@ -2110,7 +2110,7 @@ export default function OrdersTab({
                                 {rate.courier_name}
                               </p>
                               <p className="text-[10px] text-gray-400 font-medium">
-                                Estimated Delivery: {rate.delivery_eta || '—'}
+                                Estimated Delivery: {rate.delivery_eta || '-'}
                               </p>
                             </div>
                           </div>

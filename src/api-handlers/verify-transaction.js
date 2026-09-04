@@ -5,7 +5,7 @@ import { formatCode } from './_lib/loyalty.js'
 // ServiceStorePage.jsx) as a fallback when the client-side sessionStorage snapshot
 // written before the Paystack redirect didn't survive the round trip (common in
 // WhatsApp/Instagram/Facebook in-app browsers, which can spin up a fresh WebView
-// on external redirects). Scoped to an exact storeId + paystackReference match —
+// on external redirects). Scoped to an exact storeId + paystackReference match -
 // a Paystack reference is an unguessable per-transaction token, so this is safe
 // to expose without auth, same trust model as the Paystack-hosted receipt page.
 export default async function handler(req, res) {
@@ -101,7 +101,7 @@ export default async function handler(req, res) {
       })
     }
 
-    // Not found yet is expected right after redirect — the webhook may still be
+    // Not found yet is expected right after redirect - the webhook may still be
     // in flight (Paystack fires it async, sometimes a second or two behind the
     // browser redirect). The frontend polls this endpoint briefly before giving up.
     return res.status(404).json({ error: 'Transaction not found yet' })

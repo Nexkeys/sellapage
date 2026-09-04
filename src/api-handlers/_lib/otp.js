@@ -1,7 +1,7 @@
 // src/api-handlers/_lib/otp.js
 // Step-up ("Phase 1") OTP: a fresh emailed code required immediately before a
 // small set of high-impact, rarely-performed actions. See
-// Docs/OTP-Verification-Plan.md for why this — and NOT an OTP on every login —
+// Docs/OTP-Verification-Plan.md for why this - and NOT an OTP on every login -
 // is where the security value is.
 //
 // SECURITY MODEL
@@ -27,9 +27,9 @@ export const OTP_PURPOSES = {
   STAFF_INVITE: 'staff_invite',
   STAFF_ROLE_CHANGE: 'staff_role_change',
   STAFF_REMOVE: 'staff_remove',
-  // Phase 3 — SMS channel. Deliberately NOT tied to any bank/payout flow.
+  // Phase 3 - SMS channel. Deliberately NOT tied to any bank/payout flow.
   PHONE_VERIFY: 'phone_verify',
-  // Phase 2 — new-device / country-change / stale-verification login challenge.
+  // Phase 2 - new-device / country-change / stale-verification login challenge.
   LOGIN: 'login',
 }
 
@@ -98,7 +98,7 @@ export function maskEmail(email) {
 }
 
 /**
- * Append-only audit trail. Never throws — a logging failure must not block or
+ * Append-only audit trail. Never throws - a logging failure must not block or
  * roll back the action it is describing.
  */
 export async function logAudit(db, { uid, action, purpose, result, ip, userAgent, meta }) {
@@ -153,7 +153,7 @@ export async function verifyRecaptcha(token, ip) {
  *
  * This is a deliberate design choice, not a shortcut. It means:
  *  - "resend invalidates the previous code" is structural, not a cleanup step
- *    that could be missed — a resend overwrites the only record that exists.
+ *    that could be missed - a resend overwrites the only record that exists.
  *  - Every lookup is a direct document GET. No multi-field queries anywhere in
  *    this module, so it needs ZERO composite indexes. Missing composite indexes
  *    have caused production outages in this codebase before; this avoids the
@@ -166,7 +166,7 @@ function challengeId(uid, purpose) {
 
 /**
  * Seconds remaining before this uid+purpose may request another code, or 0.
- * Single document read — no query, no index.
+ * Single document read - no query, no index.
  */
 export async function getResendCooldown(db, uid, purpose) {
   const snap = await db.collection(COLLECTION).doc(challengeId(uid, purpose)).get()
@@ -178,7 +178,7 @@ export async function getResendCooldown(db, uid, purpose) {
 
 /**
  * Issues a challenge and emails the code. Any earlier unconsumed challenge for
- * the same uid+purpose is invalidated first — resending must not leave two live
+ * the same uid+purpose is invalidated first - resending must not leave two live
  * codes, which would otherwise double an attacker's guessing surface.
  */
 export async function createEmailChallenge(db, { uid, purpose, email, businessName, ip, sessionId, userAgent }) {
@@ -189,7 +189,7 @@ export async function createEmailChallenge(db, { uid, purpose, email, businessNa
   const salt = crypto.randomBytes(16).toString('hex')
   const now = Date.now()
 
-  // Overwrite in place — this IS the invalidation of any previous code for this
+  // Overwrite in place - this IS the invalidation of any previous code for this
   // uid+purpose (see challengeId above). No stale second code can survive.
   const ref = db.collection(COLLECTION).doc(challengeId(uid, purpose))
   await ref.set({
@@ -230,7 +230,7 @@ export async function createEmailChallenge(db, { uid, purpose, email, businessNa
         <p style="margin:0;font-size:32px;font-weight:800;letter-spacing:8px;color:#14532d;">${code}</p>
       </div>
       <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">
-        <strong>If you did not request this, do not share this code.</strong> Someone may have your password — change it immediately.
+        <strong>If you did not request this, do not share this code.</strong> Someone may have your password - change it immediately.
       </p>
       <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">Sellapage will never ask you for this code by phone, WhatsApp or email.</p>
     </div>`,
@@ -253,7 +253,7 @@ export async function verifyChallenge(db, { code, uid, purpose }) {
   if (!code) return { ok: false, error: 'missing_fields' }
   if (!isValidPurpose(purpose)) return { ok: false, error: 'invalid_purpose' }
 
-  // Derived server-side from the authenticated uid — never taken from the
+  // Derived server-side from the authenticated uid - never taken from the
   // request body, so a caller cannot point verification at another record.
   const ref = db.collection(COLLECTION).doc(challengeId(uid, purpose))
 
@@ -296,7 +296,7 @@ export async function verifyChallenge(db, { code, uid, purpose }) {
 
 /**
  * Called by the action handler itself. Confirms a challenge was verified, for
- * THIS uid and THIS purpose, recently — then burns it so one verification can
+ * THIS uid and THIS purpose, recently - then burns it so one verification can
  * authorise exactly one action.
  *
  * This is the actual enforcement point: a client-side OTP screen proves
@@ -342,7 +342,7 @@ export function otpErrorMessage(error) {
 }
 
 // ---------------------------------------------------------------------------
-// SMS channel (Phase 3 — Termii)
+// SMS channel (Phase 3 - Termii)
 //
 // Termii generates and holds the PIN, enforcing attempts and TTL on their side
 // (see _lib/termii.js). We therefore store their `pinId` instead of a codeHash,
@@ -350,8 +350,8 @@ export function otpErrorMessage(error) {
 // Termii verifies THE CODE, only we can verify THE CONTEXT. Without this a
 // pinId issued for phone_verify could be replayed against another purpose.
 //
-// Everything else — deterministic doc id, single-use consume/redeem, resend
-// cooldown, audit logging — is shared with the email flow unchanged.
+// Everything else - deterministic doc id, single-use consume/redeem, resend
+// cooldown, audit logging - is shared with the email flow unchanged.
 // ---------------------------------------------------------------------------
 
 /**
@@ -387,7 +387,7 @@ export async function createSmsChallenge(db, { uid, purpose, phone, ip, sessionI
     codeHash: null,
     salt: null,
     termiiPinId: sent.pinId,
-    // The number being proven — read back on redeem so a caller cannot verify
+    // The number being proven - read back on redeem so a caller cannot verify
     // one number then attach a different one to their account.
     pendingPhone: normalised,
     expiresAt: now + ttlMs,

@@ -1,14 +1,14 @@
 //src/api-handlers/topship-create-shipment.js
-// LIVE — TOPSHIP_ENV=production as of 2026-08-12 (Topship issued the production key
+// LIVE - TOPSHIP_ENV=production as of 2026-08-12 (Topship issued the production key
 // after reviewing staging logs/reports). See _lib/topship-booking.js header.
 //
 // !! PAYMENT-FIRST IS CURRENTLY OFF, INCLUDING IN PRODUCTION !! (2026-08-12, Nex's explicit
 // instruction: validate the production key/booking flow itself before wiring real customer
-// payment collection). `reference` is optional — when absent, this handler skips Paystack
+// payment collection). `reference` is optional - when absent, this handler skips Paystack
 // verification and books directly against the LIVE Topship account, meaning it charges the
 // real Topship wallet balance with NO payment collected from anyone. The "Book Shipment (No
 // Payment)" button in OrdersTab.jsx is reachable by every vendor on the live dashboard, not
-// just Nex — there is currently no restriction. This must be re-locked (re-add the
+// just Nex - there is currently no restriction. This must be re-locked (re-add the
 // `if (!reference && isProduction) return 400` block removed below) before this flow is
 // relied on for real vendor traffic. See Changelog-README.md 2026-08-12 entry.
 import { FieldValue } from 'firebase-admin/firestore'
@@ -30,9 +30,9 @@ export default async function handler(req, res) {
   const {
     storeId,
     orderId,
-    reference, // optional while payment-first is off — see file header
+    reference, // optional while payment-first is off - see file header
     pricingTier, // Topship enum: Budget / Express / FedEx / Premium / LastMileBudget
-    shippingFee, // Naira — required when `reference` is absent
+    shippingFee, // Naira - required when `reference` is absent
     senderDetails,
     receiverDetails,
     weight = 1,
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     })
   }
 
-  // Payment-first gate REMOVED here on 2026-08-12 per Nex's explicit instruction — see file
+  // Payment-first gate REMOVED here on 2026-08-12 per Nex's explicit instruction - see file
   // header. To re-enable payment-first enforcement in production, reinstate:
   //   const isProduction = (process.env.TOPSHIP_ENV || 'staging').toLowerCase() === 'production'
   //   if (!reference && isProduction) return res.status(400).json({ error: 'Payment reference is required' })
@@ -84,7 +84,7 @@ export default async function handler(req, res) {
 
     if (reference) {
       // Self-contained Paystack verification. Unlike the Sendbox redirect flow (which
-      // depends on a separate /api/sendbox-payment-verify call — a handler that doesn't
+      // depends on a separate /api/sendbox-payment-verify call - a handler that doesn't
       // currently exist in this codebase), this endpoint verifies the transaction itself
       // before booking, so a crafted/incomplete reference can't trigger a real Topship
       // wallet charge.
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
       }
       resolvedShippingFee = Number(txn.metadata?.shippingFee) || resolvedShippingFee
     } else {
-      console.warn(`[topship-create-shipment] Booking WITHOUT payment verification (LIVE, payment-first temporarily off) — order ${orderId}`)
+      console.warn(`[topship-create-shipment] Booking WITHOUT payment verification (LIVE, payment-first temporarily off) - order ${orderId}`)
     }
 
     const shipmentRoute = resolveShipmentRoute(senderDetails.countryCode, receiverDetails.countryCode)
@@ -151,13 +151,13 @@ export default async function handler(req, res) {
 
     const shipData = result.data
     // Confirms exactly what Topship put in each field on a real success (trackingUrl in
-    // particular — see Changelog-README.md 2026-07-22 entry re: the Track-link 404 investigation).
+    // particular - see Changelog-README.md 2026-07-22 entry re: the Track-link 404 investigation).
     console.log('[topship-create-shipment] booked shipment record:', JSON.stringify(shipData))
     const trackingId = shipData?.trackingId || shipData?.thirdPartyTrackingId || ''
     const trackingUrl = shipData?.trackingUrl || ''
     const now = new Date()
 
-    // Exact addresses actually sent to Topship for this booking — the vendor may have
+    // Exact addresses actually sent to Topship for this booking - the vendor may have
     // edited these in the modal from the order's original checkout address, so this is
     // higher-fidelity than falling back to order.deliveryAddress. Displayed on the
     // Delivery tab with zero extra reads (already loaded with the order).
@@ -195,7 +195,7 @@ export default async function handler(req, res) {
       }),
     })
 
-    // Best-effort vendor notification — never blocks the booking response on failure,
+    // Best-effort vendor notification - never blocks the booking response on failure,
     // same non-fatal try/catch pattern already used in submit-review.js.
     try {
       const storeData = storeDoc.data() || {}
@@ -217,7 +217,7 @@ export default async function handler(req, res) {
             </div>
           </div>
         `
-        await sendEmail(storeData.email, `Shipment Booked — Tracking ${trackingId || ''}`.trim(), html)
+        await sendEmail(storeData.email, `Shipment Booked - Tracking ${trackingId || ''}`.trim(), html)
       }
     } catch (err) {
       console.error('[topship-create-shipment] vendor email failed (non-fatal):', err)

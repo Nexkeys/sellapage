@@ -44,11 +44,11 @@ export default async function handler(req, res) {
 
     // Fail closed if the pepper is missing rather than writing weak hashes.
     if (!process.env.OTP_PEPPER) {
-      console.error('[otp-send] OTP_PEPPER is not configured — refusing to issue codes')
+      console.error('[otp-send] OTP_PEPPER is not configured - refusing to issue codes')
       return res.status(500).json({ error: 'otp_unavailable', message: 'Verification is temporarily unavailable.' })
     }
 
-    // Durable (Firestore-backed) limits — memoryRateLimit is per-instance on
+    // Durable (Firestore-backed) limits - memoryRateLimit is per-instance on
     // Vercel and an attacker hopping instances would bypass it.
     const [perUser, perIp] = await Promise.all([
       durableRateLimit('otp_send_uid', uid, 3, 15 * 60 * 1000),
@@ -82,8 +82,8 @@ export default async function handler(req, res) {
     // Phone verification proves control of a NEW number, so unlike the email
     // channel the destination legitimately comes from the request. It is
     // normalised and stored on the challenge as `pendingPhone`, and the
-    // completion handler reads it back from there — never from a later
-    // request — so a caller cannot verify one number and attach another.
+    // completion handler reads it back from there - never from a later
+    // request - so a caller cannot verify one number and attach another.
     if (SMS_PURPOSES.has(purpose)) {
       // SMS costs real money per message, so the cap is much tighter than
       // email and is enforced per-day as well as per-window.
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
           meta: { channel: 'sms', reason: smsResult.error },
         })
         // Sender ID not yet approved / not configured is an EXPECTED state
-        // until Termii approves ours — report it as unavailable, not an error,
+        // until Termii approves ours - report it as unavailable, not an error,
         // so the UI can show "coming soon" rather than a scary failure.
         const pending = String(smsResult.error || '').startsWith('sender_id') ||
                         smsResult.error === 'not_configured'
@@ -135,7 +135,7 @@ export default async function handler(req, res) {
 
     // ---- Email channel -------------------------------------------------
     // Destination is the account's own email, read server-side. Never taken
-    // from the request body — otherwise a caller could redirect their own
+    // from the request body - otherwise a caller could redirect their own
     // step-up code to an inbox they control.
     let email = decoded.email || ''
     let businessName = ''

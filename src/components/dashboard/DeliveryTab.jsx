@@ -25,7 +25,7 @@ const SHIPMENTS_PER_PAGE = 5
 
 const SHIPMENT_STAGES = ['Booked', 'Picked Up', 'In Transit', 'Delivered']
 
-// Keyword-bucket classifier, not an exhaustive enum table — Topship's /track-shipment
+// Keyword-bucket classifier, not an exhaustive enum table - Topship's /track-shipment
 // `status` field is documented only as a free-text string (unlike the enumerated
 // `shipmentStatus` field from a different endpoint), and Sendbox has its own status
 // vocabulary too. Matching on substrings lets one function serve both providers without
@@ -47,7 +47,7 @@ const STAGE_COLORS = {
 }
 
 // Big headline + vertical dotted timeline, styled after the reference "Delivered" card
-// Nex shared — same underlying data/logic as before (classifyShipmentStage, the tracking
+// Nex shared - same underlying data/logic as before (classifyShipmentStage, the tracking
 // timeline array), just a different layout. Degrades to a single "Booked" entry when no
 // live tracking timeline is available yet, so the card never looks broken pre-Refresh.
 function ShipmentTimelineCard({ rawStatus, courierName, estimatedDelivery, timelineEvents, bookedAtLabel }) {
@@ -86,7 +86,7 @@ function ShipmentTimelineCard({ rawStatus, courierName, estimatedDelivery, timel
   )
 }
 
-// Pickup/delivery address block — sourced entirely from data already loaded on the page
+// Pickup/delivery address block - sourced entirely from data already loaded on the page
 // (the order and store objects), never a new fetch, so it can't itself error. Prefers the
 // exact addresses Topship actually booked with (persisted at booking time) over the
 // order's original checkout address, since the vendor may have edited them in the modal.

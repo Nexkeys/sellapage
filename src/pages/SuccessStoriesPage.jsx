@@ -1,5 +1,5 @@
 //src/pages/SuccessStoriesPage.jsx/
-// Public marketing page — /success-stories. Shows admin-approved vendor
+// Public marketing page - /success-stories. Shows admin-approved vendor
 // reviews of Sellapage (text + optional photos/videos), featured ones first.
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'

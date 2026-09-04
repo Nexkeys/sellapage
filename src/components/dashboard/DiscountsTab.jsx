@@ -261,7 +261,7 @@ export default function DiscountsTab({ store, isPro, navigateTo }) {
           </div>
           <div>
             <h2 className="font-bold text-gray-900 text-base mb-1">
-              Discount Codes — Pro Feature
+              Discount Codes - Pro Feature
             </h2>
             <p className="text-gray-400 text-sm max-w-md mx-auto leading-relaxed">
               Create promo codes with percentage or flat discounts for your

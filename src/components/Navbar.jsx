@@ -8,7 +8,7 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { logoutSeller } from '../firebase/auth'
 
-// Same routes as before, just grouped — no path here changed.
+// Same routes as before, just grouped - no path here changed.
 const TOOLS_LINKS = [
   { label: 'Offer & Name Lab', href: '/tools/offer-name-lab', icon: Tag },
   { label: 'Policy Generator', href: '/tools/policy-generator', icon: FileText },
@@ -168,7 +168,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu — grouped into sections instead of one long flat list */}
+      {/* Mobile Menu - grouped into sections instead of one long flat list */}
       {open && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 pt-3 pb-5 shadow-lg shadow-gray-200/60 animate-in slide-in-from-top-2 duration-200 max-h-[calc(100dvh-56px)] overflow-y-auto">
           {[

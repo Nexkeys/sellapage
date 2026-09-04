@@ -413,7 +413,7 @@ export default function BlogPostEditor({ authHeaders, adminUid, postId, onClose,
   )
 }
 
-// Defined at module scope, not inside BlogPostEditor — a nested definition
+// Defined at module scope, not inside BlogPostEditor - a nested definition
 // gets recreated on every keystroke's re-render (same bug class fixed in
 // JobListingsTab.jsx's JobForm). Harmless here since it wraps buttons, not
 // text inputs, but worth keeping consistent.

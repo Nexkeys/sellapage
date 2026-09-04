@@ -2,8 +2,8 @@
 // Used by every data-access function that normally reads Firestore directly
 // (getProducts, getServices, fetchOrders, etc.) once it detects the caller
 // isn't the store owner. Returns items in the same shape a native getDocs()
-// call would — including real Firestore Timestamp objects (not ISO strings)
-// for any date-like field — so no downstream `.toDate()` call anywhere in
+// call would - including real Firestore Timestamp objects (not ISO strings)
+// for any date-like field - so no downstream `.toDate()` call anywhere in
 // the app needs to change.
 import { Timestamp } from 'firebase/firestore'
 import { auth } from '../firebase/auth'
@@ -28,7 +28,7 @@ export async function fetchStoreCollectionAsStaff(type, storeId) {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) {
-    // Never swallow this silently — an empty list here is indistinguishable
+    // Never swallow this silently - an empty list here is indistinguishable
     // from "this store has no products", which is exactly how the earlier
     // routing bug hid itself.
     console.error(`[staffDataFetch] ${type} fetch failed for store ${storeId}: ${res.status}`)
@@ -38,7 +38,7 @@ export async function fetchStoreCollectionAsStaff(type, storeId) {
   return (data.items || []).map(hydrateTimestamps)
 }
 
-// Single-document variant — used for the analytics/storeSummary doc, which
+// Single-document variant - used for the analytics/storeSummary doc, which
 // isn't a list.
 export async function fetchStoreDocAsStaff(type, storeId) {
   const user = auth.currentUser
@@ -65,14 +65,14 @@ export function clearActiveStaffStore() {
   activeStaffStoreId = null
 }
 
-// True ONLY when the current user is a verified staff member of THIS store —
+// True ONLY when the current user is a verified staff member of THIS store -
 // the signal every read/write function uses to route through the server proxy
 // instead of a direct Firestore call.
 //
 // This deliberately does NOT mean "logged in and not the owner". It did once,
 // and that broke every public storefront for signed-in visitors: any logged-in
 // user viewing someone else's store was routed to /api/store-data, denied
-// (correctly — they're not staff), and handed an empty list, so the store
+// (correctly - they're not staff), and handed an empty list, so the store
 // rendered as "no listed items yet". Logged-out visitors were unaffected,
 // which made it look like a browser/cache quirk. Keep this scoped to a
 // confirmed membership.

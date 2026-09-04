@@ -36,7 +36,7 @@ export default function ReferralTab({ user, store }) {
   const [bankSearch, setBankSearch] = useState('')
   const [bankVerified, setBankVerified] = useState(store?.referralBankVerified || false)
   const [bankName, setBankName] = useState(store?.referralBankName || '')
-  // Only the masked number is on the store doc now — the full account number
+  // Only the masked number is on the store doc now - the full account number
   // lives server-side in stores/{id}/private/referralBank. `bankAccount` holds
   // the full number only during the session where the vendor just typed it.
   const [bankAccount, setBankAccount] = useState('')
@@ -112,7 +112,7 @@ export default function ReferralTab({ user, store }) {
   }, [token, store?.id])
 
   // Live refresh: fetch stats + withdrawal history on load, poll every 25s, and
-  // re-fetch when the tab regains focus — so new clicks/signups/referrals and
+  // re-fetch when the tab regains focus - so new clicks/signups/referrals and
   // payout status changes appear without a manual dashboard refresh. (Previously
   // stats were fetched exactly once and the money cards bound only to the `store`
   // prop, which is why nothing updated live.)
@@ -329,7 +329,7 @@ export default function ReferralTab({ user, store }) {
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold">Invite & Earn</h2>
-              <p className="text-green-100 text-xs">₦500 – ₦2,000 per paid referral</p>
+              <p className="text-green-100 text-xs">₦500 - ₦2,000 per paid referral</p>
             </div>
           </div>
 
@@ -401,7 +401,7 @@ export default function ReferralTab({ user, store }) {
             ))}
           </div>
           <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
-            You earn when a vendor you referred upgrades to a paid plan — paid instantly to your available balance. If they later move up a tier, you're topped up to that tier's reward (up to ₦2,000). One-time per referral, never charged on renewals.
+            You earn when a vendor you referred upgrades to a paid plan - paid instantly to your available balance. If they later move up a tier, you're topped up to that tier's reward (up to ₦2,000). One-time per referral, never charged on renewals.
           </p>
         </div>
       )}
@@ -485,7 +485,7 @@ export default function ReferralTab({ user, store }) {
                 <span className="text-sm font-medium text-green-900">Bank Account Verified</span>
               </div>
               <p className="text-sm text-green-800">{bankName || store?.referralBankName}</p>
-              <p className="text-sm text-green-800">{bankAccount || store?.referralBankAccountMasked} — {bankAccountName || store?.referralBankAccountName}</p>
+              <p className="text-sm text-green-800">{bankAccount || store?.referralBankAccountMasked} - {bankAccountName || store?.referralBankAccountName}</p>
             </div>
           )}
 
@@ -510,7 +510,7 @@ export default function ReferralTab({ user, store }) {
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <Info className="w-4 h-4 text-gray-400 mx-auto mb-1" />
                   <p className="text-xs text-gray-500">
-                    Earn ₦500 – ₦2,000 for each vendor you refer who upgrades to a paid plan. You can withdraw any amount the moment you earn it.
+                    Earn ₦500 - ₦2,000 for each vendor you refer who upgrades to a paid plan. You can withdraw any amount the moment you earn it.
                   </p>
                 </div>
               )}
@@ -744,7 +744,7 @@ export default function ReferralTab({ user, store }) {
             <div className="bg-gray-50 rounded-xl p-4 mb-4">
               <p className="text-sm text-gray-600">Available Balance</p>
               <p className="text-2xl font-bold text-green-600">{formatKobo(available)}</p>
-              <p className="text-xs text-gray-500 mt-1">{bankName || store?.referralBankName} — {bankAccount || store?.referralBankAccountMasked}</p>
+              <p className="text-xs text-gray-500 mt-1">{bankName || store?.referralBankName} - {bankAccount || store?.referralBankAccountMasked}</p>
             </div>
 
             <div className="space-y-4">

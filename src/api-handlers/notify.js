@@ -177,7 +177,7 @@ export default async function handler(req, res) {
                       <p class="sign-off">
                         If anything ever looks off or you're not sure of how something works, just reach out. We actually respond. <br /><br />
                         Welcome to Sellapage. 🚀<br />
-                        <strong style="color: #111827;">— The Sellapage Team</strong>
+                        <strong style="color: #111827;">- The Sellapage Team</strong>
                       </p>
 
                       <p class="support-line">

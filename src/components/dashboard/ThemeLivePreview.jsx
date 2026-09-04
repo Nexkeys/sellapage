@@ -168,7 +168,7 @@ export default function ThemeLivePreview({
                   </div>
                 </div>
 
-                {/* Compact footer — trust badges hidden in preview */}
+                {/* Compact footer - trust badges hidden in preview */}
                 <div className="px-2 pb-3">
                   {footerText ? (
                     <p

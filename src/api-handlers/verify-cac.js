@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   // against Prembly and stashes the result server-side; this step promotes that
   // stashed result onto the public store doc. The write lives here rather than
   // in the client (it used to be a direct updateDoc in CACVerificationTab) so
-  // that `cacVerified` can be locked in firestore.rules — otherwise any vendor
+  // that `cacVerified` can be locked in firestore.rules - otherwise any vendor
   // could award themselves the CAC Verified badge from the browser console.
   if (req.query.action === 'confirm') {
     return confirmVerification(req, res, idToken)
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   if (!cleanRC || !/^\d+$/.test(cleanRC)) {
     return res.status(400).json({
       error: 'invalid_rc',
-      message: 'Please enter a valid RC or BN number — numbers only, e.g. RC1234567 or BN1234567.',
+      message: 'Please enter a valid RC or BN number - numbers only, e.g. RC1234567 or BN1234567.',
     })
   }
 
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
       if (isPendingPayment || responseCode === '04') {
         errorCode = 'insufficient_funds'
         errorMsg = 'Our verification system is temporarily processing your request. Please try again in a few minutes.'
-        emailSubject = 'CAC Verification — System Temporarily Unavailable'
+        emailSubject = 'CAC Verification - System Temporarily Unavailable'
         emailBody = 'Our verification system is temporarily processing your request. No retry was deducted. Please try again in a few minutes.'
       } else if (responseCode === '06' || errMsg.toLowerCase().includes('not found')) {
         errorCode = 'rc_not_found'
@@ -192,7 +192,7 @@ export default async function handler(req, res) {
 
     // Stash the verified result server-side so `action=confirm` can promote it
     // without re-calling Prembly (which costs money and burns a retry). Lives in
-    // private/* — never client-readable, never client-writable.
+    // private/* - never client-readable, never client-writable.
     await db.collection('stores').doc(storeId)
       .collection('private').doc('cacPending')
       .set({
@@ -241,7 +241,7 @@ export default async function handler(req, res) {
 
 /**
  * Step 2 of CAC verification. Promotes the result stashed by the verify step
- * onto the public store document. The vendor supplies no CAC data here — the
+ * onto the public store document. The vendor supplies no CAC data here - the
  * only input that matters is their identity, so nothing they send can influence
  * what gets written.
  */

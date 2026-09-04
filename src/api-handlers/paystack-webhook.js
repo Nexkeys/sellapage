@@ -98,7 +98,7 @@ export default async function handler(req, res) {
   const transactionType = data.metadata?.transactionType;
 
   if (transactionType === "checkout") {
-    // Dispatch to the product-order or service-booking branch — the two flows
+    // Dispatch to the product-order or service-booking branch - the two flows
     // never converge past this point (separate collections, separate emails,
     // separate status vocabularies downstream in update-order-status.js /
     // update-booking-status.js).
@@ -201,7 +201,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // Topship safety net — mirrors the Sendbox branch above but for Topship-provider
+  // Topship safety net - mirrors the Sendbox branch above but for Topship-provider
   // shipments. LIVE (see _lib/topship-booking.js). No separate Paystack verify call
   // needed here: this webhook is already HMAC-verified by Paystack, same trust model
   // as the Sendbox branch above.
@@ -409,7 +409,7 @@ export default async function handler(req, res) {
   //   upgrade Premium-> +₦1,000 (delta 200000-100000) = ₦2,000 total (cap)
   //   renewal / same tier -> delta 0, nothing credited
   //   downgrade -> delta negative, nothing credited, no clawback
-  // Earnings land in `referralAvailable` immediately (no holding period — the manual
+  // Earnings land in `referralAvailable` immediately (no holding period - the manual
   // admin payout-approval step is the fraud checkpoint). The outer W1 idempotency guard
   // (subscriptions where paystackRef == reference) prevents double-processing per payment,
   // and the whole thing is written in one atomic batch.
@@ -456,7 +456,7 @@ export default async function handler(req, res) {
     console.error("[Referral Reward] Error:", err)
   }
 
-  // Send notifications — reuse storeCheckSnap from earlier
+  // Send notifications - reuse storeCheckSnap from earlier
   const storeData = storeCheckSnap.data() || {};
   const planLabel = { growth: "Growth", pro: "Pro", premium: "Premium" }[plan];
   const periodLabel = { monthly: "Monthly", quarterly: "Quarterly", biannual: "6-Month", annual: "Annual" }[billingPeriod];

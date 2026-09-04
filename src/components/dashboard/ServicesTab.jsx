@@ -158,7 +158,7 @@ export default function ServicesTab({
                   </button>
                 ) : (
                   <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold px-2 py-1 rounded-lg bg-gray-50 border border-gray-200">
-                    <Lock size={10} /> AI — Growth+
+                    <Lock size={10} /> AI - Growth+
                   </span>
                 )}
               </div>
@@ -358,7 +358,7 @@ export default function ServicesTab({
                           </button>
                         ) : (
                           <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold px-2 py-1 rounded-lg bg-gray-50 border border-gray-200">
-                            <Lock size={10} /> AI — Growth+
+                            <Lock size={10} /> AI - Growth+
                           </span>
                         )}
                       </div>

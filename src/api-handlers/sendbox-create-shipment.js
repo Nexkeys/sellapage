@@ -63,14 +63,14 @@ export default async function handler(req, res) {
     // Self-contained Paystack verification, matching topship-create-shipment.js.
     //
     // The old flow expected the client to call /api/sendbox-payment-verify first
-    // and pass back the courierId it returned — but that handler was never built,
+    // and pass back the courierId it returned - but that handler was never built,
     // so the redirect after payment 404'd and the shipment was never created even
     // though the customer had been charged.
     //
     // Verifying here also closes the hole that made a separate verify step risky:
     // this endpoint previously took courierId straight from the request body with
     // no proof of payment, so any vendor with delivery write access could book a
-    // real shipment — and trigger a real Sendbox wallet charge — without paying.
+    // real shipment - and trigger a real Sendbox wallet charge - without paying.
     let courierId = courierIdFromBody
 
     if (reference) {
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
       }
 
       // Trust the courier recorded at payment time, not whatever the client sends
-      // now — otherwise someone could pay for the cheapest courier and book the
+      // now - otherwise someone could pay for the cheapest courier and book the
       // most expensive one.
       courierId = txn.metadata?.courierId || courierId
     }

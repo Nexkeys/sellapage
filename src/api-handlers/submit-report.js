@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  // Unauthenticated endpoint that writes to Firestore — without a cap it can be
+  // Unauthenticated endpoint that writes to Firestore - without a cap it can be
   // used to flood a competitor with defamatory reports and to burn the Spark
   // plan's daily write quota, which on a free tier means a full outage.
   if (!memoryRateLimit('submit-report', clientKey(req), 3, 3600000)) {

@@ -116,7 +116,7 @@ export default async function handler(req, res) {
 
       await ref.update({ active: false, deactivatedAt: new Date() })
 
-      // Revoke any of this staff member's active sessions on this store —
+      // Revoke any of this staff member's active sessions on this store -
       // reuses the sessions collection sessions.js already reads/writes,
       // now that it's tagged with actorUid at register time.
       const sessionsSnap = await db.collection('stores').doc(ownerUid).collection('sessions')

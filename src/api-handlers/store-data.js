@@ -2,12 +2,12 @@
 // Read-only listing endpoint for staff callers. Products/Categories/Services/
 // Orders/Bookings/Ledger/Customers/Discounts/Leads are all normally read via
 // direct client Firestore SDK calls, gated by live rules requiring
-// `request.auth.uid == storeId` — true for the owner, never true for staff
+// `request.auth.uid == storeId` - true for the owner, never true for staff
 // (a different Firebase Auth uid). That silently denies every staff read,
 // rendering as empty lists rather than an error. This endpoint uses
 // firebase-admin (bypasses rules) + resolveStoreAccess to restore staff
 // visibility without touching the owner's existing direct-Firestore path at
-// all — client code only calls this when `auth.currentUser.uid !== storeId`.
+// all - client code only calls this when `auth.currentUser.uid !== storeId`.
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
@@ -64,14 +64,14 @@ export default async function handler(req, res) {
 
     const access = await resolveStoreAccess(decoded.uid, storeId, type, false)
     if (!access.allowed) {
-      // A role simply not granted this tab is expected — the nav hides it
-      // anyway — so return an empty list rather than an error.
+      // A role simply not granted this tab is expected - the nav hides it
+      // anyway - so return an empty list rather than an error.
       if (access.reason === 'tab_not_granted' || access.reason === 'read_only') {
         return res.status(200).json({ success: true, items: [] })
       }
       // Anything else (notably not_a_staff_member) means the caller should
       // never have been routed here at all. Fail LOUDLY: returning an empty
-      // 200 for this case once made a client-side routing bug invisible —
+      // 200 for this case once made a client-side routing bug invisible -
       // signed-in visitors silently saw every public storefront as empty,
       // with nothing in the browser console or the Vercel logs to show why.
       console.warn(`[store-data] denied uid=${decoded.uid} store=${storeId} type=${type} reason=${access.reason}`)

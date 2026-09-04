@@ -165,7 +165,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
         </div>
       )}
 
-      {/* Verification form — only show if not verified and retries remain */}
+      {/* Verification form - only show if not verified and retries remain */}
       {!isVerified && !confirmed && retriesLeft <= 0 && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5 text-center space-y-2">
           <AlertCircle size={18} className="mx-auto text-red-500" />
@@ -182,7 +182,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
         </div>
       )}
 
-      {/* Verification form — only show if not verified and retries remain */}
+      {/* Verification form - only show if not verified and retries remain */}
       {!isVerified && !confirmed && retriesLeft > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 space-y-4">
           <div className="flex items-center gap-3">
@@ -264,7 +264,7 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
             </p>
           </div>
 
-          {/* Verification result — confirm step */}
+          {/* Verification result - confirm step */}
           {verifyResult && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
               <div className="flex items-start gap-2.5">

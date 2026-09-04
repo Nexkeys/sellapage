@@ -24,7 +24,6 @@ export default function ContactUs() {
       {/* Header */}
       <section className="bg-gradient-to-br from-brand-50 via-white to-emerald-50 pt-28 pb-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <p className="section-tag mb-4">CONTACT US</p>
           <h1 className="font-display text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
             We're here to help
           </h1>
@@ -39,7 +38,7 @@ export default function ContactUs() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-2xl mx-auto space-y-5">
 
-          {/* Dashboard support — shown differently based on auth state */}
+          {/* Dashboard support - shown differently based on auth state */}
           {user ? (
             <Reveal className="bg-brand-50 border border-brand-200 rounded-2xl p-6 flex items-start gap-5">
               <div className="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">

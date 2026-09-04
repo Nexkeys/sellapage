@@ -1,5 +1,5 @@
 //src/api-handlers/topship-tracking.js
-// LIVE — see _lib/topship-booking.js header for the staging/production switch.
+// LIVE - see _lib/topship-booking.js header for the staging/production switch.
 import { getAdminAuth } from './_lib/firebase-admin.js'
 import { trackTopshipShipment } from './_lib/topship-booking.js'
 
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       decodedToken = await auth.verifyIdToken(idToken)
     } catch (err) {
       // Logged with the real Firebase Admin error code/message (e.g. auth/id-token-expired,
-      // auth/argument-error) so a recurrence is diagnosable from Vercel logs alone — this 401
+      // auth/argument-error) so a recurrence is diagnosable from Vercel logs alone - this 401
       // is entirely about OUR Firebase token, unrelated to Topship or the tracking ID itself.
       console.error(`[topship-tracking] verifyIdToken failed for trackingCode ${trackingCode}:`, err?.code, err?.message)
       return res.status(401).json({ error: 'Invalid or expired token' })
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
 
     const trackData = result.data
 
-    // Topship's /track-shipment response only exposes the current status/message —
+    // Topship's /track-shipment response only exposes the current status/message -
     // no per-event history array like Sendbox's tracking.events. Synthesize a single
     // timeline entry so the shared timeline UI still has something to render.
     const timeline = trackData?.status

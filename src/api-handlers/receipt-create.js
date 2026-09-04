@@ -1,7 +1,7 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 
 // Free/Starter vendors can generate unlimited receipts, but only the plain
-// fields — everything branding-related silently drops for them here too
+// fields - everything branding-related silently drops for them here too
 // (defense in depth; the UI already hides these fields for Free/Starter).
 function sanitizeForPlan(payload, plan) {
   if (plan === 'growth' || plan === 'pro' || plan === 'premium') return payload

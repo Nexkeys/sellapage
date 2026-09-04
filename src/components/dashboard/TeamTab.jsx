@@ -8,10 +8,10 @@ import { auth } from '../../firebase/auth'
 import { OWNER_ONLY_TABS } from '../../utils/staffRoles'
 import OtpVerifyModal from '../OtpVerifyModal'
 
-// A store's own assignable-tab list — mirrors DashboardLayout's NAV_ITEMS
+// A store's own assignable-tab list - mirrors DashboardLayout's NAV_ITEMS
 // minus group separators and OWNER_ONLY_TABS, so the Role Builder only ever
 // offers tabs that could plausibly be granted. Kept in sync manually since
-// DashboardLayout doesn't export a plain list — small, stable set.
+// DashboardLayout doesn't export a plain list - small, stable set.
 const ASSIGNABLE_TAB_LABELS = {
   overview: 'Dashboard', products: 'Products', services: 'Services', categories: 'Categories',
   ledger: 'Ledger', receipts: 'Receipts', orders: 'Orders', bookings: 'Bookings',
@@ -133,7 +133,7 @@ export default function TeamTab({ store }) {
 
   // Each of these three actions requires a freshly emailed code. The server
   // independently re-checks and burns that verification inside the handler,
-  // so this prompt is UX — it is not what enforces the guard.
+  // so this prompt is UX - it is not what enforces the guard.
   const createInvite = () => {
     if (!inviteRoleId) return
     setError('')
@@ -192,7 +192,7 @@ export default function TeamTab({ store }) {
     try {
       const headers = { 'Content-Type': 'application/json', ...(await authHeaders()) }
       const res = await fetch('/api/staff-manage?action=update-role', { method: 'POST', headers, body: JSON.stringify({ membershipId, roleId }) })
-      // Previously unchecked — a 403 from the step-up guard would have been
+      // Previously unchecked - a 403 from the step-up guard would have been
       // swallowed and looked like a silent no-op.
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -242,7 +242,7 @@ export default function TeamTab({ store }) {
           <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <UsersIcon size={24} className="text-indigo-500" />
           </div>
-          <h2 className="font-extrabold text-gray-900 text-lg mb-2">Team Accounts — Premium Feature</h2>
+          <h2 className="font-extrabold text-gray-900 text-lg mb-2">Team Accounts - Premium Feature</h2>
           <p className="text-gray-400 text-sm leading-relaxed max-w-sm mx-auto">
             Invite staff with custom roles and permissions. Available on the Premium plan.
           </p>
@@ -287,7 +287,7 @@ export default function TeamTab({ store }) {
         {newCode && (
           <div className="mt-3 p-3 bg-green-50 border border-green-100 rounded-xl flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Invite created — valid 72 hours</p>
+              <p className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Invite created - valid 72 hours</p>
               <p className="text-sm font-mono font-bold text-green-800 truncate">{window.location.origin}/join-team?code={newCode}</p>
             </div>
             <button onClick={() => copyCode(newCode)} className="flex-shrink-0 text-green-700 hover:text-green-900 p-1.5">
@@ -328,7 +328,7 @@ export default function TeamTab({ store }) {
         <div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Active Staff ({staff.length}/10)</h3></div>
         <div className="divide-y divide-gray-50">
           {staff.length === 0 ? (
-            <div className="p-6 text-center text-gray-400 text-sm">No staff yet — send an invite above.</div>
+            <div className="p-6 text-center text-gray-400 text-sm">No staff yet - send an invite above.</div>
           ) : staff.map((s) => (
             <div key={s.id} className="px-4 py-3 flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">

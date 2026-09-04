@@ -1,11 +1,11 @@
 // src/utils/staffRoles.js
 // Deny-list based staff permission model. New dashboard tabs are automatically
-// assignable via the Team tab's Role Builder unless listed here — see
+// assignable via the Team tab's Role Builder unless listed here - see
 // Docs/Staff-Team-Accounts-Plan.md Part B/G for why this is a deny-list, not
 // an allow-list.
 // 'payouts' = bank/settlement details, 'referral-program' = the owner's own
 // commission balance and withdrawals to the owner's personal bank account.
-// Both are the owner's money, not store operations — never delegatable.
+// Both are the owner's money, not store operations - never delegatable.
 export const OWNER_ONLY_TABS = ['billing', 'settings', 'team', 'payouts', 'referral-program']
 
 export const MAX_STAFF_ROLES = 20
@@ -14,7 +14,7 @@ export const MAX_PENDING_INVITES = 10
 export const INVITE_RATE_LIMIT_PER_HOUR = 5
 export const INVITE_EXPIRY_MS = 72 * 60 * 60 * 1000 // 72 hours
 
-// Seed data only — the owner can rename/edit/delete these or add new roles
+// Seed data only - the owner can rename/edit/delete these or add new roles
 // from scratch via the Role Builder. `access` is 'read' or 'write' per tab.
 export const PRESET_ROLES = [
   {

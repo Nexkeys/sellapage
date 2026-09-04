@@ -71,7 +71,7 @@ export default async function handler(req, res) {
       moderatedBy: null,
     })
 
-    // Best-effort — lets the dashboard stop showing the review prompt to this
+    // Best-effort - lets the dashboard stop showing the review prompt to this
     // vendor without needing a second round-trip to check submission history.
     await db.collection('stores').doc(storeId).update({ hasSubmittedPlatformReview: true }).catch(() => {})
 

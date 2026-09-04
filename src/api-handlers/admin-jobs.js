@@ -3,7 +3,7 @@
 // same convention as every other admin-*.js handler. Unlike the existing CAC
 // manual-override and referral-withdrawal admin flows (neither of which emails
 // the vendor on the admin's action), both approve and reject here email the
-// vendor — closing that gap for the first time in this codebase.
+// vendor - closing that gap for the first time in this codebase.
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 
     if (action === 'update' && req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {})
-      // adminUid no longer accepted from the body — attribution comes from the
+      // adminUid no longer accepted from the body - attribution comes from the
       // verified admin identity so the moderation trail can't be forged.
       const { jobId, status, rejectionReason } = body
 

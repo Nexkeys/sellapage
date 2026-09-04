@@ -3,7 +3,7 @@
 //
 // WHY: a script can call createUserWithEmailAndPassword directly against
 // Firebase with the public web API key and then write its own stores/{uid} doc,
-// never touching the signup form — so the signup phone step alone cannot stop
+// never touching the signup form - so the signup phone step alone cannot stop
 // it. This gate closes what such an account could actually GAIN: with no
 // verified phone, the storefront simply never appears publicly, so a bot-made
 // store is inert. Combined with signup verification, phone becomes a real wall.
@@ -39,7 +39,7 @@ export function filterVisibleStores(stores, gateEnabled) {
 }
 
 // Cached for the page lifetime: every storefront lookup asks, and this must not
-// add a round-trip per call. Fails CLOSED-as-off — if the config can't be
+// add a round-trip per call. Fails CLOSED-as-off - if the config can't be
 // fetched we do NOT hide stores, because a config blip must never black out
 // every storefront on the platform.
 let gatePromise = null

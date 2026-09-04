@@ -1,6 +1,6 @@
 //src/components/admin/BlogAdmin.jsx/
 // Self-contained Blog admin shell (own fetches/state, like JobListingsTab.jsx/
-// SellaAI.jsx) — the first Admin.jsx tab factored out of the dense inline-JSX
+// SellaAI.jsx) - the first Admin.jsx tab factored out of the dense inline-JSX
 // pattern, since a Tiptap composer with slug/SEO/scheduling/comments-moderation
 // doesn't fit the Announcements-style plain-input mold every other tab uses.
 import { useState, useCallback, useEffect } from 'react'

@@ -1,5 +1,5 @@
 //src/api-handlers/topship-rates.js
-// LIVE — see _lib/topship-booking.js header for the staging/production switch.
+// LIVE - see _lib/topship-booking.js header for the staging/production switch.
 import { getTopshipRates } from './_lib/topship-booking.js'
 
 export default async function handler(req, res) {
@@ -13,10 +13,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing storeId' })
   }
   if (!senderDetails?.city) {
-    return res.status(400).json({ error: 'Incomplete sender details — city is required' })
+    return res.status(400).json({ error: 'Incomplete sender details - city is required' })
   }
   if (!receiverDetails?.city) {
-    return res.status(400).json({ error: 'Incomplete receiver details — city is required' })
+    return res.status(400).json({ error: 'Incomplete receiver details - city is required' })
   }
 
   try {
@@ -34,13 +34,13 @@ export default async function handler(req, res) {
 
     // NOTE: `pricingTier` (Budget/Express/FedEx/Premium/LastMileBudget) is the enum
     // value Topship's /save-shipment actually requires. `mode` is just a free-text
-    // display string from their staging environment — sometimes a friendly name
+    // display string from their staging environment - sometimes a friendly name
     // ("Chowdeck Shipping"), sometimes a raw courier UUID. Never send `mode` to the
     // booking call; always book with `pricing_tier`.
     const isUuidLike = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str || '')
 
     // Topship rejects SeaExport bookings under 100kg outright ("Sea Export shipments are
-    // only supported for shipments above or equal to 100KG" — confirmed via a real staging
+    // only supported for shipments above or equal to 100KG" - confirmed via a real staging
     // booking), so don't offer that rate for lighter packages in the first place.
     const weightNum = Number(weight) || 1
     const eligible = result.data.filter(r => r.pricingTier !== 'SeaExport' || weightNum >= 100)

@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Review token is required' })
     }
 
-    // Find the order or booking by review token — orders and bookings live in
+    // Find the order or booking by review token - orders and bookings live in
     // separate collections, so a token could belong to either.
     let orderDoc = null
     const ordersQuery = await db.collectionGroup('orders').where('reviewToken', '==', token).limit(1).get()
@@ -139,14 +139,14 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, message: 'Review submitted successfully' })
   } catch (err) {
-    // Firestore code 9 = FAILED_PRECONDITION — a collection-group query (e.g. the
+    // Firestore code 9 = FAILED_PRECONDITION - a collection-group query (e.g. the
     // `bookings`/reviewToken lookup above) is missing its index/exemption in the Firebase
     // Console (Firestore > Indexes > Automatic > Exemptions). Collection-group queries need
     // an explicit exemption per field even for a plain equality match; collection-scoped
     // queries don't. Logged distinctly so a missing exemption is instantly diagnosable from
     // Vercel logs instead of reading as a generic 500.
     if (err?.code === 9) {
-      console.error('[submit-review] missing Firestore collection-group index — see Firebase Console > Firestore > Indexes > Exemptions:', err.details || err.message)
+      console.error('[submit-review] missing Firestore collection-group index - see Firebase Console > Firestore > Indexes > Exemptions:', err.details || err.message)
     } else {
       console.error('[submit-review] error', err)
     }

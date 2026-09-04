@@ -1,7 +1,7 @@
 // src/hooks/useInView.js
 import { useEffect, useRef, useState } from 'react'
 
-// Reveals once and stays revealed (no re-hiding on scroll away — that reads
+// Reveals once and stays revealed (no re-hiding on scroll away - that reads
 // as gimmicky on repeat visits). Respects prefers-reduced-motion by
 // revealing immediately instead of animating.
 export function useInView(options = {}) {
@@ -31,7 +31,7 @@ export function useInView(options = {}) {
           observer.unobserve(el)
         }
       },
-      // threshold MUST stay 0 — it's a fraction of the OBSERVED ELEMENT's own
+      // threshold MUST stay 0 - it's a fraction of the OBSERVED ELEMENT's own
       // area, so anything taller than (viewport / threshold) can never satisfy
       // it and stays opacity-0 forever. A 5000px-tall blog article on a 640px
       // mobile viewport tops out at 12.8% visible, so the old 0.15 threshold

@@ -6,7 +6,7 @@
 //
 // Independent of the OTP phases: worth having BEFORE any SMS ships, because an
 // empty Termii wallet makes phone verification fail for every vendor with no
-// obvious cause — exactly the kind of silent failure that has cost real hours
+// obvious cause - exactly the kind of silent failure that has cost real hours
 // on this codebase before.
 //
 // TERMII_API_KEY is read server-side only and is never echoed back to the
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'GET,OPTIONS' })) return
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  // 'health' — the System Health tab, where infra status already lives.
+  // 'health' - the System Health tab, where infra status already lives.
   const admin = await verifyAdmin(req, 'health')
   if (!admin) return res.status(403).json({ error: 'Forbidden' })
 
@@ -86,7 +86,7 @@ export default async function handler(req, res) {
 
     // Config-level check on TERMII_SENDER_ID. Termii's `from` must be the short
     // alphanumeric sender NAME ("Sellapage"), not the UUID the application form
-    // returns — see validateSenderId(). Catching this here beats discovering it
+    // returns - see validateSenderId(). Catching this here beats discovering it
     // as silent send failures the day approval lands. The value itself is only
     // echoed when it is INVALID, so a working sender ID is never disclosed.
     const senderCheck = validateSenderId(process.env.TERMII_SENDER_ID)
