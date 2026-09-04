@@ -4,6 +4,13 @@
 // Last updated: 2026-09-01 (loyalty cards)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-04  Locked `emailVerifiedAt` and `gateExempt` (verificationFields).
+//               `emailVerifiedAt` is written ONLY by login-verify.js when an
+//               emailed OTP clears, and the new storefront EMAIL gate trusts it
+//               to decide public visibility. If a browser could set it, an
+//               abandoned or bot signup would simply publish itself and the
+//               gate would be decorative. Safe to publish at any time: it only
+//               tightens a path no legitimate client uses.
 //   2026-09-01  Added `match /loyalty/{code}` inside /stores/{storeId}.
 //               NOT YET PUBLISHED as of writing. Must go live BEFORE any store
 //               switches loyalty on, because the document id is the customer's
@@ -29,6 +36,13 @@
 //     3. node scripts/backfill-phone-gate-exempt.js --dry-run   (then for real)
 //     4. ONLY THEN set ENABLE_STOREFRONT_PHONE_GATE=true
 // The gate is OFF by default, so doing nothing changes nothing.
+//
+// ⚠️ THE SAME ORDER APPLIES TO THE NEW EMAIL GATE.
+// `ENABLE_STOREFRONT_EMAIL_GATE=true` hides every store without a server-set
+// `emailVerifiedAt`. Existing stores have none, so grandfather them FIRST
+// (phoneGateExempt or gateExempt both satisfy it) or the whole platform
+// disappears. It is independent of the phone gate and needs no Termii, so it
+// can be switched on much sooner - but not before the backfill.
 //
 // ⚠️ DEPLOY ORDER MATTERS. Ship the application code FIRST, then these rules.
 // Two client writes were moved server-side to make the field locks below
@@ -96,10 +110,15 @@ service cloud.firestore {
         'cacRejectedAt', 'cacRejectionReason', 'cacAttempts', 'cacDocType',
         'rcNumber',
         'phoneVerified', 'phoneVerifiedAt', 'phoneVerifiedMasked', 'verifiedPhone',
-        // Grandfathers stores that existed before the storefront phone gate.
-        // MUST be server-only: if a client could set it, a bot would simply
-        // exempt itself and the gate would be decorative.
-        'phoneGateExempt'
+        // Proof that the account's email was confirmed by an emailed OTP.
+        // Written only by login-verify.js. The storefront email gate trusts
+        // this, so a client that could set it would self-publish an unverified
+        // store, which is the whole thing the gate exists to stop.
+        'emailVerifiedAt',
+        // Grandfathers stores that existed before the storefront gates.
+        // MUST be server-only: if a client could set either, a bot would simply
+        // exempt itself and the gates would be decorative.
+        'phoneGateExempt', 'gateExempt'
       ];
     }
 

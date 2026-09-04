@@ -19,23 +19,39 @@
 // smsAvailable: fix the sender ID, confirm a real SMS arrives, run
 // scripts/backfill-phone-gate-exempt.js, and only THEN enable the gate.
 
+// A store is grandfathered out of BOTH gates by a server-set flag. Client
+// writes to these are blocked in firestore.rules (verificationFields), because
+// a self-exempting bot would make either gate decorative.
+function isGrandfathered(store) {
+  return store.phoneGateExempt === true || store.gateExempt === true
+}
+
 /**
- * @param {object} store          the store document
- * @param {boolean} gateEnabled   from /api/public-config -> storefrontGate
+ * @param {object} store  the store document
+ * @param {object|boolean} gates
+ *        `{ phone, email }` from /api/public-config. A bare boolean is still
+ *        accepted and read as the phone gate, so any caller not yet updated
+ *        keeps its exact previous behaviour.
  * @returns {boolean} true when the storefront must be hidden from the public
  */
-export function isStorefrontHidden(store, gateEnabled) {
-  if (!gateEnabled) return false
+export function isStorefrontHidden(store, gates) {
+  const phoneGate = typeof gates === 'object' && gates !== null ? gates.phone === true : gates === true
+  const emailGate = typeof gates === 'object' && gates !== null ? gates.email === true : false
+
+  if (!phoneGate && !emailGate) return false
   if (!store) return false
-  // Grandfathered: existed before the gate, server-marked, client cannot set it.
-  if (store.phoneGateExempt === true) return false
-  return store.phoneVerified !== true
+  if (isGrandfathered(store)) return false
+
+  // Either gate alone is enough to hide a store. They are independent on
+  // purpose: the phone gate waits on Termii, the email gate does not.
+  if (phoneGate && store.phoneVerified !== true) return true
+  if (emailGate && !store.emailVerifiedAt) return true
+  return false
 }
 
 /** Filters a list of stores for public listings (Live Stores, etc.). */
-export function filterVisibleStores(stores, gateEnabled) {
-  if (!gateEnabled) return stores
-  return (stores || []).filter(s => !isStorefrontHidden(s, gateEnabled))
+export function filterVisibleStores(stores, gates) {
+  return (stores || []).filter(s => !isStorefrontHidden(s, gates))
 }
 
 // Cached for the page lifetime: every storefront lookup asks, and this must not
@@ -47,8 +63,13 @@ export async function isStorefrontGateEnabled() {
   if (!gatePromise) {
     gatePromise = fetch('/api/public-config')
       .then(r => (r.ok ? r.json() : null))
-      .then(d => d?.storefrontGate === true)
-      .catch(() => false)
+      .then(d => ({
+        phone: d?.storefrontGate === true,
+        email: d?.storefrontEmailGate === true,
+      }))
+      // Fails CLOSED-as-off for BOTH gates: a config blip must never black out
+      // every storefront on the platform.
+      .catch(() => ({ phone: false, email: false }))
   }
   return gatePromise
 }

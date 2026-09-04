@@ -12,6 +12,63 @@ export function getSessionId() {
 
 export function clearSessionId() {
   localStorage.removeItem(SESSION_ID_KEY)
+  clearOtpPendingHint()
+}
+
+const OTP_PENDING_HINT_KEY = 'sellapage_otp_pending'
+
+/** Remember that an emailed code is still outstanding for this browser. */
+export function setOtpPendingHint() {
+  try { localStorage.setItem(OTP_PENDING_HINT_KEY, '1') } catch { /* private mode */ }
+}
+
+export function clearOtpPendingHint() {
+  try { localStorage.removeItem(OTP_PENDING_HINT_KEY) } catch { /* private mode */ }
+}
+
+const LOGIN_NOTICE_KEY = 'sellapage_login_notice'
+
+/**
+ * A one-shot message for the sign-in page.
+ *
+ * Used instead of a ?verify=1 query param because that param does not survive:
+ * after logoutSeller() resolves, ProtectedRoute re-renders, sees no user, and
+ * redirects again to a bare /login, dropping the query string. Login also never
+ * read `verify` in the first place, so it was decorative.
+ */
+export function setLoginNotice(message) {
+  try { localStorage.setItem(LOGIN_NOTICE_KEY, message) } catch { /* private mode */ }
+}
+
+export function consumeLoginNotice() {
+  try {
+    const msg = localStorage.getItem(LOGIN_NOTICE_KEY)
+    if (msg) localStorage.removeItem(LOGIN_NOTICE_KEY)
+    return msg || ''
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Pure read, no side effect, because callers check it DURING render and
+ * StrictMode double-invokes render in development. A read-and-clear here would
+ * return true on the first pass and false on the second, and the second is the
+ * one React commits, so the check would silently stop working in dev.
+ *
+ * Clearing is therefore left to the two places that already happen: any
+ * successful sign-in clears it, and logoutSeller -> clearSessionId clears it.
+ * ProtectedRoute logs out as it redirects, so the flag cannot get stuck.
+ *
+ * Advisory only. It can deny locally but never grant; the server heartbeat
+ * stays the sole authority.
+ */
+export function hasOtpPendingHint() {
+  try {
+    return localStorage.getItem(OTP_PENDING_HINT_KEY) === '1'
+  } catch {
+    return false
+  }
 }
 
 // Returns { sessionId, otpRequired, otpReason }. Callers that predate Phase 2

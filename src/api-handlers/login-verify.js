@@ -82,6 +82,26 @@ export default async function handler(req, res) {
       otpReason: null,
     })
 
+    // Receiving the emailed code proves control of the account's email address,
+    // so record that on the store document itself. The storefront email gate
+    // reads this to decide whether a store may appear publicly.
+    //
+    // Owner only, deliberately: a staff member clearing their own device
+    // challenge says nothing about who owns the store's email, and
+    // resolveCallerStoreId returns a storeId for staff too.
+    if (access.role === 'owner' && access.storeId === uid) {
+      try {
+        await db.collection('stores').doc(access.storeId).set(
+          { emailVerifiedAt: Date.now() },
+          { merge: true },
+        )
+      } catch (err) {
+        // Never fail the sign-in over this; the gate simply keeps the store
+        // hidden until a later verification writes the field.
+        console.error('[login-verify] could not mark email verified:', err)
+      }
+    }
+
     await logAudit(db, {
       uid,
       action: 'login_otp',

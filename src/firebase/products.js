@@ -273,9 +273,10 @@ export const getStoreBySlug = async (storeName) => {
   if (!snap.empty) {
     const d = snap.docs[0]
     const store = { id: d.id, ...d.data() }
-    // Storefront phone gate - returns null (renders as "store not found") for
-    // an unverified store once the gate is on. Off by default, so this is a
-    // no-op until deliberately enabled. See utils/storefrontGate.js.
+    // Storefront gates - returns null (renders as "store not found") for an
+    // unverified store once a gate is on. Two independent gates: phone
+    // (waits on Termii) and email (does not). Both off by default, so this is
+    // a no-op until deliberately enabled. See utils/storefrontGate.js.
     const gate = await isStorefrontGateEnabled()
     if (isStorefrontHidden(store, gate)) return null
     return store

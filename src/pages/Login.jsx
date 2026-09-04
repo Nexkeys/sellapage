@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft, ShieldAlert } from 'lucide-react'
 import { loginSeller, registerSeller, resetPassword, logoutSeller, auth } from '../firebase/auth'
-import { registerSession, confirmLoginOtp } from '../utils/sessionTracking'
+import { registerSession, confirmLoginOtp, setOtpPendingHint, clearOtpPendingHint, consumeLoginNotice } from '../utils/sessionTracking'
 import OtpVerifyModal from '../components/OtpVerifyModal'
 import { getRecaptchaToken } from '../utils/recaptcha'
 import RecaptchaCheckbox from '../components/RecaptchaCheckbox'
@@ -23,6 +23,13 @@ export default function Login() {
   const navigate = useNavigate()
   // 2. Initialize the search parameter hook
   const [searchParams] = useSearchParams()
+
+  // Explains why someone was sent back here, so a returning vendor is not
+  // dropped on a bare form wondering what went wrong.
+  useEffect(() => {
+    const notice = consumeLoginNotice()
+    if (notice) setError(notice)
+  }, [])
   const refCode = searchParams.get('ref')
 
   const [mode, setMode] = useState('login')
@@ -196,6 +203,7 @@ export default function Login() {
         }
 
         if (sessionRisk?.otpRequired) {
+          setOtpPendingHint()
           setLoginOtp({ reason: sessionRisk.otpReason })
           setLoading(false)
           return
@@ -269,9 +277,10 @@ export default function Login() {
         // Clear tracking cache
         localStorage.removeItem('vendor_referral_code')
 
+        let signupRisk = { otpRequired: false }
         try {
           const token = await auth.currentUser.getIdToken()
-          await registerSession(token)
+          signupRisk = await registerSession(token)
         } catch (err) {
           console.error('Failed to register session:', err)
         }
@@ -283,14 +292,39 @@ export default function Login() {
         // signup is byte-for-byte unchanged; the moment Termii is live it turns
         // itself on with no redeploy. Checked AFTER the account exists so the
         // authenticated OTP endpoints can be reused as-is.
+        let pendingPhone = null
         try {
           const cfg = await fetch('/api/public-config').then(r => r.ok ? r.json() : null).catch(() => null)
           if (cfg?.smsAvailable && form.whatsappNumber.trim()) {
-            setSignupPhone(form.whatsappNumber.trim())
-            setLoading(false)
-            return
+            pendingPhone = form.whatsappNumber.trim()
           }
         } catch { /* never block a signup on this check */ }
+
+        // Ask for the emailed code HERE, before the dashboard.
+        //
+        // A brand new account is always an unrecognised device, so with login
+        // OTP enabled the server marks the fresh session otpPending. This
+        // result used to be discarded and the user was sent to the dashboard
+        // anyway - then DashboardLayout's heartbeat, which fires immediately on
+        // mount rather than after its 45s interval, saw otpPending and signed
+        // them straight back out to /login?verify=1.
+        //
+        // From the vendor's side that looked like the app crashing or their
+        // network dropping seconds after signing up, and only then asking for a
+        // code. Handling it here means they go: create store -> enter code ->
+        // dashboard, and never see a dashboard that gets taken away.
+        if (signupRisk?.otpRequired) {
+          setOtpPendingHint()
+          setLoginOtp({ reason: signupRisk.otpReason, isSignup: true, thenPhone: pendingPhone })
+          setLoading(false)
+          return
+        }
+
+        if (pendingPhone) {
+          setSignupPhone(pendingPhone)
+          setLoading(false)
+          return
+        }
       }
       // Successful sign-in clears any accumulated failed-attempt counter.
       if (mode === 'login') {
@@ -300,6 +334,7 @@ export default function Login() {
           body: JSON.stringify({ email: form.email }),
         }).catch(() => {})
       }
+      clearOtpPendingHint()
       navigate('/dashboard')
     } catch (err) {
       // Wrong password / unknown user - count it toward the lockout. Firebase
@@ -405,17 +440,27 @@ export default function Login() {
       <OtpVerifyModal
         open
         purpose="login"
-        title="Confirm it's you"
+        title={loginOtp.isSignup ? 'Confirm your email' : "Confirm it's you"}
         description={
-          loginOtp.reason === 'country_change'
-            ? "You're signing in from a new location, so we've emailed you a code."
-            : loginOtp.reason === 'stale_verification'
-              ? "It's been a while since we confirmed this device. We've emailed you a code."
-              : "We don't recognise this device, so we've emailed you a code."
+          loginOtp.isSignup
+            ? "Your store is created. Enter the 6-digit code we just emailed you to finish setting up."
+            : loginOtp.reason === 'country_change'
+              ? "You're signing in from a new location, so we've emailed you a code."
+              : loginOtp.reason === 'stale_verification'
+                ? "It's been a while since we confirmed this device. We've emailed you a code."
+                : "We don't recognise this device, so we've emailed you a code."
         }
         onClose={async () => {
+          const wasSignup = loginOtp.isSignup
           setLoginOtp(null)
           await logoutSeller().catch(() => {})
+          // Their account DOES exist by this point. Dropping them back on the
+          // signup form with no word would send them to create it again and hit
+          // "email already in use", so send them to sign-in and say so.
+          if (wasSignup) {
+            setMode('login')
+            setError('Your store was created. Sign in and enter the code we emailed you to finish.')
+          }
         }}
         onVerified={async () => {
           const user = auth.currentUser
@@ -423,7 +468,16 @@ export default function Login() {
             const token = await user.getIdToken()
             await confirmLoginOtp(token)
           }
+          // A signup that also owes phone verification chains into that step
+          // rather than losing it. Null for every login, and today for every
+          // signup too, since SMS is not live yet.
+          clearOtpPendingHint()
+          const nextPhone = loginOtp.thenPhone
           setLoginOtp(null)
+          if (nextPhone) {
+            setSignupPhone(nextPhone)
+            return
+          }
           navigate('/dashboard')
         }}
       />

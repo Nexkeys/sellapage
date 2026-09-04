@@ -35,5 +35,10 @@ export default async function handler(req, res) {
     // so it must be turned on deliberately AFTER the backfill script has run -
     // never as a side effect of Termii going live.
     storefrontGate: String(process.env.ENABLE_STOREFRONT_PHONE_GATE || '').toLowerCase() === 'true',
+    // Independent of the phone gate and of ENABLE_LOGIN_OTP. Hides any store
+    // with no server-recorded emailVerifiedAt, so an abandoned or bot signup
+    // leaves nothing publicly visible. Enable only AFTER grandfathering
+    // existing stores, or the whole platform disappears.
+    storefrontEmailGate: String(process.env.ENABLE_STOREFRONT_EMAIL_GATE || '').toLowerCase() === 'true',
   })
 }
