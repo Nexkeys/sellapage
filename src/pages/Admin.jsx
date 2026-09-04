@@ -46,6 +46,14 @@ const ADMIN_TAB_GROUPS = [
 ];
 
 const PLAN_N = { premium: 0, pro: 1, growth: 2, starter: 3 };
+const ANN_INPUT = 'bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500';
+
+// Suggestions only. The field stays free text so any wording is possible.
+const ANN_CTA_PRESETS = [
+  'Join Now', 'Join Community', 'Join Channel', 'Follow Us',
+  'Follow On Instagram', 'Open WhatsApp', 'Learn More', 'Get Started', 'See Details',
+];
+
 const PLAN_C = { premium: 'bg-yellow-50 text-yellow-700 border-yellow-200', pro: 'bg-gray-900 text-white border-gray-900', growth: 'bg-green-50 text-green-700 border-green-200', starter: 'bg-gray-100 text-gray-600 border-gray-200' };
 
 export default function Admin() {
@@ -124,7 +132,8 @@ export default function Admin() {
   const [announcements, setAnnouncements] = useState([]);
   const [annLoading, setAnnLoading] = useState(false);
   const [annError, setAnnError] = useState('');
-  const [newAnn, setNewAnn] = useState({ title: '', message: '', type: 'info' });
+  const [newAnn, setNewAnn] = useState({ title: '', message: '', type: 'info', displayMode: 'banner', ctaLabel: '', ctaUrl: '' });
+  const [annPostError, setAnnPostError] = useState('');
 
   const [tickets, setTickets] = useState([]);
   const [ticketStats, setTicketStats] = useState(null);
@@ -315,14 +324,25 @@ export default function Admin() {
 
   const createAnnouncement = useCallback(async () => {
     if (!newAnn.title.trim() || !newAnn.message.trim()) return;
+    setAnnPostError('');
     try {
-      await fetch('/api/admin-announcements?action=create', {
+      const r = await fetch('/api/admin-announcements?action=create', {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
         body: JSON.stringify(newAnn),
       });
-      setNewAnn({ title: '', message: '', type: 'info' });
+      // The server rejects unsafe link schemes, so surface that instead of
+      // silently clearing the form and losing what was typed.
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        setAnnPostError(data.error || 'Could not post the announcement.');
+        return;
+      }
+      setNewAnn({ title: '', message: '', type: 'info', displayMode: 'banner', ctaLabel: '', ctaUrl: '' });
       fetchAnnouncements();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setAnnPostError('Could not post the announcement.');
+    }
   }, [newAnn, fetchAnnouncements]);
 
   const toggleAnnouncement = useCallback(async (id, currentActive) => {
@@ -824,8 +844,65 @@ export default function Admin() {
         {activeTab === 'announcements' && <div className="space-y-4 animate-in fade-in duration-200">
           {annError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{annError}</div>}
           <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Announcements</h2><button onClick={fetchAnnouncements} disabled={annLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{annLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Create Announcement</p><div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2"><input type="text" placeholder="Title" value={newAnn.title} onChange={e=>setNewAnn({...newAnn,title:e.target.value})} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><input type="text" placeholder="Message" value={newAnn.message} onChange={e=>setNewAnn({...newAnn,message:e.target.value})} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><select value={newAnn.type} onChange={e=>setNewAnn({...newAnn,type:e.target.value})} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none"><option value="info">Info</option><option value="warning">Warning</option><option value="promo">Promo</option></select></div><button onClick={createAnnouncement} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Post</button></div>
-          {annLoading?<SkeletonRows count={5} />:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{announcements.length===0?<div className="p-6 text-center text-gray-400 text-sm">No announcements yet.</div>:announcements.map(a=><div key={a.id} className="px-4 py-3 hover:bg-gray-50/50 flex items-center justify-between gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-bold text-gray-900 truncate">{a.title}</p><span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${a.type==='warning'?'bg-amber-100 text-amber-700':a.type==='promo'?'bg-purple-100 text-purple-700':'bg-blue-100 text-blue-700'}`}>{a.type}</span></div><p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{a.message}</p><p className="text-[9px] text-gray-400 mt-0.5">{a.createdAt?new Date(a.createdAt).toLocaleDateString('en-NG'):''}</p></div><div className="flex items-center gap-2 flex-shrink-0"><button onClick={()=>toggleAnnouncement(a.id,a.active)} className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${a.active?'bg-green-500':'bg-gray-200'}`}><span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${a.active?'translate-x-4':'translate-x-0'}`} /></button><button onClick={()=>deleteAnnouncement(a.id)} className="text-red-400 hover:text-red-600"><X size={14} /></button></div></div>)}</div></div>}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Create Announcement</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+              <input type="text" placeholder="Title" value={newAnn.title} onChange={e=>setNewAnn({...newAnn,title:e.target.value})} className={ANN_INPUT} />
+              <input type="text" placeholder="Message" value={newAnn.message} onChange={e=>setNewAnn({...newAnn,message:e.target.value})} className={ANN_INPUT} />
+              <select value={newAnn.type} onChange={e=>setNewAnn({...newAnn,type:e.target.value})} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none"><option value="info">Info</option><option value="warning">Warning</option><option value="promo">Promo</option></select>
+            </div>
+
+            {/* How it shows up on the vendor's dashboard */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+              <label className="block">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">How it shows</span>
+                <select value={newAnn.displayMode} onChange={e=>setNewAnn({...newAnn,displayMode:e.target.value})} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none">
+                  <option value="banner">Bar above the dashboard</option>
+                  <option value="modal">Full screen popup</option>
+                </select>
+                <span className="mt-1 block text-[10px] text-gray-400">
+                  {newAnn.displayMode === 'modal'
+                    ? 'Covers the screen on load. They can close it or click outside.'
+                    : 'Slim strip on every tab. Easy to scroll past.'}
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Button text</span>
+                <input type="text" list="ann-cta-presets" placeholder="Join Now" value={newAnn.ctaLabel} onChange={e=>setNewAnn({...newAnn,ctaLabel:e.target.value})} className={`mt-1 w-full ${ANN_INPUT}`} />
+                <datalist id="ann-cta-presets">
+                  {ANN_CTA_PRESETS.map(o => <option key={o} value={o} />)}
+                </datalist>
+                <span className="mt-1 block text-[10px] text-gray-400">Pick one or type your own. Blank becomes "Learn More".</span>
+              </label>
+            </div>
+
+            <label className="block mb-2">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Link (hidden behind the button)</span>
+              <input type="url" inputMode="url" placeholder="https://chat.whatsapp.com/..." value={newAnn.ctaUrl} onChange={e=>setNewAnn({...newAnn,ctaUrl:e.target.value})} className={`mt-1 w-full ${ANN_INPUT}`} />
+              <span className="mt-1 block text-[10px] text-gray-400">Vendors never see the raw link, only the button. Leave blank for no button.</span>
+            </label>
+
+            {annPostError && <p className="mb-2 text-xs font-semibold text-red-600">{annPostError}</p>}
+
+            {/* What the vendor will actually see */}
+            {(newAnn.title.trim() || newAnn.message.trim()) && (
+              <div className="mb-3 rounded-lg border border-dashed border-gray-200 bg-gray-50/70 p-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Preview</p>
+                <p className="text-sm font-bold text-gray-900">{newAnn.title || 'Title'}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{newAnn.message || 'Message'}</p>
+                {newAnn.ctaUrl.trim() && (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white">
+                    {newAnn.ctaLabel.trim() || 'Learn More'}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <button onClick={createAnnouncement} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Post</button>
+          </div>
+          {annLoading?<SkeletonRows count={5} />:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{announcements.length===0?<div className="p-6 text-center text-gray-400 text-sm">No announcements yet.</div>:announcements.map(a=><div key={a.id} className="px-4 py-3 hover:bg-gray-50/50 flex items-center justify-between gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-bold text-gray-900 truncate">{a.title}</p><span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${a.type==='warning'?'bg-amber-100 text-amber-700':a.type==='promo'?'bg-purple-100 text-purple-700':'bg-blue-100 text-blue-700'}`}>{a.type}</span>{a.displayMode==='modal'&&<span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-gray-900 text-white">Popup</span>}{a.ctaUrl&&<span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{a.ctaLabel||'Link'}</span>}</div><p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{a.message}</p><div className="flex items-center gap-2 mt-0.5"><p className="text-[9px] text-gray-400">{a.createdAt?new Date(a.createdAt).toLocaleDateString('en-NG'):''}</p>{a.ctaUrl&&<a href={a.ctaUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gray-400 hover:text-green-600 truncate max-w-[220px]">{a.ctaUrl}</a>}</div></div><div className="flex items-center gap-2 flex-shrink-0"><button onClick={()=>toggleAnnouncement(a.id,a.active)} className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${a.active?'bg-green-500':'bg-gray-200'}`}><span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${a.active?'translate-x-4':'translate-x-0'}`} /></button><button onClick={()=>deleteAnnouncement(a.id)} className="text-red-400 hover:text-red-600"><X size={14} /></button></div></div>)}</div></div>}
         </div>}
 
         {/* TICKETS */}

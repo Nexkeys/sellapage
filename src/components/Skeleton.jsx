@@ -27,7 +27,15 @@ export function Skeleton({ className = '' }) {
 
 /**
  * Wrap any group of skeletons so assistive tech announces the load once.
- * Every composed skeleton below already includes this.
+ *
+ * The ready-to-use skeletons (SkeletonCardGrid, SkeletonRows, SkeletonStats,
+ * SkeletonStorefront, SkeletonDashboard, SkeletonArticle) already include this,
+ * so drop them straight into a loading branch.
+ *
+ * The lower-level pieces (Skeleton, SkeletonText, SkeletonCard) deliberately do
+ * NOT, because they are meant to be composed inside one region rather than each
+ * announcing itself. If you use one of those on its own, wrap it in this, or a
+ * screen reader gets silence where a loading message should be.
  */
 export function SkeletonRegion({ label = 'Loading', className = '', children }) {
   return (
