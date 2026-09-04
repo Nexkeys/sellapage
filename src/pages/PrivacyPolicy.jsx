@@ -106,7 +106,6 @@ export default function PrivacyPolicy() {
       {/* Header */}
       <section className="bg-gray-50 pt-28 pb-12 px-4 border-b border-gray-100">
         <div className="max-w-3xl mx-auto">
-          <p className="section-tag mb-3">LEGAL</p>
           <h1 className="font-display text-4xl font-extrabold text-gray-900 mb-3">
             Privacy Policy
           </h1>

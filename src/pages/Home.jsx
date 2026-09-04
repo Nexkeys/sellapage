@@ -730,7 +730,7 @@ export default function Home() {
               Built for the full selling workflow
             </h2>
             <p className="text-gray-500 text-base max-w-2xl mx-auto">
-              From checkout to delivery, customers, reviews, discounts, analytics, and growth - Sellapage gives Nigerian businesses the operating layer to sell with confidence. Pro and Premium unlock the full suite.
+              Checkout, delivery, customers, reviews, discounts, and analytics, all in one dashboard. Pro and Premium add the rest.
             </p>
           </Reveal>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">

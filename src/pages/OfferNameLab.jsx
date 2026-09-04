@@ -9,23 +9,23 @@ import SEO from '../components/SEO'
 const STYLE_POOLS = {
   minimalist: {
     abstracts: ['Label', 'Edit', 'Basics', 'Project', 'Core', 'Pure', 'Studio'],
-    oneLiner: (target, item) => `Streamlined, functional ${item} designed for ${target}.`,
-    bio: (target, item) => `✨ Curated ${item} for ${target}.\n• Elevated essentials for everyday wear.\n• Tap below to check catalog and secure yours on WhatsApp. 📲`
+    oneLiner: (target, item) => `Clean, well made ${item} for ${target}.`,
+    bio: (target, item) => `${item} for ${target}.\n• Simple pieces you will actually wear.\n• Tap the link to see what is in stock and order on WhatsApp.`
   },
   street: {
     abstracts: ['Plug', 'Vault', 'Drip', 'Alley', 'Base', 'Crew', 'Zone'],
-    oneLiner: (target, item) => `The ultimate high-speed ${item} plug serving ${target}.`,
-    bio: (target, item) => `🔥 Finest premium ${item} available in ${target}.\n• High demand items. Fastest finger only.\n• Drop your order payload instantly via WhatsApp below 👇`
+    oneLiner: (target, item) => `Your ${item} plug in ${target}. Fast.`,
+    bio: (target, item) => `🔥 ${item} in ${target}.\n• Stock moves fast. Fastest finger only.\n• Tap below and order on WhatsApp 👇`
   },
   luxury: {
     abstracts: ['Atelier', 'Maison', 'Aura', 'Privé', 'Vellum', 'Noir', 'Couture'],
-    oneLiner: (target, item) => `Exquisite, high-end ${item} tailored for discerning clients in ${target}.`,
-    bio: (target, item) => `👑 Redefining ${item} for premium collections in ${target}.\n• Bespoke curation and exceptional attention to detail.\n• View open drops and order straight to WhatsApp 🔗`
+    oneLiner: (target, item) => `Quiet, high end ${item} for a small list of clients in ${target}.`,
+    bio: (target, item) => `${item} for ${target}.\n• Made to order, finished by hand.\n• See what is open now and order on WhatsApp.`
   },
   modern: {
     abstracts: ['Nova', 'Apex', 'Vivid', 'Shift', 'Element', 'Hub', 'Matrix'],
-    oneLiner: (target, item) => `Smart, next-gen ${item} built for modern living across ${target}.`,
-    bio: (target, item) => `⚡ High-utility ${item} engineered for ${target}.\n• Premium quality meets effortless ordering.\n• Select your variations and checkout instantly via WhatsApp 🎯`
+    oneLiner: (target, item) => `${item} that just works, for ${target}.`,
+    bio: (target, item) => `⚡ ${item} for ${target}.\n• Good build, easy ordering.\n• Pick your size or colour and check out on WhatsApp.`
   }
 }
 
@@ -38,7 +38,7 @@ function titleCase(value) {
 }
 
 export default function OfferNameLab() {
-  // Core contextual states
+  // Inputs
   const [specificProduct, setSpecificProduct] = useState('crochet dresses')
   const [audience, setAudience] = useState('Lagos shoppers')
   const [namingStyle, setNamingStyle] = useState('minimalist')
@@ -50,7 +50,7 @@ export default function OfferNameLab() {
     const targetClean = audience.trim() || 'Nigeria'
     const styleData = STYLE_POOLS[namingStyle] || STYLE_POOLS.minimalist
 
-    // 1. Algorithmic Word Root Extraction
+    // 1. Pull the useful words out of what they typed
     const words = productClean.split(/\s+/)
     const productPrefix = titleCase(words[0] || 'Prime')
     const productRoot = titleCase(words[words.length - 1] || 'Brand')
@@ -59,28 +59,27 @@ export default function OfferNameLab() {
     const suffixStr = preferredSuffix === 'None' ? '' : ` ${preferredSuffix}`
     const pool = styleData.abstracts
 
-    // 2. Multi-Angle Name Formulation Engine
-    // Each formula uses a completely non-overlapping grammatical structure
+    // 2. Six name formulas, each with a different shape so they do not repeat
     
-    // Formula A: The Streamlined Suffix
+    // A: name + suffix
     const nameA = `${productPrefix}${suffixStr || ' Studio'}`
 
-    // Formula B: The Neologism / Portmanteau (Blends words for short styles)
+    // B: blended word, or abstract + product
     const rootTruncated = productRoot.slice(0, 4)
     const nameB = nameLength === 'short' 
       ? `${rootTruncated}ova` 
       : `${pool[0]} ${productRoot}`
 
-    // Formula C: The Continental Reverse Structure
+    // C: "The <product> <abstract>"
     const nameC = `The ${productRoot} ${pool[1]}`
 
-    // Formula D: The Identity-Localized Hybrid
+    // D: place + abstract
     const nameD = `${targetGeo} ${pool[2]}`
 
-    // Formula E: Abstract Narrative Prefix
+    // E: abstract + product
     const nameE = `${pool[3]} ${productPrefix}`
 
-    // Formula F: Studio Direction Title
+    // F: product + abstract
     const nameF = `${productRoot} ${pool[4]}`
 
     const uniqueNames = [nameA, nameB, nameC, nameD, nameE, nameF].map(n => n.trim())
@@ -89,12 +88,12 @@ export default function OfferNameLab() {
       names: uniqueNames,
       oneLiner: styleData.oneLiner(targetClean, productClean),
       bio: styleData.bio(targetClean, productClean),
-      tagline: `${titleCase(productClean)} optimized seamlessly for ${targetClean}.`,
+      tagline: `${titleCase(productClean)}, made for ${targetClean}.`,
       checklist: [
-        'Secure the cleanest generated name combination on your custom Sellapage URL.',
-        'Drop your sharp one-line formula right inside your homepage store description.',
-        'Copy-paste the structured line-break bio straight to your Instagram Profile Bio.',
-        'Ensure you configure dynamic product variants (sizes/colors) before blasting links.',
+        'Pick the name you like best and claim it as your Sellapage link.',
+        'Put the one-liner in your store description.',
+        'Paste the bio into your Instagram profile.',
+        'Add your sizes and colours before you share the link anywhere.',
       ]
     }
   }, [specificProduct, audience, namingStyle, nameLength, preferredSuffix])
@@ -115,21 +114,21 @@ export default function OfferNameLab() {
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_1.1fr]">
             <div>
               <span className="inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-orange-700">
-                <Sparkles size={13} /> High-Conversion Studio
+                <Sparkles size={13} /> Free tool
               </span>
               <h1 className="mt-5 font-display text-4xl font-extrabold leading-tight text-gray-950 md:text-5xl">
-                Engineer a distinctive brand silhouette in seconds.
+                Find a store name that does not sound like everyone else.
               </h1>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-gray-600">
-                Stop using generic templates. Input your exact product specifications and let our engine map out non-repetitive, premium branding layouts.
+                Tell it what you sell and who buys from you. You get name options, a one-line description for your store, and a bio you can paste straight into Instagram.
               </p>
             </div>
 
-            {/* Input Configuration Grid Control Panel */}
+            {/* Controls */}
             <div className="rounded-[28px] border border-orange-100 bg-white p-6 shadow-xl shadow-orange-100/70 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-xs font-bold text-gray-700">What specific item/service do you sell?</span>
+                  <span className="text-xs font-bold text-gray-700">What do you sell?</span>
                   <input 
                     value={specificProduct} 
                     onChange={e => setSpecificProduct(e.target.value)} 
@@ -138,7 +137,7 @@ export default function OfferNameLab() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-bold text-gray-700">Who is your target audience?</span>
+                  <span className="text-xs font-bold text-gray-700">Who buys from you?</span>
                   <input 
                     value={audience} 
                     onChange={e => setAudience(e.target.value)} 
@@ -150,23 +149,23 @@ export default function OfferNameLab() {
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <label className="block">
-                  <span className="text-xs font-bold text-gray-700">Brand Vibe/Style</span>
+                  <span className="text-xs font-bold text-gray-700">Style</span>
                   <select value={namingStyle} onChange={e => setNamingStyle(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100">
                     <option value="minimalist">Minimalist</option>
-                    <option value="street">Street / Direct</option>
-                    <option value="luxury">Luxury / Premium</option>
-                    <option value="modern">Modern Tech</option>
+                    <option value="street">Street</option>
+                    <option value="luxury">Luxury</option>
+                    <option value="modern">Modern</option>
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-xs font-bold text-gray-700">Name Length Format</span>
+                  <span className="text-xs font-bold text-gray-700">Name format</span>
                   <select value={nameLength} onChange={e => setNameLength(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100">
-                    <option value="compound">Compound (Two words)</option>
-                    <option value="short">Short (Blended words)</option>
+                    <option value="compound">Two words</option>
+                    <option value="short">One blended word</option>
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-xs font-bold text-gray-700">Preferred Suffix</span>
+                  <span className="text-xs font-bold text-gray-700">Ending</span>
                   <select value={preferredSuffix} onChange={e => setPreferredSuffix(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100">
                     <option value="Co">Co</option>
                     <option value="Lab">Lab</option>
@@ -180,16 +179,16 @@ export default function OfferNameLab() {
           </div>
         </section>
 
-        {/* Output Section Layout Grid */}
+        {/* Output */}
         <section className="px-4 pb-16">
           <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-3">
             <Reveal direction="left" className="rounded-[26px] bg-gray-950 p-6 text-white shadow-xl shadow-gray-300/70 lg:col-span-1">
               <Wand2 className="mb-4 text-orange-300" />
-              <h2 className="font-display text-xl font-extrabold">Distinct Brand Names</h2>
+              <h2 className="font-display text-xl font-extrabold">Name options</h2>
               <p className="text-xs text-gray-400 mt-1 mb-4">Click any option below to copy.</p>
               <div className="mt-3 grid gap-2">
                 {output.names.map(name => (
-                  <button key={name} onClick={() => copy(name)} className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 text-left text-sm font-bold hover:bg-white/15 transitional-all active:scale-95">
+                  <button key={name} onClick={() => copy(name)} className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 text-left text-sm font-bold hover:bg-white/15 transition-all active:scale-95">
                     {name}
                     <Copy size={14} className="text-gray-400" />
                   </button>
@@ -199,9 +198,9 @@ export default function OfferNameLab() {
 
             <Reveal direction="right" delay={150} className="space-y-5 lg:col-span-2">
               {[
-                ['One-line Conversion Hook', output.oneLiner],
-                ['Instagram / WhatsApp Bullet Bio', output.bio],
-                ['Brand Tagline', output.tagline],
+                ['One-line store description', output.oneLiner],
+                ['Instagram bio', output.bio],
+                ['Tagline', output.tagline],
               ].map(([label, text]) => (
                 <div key={label} className="rounded-[26px] border border-orange-100 bg-white p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
@@ -214,7 +213,7 @@ export default function OfferNameLab() {
                 </div>
               ))}
               <div className="rounded-[26px] border border-emerald-100 bg-emerald-50 p-6">
-                <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Execution Plan</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">What to do next</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {output.checklist.map(item => (
                     <div key={item} className="flex gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-gray-700">

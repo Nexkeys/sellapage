@@ -7,127 +7,127 @@ import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 
 export default function PolicyGenerator() {
-  // Structured Business Profile States
+  // Store setup
   const [businessName, setBusinessName] = useState('Your Business')
   const [deliveryModel, setDeliveryModel] = useState('island-mainland') // island-mainland, nationwide, pickup
   const [processingTime, setProcessingTime] = useState('standard') // fast-track, standard, preorder
   const [paymentModel, setPaymentModel] = useState('pbd') // pbd (payment before delivery), split, pod
   const [refundStrategy, setRefundStrategy] = useState('size-exchange') // no-refunds, size-exchange, unboxing-only
-  const [saleExclusion, setSaleExclusion] = useState(true) // Protects clearance items
-  const [logisticShield, setLogisticShield] = useState(true) // Protects from rider delays
+  const [saleExclusion, setSaleExclusion] = useState(true) // sale items are final
+  const [logisticShield, setLogisticShield] = useState(true) // courier delay disclaimer
 
   const policy = useMemo(() => {
     const name = businessName.trim() || 'Our Store'
 
-    // 1. Logistics Clause Engine
+    // 1. Delivery
     let deliveryClause = ""
     let deliverySummary = ""
     if (deliveryModel === 'island-mainland') {
-      deliveryClause = "We enforce an explicit Mainland vs. Island dispatch rate infrastructure. Clients must select their precise delivery zone at checkout. Failure to select the correct location code will result in immediate order hold or processing cancellation."
-      deliverySummary = "Lagos Mainland vs. Island rates apply strictly. Ensure accurate checkout selection."
+      deliveryClause = "Delivery to Lagos Island and Lagos Mainland are charged at different rates. Please pick the correct area at checkout. If the wrong area is selected, we will hold the order until the balance is settled."
+      deliverySummary = "Island and Mainland rates are different. Pick the correct area at checkout."
     } else if (deliveryModel === 'pickup') {
-      deliveryClause = "This store operates strictly via pre-scheduled hub pickups. Safe pickup coordinates, secure warehouse access tokens, and collection windows are transmitted automatically via email/WhatsApp immediately after payment settlement verifies."
-      deliverySummary = "Strictly hub pickup. Location coordinates unlock only after payment confirmation."
+      deliveryClause = "Orders are collected in person at our pickup point. We send you the address and a collection time on WhatsApp or email once your payment comes in."
+      deliverySummary = "Pickup only. We send the address once payment comes in."
     } else {
-      deliveryClause = "Interstate shipping routes via verified third-party transit networks. Capital cities sustain 3 to 5 business days transit windows. Remote geopolitical zones may necessitate self-collection at regional logistics hubs."
-      deliverySummary = "Nationwide shipping takes 3-5 working days. Remote regions require hub terminal pickup."
+      deliveryClause = "We ship nationwide through courier partners. Delivery to major cities takes 3 to 5 working days. For some locations you may need to collect from the courier office closest to you."
+      deliverySummary = "Nationwide delivery takes 3 to 5 working days. Some areas require pickup at the courier office."
     }
 
-    // 2. Processing & Timeline Engine
+    // 2. Processing time
     let timelineClause = ""
     if (processingTime === 'fast-track') {
-      timelineClause = "Orders cleared before 12 PM enter immediate distribution channels for next-day dispatch rider handoff."
+      timelineClause = "Orders paid for before 12 PM are packed the same day and go out the next morning."
     } else if (processingTime === 'preorder') {
-      timelineClause = "🕒 PRE-ORDER INFRASTRUCTURE: This piece is manufactured or batched upon request. Processing requires a mandatory 7 to 14 working days window before outward courier tracking codes activate."
+      timelineClause = "This item is made or restocked after you order it. Please allow 7 to 14 working days before it ships."
     } else {
-      timelineClause = "Standard order sorting, verification, and package staging take 24 to 48 hours post-payment confirmation before courier collection."
+      timelineClause = "We pack your order and hand it to the courier within 24 to 48 hours of your payment."
     }
 
-    // 3. Escrow & Settlement Engine
+    // 3. Payment
     let paymentClause = ""
     if (paymentModel === 'pbd') {
-      paymentClause = "We operate exclusively on a Payment Before Delivery (PBD) architecture. Order components will not be staged, cut, or allocated to dispatch riders without cleared funds confirming in our payment gateway records."
+      paymentClause = "We only accept payment before delivery. Your order is packed and sent out once your payment reflects."
     } else if (paymentModel === 'split') {
-      paymentClause = "A non-refundable 50% commitment stake is required to activate item packaging or custom production lines. The remaining 50% balance must clear seamlessly prior to release to outward dispatch riders."
+      paymentClause = "Pay 50% to start your order and the balance before we send it out. The first 50% is not refundable once work has started."
     } else {
-      paymentClause = "Pay on Delivery (POD) is exclusively available for verified mainland hubs. Funds must transfer via instant mobile transaction immediately upon rider presentation, before product packaging breaks open."
+      paymentClause = "Pay on delivery is available in selected areas only. Please have the money ready and pay the rider before the package is opened."
     }
 
-    // 4. Return, Exchange & Dispute Defense Engine
+    // 4. Returns and exchanges
     let refundClause = ""
     let exchangeLine = ""
     if (refundStrategy === 'no-refunds') {
-      refundClause = "Due to the fast operational lifecycles and product sanitary parameters, all transactions are final. We maintain a zero-refund policy. Ensure you double-check specifications completely before checkout confirmation."
-      exchangeLine = "Exchanges are strictly prohibited unless an entirely wrong item or verifiable mistake was made by our processing warehouse."
+      refundClause = "All sales are final and we do not give refunds. Please check the size, colour, and details carefully before you pay."
+      exchangeLine = "We only replace an item if we sent you the wrong thing."
     } else if (refundStrategy === 'unboxing-only') {
-      refundClause = "Refunds or store credits are evaluated uniquely under the absolute condition of a continuous, unedited unboxing video submitted within 24 hours of package drop-off."
-      exchangeLine = "Disputes concerning missing contents, cosmetic cracks, or wrong sizes will be rejected flatly without unambiguous unboxing video proof."
+      refundClause = "We only review refund or store credit requests if you send a clear unboxing video, recorded in one take, within 24 hours of delivery."
+      exchangeLine = "Without that video we cannot honour a claim for a missing, damaged, or wrong item."
     } else {
-      refundClause = "Size exchanges are available as a customer service courtesy within 48 hours of transit pickup. Items must remain completely unworn, scent-free, with brand product tags entirely intact."
-      exchangeLine = "The customer assumes full legal and financial responsibility for covering both inward return and outward exchange courier fees."
+      refundClause = "You can exchange for a different size within 48 hours of delivery. The item must be unworn, unwashed, and still have its tags on."
+      exchangeLine = "You cover the delivery cost both ways for an exchange."
     }
 
-    // 5. System Safeguard Add-ons
+    // 5. Optional clauses
     const saleBlock = saleExclusion 
-      ? "\n\n🛑 PROMOTIONAL EXCLUSIONS:\nAll items secured during promotional flash sales, clearance cycles, or store discount runs are strictly final. Promotional orders are exempt from sizing modifications or store credits under any circumstances."
+      ? "\n\nSALE AND DISCOUNTED ITEMS\nAnything bought during a sale, flash sale, or discount run is final. Sale items cannot be exchanged or returned."
       : ""
 
     const logisticsBlock = logisticShield
-      ? "\n\n⚠️ THIRD-PARTY COURIER LIABILITY:\nOutward fulfillment is driven by independent logistics platforms. While our operations desk tracks shipments, we hold zero financial liability for weather disruptions, traffic grids, or unexpected rider delays once parcels leave the distribution hub."
+      ? "\n\nDELIVERY DELAYS\nWe deliver through courier and dispatch partners. We follow up on every order, but once a parcel leaves us we cannot control delays caused by traffic, weather, or the rider."
       : ""
 
-    // --- STRATEGIC OUTPUT FORMATS ---
+    // --- OUTPUT FORMATS ---
 
-    // Channel Layout A: Official Storefront Terms
-    const full = `${name.toUpperCase()} OPERATIONAL POLICY
+    // A: full terms for the store page
+    const full = `${name.toUpperCase()} STORE POLICY
 
-1. Order Settlement & Payment Execution
+1. Payment
 ${paymentClause}
 
-2. Distribution & Timeline Parameters
+2. Delivery and Timing
 ${timelineClause} ${deliveryClause}${logisticsBlock}
 
-3. Returns, Cancellations & Escrow Disputes
+3. Returns and Exchanges
 ${refundClause} ${exchangeLine}${saleBlock}
 
-4. Client Verification Data
-Purchasers assume full liability for providing flawless phone lines, exact WhatsApp digits, and complete street addresses. We hold zero liability for delivery failure tied to dead terminal responses.`
+4. Your Details
+Please give us a correct phone number, WhatsApp number, and full address. We cannot be held responsible for a delivery that fails because the contact details were wrong or unreachable.`
 
-    // Channel Layout B: Instagram Highlight Story Formula (Bullet optimized for screenshots)
-    const short = `✨ ${name.toUpperCase()} STORE TERMS ✨
+    // B: short version, sized for an Instagram highlight screenshot
+    const short = `${name.toUpperCase()} STORE TERMS
 
 💳 PAYMENT MODEL
-• ${paymentModel === 'pbd' ? 'Payment Before Delivery Only' : paymentModel === 'split' ? '50% Staking / 50% Pre-dispatch' : 'POD available for verified zones'}
-• No payment = No rider deployment.
+• ${paymentModel === 'pbd' ? 'Payment before delivery only' : paymentModel === 'split' ? '50% upfront, balance before we ship' : 'Pay on delivery in selected areas'}
+• No payment, no delivery.
 
-🚚 DISPATCH PIPELINE
+🚚 DELIVERY
 • ${deliverySummary}
-• Allow ${processingTime === 'preorder' ? '7-14 days production' : '24-48 hours staging time'}.
+• Allow ${processingTime === 'preorder' ? '7 to 14 days to make your item' : '24 to 48 hours before it ships'}.
 
-🔄 RETURNS / DISPUTES
-• ${refundStrategy === 'no-refunds' ? 'Strictly No Refunds/Exchanges' : refundStrategy === 'unboxing-only' ? 'Unboxing Video Required within 24h' : 'Size swaps allowed within 48h'}
-• ${saleExclusion ? 'Sale items are completely FINAL.' : 'Terms apply to all orders.'}`
+🔄 RETURNS
+• ${refundStrategy === 'no-refunds' ? 'No refunds or exchanges' : refundStrategy === 'unboxing-only' ? 'Unboxing video required within 24 hours' : 'Size swaps allowed within 48 hours'}
+• ${saleExclusion ? 'Sale items are final.' : 'These terms apply to every order.'}`
 
-    // Channel Layout C: Post-Checkout WhatsApp Confirmation Matrix (Natively wrapped in Markdown wildcards)
-    const whatsapp = `*🧾 ORDER TRANSACTION TERMS: ${name.toUpperCase()}*
+    // C: WhatsApp message, using WhatsApp markdown
+    const whatsapp = `*🧾 ${name.toUpperCase()} - ORDER TERMS*
 
-Hi! Thank you for choosing us. To ensure a smooth delivery transaction, please review our store terms:
+Thank you for your order. Here is how we work:
 
-*1. Processing Timeline:*
+*1. Timing*
 • ${timelineClause}
 
-*2. Logistics Delivery:*
+*2. Delivery*
 • ${deliverySummary}
-${logisticShield ? '• _Note: We utilize third-party rider lines; transit delays are outside our manual control._' : ''}
+${logisticShield ? '• _We deliver through dispatch partners, so delays from traffic or weather are outside our control._' : ''}
 
-*3. Payment Terms:*
+*3. Payment*
 • ${paymentClause}
 
-*4. Refund/Exchange Rules:*
-• ${refundStrategy === 'no-refunds' ? 'All sales are final. No return lines open.' : refundStrategy === 'unboxing-only' ? 'Any dispute requires a clear, unedited unboxing video clip.' : 'Size swaps require items to be pristine. Buyer bears dispatch costs.'}
-${saleExclusion ? '\n⚠️ *Note:* Flash sale/discounted items cannot be swapped or returned.' : ''}
+*4. Returns*
+• ${refundStrategy === 'no-refunds' ? 'All sales are final. We do not accept returns.' : refundStrategy === 'unboxing-only' ? 'Any claim needs a clear, unedited unboxing video.' : 'Size swaps need the item unworn with tags on. You cover delivery both ways.'}
+${saleExclusion ? '\n⚠️ *Note:* Sale and discounted items cannot be swapped or returned.' : ''}
 
-_By proceeding with payment verification, you validate this operational contract._`
+_Paying for your order means you agree to these terms._`
 
     return { full, short, whatsapp }
   }, [businessName, deliveryModel, processingTime, paymentModel, refundStrategy, saleExclusion, logisticShield])
@@ -149,17 +149,17 @@ _By proceeding with payment verification, you validate this operational contract
             <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-emerald-700">
-                  <ShieldCheck size={13} /> Dispute Defense Studio
+                  <ShieldCheck size={13} /> Free tool
                 </span>
                 <h1 className="mt-5 font-display text-4xl font-extrabold leading-tight text-gray-950 md:text-5xl">
-                  Deploy air-tight terms before bad clients show up.
+                  Set your store rules before a customer tries to bend them.
                 </h1>
                 <p className="mt-4 max-w-xl text-base leading-relaxed text-gray-600">
-                  Ditch the generic legal text templates. Configure real operational logic parameters to structure custom storefront guidelines, social screenshots, and automated WhatsApp receipts.
+                  Answer a few questions about how you actually run your store. You get terms for your store page, a short version for your Instagram highlight, and a message to send on WhatsApp after checkout.
                 </p>
               </div>
 
-              {/* Dynamic Interactive Parameter Grid */}
+              {/* Controls */}
               <div className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-xl shadow-emerald-100/70 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
@@ -167,7 +167,7 @@ _By proceeding with payment verification, you validate this operational contract
                     <input value={businessName} onChange={e => setBusinessName(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" />
                   </label>
                   <label className="block">
-                    <span className="text-xs font-bold text-gray-700">Logistics Strategy</span>
+                    <span className="text-xs font-bold text-gray-700">Delivery</span>
                     <select value={deliveryModel} onChange={e => setDeliveryModel(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
                       <option value="island-mainland">Lagos Split (Island vs Mainland)</option>
                       <option value="nationwide">Nationwide Courier Delivery</option>
@@ -178,32 +178,32 @@ _By proceeding with payment verification, you validate this operational contract
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <label className="block">
-                    <span className="text-xs font-bold text-gray-700">Processing Window</span>
+                    <span className="text-xs font-bold text-gray-700">How fast you ship</span>
                     <select value={processingTime} onChange={e => setProcessingTime(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
-                      <option value="fast-track">Next-Day Handoff (Fast)</option>
-                      <option value="standard">Standard (24-48 Hours)</option>
-                      <option value="preorder">Pre-Order (7-14 Days Production)</option>
+                      <option value="fast-track">Next day</option>
+                      <option value="standard">24 to 48 hours</option>
+                      <option value="preorder">Pre-order (7 to 14 days)</option>
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-xs font-bold text-gray-700">Payment Strategy</span>
+                    <span className="text-xs font-bold text-gray-700">Payment</span>
                     <select value={paymentModel} onChange={e => setPaymentModel(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
                       <option value="pbd">Payment Before Delivery (PBD)</option>
-                      <option value="split">50% Deposit Commitment</option>
-                      <option value="pod">Pay On Delivery (POD Split)</option>
+                      <option value="split">50% deposit, balance later</option>
+                      <option value="pod">Pay on delivery (POD)</option>
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-xs font-bold text-gray-700">Dispute Defense Strategy</span>
+                    <span className="text-xs font-bold text-gray-700">Returns</span>
                     <select value={refundStrategy} onChange={e => setRefundStrategy(e.target.value)} className="mt-1 w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
-                      <option value="size-exchange">Allow Pristine Size Swaps</option>
-                      <option value="unboxing-only">Require Unboxing Video</option>
-                      <option value="no-refunds">Absolute Zero Return Line</option>
+                      <option value="size-exchange">Allow size swaps</option>
+                      <option value="unboxing-only">Require an unboxing video</option>
+                      <option value="no-refunds">No returns at all</option>
                     </select>
                   </label>
                 </div>
 
-                {/* Algorithmic Safeguard Toggles */}
+                {/* Optional clauses */}
                 <div className="pt-2 grid gap-3 sm:grid-cols-2">
                   <button 
                     onClick={() => setSaleExclusion(!saleExclusion)} 
@@ -211,8 +211,8 @@ _By proceeding with payment verification, you validate this operational contract
                   >
                     <CheckCircle size={18} className={saleExclusion ? 'text-emerald-600' : 'text-gray-300'} />
                     <div>
-                      <p className="text-xs font-bold">Lock Flash Sale Exclusion</p>
-                      <p className="text-[10px] opacity-80">Block sizing returns entirely on clearance drops.</p>
+                      <p className="text-xs font-bold">Sale items are final</p>
+                      <p className="text-[10px] opacity-80">No swaps or returns on discounted items.</p>
                     </div>
                   </button>
 
@@ -222,8 +222,8 @@ _By proceeding with payment verification, you validate this operational contract
                   >
                     <CheckCircle size={18} className={logisticShield ? 'text-emerald-600' : 'text-gray-300'} />
                     <div>
-                      <p className="text-xs font-bold">Deploy Third-Party Shield</p>
-                      <p className="text-[10px] opacity-80">Protect operations from dispatch rider delay liability.</p>
+                      <p className="text-xs font-bold">Cover courier delays</p>
+                      <p className="text-[10px] opacity-80">States that rider and traffic delays are not your fault.</p>
                     </div>
                   </button>
                 </div>
@@ -232,13 +232,13 @@ _By proceeding with payment verification, you validate this operational contract
           </div>
         </section>
 
-        {/* Structured Output Formats Grid Display */}
+        {/* Output */}
         <section className="px-4 pb-16">
           <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-3">
             {[
-              ['Official Storefront Blueprint', policy.full, 'lg:col-span-2'],
-              ['Instagram Highlight Content', policy.short, ''],
-              ['WhatsApp Invoice Text Payload', policy.whatsapp, 'lg:col-span-3'],
+              ['For your store page', policy.full, 'lg:col-span-2'],
+              ['For your Instagram highlight', policy.short, ''],
+              ['To send on WhatsApp', policy.whatsapp, 'lg:col-span-3'],
             ].map(([label, text, classes], i) => (
               <Reveal key={label} delay={i * 100} className={`rounded-[26px] border border-emerald-100 bg-white p-6 shadow-sm transition-all hover:shadow-md ${classes}`}>
                 <div className="flex items-center justify-between gap-3">

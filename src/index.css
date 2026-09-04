@@ -44,10 +44,6 @@
            focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 
            transition-all duration-200 font-body;
   }
-
-  .section-tag {
-    @apply text-brand-600 text-xs font-bold uppercase tracking-widest;
-  }
 }
 
 /* Smooth scrolling */
