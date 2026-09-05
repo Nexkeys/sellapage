@@ -22,6 +22,12 @@ export const RESERVED_SLUGS = [
   'tools',
   'compare',
   'billing',
+  // Added 2026-09-05: these are live routes in App.jsx but were never reserved,
+  // so a vendor could take one as their store name and React Router would
+  // resolve the static page instead, leaving their storefront unreachable.
+  'success-stories',
+  'account-recovery',
+  'join-team',
 ]
 
 export function isReservedSlug(slug) {

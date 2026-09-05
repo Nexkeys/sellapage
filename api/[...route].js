@@ -346,6 +346,14 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "store-seo": {
+        const { default: handler } = await import("../src/api-handlers/store-seo.js")
+        return await handler(req, res)
+      }
+      case "storefront-render": {
+        const { default: handler } = await import("../src/api-handlers/storefront-render.js")
+        return await handler(req, res)
+      }
       case "sitemap": {
         const { default: handler } = await import("../src/api-handlers/sitemap.js")
         return handler(req, res)

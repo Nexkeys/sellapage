@@ -33,7 +33,7 @@ const sections = [
     content: [
       'Payment processing: We share transaction details with Paystack (our payment processor) to process payments. Paystack has its own privacy policy governing how they handle your financial data.',
       'Order fulfillment: We share delivery addresses, recipient names, and phone numbers with Sendbox and Topship (our logistics partners) to deliver orders to your customers.',
-      'Advertising: When you connect a Google Ads account, we communicate with the Google Ads API to create and manage campaigns on your behalf. Campaign data (names, budgets, performance metrics) is shared with Google for this purpose. When you connect a Meta/Facebook Ads account, we communicate with the Meta Marketing API for the same purpose.',
+      'Advertising: When you connect a Google Ads account, we communicate with the Google Ads API to create and manage campaigns on your behalf. Campaign data (names, budgets, performance metrics) is shared with Google for this purpose.',
       'Business verification: If you use our advertising features, we may share business verification documents (such as CAC registration) with Meta for advertising account verification.',
       'Legal compliance: We may disclose data if required by law, court order, or to protect the rights and safety of Sellapage and its users.',
       'We do NOT sell your personal data to third parties.',

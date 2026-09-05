@@ -8,6 +8,15 @@ import { db } from '../../firebase/config'
 
 export default function AnalyticsTab({ storeId, products, services = [], vendorType = 'products', isGrowthOrPro, isPro, navigateTo, analyticsData }) {
 
+  // ── State ──
+  // MUST stay above the plan gate below. These used to sit after the early
+  // return, so a render where `isGrowthOrPro` was false called zero hooks and a
+  // later render called two. `isGrowthOrPro` is derived from the store document,
+  // which loads asynchronously, so that flip happens in normal use and React
+  // throws "Rendered more hooks than during the previous render".
+  const [resetting, setResetting] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
+
   // ── Plan gate ──
   if (!isGrowthOrPro) {
     return (
@@ -37,11 +46,6 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
     )
   }
 
-
-
-  // ── State ──
-  const [resetting, setResetting] = useState(false)
-  const [resetDone, setResetDone] = useState(false)
 
 
 

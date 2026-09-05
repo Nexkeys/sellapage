@@ -50,6 +50,30 @@
       "destination": "/api/[...route]"
     },
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "sellapage.com.ng"
+        }
+      ],
+      "destination": "/index.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.sellapage.com.ng"
+        }
+      ],
+      "destination": "/index.html"
+    },
+    {
+      "source": "/",
+      "destination": "/api/storefront-render"
+    },
+    {
       "source": "/about",
       "destination": "/about/index.html"
     },
@@ -112,6 +136,14 @@
     {
       "source": "/compare/vs-instagram-bio",
       "destination": "/compare/vs-instagram-bio/index.html"
+    },
+    {
+      "source": "/(?<slug>(?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/services",
+      "destination": "/api/storefront-render?slug=:slug"
+    },
+    {
+      "source": "/(?<slug>(?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})",
+      "destination": "/api/storefront-render?slug=:slug"
     },
     {
       "source": "/((?!api/|assets/|.*\\..*).*)",

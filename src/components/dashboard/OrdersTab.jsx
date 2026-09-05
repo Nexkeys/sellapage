@@ -470,7 +470,12 @@ export default function OrdersTab({
 
     try {
       await onDeleteOrder?.(confirmingDelete.id)
-      if (editingOrder?.id === confirmingDelete.id) resetForm()
+      // Removed: `if (editingOrder?.id === confirmingDelete.id) resetForm()`.
+      // Neither identifier exists in this file (OrdersTab has no inline edit
+      // form; they were copied from a tab that does). The reference threw
+      // AFTER the delete had already succeeded, so the catch below reported
+      // "Could not delete this order. The record has been restored." on every
+      // single deletion, while the order was in fact gone.
       setConfirmingDelete(null)
     } catch (err) {
       setDeleteError(err?.message || 'Could not delete this order. The record has been restored.')

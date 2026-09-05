@@ -4,6 +4,12 @@
 // Last updated: 2026-09-01 (loyalty cards)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-05  Locked `previousSlugs` (verificationFields). Written only by
+//               store-seo.js when a vendor renames their store URL; the
+//               storefront renderer 301s those old addresses to the current
+//               one. Client-writable would mean a vendor could list another
+//               store's slug and hijack it on rename. Safe to publish any time:
+//               no client writes this field.
 //   2026-09-04  Locked `emailVerifiedAt` and `gateExempt` (verificationFields).
 //               `emailVerifiedAt` is written ONLY by login-verify.js when an
 //               emailed OTP clears, and the new storefront EMAIL gate trusts it
@@ -118,7 +124,13 @@ service cloud.firestore {
         // Grandfathers stores that existed before the storefront gates.
         // MUST be server-only: if a client could set either, a bot would simply
         // exempt itself and the gates would be decorative.
-        'phoneGateExempt', 'gateExempt'
+        'phoneGateExempt', 'gateExempt',
+        // Server-only, written ONLY by store-seo.js on a slug change. It holds
+        // addresses this store used to own, and the storefront renderer 301s
+        // them to the current one. A client that could write it would add
+        // someone else's slug and capture that address the moment its owner
+        // renamed, so it is locked here and derived from Firestore there.
+        'previousSlugs'
       ];
     }
 

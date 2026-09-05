@@ -70,7 +70,7 @@ export const PLAN_FEATURES = {
     'Loyalty Points System for repeat customers',
     'Abandoned Cart Recovery via WhatsApp',
     'Multi-staff account access with role controls',
-    'Meta Ads integration (self-managed or Sellapage-managed)',
+    'Meta Ads performance tracking (coming soon)',
     'Google Ads integration (self-managed)',
     'Custom Domain Engine with SSL',
     'Advanced integrations & premium positioning',

@@ -28,3 +28,4 @@ scripts
 # Migration script output (may contain customer PII)
 scripts/migration-output
 
+src/api-handlers/_generated/
