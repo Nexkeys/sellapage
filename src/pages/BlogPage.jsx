@@ -8,6 +8,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { getExcerpt, formatBlogDate, getCategoryBadgeClass } from '../utils/blogHelpers'
 import { SkeletonCardGrid } from '../components/Skeleton'
@@ -90,12 +91,7 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      <SEO
-        title="Blog"
-        description="Tips, guides, and stories to help Nigerian entrepreneurs sell more with Sellapage."
-        url="/blog"
-        keywords="sellapage blog, nigerian business tips, ecommerce guide, online selling tips"
-      />
+      <SEO {...pageSeo("/blog")} url="/blog" />
       <Navbar />
 
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-green-400">

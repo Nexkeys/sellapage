@@ -6,6 +6,7 @@ import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 
 const FEATURES = [
@@ -33,12 +34,7 @@ export default function VsShopify() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO
-        title="Sellapage vs Shopify"
-        description="Compare Sellapage and Shopify. See why Sellapage is built specifically for Nigerian businesses with local payments, delivery, and pricing."
-        url="/compare/vs-shopify"
-        keywords="sellapage vs shopify, shopify alternative nigeria, ecommerce platform nigeria"
-      />
+      <SEO {...pageSeo("/compare/vs-shopify")} url="/compare/vs-shopify" />
       <Navbar />
 
       {/* Hero */}

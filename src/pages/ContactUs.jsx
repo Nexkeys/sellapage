@@ -5,6 +5,7 @@ import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 
 export default function ContactUs() {
@@ -13,12 +14,7 @@ export default function ContactUs() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO
-        title="Contact Us"
-        description="Get in touch with the Sellapage team. We're here to help you grow your business."
-        url="/contact"
-        keywords="contact sellapage, sellapage support, get help sellapage"
-      />
+      <SEO {...pageSeo("/contact")} url="/contact" />
       <Navbar />
 
       {/* Header */}

@@ -1,6 +1,6 @@
 //src/pages/BillingCallback.jsx/
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle } from 'lucide-react'
 
 /**
@@ -129,15 +129,39 @@ export default function BillingCallback() {
               Your order has been placed successfully
             </p>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Thank you for your purchase. You will be redirected shortly.
+              Preparing your receipt. This will only take a moment.
             </p>
           </div>
-          <Link
-            to={`${checkoutReturnPath(checkoutData)}?checkout=success&reference=${encodeURIComponent(reference)}`}
-            className="text-green-600 font-semibold text-sm hover:underline"
-          >
-            View store
-          </Link>
+
+          {/* Replaces a "View store" link that used to sit here. It read as an
+              invitation to go browsing, when the only thing waiting on the other
+              side is this customer's own receipt (and their loyalty code, on a
+              first order). The page already redirects itself, so a manual escape
+              hatch only invited people to leave before it landed. */}
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <svg
+              className="animate-spin w-4 h-4 text-green-500"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-20"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
+              <path
+                className="opacity-90"
+                fill="currentColor"
+                d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"
+              />
+            </svg>
+            Taking you to your receipt
+          </div>
         </div>
       </div>
     )

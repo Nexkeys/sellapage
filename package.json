@@ -8,6 +8,7 @@
     "check:cjs": "node scripts/check-cjs-safe.js",
     "prebuild": "node scripts/check-cjs-safe.js",
     "build": "vite build",
+    "postbuild": "node scripts/prerender-seo.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

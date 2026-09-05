@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 const STYLE_POOLS = {
   minimalist: {
@@ -102,12 +103,7 @@ export default function OfferNameLab() {
 
   return (
     <div className="min-h-screen bg-[#fffaf2] text-gray-950">
-      <SEO
-        title="Offer & Name Lab"
-        description="Generate catchy product names, service names, and offer descriptions for your business. Free AI-powered naming tool."
-        url="/tools/offer-name-lab"
-        keywords="business name generator, product name generator, offer name lab, business naming tool"
-      />
+      <SEO {...pageSeo("/tools/offer-name-lab")} url="/tools/offer-name-lab" />
       <Navbar />
       <main className="pt-10">
         <section className="px-4 py-14">

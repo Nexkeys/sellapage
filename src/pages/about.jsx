@@ -5,16 +5,12 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 export default function About() {
   return (
     <div className="min-h-screen bg-white font-body">
-      <SEO
-        title="About"
-        description="Learn about Sellapage, the all-in-one commerce platform built for Nigerian merchants, service providers, and freelancers."
-        url="/about"
-        keywords="sellapage about, nigerian ecommerce platform, about sellapage, online business nigeria"
-      />
+      <SEO {...pageSeo("/about")} url="/about" />
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}

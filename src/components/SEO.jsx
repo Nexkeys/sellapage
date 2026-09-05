@@ -42,11 +42,24 @@ export default function SEO({
       <meta name="twitter:description" content={desc} />
       <meta name="twitter:image" content={img} />
 
-      {jsonLd && (
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
-        </script>
+      {/* Explicitly invite indexing rather than relying on the default. Three
+          public pages previously shipped `noindex` by accident, which is silent
+          and very easy to miss. */}
+      {!noIndex && (
+        <meta
+          name="robots"
+          content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+        />
       )}
+
+      {/* A page may carry several blocks (Organization, FAQ, Breadcrumb). Each
+          gets its own script tag, which is better supported by validators than
+          one top-level array. */}
+      {(Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : []).map((block, i) => (
+        <script type="application/ld+json" key={i}>
+          {JSON.stringify(block)}
+        </script>
+      ))}
     </Helmet>
   )
 }

@@ -282,6 +282,17 @@ function StoreCheckoutModal({
     { id: "payment", label: "3. Payment" },
   ];
 
+  // Backwards navigation only. All three steps read and write the same `form`
+  // and `cart` state held in StorePage, so stepping back edits in place and
+  // nothing is retyped. Forward moves still have to go through the Continue
+  // buttons, because those are what validate the fields.
+  const stepIndex = steps.findIndex((s) => s.id === step);
+  const goToStep = (targetId) => {
+    const targetIndex = steps.findIndex((s) => s.id === targetId);
+    if (targetIndex === -1 || targetIndex >= stepIndex) return;
+    setStep(targetId);
+  };
+
   const updateForm = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
@@ -425,17 +436,34 @@ function StoreCheckoutModal({
             ) : step === "verifying" ? (
               <span className="text-green-600">Confirming payment</span>
             ) : (
-              steps.map((s, i) => (
-                <span
-                  key={s.id}
-                  className={step === s.id ? "text-green-600" : "text-gray-400"}
-                >
-                  {s.label}
-                  {i < steps.length - 1 && (
-                    <span className="mx-1 text-gray-300">·</span>
-                  )}
-                </span>
-              ))
+              steps.map((s, i) => {
+                const isDone = i < stepIndex;
+                return (
+                  <span key={s.id}>
+                    {/* A completed step is a button so it can be tapped to go
+                        back and edit. The current and future ones stay plain
+                        text, since jumping forward would skip validation. */}
+                    {isDone ? (
+                      <button
+                        type="button"
+                        onClick={() => goToStep(s.id)}
+                        className="text-gray-500 hover:text-green-600 underline underline-offset-2"
+                      >
+                        {s.label}
+                      </button>
+                    ) : (
+                      <span
+                        className={step === s.id ? "text-green-600" : "text-gray-400"}
+                      >
+                        {s.label}
+                      </span>
+                    )}
+                    {i < steps.length - 1 && (
+                      <span className="mx-1 text-gray-300">·</span>
+                    )}
+                  </span>
+                );
+              })
             )}
           </div>
           <button
@@ -677,14 +705,23 @@ function StoreCheckoutModal({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleContinueDelivery}
-                disabled={deliveryZones.length === 0 || !selectedZone || !form.deliveryAddress.trim()}
-                className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all"
-              >
-                Continue to Payment
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToStep("details")}
+                  className="px-5 py-3.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold text-sm transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContinueDelivery}
+                  disabled={deliveryZones.length === 0 || !selectedZone || !form.deliveryAddress.trim()}
+                  className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all"
+                >
+                  Continue to Payment
+                </button>
+              </div>
             </div>
           )}
 
@@ -861,6 +898,17 @@ function StoreCheckoutModal({
                 </p>
               )}
 
+              {/* Disabled mid-payment: once Paystack has been called, going back
+                  would strand the customer against a reference already in flight. */}
+              <button
+                type="button"
+                onClick={() => goToStep("delivery")}
+                disabled={checkoutProcessing}
+                className="w-full py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 font-bold text-sm transition-all"
+              >
+                Back to delivery
+              </button>
+
               <button
                 type="button"
                 onClick={onPay}
@@ -936,7 +984,9 @@ function StoreCheckoutModal({
                   <div className="flex items-center gap-2 mb-2">
                     <Gift size={15} className="text-green-600" />
                     <p className="text-sm font-bold text-green-800">
-                      You earned {completedOrder.loyalty.earned} points
+                      {completedOrder.loyalty.earned > 0
+                        ? `You earned ${completedOrder.loyalty.earned} point${completedOrder.loyalty.earned === 1 ? "" : "s"}`
+                        : "Your points card is ready"}
                     </p>
                   </div>
                   <p className="text-[11px] font-bold uppercase tracking-wider text-green-600">
@@ -949,6 +999,14 @@ function StoreCheckoutModal({
                     Balance: {completedOrder.loyalty.balance} points. Save this code
                     and enter it at checkout next time to spend them. We have emailed
                     it to you as well.
+                    {completedOrder.loyalty.earned === 0 && store?.loyaltyEarnRate ? (
+                      <>
+                        {" "}
+                        This order was under ₦
+                        {Number(store.loyaltyEarnRate).toLocaleString()}, which is the
+                        minimum to earn a point.
+                      </>
+                    ) : null}
                   </p>
                 </div>
               )}
@@ -991,6 +1049,55 @@ export default function StorePage() {
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const [cart, setCart] = useState([]);
+  // Guards the restore below against running after a completed order, where the
+  // cart has just been intentionally emptied.
+  const cartRestoredRef = useRef(false);
+
+  // ------------------------------------------------------------------
+  // Cart persistence. Scoped per store, so a cart at one vendor never leaks
+  // into another. Kept in localStorage rather than sessionStorage so it also
+  // survives closing the tab, which is the common case on mobile where people
+  // browse, leave, and come back.
+  //
+  // Skipped entirely when returning from a completed payment: those items were
+  // just bought, and restoring them would show the buyer a cart full of things
+  // they already paid for.
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    if (!store?.id || cartRestoredRef.current) return;
+    cartRestoredRef.current = true;
+
+    const returningFromCheckout = searchParams.get("checkout") === "success";
+    try {
+      if (returningFromCheckout) {
+        localStorage.removeItem(`sellapage_cart_${store.id}`);
+        return;
+      }
+      const saved = localStorage.getItem(`sellapage_cart_${store.id}`);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) setCart(parsed);
+    } catch {
+      // Private mode, blocked storage, or corrupted JSON. An empty cart is the
+      // correct fallback and never worth surfacing to a shopper.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store?.id]);
+
+  useEffect(() => {
+    // Waits for the restore to run first, otherwise the initial empty state
+    // would overwrite a saved cart before it was ever read back.
+    if (!store?.id || !cartRestoredRef.current) return;
+    try {
+      if (cart.length > 0) {
+        localStorage.setItem(`sellapage_cart_${store.id}`, JSON.stringify(cart));
+      } else {
+        localStorage.removeItem(`sellapage_cart_${store.id}`);
+      }
+    } catch {
+      // Storage unavailable. The cart still works for this session.
+    }
+  }, [cart, store?.id]);
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -1425,6 +1532,13 @@ export default function StorePage() {
     setAppliedDiscount(null);
     setPromoError("");
     setPromoLoading(false);
+    // Cleared alongside the promo code for the same reason: an applied discount
+    // should not silently persist into a later, different checkout. The card
+    // itself is untouched, only this session's intent to spend from it.
+    setLoyaltyCode("");
+    setLoyaltyCard(null);
+    setLoyaltyError("");
+    setLoyaltyLoading(false);
     if (checkoutStep === "success" || checkoutStep === "verifying") {
       setCart([]);
       setCheckoutForm(EMPTY_CHECKOUT_FORM);

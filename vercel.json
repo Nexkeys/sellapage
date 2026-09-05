@@ -4,18 +4,39 @@
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=()" },
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), microphone=(), camera=(), payment=()"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
       ]
     }
   ],
@@ -27,6 +48,70 @@
     {
       "source": "/api/:path*",
       "destination": "/api/[...route]"
+    },
+    {
+      "source": "/about",
+      "destination": "/about/index.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/pricing/index.html"
+    },
+    {
+      "source": "/live-stores",
+      "destination": "/live-stores/index.html"
+    },
+    {
+      "source": "/success-stories",
+      "destination": "/success-stories/index.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact/index.html"
+    },
+    {
+      "source": "/report-store",
+      "destination": "/report-store/index.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms/index.html"
+    },
+    {
+      "source": "/jobs",
+      "destination": "/jobs/index.html"
+    },
+    {
+      "source": "/blog",
+      "destination": "/blog/index.html"
+    },
+    {
+      "source": "/tools/offer-name-lab",
+      "destination": "/tools/offer-name-lab/index.html"
+    },
+    {
+      "source": "/tools/policy-generator",
+      "destination": "/tools/policy-generator/index.html"
+    },
+    {
+      "source": "/compare/vs-shopify",
+      "destination": "/compare/vs-shopify/index.html"
+    },
+    {
+      "source": "/compare/vs-linktree",
+      "destination": "/compare/vs-linktree/index.html"
+    },
+    {
+      "source": "/compare/vs-whatsapp-business",
+      "destination": "/compare/vs-whatsapp-business/index.html"
+    },
+    {
+      "source": "/compare/vs-instagram-bio",
+      "destination": "/compare/vs-instagram-bio/index.html"
     },
     {
       "source": "/((?!api/|assets/|.*\\..*).*)",

@@ -8,6 +8,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { SkeletonCardGrid } from '../components/Skeleton'
 
@@ -39,12 +40,7 @@ export default function SuccessStoriesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      <SEO
-        title="Success Stories"
-        description="Real Nigerian vendors sharing what selling on Sellapage has done for their business."
-        url="/success-stories"
-        keywords="sellapage reviews, sellapage testimonials, nigerian vendor success stories"
-      />
+      <SEO {...pageSeo("/success-stories")} url="/success-stories" />
       <Navbar />
 
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-green-400">

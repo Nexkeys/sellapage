@@ -10,6 +10,7 @@ const STATIC_PAGES = [
   { path: '/live-stores', changefreq: 'weekly', priority: '0.7' },
   { path: '/jobs', changefreq: 'weekly', priority: '0.8' },
   { path: '/blog', changefreq: 'weekly', priority: '0.8' },
+  { path: '/success-stories', changefreq: 'weekly', priority: '0.7' },
   { path: '/report-store', changefreq: 'yearly', priority: '0.4' },
   { path: '/tools/offer-name-lab', changefreq: 'monthly', priority: '0.6' },
   { path: '/tools/policy-generator', changefreq: 'monthly', priority: '0.6' },

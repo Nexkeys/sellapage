@@ -5,6 +5,7 @@ import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 
 const FEATURES = [
@@ -43,12 +44,7 @@ export default function VsWhatsAppBusiness() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO
-        title="Sellapage vs WhatsApp Business"
-        description="Compare Sellapage and WhatsApp Business. See why Sellapage gives you a proper online store with checkout, delivery, and analytics beyond WhatsApp."
-        url="/compare/vs-whatsapp-business"
-        keywords="sellapage vs whatsapp business, whatsapp store alternative, online store nigeria"
-      />
+      <SEO {...pageSeo("/compare/vs-whatsapp-business")} url="/compare/vs-whatsapp-business" />
       <Navbar />
 
       {/* Hero */}

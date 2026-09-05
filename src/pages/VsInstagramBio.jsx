@@ -5,6 +5,7 @@ import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 
 const FEATURES = [
@@ -41,12 +42,7 @@ export default function VsInstagramBio() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO
-        title="Sellapage vs Instagram Bio"
-        description="Compare Sellapage and Instagram bio links. See why Sellapage gives you a full commerce page with products, checkout, and orders."
-        url="/compare/vs-instagram-bio"
-        keywords="sellapage vs instagram bio, instagram link alternative, bio link alternative nigeria"
-      />
+      <SEO {...pageSeo("/compare/vs-instagram-bio")} url="/compare/vs-instagram-bio" />
       <Navbar />
 
       {/* Hero */}

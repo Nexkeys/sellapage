@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 export default function PolicyGenerator() {
   // Store setup
@@ -136,12 +137,7 @@ _Paying for your order means you agree to these terms._`
 
   return (
     <div className="min-h-screen bg-[#f7fbf6] text-gray-950">
-      <SEO
-        title="Policy Generator"
-        description="Generate professional store policies for your business. Create return, shipping, and privacy policies in minutes."
-        url="/tools/policy-generator"
-        keywords="store policy generator, return policy generator, privacy policy generator nigeria"
-      />
+      <SEO {...pageSeo("/tools/policy-generator")} url="/tools/policy-generator" />
       <Navbar />
       <main className="pt-10">
         <section className="px-4 py-14">

@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 
 const LAST_UPDATED = 'July 2026'
@@ -95,12 +96,7 @@ const sections = [
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-white">
-      <SEO
-        title="Privacy Policy"
-        description="Sellapage privacy policy. Learn how we collect, use, and protect your personal information."
-        url="/privacy-policy"
-        noIndex
-      />
+      <SEO {...pageSeo("/privacy-policy")} url="/privacy-policy" />
       <Navbar />
 
       {/* Header */}

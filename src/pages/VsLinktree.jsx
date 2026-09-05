@@ -5,6 +5,7 @@ import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
+import { pageSeo } from '../data/seoPages'
 
 
 const FEATURES = [
@@ -42,12 +43,7 @@ export default function VsLinktree() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO
-        title="Sellapage vs Linktree"
-        description="Compare Sellapage and Linktree. See why Sellapage is the better choice for Nigerian businesses that need a full commerce page, not just a link list."
-        url="/compare/vs-linktree"
-        keywords="sellapage vs linktree, linktree alternative nigeria, link in bio alternative"
-      />
+      <SEO {...pageSeo("/compare/vs-linktree")} url="/compare/vs-linktree" />
       <Navbar />
 
       {/* Hero */}

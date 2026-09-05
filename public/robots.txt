@@ -1,15 +1,80 @@
 # Sellapage robots.txt
-# Allow all crawlers to access public pages
+#
+# Public marketing pages, the store directory and every vendor storefront are
+# open to all crawlers. Only authenticated and single-use paths are excluded.
+
 User-agent: *
 Allow: /
-
-# Sitemap location
-Sitemap: https://sellapage.com.ng/sitemap.xml
-
-# Disallow private/admin paths
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /billing
 Disallow: /login
 Disallow: /reset-password
 Disallow: /review
+Disallow: /account-recovery
+Disallow: /join-team
+
+# ---------------------------------------------------------------------------
+# AI and answer-engine crawlers, listed explicitly.
+#
+# The wildcard above already permits these, but naming them is deliberate:
+# several operators publish per-agent rules, and an explicit Allow removes any
+# ambiguity about whether Sellapage content may be read and cited. These are the
+# crawlers behind ChatGPT, Claude, Perplexity, Gemini and Common Crawl, so this
+# is what decides whether an assistant can answer "what is Sellapage".
+#
+# Note they mostly do NOT execute JavaScript, which is why the public routes are
+# prerendered to static HTML at build time (scripts/prerender-seo.mjs). Allowing
+# them here is only half the job; the other half is giving them something to read.
+# ---------------------------------------------------------------------------
+
+User-agent: GPTBot
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+Sitemap: https://sellapage.com.ng/sitemap.xml
