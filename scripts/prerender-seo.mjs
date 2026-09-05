@@ -195,6 +195,25 @@ console.log(`\nPrerendered ${written} public routes with full SEO metadata.`)
 try {
   const vercel = JSON.parse(readFileSync(join(ROOT, 'vercel.json'), 'utf8'))
   const sources = new Set((vercel.rewrites || []).map((r) => r.source))
+  // Vercel validates vercel.json BEFORE it builds, so a bad `source` fails the
+  // deployment outright with "Invalid route source pattern" and nothing else
+  // runs. `source` is path-to-regexp, NOT JavaScript RegExp: a named capture
+  // group like (?<slug>...) is rejected with 'Pattern cannot start with "?"'.
+  // The path-to-regexp way to name a param is :slug(pattern). This shipped once
+  // and broke a deploy, so it is checked here rather than discovered in CI.
+  const badSyntax = (vercel.rewrites || [])
+    .concat(vercel.redirects || [], vercel.headers || [])
+    .filter((r) => typeof r.source === 'string' && r.source.includes('(?<'))
+  if (badSyntax.length) {
+    console.error(
+      '\n✖ vercel.json uses JavaScript named capture groups, which ' +
+        'path-to-regexp rejects:\n  ' +
+        badSyntax.map((r) => r.source).join('\n  ') +
+        '\n  Use :name(pattern) instead of (?<name>pattern).',
+    )
+    process.exit(1)
+  }
+
   const missing = Object.keys(PAGE_SEO).filter((r) => r !== '/' && !sources.has(r))
   if (missing.length) {
     console.error(
