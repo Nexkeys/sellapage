@@ -5,16 +5,35 @@ export default async function handler(req, res) {
   try {
     let rawEndpoint = "";
 
-    // 1. Try reading from Vercel's native query parameters
-    if (req.query && req.query.route && req.query.route[0]) {
-      rawEndpoint = req.query.route[0];
+    // 1. Vercel's dynamic segment.
+    //    It normally arrives as an array (["sitemap"]) but can arrive as a plain
+    //    string depending on how the request was rewritten. Indexing [0] on a
+    //    string yields a single character, which would route to a silent 404,
+    //    so both shapes are handled explicitly.
+    const routeParam = req.query ? req.query.route : undefined;
+    if (Array.isArray(routeParam)) rawEndpoint = routeParam[0] || "";
+    else if (typeof routeParam === "string") rawEndpoint = routeParam;
+
+    // 2. An explicit ?route= placed on the rewrite destination.
+    //    Storefront and product-feed rewrites keep the VISITOR's path
+    //    (/denvermall, /denvermall/feed.xml) rather than an /api/... path, so
+    //    step 3 below cannot work for them: it would read "denvermall" as the
+    //    handler name and 404 every store page, which is exactly what happened.
+    //    Naming the handler in the query string is the only reliable signal
+    //    when the path belongs to the visitor rather than to the API.
+    if (!rawEndpoint && req.url && req.url.includes("?")) {
+      try {
+        rawEndpoint = new URLSearchParams(req.url.split("?")[1]).get("route") || "";
+      } catch {
+        // Malformed query string: fall through to path parsing.
+      }
     }
 
-    // 2. Fallback: Parse the raw URL directly to bypass vercel.json rewrite edge cases
+    // 3. Fallback: parse the raw URL path, for direct /api/<name> calls.
     if (!rawEndpoint && req.url) {
       const urlPath = req.url.split("?")[0]; // Remove any query strings
       const segments = urlPath.split("/").filter(Boolean); // Split and clear empty spaces
-      
+
       if (segments[0] === "api" && segments[1]) {
         rawEndpoint = segments[1];
       } else if (segments[0]) {
@@ -436,8 +455,32 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
-      default:
+      default: {
+        // A request whose PATH is not /api/... reached the router by way of a
+        // rewrite, which means a real visitor is looking at a page, not calling
+        // an API. Answering those with a JSON 404 is what put
+        // {"error":"Route [denvermall] not found"} on every storefront.
+        //
+        // The handlers themselves already fail open to the SPA; this makes the
+        // ROUTER fail open too, so a future routing mistake degrades to "the
+        // React app loads and works" instead of taking every store page down.
+        const path = (req.url || "").split("?")[0];
+        const isApiCall = path.startsWith("/api/");
+        if (!isApiCall) {
+          try {
+            const { SPA_SHELL } = await import("../src/api-handlers/_generated/spa-shell.js");
+            if (SPA_SHELL) {
+              res.setHeader("Content-Type", "text/html; charset=utf-8");
+              res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+              res.setHeader("X-Sellapage-Render", "router-fallback");
+              return res.status(200).send(SPA_SHELL);
+            }
+          } catch {
+            // Shell unavailable: fall through to the JSON 404 below.
+          }
+        }
         return res.status(404).json({ error: `Route [${rawEndpoint || "empty"}] not found` });
+      }
     }
   } catch (err) {
     console.error("[catch-all router] error:", err);

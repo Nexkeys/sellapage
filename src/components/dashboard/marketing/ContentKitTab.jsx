@@ -153,71 +153,140 @@ export default function ContentKitTab({ store, storeUrl }) {
     ctx.fillStyle = theme.bg
     ctx.fillRect(0, 0, w, h)
 
-    const pad = Math.round(w * 0.075)
-    const imgBox = { x: pad, y: pad, w: w - pad * 2, h: format.id === 'square' ? w - pad * 2 - 240 : Math.round(h * 0.52) }
+    // ---------------------------------------------------------------------
+    // LAYOUT
+    //
+    // Measured before anything is drawn, because the first version positioned
+    // the image from the TOP with a hardcoded text allowance and the store URL
+    // from the BOTTOM independently. On a square card those two anchors landed
+    // 3px apart while the price glyphs were 81px tall, so the price was drawn
+    // straight through the URL.
+    //
+    // Now the text stack is measured first and the image takes whatever height
+    // is left. Nothing can overlap because every band's height is known before
+    // a single pixel is drawn.
+    // ---------------------------------------------------------------------
+    const pad = Math.round(w * 0.072)
+    const contentW = w - pad * 2
+
+    const titleSize = Math.round(w * 0.058)
+    const titleLead = Math.round(titleSize * 1.22)
+    const priceSize = Math.round(w * 0.082)
+    const descSize = Math.round(w * 0.034)
+    const descLead = Math.round(descSize * 1.45)
+    const footSize = Math.round(w * 0.032)
+
+    ctx.textBaseline = 'top'
+
+    ctx.font = `700 ${titleSize}px "DM Sans", system-ui, sans-serif`
+    const titleLines = wrap(ctx, selected.name, contentW, 2)
+
+    const price = naira(selected.price)
+
+    ctx.font = `400 ${descSize}px "DM Sans", system-ui, sans-serif`
+    const descLines =
+      format.id === 'story' && selected.description
+        ? wrap(ctx, selected.description, contentW, 3)
+        : []
+
+    const gapAfterImage = Math.round(w * 0.055)
+    const gapTitleToPrice = Math.round(w * 0.022)
+    const gapToDesc = descLines.length ? Math.round(w * 0.028) : 0
+    const footerBand = footSize + Math.round(w * 0.055) // rule + breathing room
+
+    const textH =
+      titleLines.length * titleLead +
+      (price ? gapTitleToPrice + priceSize : 0) +
+      (descLines.length ? gapToDesc + descLines.length * descLead : 0)
+
+    // Whatever is left over belongs to the photo.
+    const imgH = h - pad * 2 - gapAfterImage - textH - footerBand
+    const imgBox = { x: pad, y: pad, w: contentW, h: Math.max(imgH, Math.round(h * 0.25)) }
 
     const src = selected.imageUrl || selected.imageUrls?.[0]
     const img = await loadImage(src)
 
+    const radius = Math.round(w * 0.03)
+    const clipRounded = () => {
+      ctx.beginPath()
+      ctx.moveTo(imgBox.x + radius, imgBox.y)
+      ctx.arcTo(imgBox.x + imgBox.w, imgBox.y, imgBox.x + imgBox.w, imgBox.y + imgBox.h, radius)
+      ctx.arcTo(imgBox.x + imgBox.w, imgBox.y + imgBox.h, imgBox.x, imgBox.y + imgBox.h, radius)
+      ctx.arcTo(imgBox.x, imgBox.y + imgBox.h, imgBox.x, imgBox.y, radius)
+      ctx.arcTo(imgBox.x, imgBox.y, imgBox.x + imgBox.w, imgBox.y, radius)
+      ctx.closePath()
+    }
+
     if (img) {
-      // cover-fit inside the box
       const scale = Math.max(imgBox.w / img.width, imgBox.h / img.height)
       const dw = img.width * scale
       const dh = img.height * scale
       ctx.save()
-      ctx.beginPath()
-      const r = 32
-      ctx.moveTo(imgBox.x + r, imgBox.y)
-      ctx.arcTo(imgBox.x + imgBox.w, imgBox.y, imgBox.x + imgBox.w, imgBox.y + imgBox.h, r)
-      ctx.arcTo(imgBox.x + imgBox.w, imgBox.y + imgBox.h, imgBox.x, imgBox.y + imgBox.h, r)
-      ctx.arcTo(imgBox.x, imgBox.y + imgBox.h, imgBox.x, imgBox.y, r)
-      ctx.arcTo(imgBox.x, imgBox.y, imgBox.x + imgBox.w, imgBox.y, r)
-      ctx.closePath()
+      clipRounded()
       ctx.clip()
+      // Many product photos are shot on white, so a plain white card makes the
+      // image edges vanish. A faint tile behind it keeps the shape readable.
+      ctx.fillStyle = theme.id === 'dark' ? '#1e293b' : '#f1f5f9'
+      ctx.fillRect(imgBox.x, imgBox.y, imgBox.w, imgBox.h)
       ctx.drawImage(img, imgBox.x + (imgBox.w - dw) / 2, imgBox.y + (imgBox.h - dh) / 2, dw, dh)
       ctx.restore()
     } else if (src) {
       // Cloudinary refused the CORS request. Say so rather than silently
       // shipping a card with a blank rectangle where the product should be.
       setPhotoBlocked(true)
+      ctx.save()
+      clipRounded()
       ctx.fillStyle = theme.id === 'dark' ? '#1e293b' : '#f1f5f9'
-      ctx.fillRect(imgBox.x, imgBox.y, imgBox.w, imgBox.h)
+      ctx.fill()
+      ctx.restore()
     }
 
-    let y = imgBox.y + imgBox.h + Math.round(pad * 1.1)
+    let y = imgBox.y + imgBox.h + gapAfterImage
 
     ctx.fillStyle = theme.fg
-    ctx.textBaseline = 'top'
-    ctx.font = `700 ${Math.round(w * 0.062)}px "DM Sans", system-ui, sans-serif`
-    for (const line of wrap(ctx, selected.name, w - pad * 2, 2)) {
+    ctx.font = `700 ${titleSize}px "DM Sans", system-ui, sans-serif`
+    for (const line of titleLines) {
       ctx.fillText(line, pad, y)
-      y += Math.round(w * 0.075)
+      y += titleLead
     }
 
-    const price = naira(selected.price)
     if (price) {
-      y += Math.round(w * 0.012)
+      y += gapTitleToPrice
       ctx.fillStyle = theme.accent
-      ctx.font = `800 ${Math.round(w * 0.075)}px "DM Sans", system-ui, sans-serif`
+      ctx.font = `800 ${priceSize}px "DM Sans", system-ui, sans-serif`
       ctx.fillText(price, pad, y)
-      y += Math.round(w * 0.095)
+      y += priceSize
     }
 
-    if (format.id === 'story' && selected.description) {
+    if (descLines.length) {
+      y += gapToDesc
       ctx.fillStyle = theme.sub
-      ctx.font = `400 ${Math.round(w * 0.036)}px "DM Sans", system-ui, sans-serif`
-      for (const line of wrap(ctx, selected.description, w - pad * 2, 3)) {
+      ctx.font = `400 ${descSize}px "DM Sans", system-ui, sans-serif`
+      for (const line of descLines) {
         ctx.fillText(line, pad, y)
-        y += Math.round(w * 0.048)
+        y += descLead
       }
     }
 
-    // Footer: the store address, which is the entire point of the post.
-    const footerY = h - pad - Math.round(w * 0.05)
+    // Footer sits on the baseline of the card, separated by a hairline so the
+    // store address reads as an address and not as part of the description.
+    const footY = h - pad - footSize
+    ctx.strokeStyle = theme.id === 'dark' ? '#1e293b' : '#e2e8f0'
+    ctx.lineWidth = Math.max(1, Math.round(w * 0.002))
+    ctx.beginPath()
+    ctx.moveTo(pad, footY - Math.round(w * 0.028))
+    ctx.lineTo(w - pad, footY - Math.round(w * 0.028))
+    ctx.stroke()
+
+    ctx.fillStyle = theme.accent
+    ctx.beginPath()
+    ctx.arc(pad + footSize * 0.28, footY + footSize * 0.5, footSize * 0.28, 0, Math.PI * 2)
+    ctx.fill()
+
     ctx.fillStyle = theme.sub
-    ctx.font = `600 ${Math.round(w * 0.033)}px "DM Sans", system-ui, sans-serif`
+    ctx.font = `600 ${footSize}px "DM Sans", system-ui, sans-serif`
     const handle = (storeUrl || '').replace(/^https?:\/\//, '')
-    ctx.fillText(handle, pad, footerY)
+    ctx.fillText(handle, pad + footSize, footY)
 
     setDrawing(false)
   }, [selected, format, theme, storeUrl])
