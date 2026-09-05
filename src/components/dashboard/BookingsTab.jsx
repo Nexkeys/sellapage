@@ -646,14 +646,6 @@ export default function BookingsTab({
                               >
                                 <Download size={11} /> Receipt
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => openDeleteDialog(booking)}
-                                disabled={normalizeStatus(booking.status) === 'completed'}
-                                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-[10px] font-bold text-gray-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                <Trash2 size={11} />
-                              </button>
                             </div>
                           </td>
                         </tr>
@@ -740,14 +732,6 @@ export default function BookingsTab({
                       className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-[11px] font-bold text-gray-600 hover:bg-gray-50"
                     >
                       <Download size={12} /> Receipt
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openDeleteDialog(booking)}
-                      disabled={normalizeStatus(booking.status) === 'completed'}
-                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-[11px] font-bold text-gray-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <Trash2 size={12} />
                     </button>
                   </div>
 

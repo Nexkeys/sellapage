@@ -153,7 +153,7 @@ function buildJsonLd({ store, seo, listings, canonical, storeUrl }) {
       if (!Number.isFinite(price)) return null
       return {
         '@type': 'Offer',
-        price: (price / 100).toFixed(2),
+        price: price.toFixed(2),
         priceCurrency: 'NGN',
         availability:
           p.stock === 0 ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
@@ -219,7 +219,7 @@ function buildJsonLd({ store, seo, listings, canonical, storeUrl }) {
             ? {
                 offers: {
                   '@type': 'Offer',
-                  price: (Number(p.price) / 100).toFixed(2),
+                  price: Number(p.price).toFixed(2),
                   priceCurrency: 'NGN',
                   availability:
                     p.stock === 0

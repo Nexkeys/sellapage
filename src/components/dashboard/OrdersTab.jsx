@@ -1316,16 +1316,6 @@ export default function OrdersTab({
                               <Download size={15} />
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => !isLocked && openDeleteDialog(order)}
-                            disabled={isLocked}
-                            className={`inline-flex items-center justify-center rounded-xl p-2 transition-all duration-200 ${isLocked ? 'text-gray-200 cursor-not-allowed opacity-0 group-hover:opacity-100' : 'text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 focus:opacity-100'}`}
-                            title={isLocked ? 'Delivered orders are locked and cannot be deleted' : 'Delete order'}
-                            aria-label="Delete order"
-                          >
-                            {isLocked ? <Lock size={13} /> : <Trash2 size={15} />}
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1476,15 +1466,6 @@ export default function OrdersTab({
                       Receipt
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => !isLocked && openDeleteDialog(order)}
-                    disabled={isLocked}
-                    className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition-all ${isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}
-                  >
-                    {isLocked ? <Lock size={13} /> : <Trash2 size={13} />}
-                    {isLocked ? 'Locked' : 'Delete'}
-                  </button>
                 </div>
               </article>
               )
