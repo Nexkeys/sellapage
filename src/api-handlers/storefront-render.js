@@ -40,10 +40,16 @@ const clamp = (s, n) => {
   return v.length <= n ? v : v.slice(0, n - 1).trimEnd() + '\u2026'
 }
 
-const naira = (kobo) => {
-  const n = Number(kobo)
+// product.price is stored in NAIRA, not kobo. Confirmed two ways: ProductCard
+// renders it raw as `Number(product.price).toLocaleString()`, and checkout
+// multiplies by 100 to reach the kobo Paystack expects. Dividing here would have
+// advertised a 45,000 naira item to Google and every AI as 450 naira, which
+// misleads buyers and is the kind of mismatch that gets a Merchant Center
+// account suspended.
+const naira = (amount) => {
+  const n = Number(amount)
   if (!Number.isFinite(n)) return null
-  return `\u20a6${(n / 100).toLocaleString('en-NG')}`
+  return `\u20a6${n.toLocaleString('en-NG')}`
 }
 
 /** Serves the SPA unchanged. Used for every not-found, not-eligible or error path. */

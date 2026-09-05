@@ -85,7 +85,7 @@ function Counter({ value, max }) {
   )
 }
 
-export default function SeoTab({ store, storeUrl }) {
+export default function SeoTab({ store, storeUrl, onStatusChange }) {
   const [form, setForm] = useState(EMPTY)
   const [meta, setMeta] = useState({ eligible: false, active: false, plan: 'starter', previousSlugs: [], customDomain: null, customDomainStatus: null, storeName: '' })
   const [loading, setLoading] = useState(true)
@@ -115,6 +115,7 @@ export default function SeoTab({ store, storeUrl }) {
           previousSlugs: d.previousSlugs || [], customDomain: d.customDomain,
           customDomainStatus: d.customDomainStatus, storeName: d.storeName || '',
         })
+        onStatusChange?.({ eligible: d.eligible, active: d.active })
       } catch {
         if (!cancelled) setError('Could not load your SEO settings.')
       } finally {
@@ -135,6 +136,7 @@ export default function SeoTab({ store, storeUrl }) {
       if (!r.ok) { setError(d.message || 'Could not save.'); return }
       setForm({ ...EMPTY, ...d.seo })
       setMeta((m) => ({ ...m, active: d.active }))
+      onStatusChange?.({ eligible: true, active: d.active })
       setSuccess(d.active ? 'Saved. Your store is live for search engines and AI.' : 'Saved.')
       setTimeout(() => setSuccess(''), 4000)
     } catch {

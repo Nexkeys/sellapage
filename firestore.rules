@@ -4,6 +4,12 @@
 // Last updated: 2026-09-01 (loyalty cards)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-05  orders and bookings: `delete` denied, create/update unchanged.
+//               NOT YET PUBLISHED as of writing. The dashboard delete buttons
+//               were removed the same day, but the client SDK path stayed open
+//               until this lands. Nothing legitimate deletes them: the only two
+//               callers were the buttons just removed, and no server handler
+//               deletes an order. Safe to publish before or after the code.
 //   2026-09-05  Locked `previousSlugs` (verificationFields). Written only by
 //               store-seo.js when a vendor renames their store URL; the
 //               storefront renderer 301s those old addresses to the current
@@ -237,12 +243,24 @@ service cloud.firestore {
         }
       }
 
+      // Orders and bookings are financial records. Create and update only,
+      // never delete. Removing one silently corrupts revenue reporting, the
+      // ledger, and loyalty reversal (which reads loyaltyEarned back off the
+      // order). The dashboard delete buttons were removed on 2026-09-05; this
+      // closes the browser-console path that removing a button does not.
+      //
+      // Support-driven deletion is still possible: the Admin SDK bypasses rules
+      // entirely, so a server handler can do it deliberately and leave a trail.
       match /orders/{orderId} {
-        allow read, write: if request.auth != null && request.auth.uid == storeId;
+        allow read: if request.auth != null && request.auth.uid == storeId;
+        allow create, update: if request.auth != null && request.auth.uid == storeId;
+        allow delete: if false;
       }
 
       match /bookings/{bookingId} {
-        allow read, write: if request.auth != null && request.auth.uid == storeId;
+        allow read: if request.auth != null && request.auth.uid == storeId;
+        allow create, update: if request.auth != null && request.auth.uid == storeId;
+        allow delete: if false;
       }
 
       // Anonymous visitors on public store pages must be able to increment

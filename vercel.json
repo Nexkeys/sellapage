@@ -138,6 +138,10 @@
       "destination": "/compare/vs-instagram-bio/index.html"
     },
     {
+      "source": "/:slug([a-z0-9][a-z0-9-]{1,60})/feed.xml",
+      "destination": "/api/product-feed?slug=:slug"
+    },
+    {
       "source": "/(?<slug>(?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/services",
       "destination": "/api/storefront-render?slug=:slug"
     },

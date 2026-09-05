@@ -346,6 +346,10 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "product-feed": {
+        const { default: handler } = await import("../src/api-handlers/product-feed.js")
+        return await handler(req, res)
+      }
       case "store-seo": {
         const { default: handler } = await import("../src/api-handlers/store-seo.js")
         return await handler(req, res)

@@ -100,7 +100,7 @@ const PLANS = [
       'Loyalty Points System for repeat customers',
       'Abandoned Cart Recovery via WhatsApp',
       'Multi-staff account access with role controls',
-      'Meta Ads performance tracking (coming soon)',
+      'Meta Ads performance tracking',
       'Google Ads integration (self-managed)',
       'Custom Domain Engine with SSL',
       'Advanced integrations & premium positioning',
