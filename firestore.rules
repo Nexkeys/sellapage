@@ -4,6 +4,10 @@
 // Last updated: 2026-09-01 (loyalty cards)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-05  Added `match /abandonedCheckouts/{reference}` inside
+//               /stores/{storeId}. NOT YET PUBLISHED as of writing. Must go live
+//               BEFORE the first record is written, since these documents hold
+//               customer name, email, phone and basket contents.
 //   2026-09-05  orders and bookings: `delete` denied, create/update unchanged.
 //               NOT YET PUBLISHED as of writing. The dashboard delete buttons
 //               were removed the same day, but the client SDK path stayed open
@@ -327,6 +331,20 @@ service cloud.firestore {
       // Staff role definitions - server-only (Admin SDK). Explicitly denied so
       // nobody later mistakes "no rule here" for an oversight.
       match /staffRoles/{roleId} {
+        allow read, write: if false;
+      }
+
+      // Abandoned checkouts - server only. Holds a customer's name, email, phone
+      // and the basket they walked away from, so it is never client-readable.
+      // The vendor sees it through an authenticated handler, not directly.
+      match /abandonedCheckouts/{reference} {
+        allow read, write: if false;
+      }
+
+      // One doc per customer (id = sha256 of their email) holding the timestamp
+      // of their last recovery email. Enforces the 24 hour throttle server side
+      // so a vendor cannot bombard someone by pressing Send repeatedly.
+      match /reminderThrottle/{emailHash} {
         allow read, write: if false;
       }
 

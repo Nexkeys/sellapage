@@ -10,9 +10,11 @@
 // customer, not help them admire their business. Reporting belongs in Analytics
 // and is deliberately not duplicated here.
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Megaphone, ShoppingBag } from 'lucide-react'
+import { Search, Megaphone, ShoppingBag, Image as ImageIcon, Users } from 'lucide-react'
 import SeoTab from './marketing/SeoTab'
 import GoogleFeedTab from './marketing/GoogleFeedTab'
+import ContentKitTab from './marketing/ContentKitTab'
+import ReferralKitTab from './marketing/ReferralKitTab'
 import { auth } from '../../firebase/auth'
 
 const SECTIONS = [
@@ -27,6 +29,21 @@ const SECTIONS = [
     label: 'Free Google listings',
     icon: ShoppingBag,
     blurb: 'Put your products on Google Search and Shopping without paying for ads.',
+  },
+  {
+    id: 'content',
+    icon: ImageIcon,
+    label: 'Post kit',
+    // Available on every plan, deliberately. It costs nothing to run (the card
+    // is drawn in the browser), and a Starter vendor who uses it daily is the
+    // one most likely to notice the locked sections next to it.
+    blurb: 'Turn a product into a ready-to-post image, caption and hashtags for Instagram, WhatsApp status or TikTok.',
+  },
+  {
+    id: 'referrals',
+    icon: Users,
+    label: 'Customer referrals',
+    blurb: 'Give your customers their own discount code so their friends become your customers.',
   },
 ]
 
@@ -88,6 +105,8 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
       {section === 'seo' && (
         <SeoTab store={store} storeUrl={storeUrl} navigateTo={navigateTo} onStatusChange={setStatus} />
       )}
+      {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
+      {section === 'referrals' && <ReferralKitTab store={store} storeUrl={storeUrl} />}
       {section === 'google' && (
         <GoogleFeedTab
           store={store}

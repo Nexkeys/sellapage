@@ -332,6 +332,14 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/loyalty-vendor.js")
         return handler(req, res)
       }
+      case "abandoned-checkout-vendor": {
+        const { default: handler } = await import("../src/api-handlers/abandoned-checkout-vendor.js")
+        return handler(req, res)
+      }
+      case "abandoned-checkout-send": {
+        const { default: handler } = await import("../src/api-handlers/abandoned-checkout-send.js")
+        return handler(req, res)
+      }
       case "admin-jobs": {
         const { default: handler } = await import("../src/api-handlers/admin-jobs.js")
         return handler(req, res)

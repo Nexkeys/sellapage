@@ -2,6 +2,7 @@
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
+import { markRecovered } from "./abandoned-checkout.js";
 
 // Service-booking branch of the paystack-webhook "checkout" dispatcher.
 // Writes to stores/{storeId}/bookings - a collection separate from stores/{storeId}/orders,
@@ -85,6 +86,10 @@ export async function handleBookingCheckout(db, data, res) {
       changedByLabel: "Booking Created",
     }],
   });
+
+  // This checkout is no longer abandoned. Fire and forget: markRecovered never
+  // throws, and a missing record is the normal case for a non-Premium store.
+  markRecovered(db, storeId, data.reference);
 
   if (typeof promoCode === "string" && promoCode.trim()) {
     try {

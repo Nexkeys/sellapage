@@ -3,6 +3,7 @@ import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
 import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
+import { markRecovered } from "./abandoned-checkout.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
 // Moved verbatim out of paystack-webhook.js's former single checkout branch - logic
@@ -236,6 +237,10 @@ export async function handleProductCheckout(db, data, res) {
   } catch (err) {
     console.error("[handle-product-checkout] loyalty failed", err);
   }
+
+  // This checkout is no longer abandoned. Fire and forget: markRecovered never
+  // throws, and a missing record is the normal case for a non-Premium store.
+  markRecovered(db, storeId, data.reference);
 
   // The code also renders on the success screen, but the Paystack redirect
   // usually beats this webhook, so on a first order that screen may load before

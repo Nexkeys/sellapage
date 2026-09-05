@@ -3,6 +3,7 @@ import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 import { resolveRedemption } from './_lib/loyalty.js'
+import { recordCheckoutAttempt } from './_lib/abandoned-checkout.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -389,6 +390,25 @@ export default async function handler(req, res) {
           paystackData.message || "Paystack transaction initialization failed",
       });
     }
+
+    // Abandoned checkout record. Written here because this is the first moment a
+    // Paystack reference exists, and the last moment before the customer leaves
+    // for the payment page. If they never come back, this is the only trace of
+    // them anywhere: nothing else in this handler writes to Firestore.
+    //
+    // Deliberately not awaited into the response path. The function itself never
+    // throws, but even the latency is not worth adding to a checkout redirect.
+    // Premium-only, decided inside recordCheckoutAttempt.
+    recordCheckoutAttempt(db, storeId, store, {
+      reference: paystackData.data.reference,
+      customerName: customerName.trim(),
+      customerEmail: customerEmail.trim(),
+      customerPhone: customerPhone.trim(),
+      cartItems: kind === "product" ? verifiedCartItems : [],
+      subtotal,
+      grandTotal,
+      kind,
+    });
 
     return res.status(200).json({
       authorization_url: paystackData.data.authorization_url,

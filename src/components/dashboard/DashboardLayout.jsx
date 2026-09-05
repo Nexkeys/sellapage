@@ -33,6 +33,7 @@ import {
   Receipt,
   UserPlus,
   Gift,
+  ShoppingBag,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -51,6 +52,7 @@ const NAV_ITEMS = [
   { id: "ledger", label: "Ledger", icon: BookOpen },
   { id: "receipts", label: "Receipts", icon: Receipt },
   { id: "orders", label: "Orders", icon: ShoppingCart },
+  { id: "abandoned", label: "Abandoned", icon: ShoppingBag },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
   { id: "delivery", label: "Delivery", icon: Truck },
   { id: "customers", label: "Customers", icon: Users },
@@ -201,6 +203,7 @@ export default function DashboardLayout({
         // Gating only one of the two leaves the tab reachable on phones after a
         // plan lapses, which has already shipped as a bug twice on admin tabs.
         if (item.id === 'loyalty' && !isPremiumPlan) return false;
+        if (item.id === 'abandoned' && !isPremiumPlan) return false;
         if (item.id === 'team' && isStaffIdentity) return false;
         if (isStaffIdentity && item.id !== 'team' && !staffTabAccess(item.id)) return false;
         return true;
@@ -291,6 +294,7 @@ export default function DashboardLayout({
           if (id === 'team' && !isPremiumPlan) return null;
           // Mirror of the desktop gate above. Both are required.
           if (id === 'loyalty' && !isPremiumPlan) return null;
+          if (id === 'abandoned' && !isPremiumPlan) return null;
           if (id === 'team' && isStaffIdentity) return null;
           if (isStaffIdentity && id !== 'team' && !staffTabAccess(id)) return null;
           const active = activeTab === id;

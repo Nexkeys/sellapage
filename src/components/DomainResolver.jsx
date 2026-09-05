@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
+// Both apex and www, so changing which one Vercel treats as primary does not
+// strand the other. `.vercel.app` is included because a preview deployment is
+// not a vendor custom domain and must not be resolved as one.
 const MAIN_DOMAINS = ['sellapage.com.ng', 'www.sellapage.com.ng', 'localhost']
+const isMainDomain = (h) =>
+  MAIN_DOMAINS.includes(h) || h.startsWith('localhost') || h.endsWith('.vercel.app')
 
 export default function DomainResolver({ children }) {
   const { user } = useAuth()
@@ -13,7 +18,7 @@ export default function DomainResolver({ children }) {
   useEffect(() => {
     const hostname = window.location.hostname
 
-    if (MAIN_DOMAINS.includes(hostname) || hostname.startsWith('localhost:')) {
+    if (isMainDomain(hostname)) {
       setChecking(false)
       setResolved(true)
       return

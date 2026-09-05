@@ -23,7 +23,14 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 
 const SITE_URL = 'https://sellapage.com.ng'
+// BOTH apex and www stay listed regardless of which one Vercel treats as
+// primary, so switching the primary domain in the dashboard cannot strand
+// either host. Preview deployments count as main hosts too: otherwise `/` on a
+// *.vercel.app URL is treated as a vendor custom domain, runs a Firestore
+// lookup that can only fail, and renders nothing useful.
 const MAIN_HOSTS = new Set(['sellapage.com.ng', 'www.sellapage.com.ng', 'localhost'])
+const isMainHostname = (host) =>
+  MAIN_HOSTS.has(host) || host.startsWith('localhost') || host.endsWith('.vercel.app')
 
 // SEO rendering is a paid feature. Starter stores keep exactly today's path.
 const ELIGIBLE_PLANS = new Set(['growth', 'pro', 'premium'])
@@ -76,7 +83,7 @@ async function resolveStore(db, req) {
   const segments = url.split('/').filter(Boolean)
   const querySlug = req.query?.slug
 
-  const isMainHost = MAIN_HOSTS.has(host) || host.startsWith('localhost')
+  const isMainHost = isMainHostname(host)
 
   if (!isMainHost && host) {
     const snap = await db
