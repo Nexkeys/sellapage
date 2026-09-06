@@ -34,6 +34,7 @@ import {
   UserPlus,
   Gift,
   ShoppingBag,
+  Activity,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -65,6 +66,7 @@ const NAV_ITEMS = [
   { id: "loyalty", label: "Loyalty", icon: Gift },
   { id: "referral-program", label: "Referral Program", icon: Share2 },
   { id: "google-ads", label: "Google Ads", icon: Target },
+  { id: "meta-pixel", label: "Meta Pixel", icon: Activity },
   { id: "job-listings", label: "Job Listings", icon: Briefcase },
   { type: "group", label: "Business" },
   { id: "online-store", label: "Business Page", icon: Globe },
@@ -204,6 +206,7 @@ export default function DashboardLayout({
         // plan lapses, which has already shipped as a bug twice on admin tabs.
         if (item.id === 'loyalty' && !isPremiumPlan) return false;
         if (item.id === 'abandoned' && !isPremiumPlan) return false;
+        if (item.id === 'meta-pixel' && !isPremiumPlan) return false;
         if (item.id === 'team' && isStaffIdentity) return false;
         if (isStaffIdentity && item.id !== 'team' && !staffTabAccess(item.id)) return false;
         return true;
@@ -295,6 +298,7 @@ export default function DashboardLayout({
           // Mirror of the desktop gate above. Both are required.
           if (id === 'loyalty' && !isPremiumPlan) return null;
           if (id === 'abandoned' && !isPremiumPlan) return null;
+          if (id === 'meta-pixel' && !isPremiumPlan) return null;
           if (id === 'team' && isStaffIdentity) return null;
           if (isStaffIdentity && id !== 'team' && !staffTabAccess(id)) return null;
           const active = activeTab === id;

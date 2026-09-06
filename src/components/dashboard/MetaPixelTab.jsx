@@ -17,12 +17,16 @@ import {
   Loader2, Save, CheckCircle2, AlertCircle, ExternalLink, Lock, CreditCard,
   Activity,
 } from 'lucide-react'
-import { updateStore } from '../../../firebase/auth'
+import { updateStore } from '../../firebase/auth'
 
-// Meta pixel ids are numeric, currently 15 to 16 digits. Kept loose enough to
-// survive Meta changing the length, strict enough to catch someone pasting the
-// whole install snippet or a URL.
-const PIXEL_ID_RE = /^\d{10,20}$/
+// Meta pixel ids are 15 or 16 digits and never start with a zero.
+//
+// This was originally /^\d{10,20}$/, which was too loose: a mistyped 20 digit
+// value saved happily, the dashboard reported "pixel is live", and the only
+// symptom was an Events Manager that stayed empty forever with nothing
+// explaining why. Validating the real shape turns a silent dead end into an
+// error at the moment of pasting.
+const PIXEL_ID_RE = /^[1-9]\d{14,15}$/
 
 const EVENTS = [
   ['PageView', 'Someone opens your store'],
@@ -42,7 +46,7 @@ export default function MetaPixelTab({ store, isPremium, navigateTo }) {
     if (trimmed && !PIXEL_ID_RE.test(trimmed)) {
       setResult({
         kind: 'err',
-        text: 'That does not look like a Pixel ID. It should be numbers only, around 15 digits, with no letters or spaces.',
+        text: `That does not look like a Pixel ID. Meta pixel IDs are 15 or 16 digits and do not start with 0. You entered ${trimmed.length} digits.`,
       })
       return
     }
