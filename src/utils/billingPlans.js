@@ -64,7 +64,6 @@ export const PLAN_FEATURES = {
     'Job Listings board',
     'Custom domain (yourbrand.com)',
     'CAC Trust Verification badge',
-    'WhatsApp Community Group Sync',
     'Priority same-day support',
   ],
   premium: [

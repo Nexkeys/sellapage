@@ -144,7 +144,7 @@ const COMPARISON_ROWS = [
     { label: 'Top-performing analytics', starter: false, growth: false, pro: true, premium: true },
     { label: 'Marketing tab (tasks & points)', starter: false, growth: true, pro: true, premium: true },
     { label: 'AI descriptions', starter: false, growth: '20/day', pro: '50/day', premium: '50/day' },
-    { label: 'WhatsApp Community Group Sync', starter: false, growth: false, pro: true, premium: true },
+    { label: 'WhatsApp community link on storefront', starter: true, growth: true, pro: true, premium: true },
     { label: 'Job Listings (posting cap)', starter: '5', growth: '25', pro: '50', premium: 'Unlimited' },
     { label: 'Sellapage Blog (read & comment)', starter: true, growth: true, pro: true, premium: true },
     { label: 'Referral Program (earn on referred upgrades)', starter: true, growth: true, pro: true, premium: true },

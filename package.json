@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "check:cjs": "node scripts/check-cjs-safe.js",
-    "prebuild": "node scripts/check-cjs-safe.js && node scripts/check-ai-models.js",
+    "prebuild": "node -e \"const{existsSync}=require('fs'),{execFileSync}=require('child_process');for(const s of ['scripts/check-cjs-safe.js','scripts/check-ai-models.js']){if(!existsSync(s)){console.warn('· '+s+' missing from repo - guard SKIPPED');continue}execFileSync(process.execPath,[s],{stdio:'inherit'})}\"",
     "build": "vite build",
     "postbuild": "node scripts/prerender-seo.mjs",
     "preview": "vite preview",

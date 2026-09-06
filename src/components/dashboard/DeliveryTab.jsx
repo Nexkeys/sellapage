@@ -305,6 +305,7 @@ export default function DeliveryTab({
       return (
         <ShipmentDetail
           order={live}
+          store={store}
           tracking={trackingData[live.id]}
           loading={!!trackingLoading[live.id]}
           error={trackingError[live.id]}

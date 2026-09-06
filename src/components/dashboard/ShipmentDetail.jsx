@@ -66,7 +66,7 @@ function Fact({ label, value, mono }) {
   )
 }
 
-export default function ShipmentDetail({ order, tracking, loading, error, onRefresh, onBack }) {
+export default function ShipmentDetail({ order, store, tracking, loading, error, onRefresh, onBack }) {
   const isTopship =
     !!order.topshipTrackingId &&
     !(order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)
@@ -76,12 +76,26 @@ export default function ShipmentDetail({ order, tracking, loading, error, onRefr
     ? order.topshipTrackingId
     : order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode
 
-  const pickup = isTopship
+  // Same resolution as ShipmentAddressBlock in DeliveryTab, deliberately.
+  // Sendbox bookings do NOT persist addresses on the order (only tracking ids
+  // and urls), so a Sendbox shipment has to fall back to the store's pickup
+  // address and the order's own checkout address. An earlier version of this
+  // file invented `sendboxSenderAddress`, which does not exist, and would have
+  // shown "Not provided" on every Sendbox shipment.
+  const pickup = isTopship && order.topshipSenderAddress
     ? order.topshipSenderAddress
-    : order.sendboxSenderAddress || order.senderAddress
-  const dropoff = isTopship
+    : {
+        address: store?.pickupAddress?.streetAddress || '',
+        city: store?.pickupAddress?.city || '',
+        state: store?.pickupAddress?.state || '',
+      }
+  const dropoff = isTopship && order.topshipReceiverAddress
     ? order.topshipReceiverAddress
-    : order.sendboxReceiverAddress || order.receiverAddress
+    : {
+        address: order.deliveryAddress?.address || order.deliveryAddress?.streetAddress || '',
+        city: order.deliveryAddress?.city || order.deliveryAddress?.lga || '',
+        state: order.deliveryAddress?.state || '',
+      }
 
   const pickupText = [pickup?.address, pickup?.city, pickup?.state].filter(Boolean).join(', ')
   const dropoffText = [dropoff?.address, dropoff?.city, dropoff?.state].filter(Boolean).join(', ')
@@ -253,7 +267,7 @@ export default function ShipmentDetail({ order, tracking, loading, error, onRefr
           <Fact label="Delivered on" value={formatWhen(tracking?.deliveryDate)} />
           <Fact label="Weight" value={tracking?.weight ? `${tracking.weight} kg` : ''} />
           <Fact label="Last checked" value={formatWhen(tracking?.updatedAt || tracking?.lastUpdated)} />
-          <Fact label="Recipient phone" value={dropoff?.phone || tracking?.receiver?.phone} />
+          <Fact label="Recipient phone" value={dropoff?.phone || tracking?.receiver?.phone || order.customerPhone || order.deliveryAddress?.phone} />
           <Fact label="Order total" value={order.total ? `₦${Number(order.total).toLocaleString('en-NG')}` : ''} />
         </div>
 

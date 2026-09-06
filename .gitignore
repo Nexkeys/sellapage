@@ -16,7 +16,16 @@ ai-business-partner-cursor-prompt.md
 PAYSTACK_API_DOC.txt
 KWIK_API_DOC.md
 Docs
-scripts
+
+# scripts/ is ignored (one-off migrations, output that may contain customer PII),
+# BUT build-critical guards must ship or the Vercel build dies with
+# MODULE_NOT_FOUND - which is exactly what happened when check-ai-models.js was
+# added and never committed. `scripts/*` (not `scripts`) is required: git cannot
+# re-include a file whose PARENT DIRECTORY is excluded, so the bare `scripts`
+# rule made the negations below impossible.
+scripts/*
+!scripts/check-*.js
+!scripts/prerender-seo.mjs
 
 
 # Local Vercel folder
