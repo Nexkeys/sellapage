@@ -32,6 +32,7 @@ import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import SEO from '../components/SEO';
 import { initMetaPixel, trackPixel } from '../utils/metaPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
+import GuaranteeBadge from "../components/GuaranteeBadge";
 
 const EMPTY_CHECKOUT_FORM = {
   customerName: "",
@@ -909,6 +910,11 @@ function StoreCheckoutModal({
               >
                 Back to delivery
               </button>
+
+              {/* Shown here rather than only in the footer: this is the moment
+                  a stranger decides whether to send money to a name they do
+                  not know. */}
+              <GuaranteeBadge guarantee={store?.guarantee} variant="inline" />
 
               <button
                 type="button"
@@ -1973,6 +1979,7 @@ export default function StorePage() {
           <StoreFooter
             storeName={store.businessName}
             customFooterText={footerText}
+            guarantee={store.guarantee}
           />
         )}
       </main>

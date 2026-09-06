@@ -103,6 +103,26 @@ function sanitizeSeo(input) {
   }
 }
 
+/**
+ * The vendor's promise to a buyer.
+ *
+ * Capped hard because it is rendered on a public page and inside JSON-LD: an
+ * unbounded headline would let one vendor bloat every crawl of their storefront.
+ * `days` is clamped to a year, since a "guarantee" measured in decades is not a
+ * promise anyone can hold them to.
+ */
+function sanitizeGuarantee(input) {
+  const b = input && typeof input === 'object' ? input : {}
+  const days = Number(b.days)
+  return {
+    enabled: b.enabled === true,
+    headline: clean(b.headline, 140),
+    details: clean(b.details, 400),
+    days: Number.isFinite(days) && days > 0 ? Math.min(Math.round(days), 365) : null,
+    updatedAt: Date.now(),
+  }
+}
+
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,60}$/
 
 export default async function handler(req, res) {
@@ -149,6 +169,7 @@ export default async function handler(req, res) {
         // Live only when BOTH the plan allows it and the vendor switched it on.
         active: isPaid && store.seo?.enabled === true,
         seo: store.seo || null,
+        guarantee: store.guarantee || null,
         storeName: store.storeName || null,
         previousSlugs: store.previousSlugs || [],
         customDomain: store.customDomain || null,
@@ -163,6 +184,23 @@ export default async function handler(req, res) {
       body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
     } catch {
       return res.status(400).json({ error: 'Invalid JSON body' })
+    }
+
+    // ------------------------------------------------------- save-guarantee
+    // Deliberately NOT plan-gated. The vendors who most need a promise to lean
+    // on are the new ones with no reviews yet, which is exactly the Starter
+    // cohort. Charging for it would withhold the feature from the only people
+    // it was designed for.
+    if (action === 'save-guarantee') {
+      const guarantee = sanitizeGuarantee(body.guarantee)
+      if (guarantee.enabled && !guarantee.headline) {
+        return res.status(400).json({
+          error: 'headline_required',
+          message: 'Write the promise before switching it on.',
+        })
+      }
+      await ref.set({ guarantee }, { merge: true })
+      return res.status(200).json({ success: true, guarantee })
     }
 
     // ---------------------------------------------------------------- save

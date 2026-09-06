@@ -10,11 +10,12 @@
 // customer, not help them admire their business. Reporting belongs in Analytics
 // and is deliberately not duplicated here.
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Megaphone, ShoppingBag, Image as ImageIcon, MapPin } from 'lucide-react'
+import { Search, Megaphone, ShoppingBag, Image as ImageIcon, MapPin, ShieldCheck } from 'lucide-react'
 import SeoTab from './marketing/SeoTab'
 import GoogleFeedTab from './marketing/GoogleFeedTab'
 import ContentKitTab from './marketing/ContentKitTab'
 import GoogleBusinessTab from './marketing/GoogleBusinessTab'
+import GuaranteeTab from './marketing/GuaranteeTab'
 import { auth } from '../../firebase/auth'
 
 const SECTIONS = [
@@ -47,6 +48,15 @@ const SECTIONS = [
     // is drawn in the browser), and a Starter vendor who uses it daily is the
     // one most likely to notice the locked sections next to it.
     blurb: 'Turn a product into a ready-to-post image, caption and hashtags for Instagram, WhatsApp status or TikTok.',
+  },
+  {
+    id: 'guarantee',
+    icon: ShieldCheck,
+    label: 'Your guarantee',
+    // The only section that closes a sale rather than starting one. Every other
+    // section brings a stranger to the page; this is what convinces them to pay
+    // a name they have never bought from before.
+    blurb: 'Give buyers a promise they can hold you to, so a stranger has a reason to trust you.',
   },
 ]
 
@@ -110,6 +120,7 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
       )}
       {section === 'maps' && <GoogleBusinessTab store={store} storeUrl={storeUrl} />}
       {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
+      {section === 'guarantee' && <GuaranteeTab store={store} storeUrl={storeUrl} />}
       {section === 'google' && (
         <GoogleFeedTab
           store={store}

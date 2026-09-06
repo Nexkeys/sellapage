@@ -262,6 +262,24 @@ function buildJsonLd({ store, seo, listings, canonical, storeUrl }) {
     })
   }
 
+  // The vendor's guarantee, expressed as a return policy ONLY when they set a
+  // day count. A free-text promise does not map cleanly onto
+  // MerchantReturnPolicy, and emitting a policy that does not match reality is
+  // how a merchant account gets penalised, so the untimed case stays prose only.
+  const g = store.guarantee
+  if (g?.enabled && g?.headline && Number(g.days) > 0) {
+    blocks.push({
+      '@context': 'https://schema.org',
+      '@type': 'MerchantReturnPolicy',
+      '@id': `${canonical}#returns`,
+      name: g.headline,
+      merchantReturnDays: Number(g.days),
+      returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+      applicableCountry: 'NG',
+      ...(g.details ? { description: g.details } : {}),
+    })
+  }
+
   blocks.push({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -319,6 +337,14 @@ function buildNoscript({ store, seo, listings, canonical }) {
     for (const f of seo.faq) {
       lines.push(`<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`)
     }
+  }
+
+  const guarantee = store.guarantee
+  if (guarantee?.enabled && guarantee?.headline) {
+    const days = Number(guarantee.days)
+    lines.push(`<h2>${days > 0 ? `${days}-day guarantee` : 'Our guarantee'}</h2>`)
+    lines.push(`<p>${esc(guarantee.headline)}</p>`)
+    if (guarantee.details) lines.push(`<p>${esc(guarantee.details)}</p>`)
   }
 
   lines.push(

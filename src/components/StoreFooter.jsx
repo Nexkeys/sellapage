@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Shield, Truck, Lock } from 'lucide-react'
+import GuaranteeBadge from './GuaranteeBadge'
 
 const TRUST_BADGES = [
   { icon: Shield, title: '100% Authentic',   sub: 'Genuine products' },
@@ -7,7 +8,7 @@ const TRUST_BADGES = [
   { icon: Lock,   title: 'Secure Shopping',  sub: 'Your data is safe' },
 ]
 
-export default function StoreFooter({ storeName, customFooterText }) {
+export default function StoreFooter({ storeName, customFooterText, guarantee }) {
   return (
     <footer className="mt-10 mb-20 md:mb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -18,6 +19,10 @@ export default function StoreFooter({ storeName, customFooterText }) {
           </div>
         )}
         
+        {/* The vendor's own promise, above the generic badges on purpose: it is
+            the only claim on this page that is specific and can be held to. */}
+        <GuaranteeBadge guarantee={guarantee} variant="panel" className="mb-4" />
+
         {/* Trust Badges */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 py-6 px-6 bg-white rounded-2xl border border-stone-100 shadow-sm">
           {TRUST_BADGES.map(({ icon: Icon, title, sub }) => (
