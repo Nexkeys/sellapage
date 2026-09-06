@@ -30,6 +30,7 @@ import ProductDetailOverlay from "../components/ProductDetailOverlay";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import SEO from '../components/SEO';
+import { initMetaPixel, trackPixel } from '../utils/metaPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
 
 const EMPTY_CHECKOUT_FORM = {
@@ -1063,6 +1064,40 @@ export default function StorePage() {
   // just bought, and restoring them would show the buyer a cart full of things
   // they already paid for.
   // ------------------------------------------------------------------
+  // Purchase, fired once per paid order.
+  //
+  // Deduped two ways, because double counted revenue silently corrupts a
+  // vendor's ad reporting and is the sort of thing nobody notices for months:
+  //   - locally, via a sessionStorage marker keyed on the Paystack reference,
+  //     so a refresh of the success screen cannot fire it twice;
+  //   - on Meta's side, by passing the reference as `eventID`, which is their
+  //     own deduplication key.
+  useEffect(() => {
+    const ref = completedOrder?.reference;
+    if (!ref || !store?.metaPixelId) return;
+    const key = `sellapage_pixel_purchase_${ref}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch {
+      // Storage blocked. The eventID below still protects Meta's side.
+    }
+    trackPixel('Purchase', {
+      value: Number(completedOrder.grandTotal) || 0,
+      currency: 'NGN',
+      content_ids: (completedOrder.cartItems || []).map((i) => i.id),
+      content_type: 'product',
+      eventID: ref,
+    });
+  }, [completedOrder?.reference, completedOrder, store?.metaPixelId]);
+
+  // Vendor's own Meta Pixel. Fires only for stores that configured one, so a
+  // store without a pixel loads no script and sets no cookie.
+  useEffect(() => {
+    if (!store?.metaPixelId) return;
+    if (initMetaPixel(store.metaPixelId)) trackPixel('PageView');
+  }, [store?.metaPixelId]);
+
   useEffect(() => {
     if (!store?.id || cartRestoredRef.current) return;
     cartRestoredRef.current = true;
@@ -1230,6 +1265,13 @@ export default function StorePage() {
 
   const handleAddToCart = (product) => {
     triggerSessionEngagement();
+    trackPixel('AddToCart', {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: 'product',
+      value: Number(product.price) || 0,
+      currency: 'NGN',
+    });
     const productVariations = product.selectedVariations || {};
     const variationLabel = product.variationLabel || '';
     setCart((prev) => {
@@ -1431,6 +1473,14 @@ export default function StorePage() {
 
     setCheckoutProcessing(true);
     setCheckoutError("");
+
+    trackPixel('InitiateCheckout', {
+      content_ids: cart.map((i) => i.id),
+      content_type: 'product',
+      num_items: cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0),
+      value: calcSubtotal(cart),
+      currency: 'NGN',
+    });
 
     const subtotal = calcSubtotal(cart);
     const processingFee = calcProcessingFee(subtotal);
@@ -1869,7 +1919,16 @@ export default function StorePage() {
                             activeThemeObj.structuralStyle.buttonClasses
                           }
                           structuralClasses={`${activeThemeObj.structuralStyle.cardBorderRadius} ${activeThemeObj.structuralStyle.cardBorder}`}
-                          onViewProduct={setSelectedProduct}
+                          onViewProduct={(p) => {
+                            trackPixel('ViewContent', {
+                              content_name: p?.name,
+                              content_ids: [p?.id],
+                              content_type: 'product',
+                              value: Number(p?.price) || 0,
+                              currency: 'NGN',
+                            });
+                            setSelectedProduct(p);
+                          }}
                         />
                       ))}
                     </div>

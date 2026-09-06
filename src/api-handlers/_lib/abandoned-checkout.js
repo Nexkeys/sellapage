@@ -95,20 +95,58 @@ export async function recordCheckoutAttempt(db, storeId, storeData, attempt) {
  *
  * Never throws: a paid order must not fail over its own bookkeeping.
  */
-export async function markRecovered(db, storeId, reference) {
+export async function markRecovered(db, storeId, reference, customerEmail) {
+  const stamp = { recoveredAt: Timestamp.now(), reminderSent: true }
+  let marked = false
+
+  // 1. Exact reference match. Covers the customer who returns to the SAME
+  //    Paystack link (still open in a tab, or from Paystack's own email) and
+  //    pays it. update() not set(): if no record exists, which is the normal
+  //    case for a store without recovery enabled, there is nothing to mark and
+  //    creating one would invent an abandoned checkout that never happened.
+  if (reference) {
+    try {
+      await ref(db, storeId, reference).update(stamp)
+      marked = true
+    } catch {
+      // NOT_FOUND is expected and not an error.
+    }
+  }
+
+  // 2. Match on the customer instead.
+  //
+  //    Without this the recovered count would sit at 0 forever, and the feature
+  //    would look broken while working perfectly. The reminder email links to
+  //    the STORE, not back to the original Paystack link, so a customer who acts
+  //    on it starts a brand new checkout with a brand new reference. Step 1 then
+  //    stamps a document that does not exist, and the record they actually
+  //    abandoned stays unpaid permanently.
+  //
+  //    Single field equality only. Filtering `recoveredAt == null` in the query
+  //    as well would need a composite index, and missing composite indexes have
+  //    caused outages in this codebase, so that half is done in memory. The
+  //    result set is one customer's own abandoned checkouts at one store, so it
+  //    is tiny.
+  const email = String(customerEmail || '').trim().toLowerCase()
+  if (!email) return marked
+
   try {
-    if (!reference) return false
-    // update() rather than set(): if no record exists (a non-Premium store, or a
-    // checkout started before this shipped) there is nothing to mark, and
-    // creating one here would invent an abandoned checkout that was never abandoned.
-    await ref(db, storeId, reference).update({
-      recoveredAt: Timestamp.now(),
-      reminderSent: true,
-    })
+    const snap = await db
+      .collection('stores').doc(storeId).collection(COLLECTION)
+      .where('customerEmail', '==', email)
+      .limit(20)
+      .get()
+
+    const open = snap.docs.filter((d) => !d.data().recoveredAt)
+    if (open.length === 0) return marked
+
+    const batch = db.batch()
+    open.forEach((d) => batch.update(d.ref, stamp))
+    await batch.commit()
     return true
-  } catch {
-    // NOT_FOUND is the normal case for any store without a record. Not an error.
-    return false
+  } catch (err) {
+    console.error('[abandoned-checkout] recovery match by email failed', err)
+    return marked
   }
 }
 

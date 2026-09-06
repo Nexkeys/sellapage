@@ -240,7 +240,7 @@ export async function handleProductCheckout(db, data, res) {
 
   // This checkout is no longer abandoned. Fire and forget: markRecovered never
   // throws, and a missing record is the normal case for a non-Premium store.
-  markRecovered(db, storeId, data.reference);
+  markRecovered(db, storeId, data.reference, customerEmail);
 
   // The code also renders on the success screen, but the Paystack redirect
   // usually beats this webhook, so on a first order that screen may load before

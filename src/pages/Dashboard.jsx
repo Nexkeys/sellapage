@@ -2041,6 +2041,7 @@ export default function Dashboard() {
           store={store}
           storeUrl={storeUrl}
           navigateTo={setActiveTab}
+          isPremium={isPremium}
         />
       )}
       {activeTab === "discounts" && (

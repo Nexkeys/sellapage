@@ -89,7 +89,7 @@ export async function handleBookingCheckout(db, data, res) {
 
   // This checkout is no longer abandoned. Fire and forget: markRecovered never
   // throws, and a missing record is the normal case for a non-Premium store.
-  markRecovered(db, storeId, data.reference);
+  markRecovered(db, storeId, data.reference, customerEmail);
 
   if (typeof promoCode === "string" && promoCode.trim()) {
     try {

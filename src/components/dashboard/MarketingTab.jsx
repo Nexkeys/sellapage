@@ -10,10 +10,11 @@
 // customer, not help them admire their business. Reporting belongs in Analytics
 // and is deliberately not duplicated here.
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Megaphone, ShoppingBag, Image as ImageIcon } from 'lucide-react'
+import { Search, Megaphone, ShoppingBag, Image as ImageIcon, Activity } from 'lucide-react'
 import SeoTab from './marketing/SeoTab'
 import GoogleFeedTab from './marketing/GoogleFeedTab'
 import ContentKitTab from './marketing/ContentKitTab'
+import MetaPixelTab from './marketing/MetaPixelTab'
 import { auth } from '../../firebase/auth'
 
 const SECTIONS = [
@@ -30,6 +31,12 @@ const SECTIONS = [
     blurb: 'Put your products on Google Search and Shopping without paying for ads.',
   },
   {
+    id: 'pixel',
+    label: 'Meta Pixel',
+    icon: Activity,
+    blurb: 'Track which Facebook and Instagram ads actually lead to sales, using your own Meta pixel.',
+  },
+  {
     id: 'content',
     icon: ImageIcon,
     label: 'Post kit',
@@ -40,7 +47,7 @@ const SECTIONS = [
   },
 ]
 
-export default function MarketingTab({ store, storeUrl, navigateTo }) {
+export default function MarketingTab({ store, storeUrl, navigateTo, isPremium = false }) {
   const [section, setSection] = useState('seo')
   // Status is held here so the Google feed section knows whether the store is
   // eligible and switched on without the vendor having to visit Get Found first.
@@ -99,6 +106,9 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
         <SeoTab store={store} storeUrl={storeUrl} navigateTo={navigateTo} onStatusChange={setStatus} />
       )}
       {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
+      {section === 'pixel' && (
+        <MetaPixelTab store={store} isPremium={isPremium} navigateTo={navigateTo} />
+      )}
       {section === 'google' && (
         <GoogleFeedTab
           store={store}
