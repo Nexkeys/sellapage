@@ -15,8 +15,9 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { buildStoreContext } from './_lib/sella-ai-context.js'
+import { readTab, describeTabsForPrompt, describeFields, TAB_SCHEMA } from './_lib/ai-schema.js'
 import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-tools.js'
-import { callModel, streamModel, DEFAULT_TIER } from './_lib/openrouter.js'
+import { callModel, streamModel } from './_lib/openrouter.js'
 
 // Model selection now lives in _lib/openrouter.js, which fails over across
 // several providers instead of depending on one. Previously a single NVIDIA NIM
@@ -24,7 +25,37 @@ import { callModel, streamModel, DEFAULT_TIER } from './_lib/openrouter.js'
 // NVIDIA is NOT gone - ai-describe.js still uses it for descriptions.
 // Latency is still handled by STREAMING the final answer plus the timeout and
 // loop budget below, so a slow provider degrades cleanly, never a 60s 504.
-const AI_TIER = DEFAULT_TIER
+// Tier is chosen per message (see classifyTier). Reads and research run on
+// OpenRouter's FREE models; anything that might write runs on paid.
+const WRITE_INTENT = /\b(add|create|new|update|change|edit|set|delete|remove|log|record|mark|confirm|dispatch|deliver|cancel|reschedule|refund|apply|activate|deactivate|rename|increase|reduce|withdraw)\b/i
+// Anything needing the open web, or judgement about the outside world.
+const RESEARCH_INTENT = /(search|google|online|internet|market|competitor|trend|price of|cost of|supplier|import|research|latest|news|best selling|compare|benchmark|industry)/i
+
+/**
+ * Picks the model tier for one message.
+ *
+ * Premium vendors pay N25,000/month for Sella, and a typical message costs a
+ * FRACTION OF A CENT even on the strongest model. So quality wins every time
+ * there is any doubt - the saving is rounding error, a vague or wrong answer is
+ * not. Free models are used only where they cannot plausibly hurt.
+ *
+ *   heavy (paid, strongest) - writes, money, and RESEARCH. Research went here
+ *     after web_search answers came back generic: searching is the easy part,
+ *     SYNTHESISING sources into something specific to this vendor is the hard
+ *     part, and that is exactly where weaker models produce waffle.
+ *   read (free)             - small talk and identity questions only, where the
+ *     answer needs no store data and no outside facts.
+ *   standard (paid)         - everything else, i.e. anything grounded in the
+ *     vendor's own data. This is the default because sounding dumb about their
+ *     own store is the one thing Sella must never do.
+ */
+function classifyTier(message) {
+  const m = String(message || '')
+  if (WRITE_INTENT.test(m) || RESEARCH_INTENT.test(m)) return 'heavy'
+  // Pure pleasantries/identity - no store facts involved, free is fine.
+  if (/^\s*(hi|hey|hello|yo|good (morning|afternoon|evening)|thanks?|thank you|who are you|what can you do)\b/i.test(m)) return 'read'
+  return 'standard'
+}
 const DAILY_LIMIT = 50
 const MAX_HISTORY = 50 // messages persisted per session
 const MAX_CONTEXT_TURNS = 16 // recent turns sent to the model
@@ -44,6 +75,28 @@ const WRITE_ACTIONS = new Set([
 ])
 
 const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'read_tab',
+      description:
+        "Read live data from ANY tab of this vendor's dashboard. The store context already " +
+        'includes the busiest tabs (products, orders, bookings, customers, ledger, leads, ' +
+        'discounts, categories, analytics, services) - answer from there when you can. Use ' +
+        'this for every OTHER tab (receipts, abandoned checkouts, reviews, loyalty, job ' +
+        'listings, google ads, delivery, payouts, billing, team, settings, custom domain, ' +
+        'CAC, support and more), or to re-check a tab you need fresher or fuller detail on. ' +
+        'Never guess about a tab: read it.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'string', description: 'Tab id, exactly as listed in DASHBOARD TABS.' },
+          limit: { type: 'number', description: 'Max rows (default 50).' },
+        },
+        required: ['tab'],
+      },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -190,18 +243,24 @@ HOW TO ANSWER - read this carefully:
    - For products/services: after it's created, the vendor can upload the photo right here in the chat - mention that.
 4. Money is in Nigerian Naira (₦). Keep replies concise and mobile-friendly, but human - not robotic. Never expose IDs, raw JSON, or internal wording.
 
-CURRENT STORE CONTEXT (live snapshot):
+DASHBOARD TABS you can read with read_tab (this is the COMPLETE list - if a
+vendor asks about anything here, read it rather than guessing, and never claim
+you lack access to a tab on this list):
+${describeTabsForPrompt()}
+
+CURRENT STORE CONTEXT (live snapshot of the busiest tabs - answer from here when
+it already covers the question; use read_tab for anything else):
 ${JSON.stringify(context)}`
 }
 
 // Thin delegate. Failover across providers lives in _lib/openrouter.js; the
 // error contract (Error with .status) is unchanged, so the caller still
 // refunds quota and returns a clean 502/504 exactly as before.
-async function callNim(messages) {
+async function callNim(messages, tier = 'read') {
   return callModel({
     messages,
     tools: TOOLS,
-    tier: AI_TIER,
+    tier,
     maxTokens: 500,
     temperature: 0.6,
     timeoutMs: NIM_TIMEOUT_MS,
@@ -216,12 +275,12 @@ async function callNim(messages) {
 // browser, a mid-stream failure is NOT retried on another model - silently
 // restarting would duplicate or contradict text the vendor is already reading.
 // Pre-first-token failures still fall through the tier normally.
-async function streamNim(messages, onToken) {
+async function streamNim(messages, onToken, tier = 'read') {
   const { content, toolCalls } = await streamModel({
     messages,
     tools: TOOLS,
     onToken,
-    tier: AI_TIER,
+    tier,
     maxTokens: 700,
     temperature: 0.6,
     timeoutMs: NIM_TIMEOUT_MS,
@@ -351,6 +410,9 @@ export default async function handler(req, res) {
 
     const userMessage = String(body.message || '').trim()
     if (!userMessage) return res.status(400).json({ error: 'Message is empty.' })
+
+    // Free models for reads/research, paid for anything write-shaped.
+    const tier = classifyTier(userMessage)
     const sessionId = String(body.sessionId || Date.now().toString())
 
     // Reserve quota atomically (plain JSON errors here - SSE has not started yet).
@@ -416,7 +478,9 @@ export default async function handler(req, res) {
         }
 
         // Stream this round; text deltas go straight to the client.
-        const { content, toolCalls } = await streamNim(messages, (t) => { reply += t; sse('token', { t }) })
+        // Tier is chosen from the vendor's message: reads and research run on
+        // FREE models, anything write-shaped runs on paid (see classifyTier).
+        const { content, toolCalls } = await streamNim(messages, (t) => { reply += t; sse('token', { t }) }, tier)
 
         if (!toolCalls.length) break // plain answer - already streamed
 
@@ -451,6 +515,27 @@ export default async function handler(req, res) {
         // Otherwise run read/search tools inline and feed the results back for the next round.
         messages.push({ role: 'assistant', content, tool_calls: toolCalls })
         for (const call of toolCalls) {
+          if (call.function?.name === 'read_tab') {
+            let a = {}
+            try { a = JSON.parse(call.function.arguments || '{}') } catch { /* keep {} */ }
+            const res = await readTab(db, storeId, String(a.tab || ''), Math.min(Number(a.limit) || 50, 200))
+            // Field meanings ride along with the rows, so the model interprets
+            // the data correctly rather than guessing what a column implies
+            // (e.g. that stock 0 hides the buy button).
+            const fields = describeFields(String(a.tab || ''))
+            messages.push({
+              role: 'tool',
+              tool_call_id: call.id,
+              name: 'read_tab',
+              content: JSON.stringify({
+                tab: a.tab,
+                ...(fields ? { field_meanings: fields } : {}),
+                ...(res.ok ? { rows: res.rows, count: res.rows.length } : { error: res.note }),
+              }),
+            })
+            continue
+          }
+
           if (call.function?.name === 'web_search') {
             let q = ''
             try { q = JSON.parse(call.function.arguments || '{}').query } catch { /* */ }

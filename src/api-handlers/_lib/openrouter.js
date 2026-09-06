@@ -24,20 +24,37 @@ const MODELS_URL = 'https://openrouter.ai/api/v1/models'
 
 // Ordered by preference. Position 0 is tried first; the rest are fallbacks.
 export const TIERS = {
-  // Greetings, simple lookups, formatting.
+  // FREE. Reads, lookups and research - the bulk of Sella's traffic - run at
+  // zero token cost. Every id here was live-tested to CONFIRM it actually
+  // emits tool_calls, not merely that its metadata advertises `tools`:
+  // nvidia/nemotron-3-ultra-550b-a55b:free advertises support but ignored the
+  // tool, and thinkingmachines/inkling:free is 403 (agentic-only). Metadata
+  // alone is not evidence.
+  //
+  // Free models ARE rate limited (google/gemma-4-31b-it:free returned 429 in
+  // testing), so this tier deliberately falls through to the PAID standard
+  // tier. A vendor must never be blocked because the free pool was busy.
+  read: [
+    'minimax/minimax-m3:free',              // 1M ctx
+    'nvidia/nemotron-3.5-lightning:free',   // 1M ctx
+    'openrouter/free',                      // OpenRouter's own free auto-router
+    'poolside/laguna-s-2.1:free',
+  ],
+  // Greetings, trivial formatting. Cheap paid, used when free is exhausted.
   fast: [
     'deepseek/deepseek-v4-flash',
     'qwen/qwen3.7-flash',
     'openai/gpt-5-nano',
   ],
-  // The common path: normal chat that may call tools.
+  // Paid workhorse: normal chat with tool calls.
   standard: [
     'google/gemini-2.5-flash',
     'openai/gpt-5-mini',
     'moonshotai/kimi-k2.5',
   ],
-  // Multi-step reasoning, analysis, and anything touching money or a write
-  // decision — worth paying more to get right.
+  // Anything that PROPOSES A WRITE, touches money, or needs multi-step
+  // reasoning. Deliberately never free: a wrong write decision costs the vendor
+  // real money, which dwarfs the token saving.
   heavy: [
     'anthropic/claude-sonnet-5',
     'openai/gpt-5',
@@ -45,9 +62,10 @@ export const TIERS = {
   ],
 }
 
-// A tier that exhausts itself drops down to this one rather than failing
-// outright. 'fast' has nowhere to fall, which is fine — it handles trivia.
-const TIER_FALLBACK = { heavy: 'standard', standard: 'fast', fast: null }
+// A tier that exhausts itself drops here rather than failing outright.
+// read -> standard is the important one: free models are rate limited, so
+// overflow must land on paid rather than erroring at the vendor.
+const TIER_FALLBACK = { heavy: 'standard', standard: 'fast', read: 'standard', fast: null }
 
 export const DEFAULT_TIER = 'standard'
 
@@ -102,6 +120,37 @@ export function modelsForTier(tier) {
 }
 
 /**
+ * One request using OpenRouter's server-side `models` fallback list.
+ * Returns the completion JSON, or null when the whole request was rejected
+ * (e.g. a stale id) so the caller can fall back to trying models one at a time.
+ */
+async function nativeCall({ models, messages, tools, maxTokens, temperature, timeoutMs }) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const resp = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        model: models[0],
+        models, // server-side fallback order
+        temperature,
+        max_tokens: maxTokens,
+        messages,
+        ...(tools ? { tools, tool_choice: 'auto' } : {}),
+      }),
+      signal: controller.signal,
+    })
+    if (!resp.ok) return null // let the sequential loop diagnose it
+    const json = await resp.json()
+    json._model = json.model || models[0] // OpenRouter reports who actually answered
+    return json
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
  * Non-streaming completion with failover. Mirrors the old callNim() contract:
  * resolves to the raw OpenAI-shaped JSON, or throws an Error carrying .status.
  *
@@ -110,6 +159,23 @@ export function modelsForTier(tier) {
 export async function callModel({ messages, tools, tier = DEFAULT_TIER, maxTokens = 500, temperature = 0.6, timeoutMs = 28000 }) {
   const models = modelsForTier(tier)
   let lastErr = null
+
+  // FIRST: OpenRouter's native `models` fallback - it tries the list
+  // server-side in ONE request. Two reasons this matters:
+  //   1. The free tier is capped at 50 REQUESTS/day account-wide (their pricing
+  //      page), so four sequential retries would burn four of them. Native
+  //      fallback spends one.
+  //   2. OpenRouter bills only the successful run when routing/fallback is
+  //      enabled, so unsuccessful attempts inside it are free.
+  // It CANNOT rescue an invalid id - it validates the whole list upfront and
+  // 400s - which is exactly what the sequential loop below is kept for, and
+  // why scripts/check-ai-models.js exists.
+  try {
+    const native = await nativeCall({ models, messages, tools, maxTokens, temperature, timeoutMs, stream: false })
+    if (native) return native
+  } catch (e) {
+    console.error('[openrouter] native fallback unavailable, using sequential:', e?.message || e)
+  }
 
   for (const model of models) {
     const controller = new AbortController()
@@ -238,10 +304,17 @@ export async function streamModel({ messages, tools, onToken, tier = DEFAULT_TIE
 
           for (const tc of delta.tool_calls || []) {
             const idx = tc.index ?? 0
-            if (!toolAcc[idx]) toolAcc[idx] = { id: tc.id || `call_${idx}`, name: '', arguments: '' }
+            // MUST keep the OpenAI-standard nested shape:
+            //   { id, type: 'function', function: { name, arguments } }
+            // A flat { id, name, arguments } reads fine but makes every
+            // consumer's `call.function.name` undefined - which silently
+            // disabled web_search AND write-action detection while ordinary
+            // answers kept working (store data is injected into the system
+            // prompt, not fetched by tools, so the breakage was invisible).
+            if (!toolAcc[idx]) toolAcc[idx] = { id: tc.id || `call_${idx}`, type: 'function', function: { name: '', arguments: '' } }
             if (tc.id) toolAcc[idx].id = tc.id
-            if (tc.function?.name) toolAcc[idx].name += tc.function.name
-            if (tc.function?.arguments) toolAcc[idx].arguments += tc.function.arguments
+            if (tc.function?.name) toolAcc[idx].function.name += tc.function.name
+            if (tc.function?.arguments) toolAcc[idx].function.arguments += tc.function.arguments
           }
         }
       }
