@@ -15,7 +15,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { buildStoreContext } from './_lib/sella-ai-context.js'
-import { readTab, describeTabsForPrompt, describeFields, TAB_SCHEMA } from './_lib/ai-schema.js'
+import { readTab, describeTabsForPrompt, describeFields, TAB_SCHEMA, writableTabs, validateGenericWrite, applyGenericWrite } from './_lib/ai-schema.js'
 import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-tools.js'
 import { callModel, streamModel } from './_lib/openrouter.js'
 
@@ -70,6 +70,7 @@ const getTodayKey = () =>
 
 // Names the model can call. Writes are intercepted (never auto-run); web_search runs inline.
 const WRITE_ACTIONS = new Set([
+  'update_tab_record',
   'add_ledger_entry', 'add_product', 'add_service', 'create_discount',
   'update_order_status', 'update_booking_status', 'update_delivery_pickup', 'update_store_settings',
 ])
@@ -94,6 +95,29 @@ const TOOLS = [
           limit: { type: 'number', description: 'Max rows (default 50).' },
         },
         required: ['tab'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_tab_record',
+      description:
+        'Edit ANY field the vendor can edit themselves, on any writable tab, when no more ' +
+        'specific tool fits. Use the specific tools first where one exists (add_product, ' +
+        'update_order_status, create_discount, etc.) - they handle side effects those ' +
+        'journeys need. Use this for everything else: editing a product field, renaming a ' +
+        'category, updating a job listing, changing storefront settings, and so on. ' +
+        'ALWAYS read_tab first so you use the real record id and real current values, and ' +
+        'never invent an id. The vendor still confirms before anything saves.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'string', description: 'Tab id from DASHBOARD TABS.' },
+          docId: { type: 'string', description: 'Record id from read_tab. Omit only for whole-store tabs (settings, delivery, business page).' },
+          changes: { type: 'object', description: 'Only the fields to change, with their new values.' },
+        },
+        required: ['tab', 'changes'],
       },
     },
   },
@@ -504,6 +528,20 @@ export default async function handler(req, res) {
 
           let args = {}
           try { args = JSON.parse(writeCall.function.arguments || '{}') } catch { /* keep {} */ }
+
+          // Generic writes are validated BEFORE the confirm card is shown, so a
+          // read-only tab or a system-managed field is refused with a reason the
+          // vendor can act on - rather than being confirmed and then failing.
+          if (writeCall.function.name === 'update_tab_record') {
+            const check = validateGenericWrite({ tab: args.tab, docId: args.docId, changes: args.changes })
+            if (!check.ok) {
+              reply = check.reason
+              sse('token', { t: reply })
+              pendingAction = null
+              break
+            }
+          }
+
           pendingAction = { type: writeCall.function.name, args }
           if (!reply.trim()) {
             reply = `Here's what I'll do - please confirm:\n\n${describeAction(pendingAction)}`

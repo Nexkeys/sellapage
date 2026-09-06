@@ -314,3 +314,93 @@ export async function readTab(db, storeId, tabId, limit = 50) {
     return { ok: false, note: `Could not load the ${t.label} tab right now.` }
   }
 }
+
+// ---------------------------------------------------------------------------
+// GENERIC WRITES
+//
+// The 8 hand-written write tools (add_product, update_order_status, ...) cover
+// the common journeys well, but they are a fixed list: every OTHER field a
+// vendor can edit was unreachable, so Sella had to say "do that from the X tab".
+// This closes that gap using the same registry, so a new tab or field becomes
+// writable by adding a registry entry - not by writing another tool.
+//
+// It does NOT bypass any safety: update_tab_record produces a pendingAction
+// exactly like the specific tools, so the vendor still sees the confirm card
+// and nothing is saved without their explicit yes.
+
+/** Fields that must never be set through the generic path, on any tab. */
+const NEVER_SETTABLE = new Set([
+  'id', 'storeId', 'ownerId', 'createdAt', 'uid', 'staffUid',
+  // money/verification/entitlement state - server-owned, mirrors firestore.rules
+  'plan', 'planStatus', 'planEndDate', 'hasPremiumFeatures', 'hasProFeatures',
+  'hasGrowthFeatures', 'maxProducts', 'maxJobListings', 'cacVerified',
+  'phoneVerified', 'phoneGateExempt', 'referralAvailable', 'referralTotalEarned',
+  'referralBankAccount', 'referralBankVerified', 'subaccountCode',
+  'googleAdsRefreshToken', 'paymentStatus', 'grandTotal', 'amountPaid',
+])
+
+/**
+ * Validates a proposed generic write BEFORE it reaches the confirm card, so an
+ * impossible change is refused with a reason the model can relay, rather than
+ * being shown to the vendor and then failing on save.
+ * @returns {{ok: true, tab, docId, changes} | {ok: false, reason: string}}
+ */
+export function validateGenericWrite({ tab, docId, changes }) {
+  const t = TAB_SCHEMA[tab]
+  if (!t) return { ok: false, reason: `There is no "${tab}" tab.` }
+  if (!isTabWritable(tab)) {
+    return { ok: false, reason: `The ${t.label} tab is read-only - I can never change it for you.` }
+  }
+  if (!changes || typeof changes !== 'object' || !Object.keys(changes).length) {
+    return { ok: false, reason: 'No changes were specified.' }
+  }
+
+  const blocked = Object.keys(changes).filter(k => NEVER_SETTABLE.has(k))
+  if (blocked.length) {
+    return { ok: false, reason: `These fields are managed by the system and can't be edited: ${blocked.join(', ')}.` }
+  }
+
+  // storeDoc tabs edit the store document itself, so no docId is required.
+  if (t.source.kind !== 'storeDoc' && !docId) {
+    return { ok: false, reason: `I need to know WHICH ${t.label} record to change.` }
+  }
+
+  return { ok: true, tab, docId: docId || null, changes }
+}
+
+/** Applies a validated generic write. Called only after vendor confirmation. */
+export async function applyGenericWrite(db, storeId, { tab, docId, changes }) {
+  const check = validateGenericWrite({ tab, docId, changes })
+  if (!check.ok) return { ok: false, message: check.reason }
+
+  const t = TAB_SCHEMA[tab]
+  const storeRef = db.collection('stores').doc(storeId)
+  const payload = { ...changes, updatedAt: new Date().toISOString() }
+
+  try {
+    if (t.source.kind === 'storeDoc') {
+      await storeRef.update(payload)
+    } else if (t.source.kind === 'sub') {
+      await storeRef.collection(t.source.name).doc(docId).update(payload)
+    } else {
+      // Top-level collection: confirm the doc belongs to THIS store before
+      // touching it - the id came from the model, so it is not trusted.
+      const ref = db.collection(t.source.name).doc(docId)
+      const snap = await ref.get()
+      if (!snap.exists || snap.data()[t.source.field] !== storeId) {
+        return { ok: false, message: `I couldn't find that ${t.label} record on your store.` }
+      }
+      await ref.update(payload)
+    }
+    const what = Object.keys(changes).join(', ')
+    return { ok: true, message: `Updated ${what} on your ${t.label} tab.` }
+  } catch (err) {
+    console.error(`[ai-schema] applyGenericWrite(${tab}) failed:`, err.message)
+    return { ok: false, message: `That change didn't save - please try from the ${t.label} tab.` }
+  }
+}
+
+/** Tab ids the AI may write to, for the tool description. */
+export function writableTabs() {
+  return Object.keys(TAB_SCHEMA).filter(isTabWritable)
+}

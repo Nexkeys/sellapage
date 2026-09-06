@@ -10,6 +10,7 @@
 import crypto from 'crypto'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendEmail } from './send-email.js'
+import { applyGenericWrite, TAB_SCHEMA } from './ai-schema.js'
 
 const money = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`
 
@@ -72,6 +73,15 @@ const VALID_ORDER_STATUSES = ['pending', 'confirmed', 'dispatched', 'delivered',
 const VALID_BOOKING_STATUSES = ['pending', 'confirmed', 'in_progress', 'rescheduled', 'completed', 'cancelled', 'no_show', 'refunded']
 
 export async function executeWriteAction(db, storeId, action) {
+  // Generic registry-driven write. Handled before the switch because it is not
+  // a fixed action type - it covers every writable tab/field described in
+  // ai-schema.js, which is what stopped Sella having to say "do that yourself
+  // from the X tab" for anything outside the eight specific tools.
+  if (action?.type === 'update_tab_record') {
+    const a = action.args || {}
+    return applyGenericWrite(db, storeId, { tab: a.tab, docId: a.docId, changes: a.changes })
+  }
+
   const type = action?.type
   const args = action?.args || {}
   const storeRef = db.collection('stores').doc(storeId)
@@ -327,6 +337,15 @@ export async function executeWriteAction(db, storeId, action) {
 
 // Human-readable one-liner describing a pending write, shown on the confirm card.
 export function describeAction(action) {
+  // Generic write: spell out the tab and each field change, so the confirm card
+  // is specific ("set price to 5,000 on Products") rather than vague.
+  if (action?.type === 'update_tab_record') {
+    const a = action.args || {}
+    const tab = TAB_SCHEMA[a.tab]?.label || a.tab
+    const parts = Object.entries(a.changes || {}).map(([k, v]) => `${k} -> ${JSON.stringify(v)}`)
+    return `Update ${tab}${a.docId ? ` (record ${a.docId})` : ''}: ${parts.join(', ')}`
+  }
+
   const a = action?.args || {}
   const money2 = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`
   switch (action?.type) {
