@@ -5,7 +5,7 @@ import {
   Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
   Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift,
   Grid, Users, Truck, CreditCard, Tag, Download, Globe, Shield,
-  Briefcase, BookOpen,
+  Briefcase, BookOpen, Receipt,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -457,7 +457,10 @@ export default function Home() {
               { icon: Users, title: 'Customer CRM (Pro+)', desc: 'Auto-built from confirmed orders. Profiles, WhatsApp links, sort by spend, orders, or recency.' },
               { icon: Star, title: 'Reviews & Ratings (Pro+)', desc: 'Verified buyer reviews with aggregate stars on product and service cards.' },
               { icon: Tag, title: 'Discounts & Promos (Pro+)', desc: 'Percentage or flat discounts, usage limits, expiry dates. Applied automatically at checkout.' },
-              { icon: BarChart2, title: 'Analytics & Growth', desc: 'Track store views, clicks, engagement, top performers. Marketing tab with daily tasks and points.' },
+              { icon: BarChart2, title: 'Analytics & Growth', desc: 'Track store views, clicks, engagement and top performers. Marketing tab with SEO tools, free Google listings and a social post kit.' },
+              { icon: Receipt, title: 'Receipts & Invoices (Pro+)', desc: 'Branded receipts with your logo, stamp and QR code. Six templates, exported as PDF or PNG.' },
+              { icon: Gift, title: 'Loyalty Points (Premium)', desc: 'Customers earn points as they shop and spend them with a code at checkout. No account needed.' },
+              { icon: ShoppingCart, title: 'Abandoned Checkout Recovery (Premium)', desc: 'See who started an order and did not pay, then bring them back by email or WhatsApp.' },
             ].map((item) => (
               <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
                 <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">

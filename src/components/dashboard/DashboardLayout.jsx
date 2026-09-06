@@ -287,8 +287,12 @@ export default function DashboardLayout({
           if (id === 'customers' && !effectiveIsPro) return null;
           if (id === 'reviews' && !effectiveIsPro) return null;
           if (id === 'discounts' && !effectiveIsPro) return null;
-          if (id === 'custom-domain' && !effectiveIsPro) return null;
-          if (id === 'cac-verification' && !effectiveIsPro) return null;
+          // custom-domain and cac-verification are deliberately NOT hidden here.
+          // They were mobile-only gates, so a Pro feature was discoverable on
+          // desktop and invisible on phones, which is where most vendors are.
+          // Both tabs paywall internally (`if (!isPro)` in CustomDomainTab.jsx
+          // and CACVerificationTab.jsx), so a Starter vendor opening either one
+          // lands on the upgrade panel rather than the feature.
           if (id === 'analytics' && !isGrowthOrAbove) return null;
           if (id === 'products' && vendorType === 'services') return null;
           if (id === 'services' && vendorType === 'products') return null;

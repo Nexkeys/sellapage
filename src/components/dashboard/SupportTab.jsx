@@ -27,6 +27,17 @@ const FAQS = [
   { q: 'What happens to my products if I downgrade?', a: 'Your products stay saved, but only the amount allowed by your plan will show on your store page.' },
 ]
 
+// isGrowthOrPro deliberately includes premium, so this banner shows for Growth,
+// Pro AND Premium. The old label was a two-branch ternary that special-cased
+// 'pro' and defaulted everything else to 'Growth', which told Premium vendors
+// they were on Growth. A lookup keeps each plan correct and degrades to neutral
+// wording rather than naming the wrong plan if a new tier is added later.
+const PRIORITY_PLAN_LABELS = {
+  growth: 'Growth',
+  pro: 'Pro',
+  premium: 'Premium',
+}
+
 export default function SupportTab({
   store, plan, isGrowthOrPro,
   onSubmit, submitting, submitError, submitSuccess,
@@ -67,7 +78,9 @@ export default function SupportTab({
         <div className="flex items-start gap-3 rounded-2xl border border-green-100 bg-green-50 px-4 py-3">
           <Zap size={16} className="mt-0.5 flex-shrink-0 text-green-600" />
           <p className="text-sm font-medium leading-relaxed text-green-800">
-            {plan === 'pro' ? 'Pro' : 'Growth'} support is prioritized for faster review.
+            {PRIORITY_PLAN_LABELS[plan]
+              ? `${PRIORITY_PLAN_LABELS[plan]} support is prioritized for faster review.`
+              : 'Your support requests are prioritized for faster review.'}
           </p>
         </div>
       )}
