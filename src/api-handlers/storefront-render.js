@@ -422,7 +422,23 @@ export default async function handler(req, res) {
       .filter(Boolean)
       .join('\n    ')
 
-    let html = shell.replace('</head>', `  ${head}\n  </head>`)
+    // Meta Pixel base code, server rendered.
+    //
+    // The client also initialises this (src/utils/metaPixel.js), and for a real
+    // visitor that alone is enough. This exists because Meta's own tooling
+    // fetches the raw HTML and greps it: without a pixel in the server response
+    // Events Manager reports "a pixel wasn't detected on this website" and
+    // "0 websites", and the Event Setup Tool refuses to open, even while Test
+    // Events is happily receiving events from the hydrated page.
+    //
+    // Deliberately init WITHOUT PageView. The client fires that, so events come
+    // from exactly one place and cannot be double counted. Meta's detection
+    // looks for the base code, not the track call.
+    const pixelId = String(store.metaPixelId || '').trim()
+    const pixelTag = /^[1-9]\d{14,15}$/.test(pixelId)
+      ? "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','" + pixelId + "');window.__sellapagePixel='" + pixelId + "';</script>"
+      : ''
+    let html = shell.replace('</head>', `  ${head}\n  ${pixelTag}\n  </head>`)
     html = html.replace(
       '<div id="root"></div>',
       `${buildNoscript({ store, seo, listings, canonical })}\n    <div id="root"></div>`,

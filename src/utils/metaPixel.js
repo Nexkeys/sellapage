@@ -30,6 +30,15 @@ export function initMetaPixel(pixelId) {
   if (loadedPixelId === id) return true
 
   try {
+    // The storefront is server rendered (api/storefront-render.js) and already
+    // emits the base code plus fbq('init') for stores with a pixel. That exists
+    // so Meta's crawler can actually find the pixel in the HTML. When it has
+    // run, adopt it rather than initialising a second time.
+    if (window.__sellapagePixel === id) {
+      loadedPixelId = id
+      return true
+    }
+
     if (!window.fbq) {
       // Meta's standard bootstrap, kept close to their published snippet so it
       // stays recognisable to anyone comparing it against their docs.

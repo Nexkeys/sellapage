@@ -10,10 +10,11 @@
 // customer, not help them admire their business. Reporting belongs in Analytics
 // and is deliberately not duplicated here.
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Megaphone, ShoppingBag, Image as ImageIcon } from 'lucide-react'
+import { Search, Megaphone, ShoppingBag, Image as ImageIcon, MapPin } from 'lucide-react'
 import SeoTab from './marketing/SeoTab'
 import GoogleFeedTab from './marketing/GoogleFeedTab'
 import ContentKitTab from './marketing/ContentKitTab'
+import GoogleBusinessTab from './marketing/GoogleBusinessTab'
 import { auth } from '../../firebase/auth'
 
 const SECTIONS = [
@@ -28,6 +29,15 @@ const SECTIONS = [
     label: 'Free Google listings',
     icon: ShoppingBag,
     blurb: 'Put your products on Google Search and Shopping without paying for ads.',
+  },
+  {
+    id: 'maps',
+    icon: MapPin,
+    label: 'Google Maps',
+    // Free on every plan on purpose: it sends traffic to Google, costs us
+    // nothing to run, and it is the only section that works for service and
+    // booking vendors, who get nothing from the product feed.
+    blurb: 'Show up when someone nearby searches for what you sell, and collect the reviews that keep you there.',
   },
   {
     id: 'content',
@@ -98,6 +108,7 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
       {section === 'seo' && (
         <SeoTab store={store} storeUrl={storeUrl} navigateTo={navigateTo} onStatusChange={setStatus} />
       )}
+      {section === 'maps' && <GoogleBusinessTab store={store} storeUrl={storeUrl} />}
       {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
       {section === 'google' && (
         <GoogleFeedTab

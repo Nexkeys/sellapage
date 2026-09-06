@@ -358,7 +358,7 @@ export default function ContentKitTab({ store, storeUrl }) {
         <select
           value={selected?.id || ''}
           onChange={(e) => setSelected(products.find((p) => p.id === e.target.value))}
-          className="mt-1.5 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-green-400"
+          className="mt-1.5 w-full min-w-0 truncate rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-green-400"
         >
           {products.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
@@ -449,7 +449,7 @@ export default function ContentKitTab({ store, storeUrl }) {
             {copied === 'caption' ? <Check size={12} /> : <Copy size={12} />} Copy
           </button>
         </div>
-        <pre className="mt-2 whitespace-pre-wrap rounded-xl bg-gray-50 p-3 font-sans text-xs leading-relaxed text-gray-700">
+        <pre className="mt-2 whitespace-pre-wrap break-words rounded-xl bg-gray-50 p-3 font-sans text-xs leading-relaxed text-gray-700">
           {caption}
         </pre>
 
@@ -463,7 +463,7 @@ export default function ContentKitTab({ store, storeUrl }) {
             {copied === 'tags' ? <Check size={12} /> : <Copy size={12} />} Copy
           </button>
         </div>
-        <p className="mt-2 rounded-xl bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">{hashtags}</p>
+        <p className="mt-2 break-words rounded-xl bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">{hashtags}</p>
       </div>
 
       {error && (

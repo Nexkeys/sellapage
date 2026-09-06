@@ -79,6 +79,12 @@ function sanitizeSeo(input) {
     description: clean(b.description, LIMITS.description),
     about: clean(b.about, LIMITS.about),
     category: clean(b.category, LIMITS.category),
+    // Google Business Profile links. Stored here rather than in a new
+    // collection because they are part of the same "how this store is found"
+    // record, and they go through the same URL allowlist as socialLinks so a
+    // javascript: or data: URL can never be saved and later rendered.
+    googleReviewUrl: safeUrl(b.googleReviewUrl) || '',
+    googleProfileUrl: safeUrl(b.googleProfileUrl) || '',
     keywords: Array.isArray(b.keywords)
       ? [...new Set(b.keywords.map((k) => clean(k, LIMITS.keyword).toLowerCase()).filter(Boolean))].slice(0, LIMITS.keywords)
       : [],
