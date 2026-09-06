@@ -1064,33 +1064,6 @@ export default function StorePage() {
   // just bought, and restoring them would show the buyer a cart full of things
   // they already paid for.
   // ------------------------------------------------------------------
-  // Purchase, fired once per paid order.
-  //
-  // Deduped two ways, because double counted revenue silently corrupts a
-  // vendor's ad reporting and is the sort of thing nobody notices for months:
-  //   - locally, via a sessionStorage marker keyed on the Paystack reference,
-  //     so a refresh of the success screen cannot fire it twice;
-  //   - on Meta's side, by passing the reference as `eventID`, which is their
-  //     own deduplication key.
-  useEffect(() => {
-    const ref = completedOrder?.reference;
-    if (!ref || !store?.metaPixelId) return;
-    const key = `sellapage_pixel_purchase_${ref}`;
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, '1');
-    } catch {
-      // Storage blocked. The eventID below still protects Meta's side.
-    }
-    trackPixel('Purchase', {
-      value: Number(completedOrder.grandTotal) || 0,
-      currency: 'NGN',
-      content_ids: (completedOrder.cartItems || []).map((i) => i.id),
-      content_type: 'product',
-      eventID: ref,
-    });
-  }, [completedOrder?.reference, completedOrder, store?.metaPixelId]);
-
   // Vendor's own Meta Pixel. Fires only for stores that configured one, so a
   // store without a pixel loads no script and sets no cookie.
   useEffect(() => {
@@ -1144,6 +1117,34 @@ export default function StorePage() {
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutProcessing, setCheckoutProcessing] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
+
+  // Purchase, fired once per paid order.
+  //
+  // Deduped two ways, because double counted revenue silently corrupts a
+  // vendor's ad reporting and is the sort of thing nobody notices for months:
+  //   - locally, via a sessionStorage marker keyed on the Paystack reference,
+  //     so a refresh of the success screen cannot fire it twice;
+  //   - on Meta's side, by passing the reference as `eventID`, which is their
+  //     own deduplication key.
+  useEffect(() => {
+    const ref = completedOrder?.reference;
+    if (!ref || !store?.metaPixelId) return;
+    const key = `sellapage_pixel_purchase_${ref}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch {
+      // Storage blocked. The eventID below still protects Meta's side.
+    }
+    trackPixel('Purchase', {
+      value: Number(completedOrder.grandTotal) || 0,
+      currency: 'NGN',
+      content_ids: (completedOrder.cartItems || []).map((i) => i.id),
+      content_type: 'product',
+      eventID: ref,
+    });
+  }, [completedOrder?.reference, completedOrder, store?.metaPixelId]);
+
   const [receiptDownloading, setReceiptDownloading] = useState(false);
   const [verifyError, setVerifyError] = useState("");
   const [promoCode, setPromoCode] = useState("");
