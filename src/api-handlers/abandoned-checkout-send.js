@@ -65,6 +65,24 @@ export default async function handler(req, res) {
     const storeSnap = await db.collection('stores').doc(storeId).get()
     if (!storeSnap.exists) return res.status(404).json({ error: 'Store not found' })
 
+    // WhatsApp is a DIFFERENT thing from the email, and is recorded separately
+    // on purpose. The message leaves the vendor's own WhatsApp via a wa.me link,
+    // so all we can honestly say is that they opened it. We cannot confirm it was
+    // sent, and we cannot enforce the 24 hour throttle the way we do for email,
+    // because nothing goes through our server. Recording it as `reminderSent`
+    // would claim more than we know and would also lock them out of the email.
+    if (req.query.action === 'log-whatsapp') {
+      try {
+        await db
+          .collection('stores').doc(storeId)
+          .collection('abandonedCheckouts').doc(reference)
+          .update({ whatsappClickedAt: new Date() })
+      } catch {
+        // Record gone or already swept. Nothing to log, nothing to report.
+      }
+      return res.status(200).json({ success: true })
+    }
+
     const result = await sendRecoveryEmail(
       db,
       storeId,

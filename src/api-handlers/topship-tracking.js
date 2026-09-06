@@ -54,11 +54,47 @@ export default async function handler(req, res) {
       ? [{ status: trackData.status, description: trackData.message || '', time: trackData.updatedDate || '' }]
       : []
 
+    // Topship returns more than the four fields this used to forward. The
+    // detail view shows the whole picture, so everything useful is passed
+    // through rather than dropped here and then missed on the screen.
+    const first = Array.isArray(trackData?.shipments) ? trackData.shipments[0] : null
+
     return res.status(200).json({
       status: trackData?.status || 'unknown',
       trackingCode: trackData?.trackingId || trackingCode,
       timeline,
       itemLocation: trackData?.itemLocation || '',
+      transshipmentPoint: trackData?.transshipmentPoint || '',
+      message: trackData?.message || '',
+      updatedAt: trackData?.updatedDate || '',
+      createdAt: trackData?.createdDate || '',
+      estimatedDelivery: first?.estimatedDeliveryDate || '',
+      items: Array.isArray(first?.items)
+        ? first.items.map((i) => ({
+            description: i?.description || '',
+            category: i?.category || '',
+            quantity: i?.quantity ?? null,
+            weight: i?.weight ?? null,
+          }))
+        : [],
+      sender: first?.senderDetail
+        ? {
+            name: first.senderDetail.name || '',
+            phone: first.senderDetail.phoneNumber || '',
+            address: [first.senderDetail.addressLine1, first.senderDetail.city, first.senderDetail.state]
+              .filter(Boolean)
+              .join(', '),
+          }
+        : null,
+      receiver: first?.receiverDetail
+        ? {
+            name: first.receiverDetail.name || '',
+            phone: first.receiverDetail.phoneNumber || '',
+            address: [first.receiverDetail.addressLine1, first.receiverDetail.city, first.receiverDetail.state]
+              .filter(Boolean)
+              .join(', '),
+          }
+        : null,
     })
   } catch (err) {
     console.error('[topship-tracking] Unexpected error:', err)

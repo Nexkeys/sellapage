@@ -65,6 +65,14 @@ export default async function handler(req, res) {
       waybillUrl: trackData?.package_label_image || '',
       timeline: Array.isArray(trackData?.tracking?.events) ? trackData.tracking.events : [],
       estimatedDelivery: trackData?.package_delivery_eta || '',
+      // Sendbox exposes a readable status name alongside the code, plus the
+      // route text its tracking object carries. Both were being dropped.
+      statusName: trackData?.current_status?.name || '',
+      itemLocation: trackData?.tracking?.origin_city || '',
+      destinationCity: trackData?.tracking?.destination_city || trackData?.short_destination_address || '',
+      deliveryDate: trackData?.package_delivery_date || '',
+      lastUpdated: trackData?.last_updated || '',
+      weight: trackData?.weight ?? null,
     })
   } catch (err) {
     console.error('[sendbox-tracking] Unexpected error:', err)

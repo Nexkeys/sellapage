@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { NIGERIAN_STATES } from '../../utils/nigeriaLocations'
 import { updateStore } from '../../firebase/auth'
+import ShipmentDetail from './ShipmentDetail'
 
 const DELIVERY_ZONES_PER_PAGE = 5
 const SHIPMENTS_PER_PAGE = 5
@@ -158,6 +159,8 @@ export default function DeliveryTab({
   const [trackingData, setTrackingData] = useState({})
   const [trackingLoading, setTrackingLoading] = useState({})
   const [trackingError, setTrackingError] = useState({})
+  // Which shipment's full tracking view is open. Null means the normal tab.
+  const [openShipment, setOpenShipment] = useState(null)
 
   useEffect(() => {
     if (store?.pickupAddress) {
@@ -293,6 +296,24 @@ export default function DeliveryTab({
 
   const INPUT_CLASS =
     'w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all'
+
+  // Placed after every hook above on purpose: an early return before a hook
+  // would change hook order between renders and break the component.
+  if (openShipment) {
+    const live = activeShipments.find((o) => o.id === openShipment) || null
+    if (live) {
+      return (
+        <ShipmentDetail
+          order={live}
+          tracking={trackingData[live.id]}
+          loading={!!trackingLoading[live.id]}
+          error={trackingError[live.id]}
+          onRefresh={refreshTracking}
+          onBack={() => setOpenShipment(null)}
+        />
+      )
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-5">
@@ -610,9 +631,14 @@ export default function DeliveryTab({
                   className="rounded-xl border border-gray-100 bg-gray-50/40 p-4"
                 >
                   <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setOpenShipment(order.id)}
+                      className="min-w-0 text-left group"
+                      aria-label={`Open tracking for ${order.customerName || 'this order'}`}
+                    >
                       <div className="flex items-center gap-1.5">
-                        <p className="font-bold text-gray-900 text-sm truncate">
+                        <p className="font-bold text-gray-900 text-sm truncate group-hover:text-green-700 transition-colors">
                           {order.customerName || 'Customer'}
                         </p>
                         <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border flex-shrink-0 ${isTopship ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
@@ -625,7 +651,10 @@ export default function DeliveryTab({
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         Tracking: {isTopship ? order.topshipTrackingId : (order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)}
                       </p>
-                    </div>
+                      <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-green-700">
+                        View full tracking <ChevronRight size={11} />
+                      </span>
+                    </button>
                     <div className="grid grid-cols-2 gap-1.5 flex-shrink-0 sm:flex sm:flex-col sm:min-w-[90px]">
                       <button
                         type="button"

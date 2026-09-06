@@ -16,13 +16,15 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { buildStoreContext } from './_lib/sella-ai-context.js'
 import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-tools.js'
+import { callModel, streamModel, DEFAULT_TIER } from './_lib/openrouter.js'
 
-// Single source of truth - swap here to change the model.
-// 70B gives the reasoning needed to feel like a real partner (read the store data, pick the
-// right tool, follow the rules) - an 8B model was too weak and behaved generically. Latency
-// is handled by STREAMING the final answer (see streamFinalAnswer) plus the AbortController
-// timeout + loop budget below, so a slow provider degrades to a clean error, never a 60s 504.
-const MODEL = 'meta/llama-3.1-70b-instruct'
+// Model selection now lives in _lib/openrouter.js, which fails over across
+// several providers instead of depending on one. Previously a single NVIDIA NIM
+// endpoint meant any provider outage took Sella down with a 502.
+// NVIDIA is NOT gone - ai-describe.js still uses it for descriptions.
+// Latency is still handled by STREAMING the final answer plus the timeout and
+// loop budget below, so a slow provider degrades cleanly, never a 60s 504.
+const AI_TIER = DEFAULT_TIER
 const DAILY_LIMIT = 50
 const MAX_HISTORY = 50 // messages persisted per session
 const MAX_CONTEXT_TURNS = 16 // recent turns sent to the model
@@ -192,128 +194,39 @@ CURRENT STORE CONTEXT (live snapshot):
 ${JSON.stringify(context)}`
 }
 
+// Thin delegate. Failover across providers lives in _lib/openrouter.js; the
+// error contract (Error with .status) is unchanged, so the caller still
+// refunds quota and returns a clean 502/504 exactly as before.
 async function callNim(messages) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), NIM_TIMEOUT_MS)
-  let resp
-  try {
-    resp = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.NVIDIA_AI_PARTNER_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.6,
-        max_tokens: 500,
-        messages,
-        tools: TOOLS,
-        tool_choice: 'auto',
-      }),
-      signal: controller.signal,
-    })
-  } catch (e) {
-    // AbortError (our timeout) or a network drop - surface as a provider error
-    // so the caller refunds quota and returns a clean 502 instead of hanging to 60s.
-    console.error('[sella-ai] NIM request failed:', e?.name || e)
-    const err = new Error(e?.name === 'AbortError' ? 'AI provider timed out' : 'AI provider unreachable')
-    err.status = e?.name === 'AbortError' ? 504 : 502
-    throw err
-  } finally {
-    clearTimeout(timer)
-  }
-  if (!resp.ok) {
-    const text = await resp.text()
-    console.error('[sella-ai] NIM error:', resp.status, text.slice(0, 300))
-    const err = new Error('AI provider error')
-    err.status = resp.status
-    throw err
-  }
-  return resp.json()
+  return callModel({
+    messages,
+    tools: TOOLS,
+    tier: AI_TIER,
+    maxTokens: 500,
+    temperature: 0.6,
+    timeoutMs: NIM_TIMEOUT_MS,
+  })
 }
 
-// Streamed NIM call. Forwards text deltas to onToken() live and assembles any tool_calls.
-// Returns { content, toolCalls } once the stream finishes. Same timeout/abort semantics.
+// Thin delegate to the streaming path in _lib/openrouter.js. Same contract as
+// before: forwards text deltas to onToken() live and returns
+// { content, toolCalls } once the stream finishes.
+//
+// One deliberate limit on failover here: once the first token has reached the
+// browser, a mid-stream failure is NOT retried on another model - silently
+// restarting would duplicate or contradict text the vendor is already reading.
+// Pre-first-token failures still fall through the tier normally.
 async function streamNim(messages, onToken) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), NIM_TIMEOUT_MS)
-  let resp
-  try {
-    resp = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.NVIDIA_AI_PARTNER_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.6,
-        max_tokens: 700,
-        messages,
-        tools: TOOLS,
-        tool_choice: 'auto',
-        stream: true,
-      }),
-      signal: controller.signal,
-    })
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '')
-      console.error('[sella-ai] NIM stream error:', resp.status, text.slice(0, 300))
-      const err = new Error('AI provider error')
-      err.status = resp.status
-      throw err
-    }
-
-    let content = ''
-    const toolAcc = [] // [{ id, name, arguments }] assembled by index
-    let buffer = ''
-    const decoder = new TextDecoder()
-    const reader = resp.body.getReader()
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      let nl
-      while ((nl = buffer.indexOf('\n')) !== -1) {
-        const line = buffer.slice(0, nl).trim()
-        buffer = buffer.slice(nl + 1)
-        if (!line.startsWith('data:')) continue
-        const payload = line.slice(5).trim()
-        if (payload === '[DONE]') continue
-        let json
-        try { json = JSON.parse(payload) } catch { continue }
-        const delta = json.choices?.[0]?.delta || {}
-        if (delta.content) {
-          content += delta.content
-          onToken(delta.content)
-        }
-        if (Array.isArray(delta.tool_calls)) {
-          for (const tc of delta.tool_calls) {
-            const idx = tc.index ?? 0
-            if (!toolAcc[idx]) toolAcc[idx] = { id: tc.id || `call_${idx}`, name: '', arguments: '' }
-            if (tc.id) toolAcc[idx].id = tc.id
-            if (tc.function?.name) toolAcc[idx].name = tc.function.name
-            if (tc.function?.arguments) toolAcc[idx].arguments += tc.function.arguments
-          }
-        }
-      }
-    }
-
-    const toolCalls = toolAcc
-      .filter(Boolean)
-      .map((t) => ({ id: t.id, function: { name: t.name, arguments: t.arguments } }))
-    return { content, toolCalls }
-  } catch (e) {
-    if (e.status) throw e
-    console.error('[sella-ai] NIM stream request failed:', e?.name || e)
-    const err = new Error(e?.name === 'AbortError' ? 'AI provider timed out' : 'AI provider unreachable')
-    err.status = e?.name === 'AbortError' ? 504 : 502
-    throw err
-  } finally {
-    clearTimeout(timer)
-  }
+  const { content, toolCalls } = await streamModel({
+    messages,
+    tools: TOOLS,
+    onToken,
+    tier: AI_TIER,
+    maxTokens: 700,
+    temperature: 0.6,
+    timeoutMs: NIM_TIMEOUT_MS,
+  })
+  return { content, toolCalls }
 }
 
 export default async function handler(req, res) {

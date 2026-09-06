@@ -6,6 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Calculator as CalculatorIcon, X, Delete, History, Trash2 } from 'lucide-react'
 
+import { clampFabPosition, FAB_SIZE } from '../../utils/fabPosition'
+
 const LS_FABPOS = 'sellapage_calc_fabpos'
 const LS_HISTORY = 'sellapage_calc_history'
 const MAX_HISTORY = 50
@@ -62,9 +64,23 @@ export default function CalculatorFAB() {
   useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(LS_FABPOS) || 'null')
-      if (p && typeof p.x === 'number') setFabPos(p)
+      // Clamped on restore, not just while dragging. A position saved on a wide
+      // desktop would otherwise be applied verbatim on a phone and put the
+      // button hundreds of pixels off-screen.
+      if (p && typeof p.x === 'number') setFabPos(clampFabPosition(p))
     } catch { /* ignore */ }
     setHistory(loadHistory())
+  }, [])
+
+  // Rotating a phone or resizing a window can strand the button just as easily.
+  useEffect(() => {
+    const onResize = () => setFabPos((prev) => (prev ? clampFabPosition(prev) : prev))
+    window.addEventListener('resize', onResize)
+    window.addEventListener('orientationchange', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('orientationchange', onResize)
+    }
   }, [])
 
   const onPointerDown = (e) => {
@@ -77,7 +93,7 @@ export default function CalculatorFAB() {
     const ds = dragState.current
     if (!ds.dragging) return
     ds.moved = true
-    const size = 60
+    const size = FAB_SIZE
     let x = e.clientX - ds.offX
     let y = e.clientY - ds.offY
     x = Math.max(8, Math.min(window.innerWidth - size - 8, x))

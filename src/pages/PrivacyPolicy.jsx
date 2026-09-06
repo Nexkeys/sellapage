@@ -6,7 +6,7 @@ import SEO from '../components/SEO'
 import { pageSeo } from '../data/seoPages'
 
 
-const LAST_UPDATED = 'July 2026'
+const LAST_UPDATED = 'September 2026'
 
 const sections = [
   {
@@ -34,6 +34,7 @@ const sections = [
       'Payment processing: We share transaction details with Paystack (our payment processor) to process payments. Paystack has its own privacy policy governing how they handle your financial data.',
       'Order fulfillment: We share delivery addresses, recipient names, and phone numbers with Sendbox and Topship (our logistics partners) to deliver orders to your customers.',
       'Advertising: When you connect a Google Ads account, we communicate with the Google Ads API to create and manage campaigns on your behalf. Campaign data (names, budgets, performance metrics) is shared with Google for this purpose.',
+      'Meta Pixel: A vendor may add their own Meta Pixel ID to their store. When they do, their storefront sends standard Meta events (page views, product views, add to cart, checkout started, and completed purchases including the order value) directly from the visitor’s browser to Meta. Sellapage does not receive or store this data. If that vendor has enabled Automatic Advanced Matching inside their own Meta account, Meta may additionally collect details a visitor types into the checkout form, such as name, email address and phone number, in hashed form.',
       'Business verification: If you use our advertising features, we may share business verification documents (such as CAC registration) with Meta for advertising account verification.',
       'Legal compliance: We may disclose data if required by law, court order, or to protect the rights and safety of Sellapage and its users.',
       'We do NOT sell your personal data to third parties.',
@@ -62,6 +63,9 @@ const sections = [
     title: 'Your Customer Data',
     content: [
       'When a customer submits an enquiry through your store, their details are stored in your dashboard.',
+      'If you switch on abandoned checkout recovery, we also store the name, email, phone number and basket contents of customers who begin checkout but do not pay. These records are deleted automatically after 30 days, and nothing is stored at all while the setting is off.',
+      'If you switch on loyalty points, we store a points balance against a customer’s email address so they can spend it on a future order.',
+      'You can send a customer one recovery email per 24 hours from your dashboard. It is sent in your store’s name, so you are responsible for its use.',
       'You are responsible for how you use that customer data.',
       'Do not spam or misuse customer contact details.',
     ],
@@ -70,8 +74,9 @@ const sections = [
     title: 'Cookies',
     content: [
       'We use basic cookies to keep you logged in to your dashboard.',
-      'We do not use advertising or tracking cookies.',
-      'You can clear cookies at any time through your browser settings.',
+      'Sellapage itself does not set advertising or tracking cookies.',
+      'However, a vendor may connect their own Meta (Facebook) Pixel to their store. Where they have done so, visiting that store places Meta advertising cookies (such as _fbp) in your browser, and your activity on that store is reported to Meta. This happens only on stores whose owner has switched it on, and the data goes to that vendor’s Meta account, not to Sellapage.',
+      'You can clear cookies at any time through your browser settings, and most browsers allow you to block third-party cookies entirely.',
     ],
   },
   {

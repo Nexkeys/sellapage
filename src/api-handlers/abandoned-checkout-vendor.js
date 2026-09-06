@@ -81,6 +81,7 @@ export default async function handler(req, res) {
         kind: d.kind || 'product',
         recovered: !!d.recoveredAt,
         reminderSent: d.reminderSent === true,
+        whatsappClickedAt: d.whatsappClickedAt?.toDate?.()?.toISOString() || null,
         createdAt: d.createdAt?.toDate?.()?.toISOString() || null,
         recoveredAt: d.recoveredAt?.toDate?.()?.toISOString() || null,
       }

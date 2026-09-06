@@ -12,9 +12,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   ShoppingCart, Loader2, AlertCircle, Lock, CreditCard, Send, CheckCircle2,
-  Clock, MailCheck,
+  Clock, MailCheck, MessageCircle,
 } from 'lucide-react'
 import { updateStore } from '../../firebase/auth'
+import WhatsAppReminderModal from './WhatsAppReminderModal'
 
 const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`
 
@@ -37,6 +38,7 @@ export default function AbandonedCheckoutsTab({ store, user, isPremium, navigate
   const [page, setPage] = useState(1)
   const [sendingRef, setSendingRef] = useState(null)
   const [notice, setNotice] = useState(null)
+  const [waTarget, setWaTarget] = useState(null)
 
   const load = useCallback(async () => {
     if (!store?.id || !user || !isPremium) { setLoading(false); return }
@@ -76,6 +78,20 @@ export default function AbandonedCheckoutsTab({ store, user, isPremium, navigate
       setNotice({ kind: 'err', text: 'Could not save that. Please try again.' })
     } finally {
       setSavingToggle(false)
+    }
+  }
+
+  const handleWhatsAppOpened = async (reference) => {
+    try {
+      const token = await user.getIdToken()
+      await fetch('/api/abandoned-checkout-send?action=log-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ storeId: store.id, reference }),
+      })
+      await load()
+    } catch {
+      // The vendor is already in WhatsApp. A failed log is not worth a message.
     }
   }
 
@@ -135,7 +151,9 @@ export default function AbandonedCheckoutsTab({ store, user, isPremium, navigate
 
   const summary = data?.summary
   const checkouts = data?.checkouts || []
-  const reminded = checkouts.filter((c) => c.reminderSent && !c.recovered)
+  // Both channels, otherwise a vendor who only ever uses WhatsApp sees an
+  // empty history and assumes nothing was recorded.
+  const reminded = checkouts.filter((c) => (c.reminderSent || c.whatsappClickedAt) && !c.recovered)
   const rate = summary?.abandoned > 0
     ? Math.round((summary.recovered / summary.abandoned) * 100)
     : 0
@@ -248,22 +266,42 @@ export default function AbandonedCheckoutsTab({ store, user, isPremium, navigate
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-600">
                             <CheckCircle2 size={11} /> Paid
                           </span>
-                        ) : c.reminderSent ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-400">
-                            <MailCheck size={11} /> Reminded
-                          </span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleSend(c.reference)}
-                            disabled={sendingRef === c.reference || !enabled}
-                            className="inline-flex items-center gap-1 rounded-lg border border-green-500 px-2.5 py-1 text-[11px] font-bold text-green-600 hover:bg-green-50 disabled:opacity-40 transition-all"
-                          >
-                            {sendingRef === c.reference
-                              ? <Loader2 size={11} className="animate-spin" />
-                              : <Send size={11} />}
-                            Remind
-                          </button>
+                          <div className="inline-flex items-center gap-1.5">
+                            {c.reminderSent ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-400">
+                                <MailCheck size={11} /> Emailed
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSend(c.reference)}
+                                disabled={sendingRef === c.reference || !enabled}
+                                className="inline-flex items-center gap-1 rounded-lg border border-green-500 px-2.5 py-1 text-[11px] font-bold text-green-600 hover:bg-green-50 disabled:opacity-40 transition-all"
+                              >
+                                {sendingRef === c.reference
+                                  ? <Loader2 size={11} className="animate-spin" />
+                                  : <Send size={11} />}
+                                Email
+                              </button>
+                            )}
+                            {c.customerPhone && (
+                              <button
+                                type="button"
+                                onClick={() => setWaTarget(c)}
+                                disabled={!enabled}
+                                title={c.whatsappClickedAt ? 'Opened in WhatsApp before' : 'Message on WhatsApp'}
+                                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold transition-all disabled:opacity-40 ${
+                                  c.whatsappClickedAt
+                                    ? 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                                    : 'border-[#25D366] text-[#1fa855] hover:bg-green-50'
+                                }`}
+                              >
+                                <MessageCircle size={11} />
+                                WhatsApp
+                              </button>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -302,8 +340,20 @@ export default function AbandonedCheckoutsTab({ store, user, isPremium, navigate
                     <span className="text-gray-600 truncate">
                       {c.customerName || 'Customer'} <span className="text-gray-400">{c.customerEmail}</span>
                     </span>
-                    <span className="flex items-center gap-1 text-gray-400 flex-shrink-0">
-                      <Clock size={10} /> {timeAgo(c.createdAt)}
+                    <span className="flex items-center gap-2 text-gray-400 flex-shrink-0">
+                      {c.reminderSent && (
+                        <span className="inline-flex items-center gap-1" title="Email reminder sent">
+                          <MailCheck size={10} /> Email
+                        </span>
+                      )}
+                      {c.whatsappClickedAt && (
+                        <span className="inline-flex items-center gap-1 text-[#1fa855]" title="Opened in WhatsApp. Delivery not confirmed.">
+                          <MessageCircle size={10} /> WhatsApp
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1">
+                        <Clock size={10} /> {timeAgo(c.createdAt)}
+                      </span>
                     </span>
                   </div>
                 ))}
@@ -311,6 +361,18 @@ export default function AbandonedCheckoutsTab({ store, user, isPremium, navigate
             </div>
           )}
         </>
+      )}
+
+      {waTarget && (
+        <WhatsAppReminderModal
+          checkout={waTarget}
+          store={store}
+          onClose={() => setWaTarget(null)}
+          onSent={() => {
+            handleWhatsAppOpened(waTarget.reference)
+            setWaTarget(null)
+          }}
+        />
       )}
     </div>
   )

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { auth } from "../../firebase/auth";
 import { uploadSingleImage } from "../../firebase/products";
+import { clampFabPosition, FAB_SIZE } from '../../utils/fabPosition';
 
 const LS_SESSION = (sid) => `sellaai_session_${sid}`;
 const LS_FABPOS = "sellaai_fabpos";
@@ -65,8 +66,20 @@ export default function SellaAI({ store }) {
   useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(LS_FABPOS) || "null");
-      if (p && typeof p.x === "number") setFabPos(p);
+      // Clamped on restore: a position saved on a wide desktop would otherwise
+      // put this button far off the right edge of a phone screen.
+      if (p && typeof p.x === "number") setFabPos(clampFabPosition(p));
     } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setFabPos((prev) => (prev ? clampFabPosition(prev) : prev));
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -113,7 +126,7 @@ export default function SellaAI({ store }) {
     const ds = dragState.current;
     if (!ds.dragging) return;
     ds.moved = true;
-    const size = 60;
+    const size = FAB_SIZE;
     let x = e.clientX - ds.offX;
     let y = e.clientY - ds.offY;
     x = Math.max(8, Math.min(window.innerWidth - size - 8, x));
