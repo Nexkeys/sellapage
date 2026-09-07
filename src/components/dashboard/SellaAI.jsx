@@ -15,6 +15,7 @@ import {
 import { auth } from "../../firebase/auth";
 import { uploadSingleImage } from "../../firebase/products";
 import { clampFabPosition, FAB_SIZE } from '../../utils/fabPosition';
+import SellaTermsModal from "./SellaTermsModal";
 
 const LS_SESSION = (sid) => `sellaai_session_${sid}`;
 const LS_FABPOS = "sellaai_fabpos";
@@ -46,6 +47,7 @@ export default function SellaAI({ store }) {
 
   const [open, setOpen] = useState(false);
   const [view, setView] = useState("chat"); // chat | history | settings
+  const [termsTab, setTermsTab] = useState(null); // null | "terms" | "privacy"
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -501,7 +503,13 @@ export default function SellaAI({ store }) {
                       {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
                   </div>
-                  <p className="text-[10px] text-gray-600 text-center mt-1.5">{assistantName} can make changes - it always asks you to confirm first.</p>
+                  <p className="text-[10px] text-gray-600 text-center mt-1.5 leading-relaxed">
+                    By using {assistantName} you agree to our{" "}
+                    <button onClick={() => setTermsTab("terms")} className="text-gray-400 hover:text-green-400 underline underline-offset-2 transition-colors">Terms of Service</button>
+                    {" & "}
+                    <button onClick={() => setTermsTab("privacy")} className="text-gray-400 hover:text-green-400 underline underline-offset-2 transition-colors">Privacy Policy</button>
+                    . {assistantName} is AI and can make mistakes &mdash; it always asks you to confirm before changing anything.
+                  </p>
                 </div>
               </>
             )}
@@ -555,6 +563,14 @@ export default function SellaAI({ store }) {
                 </div>
               </div>
             )}
+
+            <SellaTermsModal
+              key={termsTab || "closed"}
+              open={!!termsTab}
+              initialTab={termsTab || "terms"}
+              assistantName={assistantName}
+              onClose={() => setTermsTab(null)}
+            />
           </div>
         </div>
       )}
@@ -574,6 +590,7 @@ function describePending(p) {
     case "update_order_status": return `Change order ${a.orderId} status to "${a.newStatus}".`;
     case "update_delivery_pickup": return `Update pickup address to ${[a.streetAddress, a.city, a.state].filter(Boolean).join(", ")}.`;
     case "update_store_settings": return `Update store settings: ${Object.keys(a).join(", ")}.`;
+    case "update_tab_record": return `Update ${a.tab || "record"}: ${Object.entries(a.changes || {}).map(([k, v]) => `${k} → ${v}`).join(", ")}.`;
     default: return "Make the requested change to your store.";
   }
 }

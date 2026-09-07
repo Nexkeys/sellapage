@@ -65,7 +65,7 @@ export const TIERS = {
 // A tier that exhausts itself drops here rather than failing outright.
 // read -> standard is the important one: free models are rate limited, so
 // overflow must land on paid rather than erroring at the vendor.
-const TIER_FALLBACK = { heavy: 'standard', standard: 'fast', read: 'standard', fast: null }
+const TIER_FALLBACK = { heavy: 'standard', standard: 'fast', read: 'standard', fast: 'read' }
 
 export const DEFAULT_TIER = 'standard'
 
@@ -105,8 +105,16 @@ function headers() {
  * production surprise. Worth it.
  */
 function isRetryable(status) {
-  return status === 400 || status === 404 || status === 408 ||
-         status === 409 || status === 429 || status >= 500
+  // 402 is here for a reason that cost real debugging time: when an OpenRouter
+  // balance goes negative the account is silently downgraded to free-tier
+  // limits, which cap PROMPT tokens at ~2085. Sella's prompt (30-tab registry
+  // + tool defs) is ~2165, so every tool-carrying request 402d while short
+  // greetings still succeeded on the free models. Treating 402 as fatal meant
+  // Sella chatted fluently but never once reached a tool — indistinguishable,
+  // from the outside, from an assistant refusing to do the work.
+  // 413 is the same failure wearing a different status code.
+  return status === 400 || status === 402 || status === 404 || status === 408 ||
+         status === 409 || status === 413 || status === 429 || status >= 500
 }
 
 /**
