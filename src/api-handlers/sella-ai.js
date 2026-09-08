@@ -17,6 +17,7 @@ import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { buildStoreContext } from './_lib/sella-ai-context.js'
 import { readTab, describeTabsForPrompt, describeFields, TAB_SCHEMA, writableTabs, validateGenericWrite, applyGenericWrite } from './_lib/ai-schema.js'
 import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-tools.js'
+import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { callModel, streamModel } from './_lib/openrouter.js'
 
 // Model selection now lives in _lib/openrouter.js, which fails over across
@@ -74,6 +75,54 @@ const WRITE_ACTIONS = new Set([
   'add_ledger_entry', 'add_product', 'add_service', 'create_discount',
   'update_order_status', 'update_booking_status', 'update_delivery_pickup', 'update_store_settings',
 ])
+
+// Which dashboard tab each write touches. Staff permissions are per-tab, so a
+// write cannot be authorised without knowing this - an unmapped action is
+// treated as owner-only rather than defaulting open.
+const ACTION_TAB = {
+  add_ledger_entry: 'ledger',
+  add_product: 'products',
+  add_service: 'services',
+  create_discount: 'discounts',
+  update_order_status: 'orders',
+  update_booking_status: 'bookings',
+  update_delivery_pickup: 'delivery',
+  update_store_settings: 'settings',
+}
+
+function tabForAction(pending) {
+  if (pending?.type === 'update_tab_record') return String(pending?.args?.tab || '')
+  return ACTION_TAB[pending?.type] || ''
+}
+
+/**
+ * Records every AI-performed write against the store, attributed to the human
+ * who confirmed it. Without this an approved change is indistinguishable from
+ * one the owner made by hand, which is not good enough once staff can drive
+ * Sella. Never throws: an audit failure must not roll back a completed write.
+ */
+async function logSellaWrite(db, storeId, actor, pending, result) {
+  try {
+    await db.collection('auditLogs').add({
+      uid: actor.uid,
+      action: 'sella_ai_write',
+      purpose: pending?.type || null,
+      result: result?.ok ? 'applied' : 'failed',
+      meta: {
+        storeId,
+        actorLabel: actor.label,
+        actorRole: actor.role,
+        viaAi: true,
+        tab: tabForAction(pending) || null,
+        args: JSON.parse(JSON.stringify(pending?.args || {})),
+        message: String(result?.message || '').slice(0, 300),
+      },
+      createdAt: FieldValue.serverTimestamp(),
+    })
+  } catch (err) {
+    console.error('[sella-ai] audit write failed:', err.message)
+  }
+}
 
 const TOOLS = [
   {
@@ -343,7 +392,14 @@ export default async function handler(req, res) {
     } catch {
       return res.status(401).json({ error: 'Invalid or expired session.' })
     }
-    if (decoded.uid !== storeId) return res.status(403).json({ error: 'Forbidden' })
+    // Sella used to be owner-only (uid === storeId). That failed CLOSED, so it
+    // was safe, but it locked staff out entirely. resolveStoreAccess is the same
+    // primitive the rest of the dashboard uses, which means a suspended or
+    // removed staff member loses Sella at the same instant they lose everything
+    // else - no second revocation path to keep in sync.
+    const access = await resolveStoreAccess(decoded.uid, storeId, null, false)
+    if (!access.allowed) return res.status(403).json({ error: 'Forbidden' })
+    const isOwner = access.role === 'owner'
 
     const storeRef = db.collection('stores').doc(storeId)
     const storeDoc = await storeRef.get()
@@ -356,19 +412,49 @@ export default async function handler(req, res) {
     }
 
     const assistantName = store.sellaAiName || 'Sella AI'
+
+    // Staff reach Sella only when the vendor has deliberately turned it on.
+    // Default off: enabling it means store data flows to third-party models on
+    // behalf of someone who is not the account holder, which is the vendor's
+    // call to make, not ours.
+    if (!isOwner && store.sellaStaffAccess !== true) {
+      return res.status(403).json({ error: `${assistantName} has not been enabled for staff on this store.` })
+    }
+
+    // Who to attribute writes to. Staff writes must never look like owner writes.
+    const actor = {
+      uid: decoded.uid,
+      label: isOwner ? (store.businessName || 'Owner') : (access.staffName || decoded.email || 'Staff'),
+      role: isOwner ? 'owner' : (access.role || 'staff'),
+      isOwner,
+    }
     const usageRef = storeRef.collection('sellaAiUsage').doc(getTodayKey())
 
     // ---------- lightweight, non-consuming actions ----------
     if (action === 'usage') {
       const u = await usageRef.get()
       const used = u.exists ? (u.data().count || 0) : 0
-      return res.status(200).json({ used, limit: DAILY_LIMIT, remaining: Math.max(DAILY_LIMIT - used, 0), assistantName })
+      return res.status(200).json({ used, limit: DAILY_LIMIT, remaining: Math.max(DAILY_LIMIT - used, 0), assistantName, sellaStaffAccess: store.sellaStaffAccess === true, isOwner })
     }
 
     if (action === 'rename') {
       const name = String(body.name || '').trim().slice(0, 40) || 'Sella AI'
       await storeRef.set({ sellaAiName: name }, { merge: true })
       return res.status(200).json({ assistantName: name })
+    }
+
+    // Owner-only: turning staff access on sends store data to third-party model
+    // providers on behalf of people who are not the account holder. Both
+    // directions are audit-logged, because consent has to be evidenced with a
+    // timestamp - not inferred from the current value of a boolean.
+    if (action === 'staff-access') {
+      if (!isOwner) return res.status(403).json({ error: 'Only the store owner can change this.' })
+      const enabled = body.enabled === true
+      await storeRef.set({ sellaStaffAccess: enabled }, { merge: true })
+      await logSellaWrite(db, storeId, actor,
+        { type: 'sella_staff_access', args: { enabled } },
+        { ok: true, message: enabled ? 'Staff access enabled' : 'Staff access disabled' })
+      return res.status(200).json({ sellaStaffAccess: enabled })
     }
 
     if (action === 'sessions') {
@@ -412,7 +498,21 @@ export default async function handler(req, res) {
     if (action === 'confirm') {
       const pending = body.pendingAction
       if (!pending?.type) return res.status(400).json({ error: 'No action to confirm.' })
+      // Authorise at EXECUTION time, not just when the card was proposed. The
+      // client sends the pending action back, so a confirm is an independent
+      // request that must stand on its own - a staff member could otherwise
+      // replay a card for a tab they cannot write to.
+      if (!isOwner) {
+        const wTab = tabForAction(pending)
+        if (!wTab) return res.status(403).json({ error: 'Only the store owner can approve that change.' })
+        const wAccess = await resolveStoreAccess(decoded.uid, storeId, wTab, true)
+        if (!wAccess.allowed) {
+          return res.status(403).json({ error: `You have read-only access to ${wTab}, so this change cannot be applied.` })
+        }
+      }
+
       const result = await executeWriteAction(db, storeId, pending)
+      await logSellaWrite(db, storeId, actor, pending, result)
 
       // Append the outcome to the session transcript.
       const sid = String(body.sessionId || '')
@@ -529,6 +629,22 @@ export default async function handler(req, res) {
           let args = {}
           try { args = JSON.parse(writeCall.function.arguments || '{}') } catch { /* keep {} */ }
 
+          // Refuse at PROPOSAL time too. The confirm endpoint re-checks this and is
+          // the real gate, but showing a staff member a card they are not allowed
+          // to approve teaches them the wrong thing about their own permissions.
+          if (!isOwner) {
+            const pTab = tabForAction({ type: writeCall.function.name, args })
+            const pAccess = pTab ? await resolveStoreAccess(decoded.uid, storeId, pTab, true) : { allowed: false }
+            if (!pAccess.allowed) {
+              reply = pTab
+                ? `You have read-only access to the ${pTab} tab, so I can't make that change. The store owner can do it, or grant you write access.`
+                : "That change is limited to the store owner, so I can't make it from your account."
+              sse('token', { t: reply })
+              pendingAction = null
+              break
+            }
+          }
+
           // Generic writes are validated BEFORE the confirm card is shown, so a
           // read-only tab or a system-managed field is refused with a reason the
           // vendor can act on - rather than being confirmed and then failing.
@@ -556,7 +672,21 @@ export default async function handler(req, res) {
           if (call.function?.name === 'read_tab') {
             let a = {}
             try { a = JSON.parse(call.function.arguments || '{}') } catch { /* keep {} */ }
-            const res = await readTab(db, storeId, String(a.tab || ''), Math.min(Number(a.limit) || 50, 200))
+            // The registry says what is READABLE; the role says what THIS person
+            // may read. Both must agree, or Sella becomes a way to read tabs the
+            // staff member was never granted.
+            const wantTab = String(a.tab || '')
+            if (!isOwner) {
+              const tabAccess = await resolveStoreAccess(decoded.uid, storeId, wantTab, false)
+              if (!tabAccess.allowed) {
+                messages.push({
+                  role: 'tool', tool_call_id: call.id, name: 'read_tab',
+                  content: JSON.stringify({ tab: wantTab, error: `You do not have access to the ${wantTab} tab. Ask the store owner if you need it.` }),
+                })
+                continue
+              }
+            }
+            const res = await readTab(db, storeId, wantTab, Math.min(Number(a.limit) || 50, 200))
             // Field meanings ride along with the rows, so the model interprets
             // the data correctly rather than guessing what a column implies
             // (e.g. that stock 0 hides the buy button).

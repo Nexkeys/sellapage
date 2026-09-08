@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Sparkles, X, Send, History, Settings2, Plus, Check, Loader2,
-  ExternalLink, Trash2, Pencil, ArrowLeft, TrendingUp, Star, Globe, Receipt, ImagePlus,
+  ExternalLink, Trash2, Pencil, ArrowLeft, TrendingUp, Star, Globe, Receipt, ImagePlus, Users, ShieldAlert,
 } from "lucide-react";
 import { auth } from "../../firebase/auth";
 import { uploadSingleImage } from "../../firebase/products";
@@ -48,6 +48,9 @@ export default function SellaAI({ store }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState("chat"); // chat | history | settings
   const [termsTab, setTermsTab] = useState(null); // null | "terms" | "privacy"
+  const [staffAccess, setStaffAccess] = useState(false);
+  const [isOwner, setIsOwner] = useState(true);
+  const [savingStaff, setSavingStaff] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -96,6 +99,8 @@ export default function SellaAI({ store }) {
       const d = await callSella({ storeId, action: "usage" });
       setUsage({ used: d.used, limit: d.limit, remaining: d.remaining });
       if (d.assistantName) { setAssistantName(d.assistantName); setRenameValue(d.assistantName); }
+      if (typeof d.sellaStaffAccess === "boolean") setStaffAccess(d.sellaStaffAccess);
+      if (typeof d.isOwner === "boolean") setIsOwner(d.isOwner);
     } catch { /* non-blocking */ }
   }, [storeId]);
 
@@ -311,6 +316,22 @@ export default function SellaAI({ store }) {
     const name = renameValue.trim().slice(0, 40) || "Sella AI";
     try { const d = await callSella({ storeId, action: "rename", name }); setAssistantName(d.assistantName); }
     catch { /* */ }
+  };
+
+  const toggleStaffAccess = async (next) => {
+    setSavingStaff(true);
+    // Optimistic, but reconciled against the server response: this controls who
+    // may send store data to third-party models, so the UI must never show a
+    // state the server did not confirm.
+    setStaffAccess(next);
+    try {
+      const d = await callSella({ storeId, action: "staff-access", enabled: next });
+      setStaffAccess(d.sellaStaffAccess === true);
+    } catch {
+      setStaffAccess(!next);
+    } finally {
+      setSavingStaff(false);
+    }
   };
 
   const pct = useMemo(() => Math.min(100, Math.round((usage.used / usage.limit) * 100)), [usage]);
@@ -554,6 +575,52 @@ export default function SellaAI({ store }) {
                     Your limit resets at midnight (WAT). Confirming an action does not use a request.
                   </p>
                 </div>
+
+                {isOwner && (
+                  <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Users size={12} /> Staff access
+                        </p>
+                        <p className="text-[12px] text-gray-300 mt-2 leading-relaxed">
+                          Let your team use <span className="font-semibold text-gray-100">{assistantName}</span>.
+                        </p>
+                      </div>
+                      <button
+                        role="switch"
+                        aria-checked={staffAccess}
+                        aria-label="Let staff use this assistant"
+                        disabled={savingStaff}
+                        onClick={() => toggleStaffAccess(!staffAccess)}
+                        className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors disabled:opacity-50 ${staffAccess ? "bg-green-500" : "bg-white/15"}`}
+                      >
+                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${staffAccess ? "left-[22px]" : "left-0.5"}`} />
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+                      Staff only ever reach the tabs their role already allows, and a member with
+                      read-only access cannot use {assistantName} to make changes.
+                    </p>
+
+                    {staffAccess && (
+                      <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/25 p-3">
+                        <p className="text-[11px] text-amber-200/90 leading-relaxed flex gap-2">
+                          <ShieldAlert size={13} className="flex-shrink-0 mt-0.5" />
+                          <span>
+                            Questions your staff ask send store data &mdash; including customer names,
+                            phone numbers and addresses &mdash; to third-party AI providers outside Nigeria.
+                            You remain responsible for that data under the NDPA 2023.{" "}
+                            <button onClick={() => setTermsTab("privacy")} className="underline underline-offset-2 hover:text-amber-100">
+                              What gets shared
+                            </button>
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="rounded-2xl bg-green-500/10 border border-green-500/25 p-4">
                   <p className="text-[12px] text-gray-300 leading-relaxed">

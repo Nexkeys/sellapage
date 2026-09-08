@@ -10,6 +10,7 @@ import {
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
 import ReviewsAdmin from '../components/admin/ReviewsAdmin';
+import CacRequests from '../components/admin/CacRequests';
 import { SkeletonRows } from '../components/Skeleton';
 
 const ADMIN_TABS = [
@@ -17,7 +18,7 @@ const ADMIN_TABS = [
   { id: 'directory', label: 'Merchants', icon: Users, short: 'Merchants' },
   { id: 'referrals', label: 'Referrals', icon: TrendingUp, short: 'Referrals' },
   { id: 'withdrawals', label: 'Payouts', icon: Clock, short: 'Payouts' },
-  { id: 'cac', label: 'CAC Verification', icon: FileCheck, short: 'CAC' },
+  { id: 'cac', label: 'CAC', icon: FileCheck, short: 'CAC' },
   { id: 'domains', label: 'Custom Domains', icon: Link2, short: 'Domains' },
   { id: 'announcements', label: 'Announcements', icon: Megaphone, short: 'Alerts' },
   { id: 'tickets', label: 'Support Tickets', icon: LifeBuoy, short: 'Tickets' },
@@ -826,8 +827,9 @@ export default function Admin() {
 
         {/* CAC */}
         {activeTab === 'cac' && <div className="space-y-4 animate-in fade-in duration-200">
+          <CacRequests authHeaders={H} />
           {cacError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{cacError}</div>}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><h2 className="font-bold text-gray-800">CAC Verification</h2><div className="flex gap-1.5 overflow-x-auto pb-1">{['all','verified','pending','not_submitted','rejected'].map(f=><button key={f} onClick={()=>{setCacStatusFilter(f);setCacPage(1);}} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${cacStatusFilter===f?'bg-gray-900 text-white':'bg-gray-100 text-gray-600'}`}>{f==='not_submitted'?'Not Submitted':f[0].toUpperCase()+f.slice(1)}</button>)}</div></div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><h2 className="font-bold text-gray-800">Verification status</h2><div className="flex gap-1.5 overflow-x-auto pb-1">{['all','verified','pending','not_submitted','rejected'].map(f=><button key={f} onClick={()=>{setCacStatusFilter(f);setCacPage(1);}} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${cacStatusFilter===f?'bg-gray-900 text-white':'bg-gray-100 text-gray-600'}`}>{f==='not_submitted'?'Not Submitted':f[0].toUpperCase()+f.slice(1)}</button>)}</div></div>
           {cacData?.stats&&<div className="grid grid-cols-2 sm:grid-cols-5 gap-2">{[{l:'Total',v:cacData.stats.total,c:'text-gray-900'},{l:'Verified',v:cacData.stats.verified,c:'text-green-600'},{l:'Pending',v:cacData.stats.pending,c:'text-amber-600'},{l:'Not Submitted',v:cacData.stats.notSubmitted,c:'text-gray-500'},{l:'Rejected',v:cacData.stats.rejected,c:'text-red-600'}].map(s=><div key={s.l} className="bg-white rounded-lg border border-gray-100 p-2.5 text-center"><p className="text-[9px] text-gray-400 font-bold uppercase">{s.l}</p><p className={`text-lg font-black mt-0.5 ${s.c}`}>{s.value||s.v}</p></div>)}</div>}
           {cacLoading?<SkeletonRows count={5} />:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{(cacData?.stores||[]).length===0?<div className="p-6 text-center text-gray-400 text-sm">No merchants.</div>:cacData.stores.map(s=><div key={s.id} className="px-4 py-2.5 hover:bg-gray-50/50 flex items-center justify-between gap-2"><div className="min-w-0 flex-1"><p className="text-sm font-bold text-gray-900 truncate">{s.storeName}</p><p className="text-[10px] text-gray-400 font-mono">@{s.handle}</p></div><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border flex-shrink-0 ${s.cacVerified?'bg-green-50 text-green-600 border-green-200':s.cacStatus==='rejected'?'bg-red-50 text-red-600 border-red-200':s.cacStatus==='pending'?'bg-amber-50 text-amber-600 border-amber-200':'bg-gray-100 text-gray-500 border-gray-200'}`}>{s.cacStatus}</span></div>)}</div>{cacData?.total>20&&<div className="bg-gray-50/80 px-3 py-2 border-t border-gray-100 flex items-center justify-between"><button onClick={()=>setCacPage(Math.max(1,cacPage-1))} disabled={cacPage===1} className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50"><ChevronLeft size={12} /> Prev</button><span className="text-[10px] font-semibold text-gray-500">{cacPage}/{Math.ceil(cacData.total/20)}</span><button onClick={()=>setCacPage(cacPage+1)} disabled={cacPage*20>=cacData.total} className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg disabled:opacity-50">Next <ChevronRight size={12} /></button></div>}</div>}
         </div>}

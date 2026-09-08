@@ -35,7 +35,7 @@ export const TIERS = {
   // testing), so this tier deliberately falls through to the PAID standard
   // tier. A vendor must never be blocked because the free pool was busy.
   read: [
-    'minimax/minimax-m3:free',              // 1M ctx
+    'thinkingmachines/inkling:free',              // 1M ctx
     'nvidia/nemotron-3.5-lightning:free',   // 1M ctx
     'openrouter/free',                      // OpenRouter's own free auto-router
     'poolside/laguna-s-2.1:free',

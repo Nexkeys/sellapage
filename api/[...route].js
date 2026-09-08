@@ -355,6 +355,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/abandoned-checkout-vendor.js")
         return handler(req, res)
       }
+      case "cac-request": {
+        const { default: handler } = await import("../src/api-handlers/cac-request.js")
+        return handler(req, res)
+      }
       case "abandoned-checkout-send": {
         const { default: handler } = await import("../src/api-handlers/abandoned-checkout-send.js")
         return handler(req, res)

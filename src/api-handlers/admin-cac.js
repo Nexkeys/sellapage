@@ -64,6 +64,65 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, stores: paged, stats, page, limit, total })
     }
 
+    // ---- CAC registration help requests ----
+    // Vendors asking us to register a business for them. Separate from the
+    // verification flow above: those already HAVE a CAC, these do not.
+    if (action === 'requests') {
+      const snap = await db.collection('cacRequests').limit(300).get()
+      const statusFilter = req.query.status || 'open'
+
+      const all = snap.docs.map((d) => {
+        const r = d.data()
+        return {
+          id: d.id,
+          storeId: r.storeId || '',
+          storeName: r.storeName || '',
+          businessName: r.businessName || '',
+          entityType: r.entityType || '',
+          proposedName: r.proposedName || '',
+          contactEmail: r.contactEmail || '',
+          contactPhone: r.contactPhone || '',
+          notes: r.notes || '',
+          status: r.status || 'new',
+          createdAt: r.createdAt?.toDate?.()?.toISOString() || null,
+          contactedAt: r.contactedAt?.toDate?.()?.toISOString() || null,
+          contactedBy: r.contactedBy || null,
+        }
+      })
+
+      const filtered = statusFilter === 'all'
+        ? all
+        : statusFilter === 'open'
+          ? all.filter((r) => r.status !== 'closed' && r.status !== 'completed')
+          : all.filter((r) => r.status === statusFilter)
+
+      filtered.sort((a2, b2) => (b2.createdAt || '').localeCompare(a2.createdAt || ''))
+
+      return res.status(200).json({
+        success: true,
+        requests: filtered,
+        counts: {
+          open: all.filter((r) => r.status !== 'closed' && r.status !== 'completed').length,
+          total: all.length,
+        },
+      })
+    }
+
+    if (action === 'request-status' && req.method === 'POST') {
+      let body = {}
+      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {} } catch {}
+      const { requestId, status } = body
+      if (!requestId || !['new', 'contacted', 'completed', 'closed'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid parameters' })
+      }
+      // Attribution comes from the verified admin, never the request body.
+      await db.collection('cacRequests').doc(requestId).update({
+        status,
+        ...(status === 'contacted' ? { contactedAt: new Date(), contactedBy: admin.uid } : {}),
+      })
+      return res.status(200).json({ success: true })
+    }
+
     if (action === 'update' && req.method === 'POST') {
       let body = {}
       try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch {}

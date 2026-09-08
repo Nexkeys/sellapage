@@ -62,6 +62,17 @@ const sections = [
     ],
   },
   {
+    title: 'Sella AI',
+    content: [
+      'Sella AI is an optional assistant on the Premium plan. It can read your dashboard and, once you confirm, make changes to it. It is a tool, not an adviser, and its output is not professional, financial or legal advice.',
+      'Sella AI is built on large language models and can be wrong. You are responsible for checking anything you act on, including prices, stock levels, order statuses and anything shown to your customers. We are not liable for losses arising from acting on its output without verifying it.',
+      'Sella AI never changes your store without showing you the exact change and getting your confirmation first. A change you approve is treated as your own.',
+      'It can never write to payouts, billing, bank details, staff management, security settings or account deletion, and cannot alter system-managed values such as your plan, verification status or referral balance. These limits are enforced on our servers.',
+      'If you allow staff to use Sella AI, it acts within their permissions, not yours, and cannot reach a tab their role does not already allow.',
+      'Using Sella AI sends your store data, and where relevant your customers’ personal data, to third-party AI providers. See our Privacy Policy for what is shared and with whom. Fair use is 50 messages per store per day.',
+    ],
+  },
+  {
     title: 'Limitation of Liability',
     content: [
       'Sellapage is a tool to help you sell. We are not responsible for your business results.',

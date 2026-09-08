@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import CacHelpRequest from './CacHelpRequest'
 import {
   ShieldCheck,
   Lock,
@@ -102,7 +103,13 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
 
   if (!isPro) {
     return (
-      <div className="mx-auto max-w-4xl p-4 sm:p-5">
+      <div className="mx-auto max-w-4xl p-4 sm:p-5 space-y-4">
+        {/* Rendered ABOVE the upsell, and deliberately inside the non-Pro branch.
+            Vendors without a CAC are overwhelmingly Starter and Growth, so this
+            is exactly the audience for registration help. Behind the paywall it
+            would be invisible to almost everyone who needs it. */}
+        <CacHelpRequest store={store} user={user} />
+
         <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
           <div className="px-6 py-14 text-center sm:py-16">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 border border-green-100">
@@ -164,6 +171,8 @@ export default function CACVerificationTab({ store, user, isPro, navigateTo }) {
           </div>
         </div>
       )}
+
+      {!isVerified && !confirmed && <CacHelpRequest store={store} user={user} />}
 
       {/* Verification form - only show if not verified and retries remain */}
       {!isVerified && !confirmed && retriesLeft <= 0 && (

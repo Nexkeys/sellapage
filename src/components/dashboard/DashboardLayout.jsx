@@ -35,6 +35,7 @@ import {
   Gift,
   ShoppingBag,
   Activity,
+  Palette,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -68,6 +69,7 @@ const NAV_ITEMS = [
   { id: "google-ads", label: "Google Ads", icon: Target },
   { id: "meta-pixel", label: "Meta Pixel", icon: Activity },
   { id: "job-listings", label: "Job Listings", icon: Briefcase },
+  { id: "store-design", label: "Store Design", icon: Palette },
   { type: "group", label: "Business" },
   { id: "online-store", label: "Business Page", icon: Globe },
   { id: "payouts", label: "Payouts", icon: Wallet },
@@ -207,6 +209,9 @@ export default function DashboardLayout({
         if (item.id === 'loyalty' && !isPremiumPlan) return false;
         if (item.id === 'abandoned' && !isPremiumPlan) return false;
         if (item.id === 'meta-pixel' && !isPremiumPlan) return false;
+        // Shown to Premium only. A downgraded vendor keeps the saved design
+        // (see isDesignLive) but loses the editor until they upgrade again.
+        if (item.id === 'store-design' && !isPremiumPlan) return false;
         if (item.id === 'team' && isStaffIdentity) return false;
         if (isStaffIdentity && item.id !== 'team' && !staffTabAccess(item.id)) return false;
         return true;
@@ -302,6 +307,7 @@ export default function DashboardLayout({
           // Mirror of the desktop gate above. Both are required.
           if (id === 'loyalty' && !isPremiumPlan) return null;
           if (id === 'abandoned' && !isPremiumPlan) return null;
+          if (id === 'store-design' && !isPremiumPlan) return null;
           if (id === 'meta-pixel' && !isPremiumPlan) return null;
           if (id === 'team' && isStaffIdentity) return null;
           if (isStaffIdentity && id !== 'team' && !staffTabAccess(id)) return null;

@@ -4,6 +4,8 @@
 // Last updated: 2026-09-01 (loyalty cards)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-08  Added top-level `match /cacRequests/{requestId}`, server only.
+//               NOT YET PUBLISHED. Holds vendor email and phone.
 //   2026-09-05  Added `match /abandonedCheckouts/{reference}` inside
 //               /stores/{storeId}. NOT YET PUBLISHED as of writing. Must go live
 //               BEFORE the first record is written, since these documents hold
@@ -465,6 +467,12 @@ service cloud.firestore {
     }
 
     // Abuse reports, feature flags, cached bank list — Admin SDK only.
+    // CAC registration help requests. Hold a vendor's email and phone, and are
+    // listed across all stores by the admin panel, so top level and server only.
+    match /cacRequests/{requestId} {
+      allow read, write: if false;
+    }
+
     match /storeReports/{reportId} {
       allow read, write: if false;
     }

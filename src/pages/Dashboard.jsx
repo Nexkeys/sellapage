@@ -97,6 +97,7 @@ import CategoriesTab from "../components/dashboard/CategoriesTab";
 import ReviewsTab from "../components/dashboard/ReviewsTab";
 import AnalyticsTab from "../components/dashboard/AnalyticsTab";
 import MarketingTab from "../components/dashboard/MarketingTab";
+import StoreDesignTab from "../components/dashboard/StoreDesignTab";
 import DiscountsTab from "../components/dashboard/DiscountsTab";
 import OnlineStoreTab from "../components/dashboard/OnlineStoreTab";
 import MobileAppTab from "../components/dashboard/MobileAppTab";
@@ -1920,6 +1921,10 @@ export default function Dashboard() {
           onWhatsAppToggle={handleWhatsAppToggle}
           navigateTo={setActiveTab}
         />
+      )}
+
+      {activeTab === "store-design" && (
+        <StoreDesignTab store={store} storeUrl={storeUrl} />
       )}
 
       {activeTab === "support" && (

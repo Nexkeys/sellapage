@@ -41,6 +41,17 @@ const sections = [
     ],
   },
   {
+    title: 'Sella AI and Third-Party AI Processing',
+    content: [
+      'Sella AI is an optional assistant available on the Premium plan. When a store owner or an authorised staff member uses it, we send the relevant parts of their question and their store data to third-party AI providers so it can answer.',
+      'These providers are reached through our AI routing provider, OpenRouter, and include Anthropic, Google, OpenAI, DeepSeek and Moonshot AI. Data sent to them is processed on their infrastructure, outside Nigeria.',
+      'Depending on what is asked, this can include store details, products and pricing, orders, bookings, sales figures, analytics, and customer personal data such as names, phone numbers, delivery addresses and order history.',
+      'Bank account and payout details, subaccount codes, verification records, authentication tokens and device push tokens are removed before anything is sent. Sella AI cannot access them.',
+      'We instruct these providers not to retain your data or use it to train their models. Chat history is stored in the store owner’s own account and is deleted when they delete it.',
+      'Sella AI is off unless used, and staff access to it is off unless the store owner turns it on. Store owners remain the data controller for their customers’ personal data under the Nigeria Data Protection Act 2023.',
+    ],
+  },
+  {
     title: 'How We Protect Your Data',
     content: [
       'All data is encrypted in transit using TLS/SSL encryption between your device and our servers.',

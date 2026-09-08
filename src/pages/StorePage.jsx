@@ -33,6 +33,8 @@ import SEO from '../components/SEO';
 import { initMetaPixel, trackPixel } from '../utils/metaPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
 import GuaranteeBadge from "../components/GuaranteeBadge";
+import DesignedStorefront from "../components/storefront/DesignedStorefront";
+import { isDesignLive } from "../utils/storeDesign";
 
 const EMPTY_CHECKOUT_FORM = {
   customerName: "",
@@ -1270,6 +1272,17 @@ export default function StorePage() {
     }).catch(() => {});
   };
 
+  // Presentation only. Nothing below changes how an order is placed.
+  const designLive = isDesignLive(store);
+  const designCategories = [...new Set((products || []).map((p) => p.category).filter(Boolean))];
+  const designStats = [
+    { value: `${(products || []).length}+`, label: "Products" },
+    { value: `${designCategories.length}+`, label: "Categories" },
+  ];
+  const designWhatsappUrl = store?.whatsappNumber
+    ? `https://wa.me/${String(store.whatsappNumber).replace(/\D/g, "")}`
+    : "";
+
   const handleAddToCart = (product) => {
     triggerSessionEngagement();
     trackPixel('AddToCart', {
@@ -1686,7 +1699,27 @@ export default function StorePage() {
           <OrdersTab store={store} activeThemeObj={activeThemeObj} />
         )}
 
-        {activeTab === "home" && (
+        {/* Custom Store Design (Premium, and only when the vendor switched it
+            on). Rendered INSTEAD of the standard home layout below, which is
+            left exactly as it was so that turning the design off restores the
+            previous page byte for byte. */}
+        {activeTab === "home" && designLive && (
+          <DesignedStorefront
+            design={store.storeDesign}
+            store={store}
+            products={products}
+            categories={designCategories}
+            reviews={[]}
+            stats={designStats}
+            whatsappUrl={designWhatsappUrl}
+            onAddToCart={handleAddToCart}
+            onOrder={(p) => setSelectedProduct(p)}
+            onCategory={() => setActiveTab("categories")}
+            onCta={() => setActiveTab("categories")}
+          />
+        )}
+
+        {activeTab === "home" && !designLive && (
           <>
             <div
               className="relative overflow-hidden shadow-inner shadow-black/10"
@@ -1975,7 +2008,7 @@ export default function StorePage() {
           </>
         )}
 
-        {activeTab === "home" && (
+        {activeTab === "home" && !designLive && (
           <StoreFooter
             storeName={store.businessName}
             customFooterText={footerText}
