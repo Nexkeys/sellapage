@@ -55,15 +55,19 @@ export default async function handler(req, res) {
     const store = snap.data()
     const plan = String(store.plan || 'starter').toLowerCase()
     const eligible = DESIGN_PLANS.has(plan)
+    // Which sections this vendor is even allowed to place depends on whether
+    // they sell products, services or both.
+    const vendorType = String(store.vendorType || 'products').toLowerCase()
 
     if (action === 'get') {
       return res.status(200).json({
         success: true,
         plan,
         eligible,
+        vendorType,
         // Live requires BOTH the plan and the vendor's own switch.
         live: eligible && store.storeDesign?.enabled === true,
-        design: store.storeDesign || defaultDesign(),
+        design: store.storeDesign || defaultDesign(vendorType),
         hasSaved: !!store.storeDesign,
       })
     }
@@ -88,7 +92,7 @@ export default async function handler(req, res) {
       // Everything is re-normalised server side. The editor already constrains
       // input, but the editor is the client and cannot be trusted with values
       // that end up as inline styles on a public page.
-      const design = sanitizeDesign(body.design)
+      const design = sanitizeDesign(body.design, vendorType)
       await ref.set({ storeDesign: design }, { merge: true })
 
       return res.status(200).json({

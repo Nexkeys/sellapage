@@ -29,6 +29,7 @@ const BillingCallback = lazy(() => import('./pages/BillingCallback'))
 // Public storefronts
 const StorePage        = lazy(() => import('./pages/StorePage'))
 const ServiceStorePage = lazy(() => import('./pages/ServiceStorePage'))
+const StoreCustomPage  = lazy(() => import('./pages/StoreCustomPage'))
 const ReviewPage       = lazy(() => import('./pages/ReviewPage'))
 
 // Comparison pages
@@ -101,6 +102,11 @@ export default function App() {
             <Route path="/live-stores" element={<LiveStoresPage />} />
             <Route path="/:storeName" element={<StorePage />} />
             <Route path="/:storeName/services" element={<ServiceStorePage />} />
+            {/* Vendor built pages. Registered as literal segments so a custom
+                page can never shadow /services or a future reserved route. */}
+            <Route path="/:storeName/about" element={<StoreCustomPage pageKey="about" />} />
+            <Route path="/:storeName/contact" element={<StoreCustomPage pageKey="contact" />} />
+            <Route path="/:storeName/policies" element={<StoreCustomPage pageKey="policies" />} />
             <Route path="*"           element={<NotFound />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>

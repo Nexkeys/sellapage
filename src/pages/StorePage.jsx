@@ -18,6 +18,7 @@ import {
   Gift,
 } from "lucide-react";
 import { getStoreBySlug, getProducts } from "../firebase/products";
+import { getServices } from "../firebase/services";
 import { db } from "../firebase/config";
 import { doc, setDoc, updateDoc, increment } from "firebase/firestore";
 import { buildEnquiryURL } from "../utils/whatsapp";
@@ -34,7 +35,7 @@ import { initMetaPixel, trackPixel } from '../utils/metaPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
 import GuaranteeBadge from "../components/GuaranteeBadge";
 import DesignedStorefront from "../components/storefront/DesignedStorefront";
-import { isDesignLive } from "../utils/storeDesign";
+import { isDesignLive, livePages, fontStack } from "../utils/storeDesign";
 
 const EMPTY_CHECKOUT_FORM = {
   customerName: "",
@@ -1049,6 +1050,9 @@ export default function StorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
+  // Only fetched for vendors selling both, and only used by a live custom
+  // design. The standard product page does not read this.
+  const [designServices, setDesignServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [search, setSearch] = useState("");
@@ -1199,6 +1203,17 @@ export default function StorePage() {
         const prods = await getProducts(storeData.id, storeData.maxProducts);
         setProducts(prods);
 
+        // A "both" vendor stays on this page, so a live design here needs the
+        // services too or its service sections would render empty.
+        if (storeData.vendorType === "both") {
+          try {
+            const svcs = await getServices(storeData.id, storeData.maxProducts);
+            setDesignServices((svcs || []).filter((s) => s.isActive !== false));
+          } catch {
+            // Presentation only: a failure here must not break the store page.
+          }
+        }
+
         if (!viewCountedRef.current) {
           viewCountedRef.current = true;
           try {
@@ -1274,14 +1289,52 @@ export default function StorePage() {
 
   // Presentation only. Nothing below changes how an order is placed.
   const designLive = isDesignLive(store);
-  const designCategories = [...new Set((products || []).map((p) => p.category).filter(Boolean))];
+  const designCategories = [
+    ...new Set(
+      [...(products || []), ...(designServices || [])]
+        .map((p) => p.category)
+        .filter(Boolean),
+    ),
+  ];
   const designStats = [
     { value: `${(products || []).length}+`, label: "Products" },
+    ...(designServices.length
+      ? [{ value: `${designServices.length}+`, label: "Services" }]
+      : []),
     { value: `${designCategories.length}+`, label: "Categories" },
   ];
   const designWhatsappUrl = store?.whatsappNumber
     ? `https://wa.me/${String(store.whatsappNumber).replace(/\D/g, "")}`
     : "";
+  // Only tabs this page actually renders. A footer link with no destination is
+  // worse than no link at all.
+  const designHelpLinks = [
+    { label: "My orders", onClick: () => setActiveTab("orders") },
+    { label: "Browse categories", onClick: () => setActiveTab("categories") },
+    // Only pages the vendor actually published, so no link can 404.
+    ...livePages(store).map((pg) => ({
+      label: pg.label,
+      onClick: () =>
+        navigate(`/${store.slug || store.storeName}/${pg.path}`),
+    })),
+    ...(designWhatsappUrl
+      ? [{ label: "Contact us", href: designWhatsappUrl }]
+      : []),
+  ];
+
+  // When a custom design is live the product detail overlay must follow it,
+  // otherwise tapping a product drops the customer back into the old theme.
+  // Only the presentation props are swapped: the overlay's cart, variation and
+  // order logic is untouched.
+  const designTokens = designLive
+    ? {
+        primary: store.storeDesign?.theme?.primary || themePrimary,
+        card: store.storeDesign?.theme?.pageBg || themeCard,
+        text: store.storeDesign?.theme?.textColor || themeText,
+        body: fontStack(store.storeDesign?.theme?.fontBody),
+        header: fontStack(store.storeDesign?.theme?.fontHeading),
+      }
+    : null;
 
   const handleAddToCart = (product) => {
     triggerSessionEngagement();
@@ -1708,13 +1761,19 @@ export default function StorePage() {
             design={store.storeDesign}
             store={store}
             products={products}
+            services={designServices}
             categories={designCategories}
             reviews={[]}
             stats={designStats}
             whatsappUrl={designWhatsappUrl}
+            helpLinks={designHelpLinks}
+            activeCategory={activeCategory}
             onAddToCart={handleAddToCart}
             onOrder={(p) => setSelectedProduct(p)}
-            onCategory={() => setActiveTab("categories")}
+            onBook={() => navigate(`/${store.storeName}/services`)}
+            onCategory={(cat) => setActiveCategory(cat)}
+            onClearCategory={() => setActiveCategory("All")}
+            onViewAll={() => setActiveTab("categories")}
             onCta={() => setActiveTab("categories")}
           />
         )}
@@ -2026,11 +2085,11 @@ export default function StorePage() {
           isCartEnabled={isCartEnabled}
           isProOrPremium={isProOrPremium}
           activeThemeObj={activeThemeObj}
-          themePrimary={themePrimary}
-          themeCard={themeCard}
-          themeText={themeText}
-          bodyFont={bodyFont}
-          headerFont={headerFont}
+          themePrimary={designTokens?.primary || themePrimary}
+          themeCard={designTokens?.card || themeCard}
+          themeText={designTokens?.text || themeText}
+          bodyFont={designTokens?.body || bodyFont}
+          headerFont={designTokens?.header || headerFont}
           whatsappNumber={store.whatsappNumber}
           storeUrl={storeUrl}
         />

@@ -1,29 +1,43 @@
 // src/components/dashboard/StoreDesignTab.jsx
 //
-// The Store Design builder. Add sections, reorder them, restyle each one, and
-// see the result before anything goes live.
+// The Store Design builder. Add sections, reorder them, restyle each one, set
+// how product and service cards look, and see the result before it goes live.
 //
 // The preview renders the SAME DesignedStorefront component the live storefront
-// uses, with the vendor's real products, categories and reviews. It is not a
-// mock-up. A separate preview renderer is how a vendor ends up publishing
+// uses, with the vendor's real products, services, categories and reviews. It is
+// not a mock-up. A separate preview renderer is how a vendor ends up publishing
 // something they never actually saw.
+//
+// THE EDITOR FOLLOWS THE VENDOR.
+// A products vendor is never offered a service list; a services vendor is never
+// offered a product row or a product card panel. A "both" vendor gets both.
+// Offering a section a vendor has no data for is how a builder produces an empty
+// page and gets blamed for it.
 //
 // REORDERING WORKS ON A PHONE
 // Up/down buttons are the primary control, not a fallback. HTML5 drag and drop
 // does not fire on touch, and most Nigerian vendors are on a phone, so a
 // drag-only builder would be unusable for the people it is built for. Drag is
 // added on top for pointer devices.
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Loader2, Check, AlertCircle, Lock, Plus, Trash2, Eye, EyeOff,
-  ChevronUp, ChevronDown, Settings2, Palette, GripVertical, X,
+  ChevronUp, ChevronDown, ChevronRight, Settings2, Palette, GripVertical, X,
+  Smartphone, Tablet, Monitor, Package, CalendarClock, Type,
+  Undo2, Redo2, Sparkles, BellRing, CalendarRange, RotateCcw, FileText, ExternalLink,
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { getProducts } from '../../firebase/products'
+import { getServices } from '../../firebase/services'
 import {
-  SECTION_TYPES, SECTION_ORDER, FONT_OPTIONS, makeSection, defaultDesign,
+  SECTION_TYPES, FONT_OPTIONS, THEME_FIELDS, PRODUCT_CARD_FIELDS, SERVICE_CARD_FIELDS,
+  POPUP_FIELDS, PRESETS, applyPreset, CUSTOM_PAGES,
+  sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, defaultDesign,
 } from '../../utils/storeDesign'
 import DesignedStorefront from '../storefront/DesignedStorefront'
+
+const inputCls =
+  'mt-1 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs outline-none focus:border-green-400'
 
 function ColorField({ label, value, onChange }) {
   return (
@@ -42,46 +56,68 @@ function ColorField({ label, value, onChange }) {
   )
 }
 
-/** Settings are generated from the section's declared fields, never hand-written. */
-function SectionSettings({ section, onChange }) {
-  const def = SECTION_TYPES[section.type]
-  if (!def) return null
-  const set = (key, value) =>
-    onChange({ ...section, settings: { ...section.settings, [key]: value } })
-
+function Toggle({ label, value, onChange }) {
   return (
-    <div className="space-y-3 border-t border-gray-100 p-3">
-      {def.fields.map((f) => {
-        const v = section.settings?.[f.key]
-        if (f.type === 'color') return <ColorField key={f.key} label={f.label} value={v} onChange={(x) => set(f.key, x)} />
-        if (f.type === 'toggle') {
-          return (
-            <label key={f.key} className="flex items-center justify-between gap-3">
-              <span className="min-w-0 flex-1 text-[11px] font-semibold text-gray-600">{f.label}</span>
-              <button
-                type="button"
-                onClick={() => set(f.key, !v)}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors ${v ? 'bg-green-600' : 'bg-gray-200'}`}
-              >
-                <span className={`pointer-events-none mt-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${v ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </button>
-            </label>
-          )
-        }
-        if (f.type === 'select') {
+    <label className="flex items-center justify-between gap-3">
+      <span className="min-w-0 flex-1 text-[11px] font-semibold text-gray-600">{label}</span>
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors ${value ? 'bg-green-600' : 'bg-gray-200'}`}
+      >
+        <span className={`pointer-events-none mt-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${value ? 'translate-x-4' : 'translate-x-0.5'}`} />
+      </button>
+    </label>
+  )
+}
+
+/**
+ * Renders one declared field list into controls. Used for the theme, both card
+ * panels and every section, so a new setting in storeDesign.js gets an editor
+ * with no new UI code here.
+ */
+function FieldList({ fields, values, onSet, categories = [] }) {
+  return (
+    <div className="space-y-3">
+      {fields.map((f) => {
+        const v = values?.[f.key]
+
+        if (f.type === 'color') return <ColorField key={f.key} label={f.label} value={v} onChange={(x) => onSet(f.key, x)} />
+        if (f.type === 'toggle') return <Toggle key={f.key} label={f.label} value={v} onChange={(x) => onSet(f.key, x)} />
+
+        if (f.type === 'font' || f.type === 'select') {
+          const opts = f.type === 'font'
+            ? FONT_OPTIONS.map((o) => [o.id, o.label])
+            : f.options.map((o) => [o, o])
           return (
             <label key={f.key} className="block">
               <span className="text-[11px] font-semibold text-gray-600">{f.label}</span>
-              <select
-                value={v}
-                onChange={(e) => set(f.key, e.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs outline-none focus:border-green-400"
-              >
-                {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+              <select value={v} onChange={(e) => onSet(f.key, e.target.value)} className={inputCls}>
+                {opts.map(([val, lab]) => <option key={val} value={val}>{lab}</option>)}
               </select>
             </label>
           )
         }
+
+        // A category picker built from the vendor's REAL categories. Typing a
+        // category by hand is how a row silently renders empty.
+        if (f.type === 'category') {
+          return (
+            <label key={f.key} className="block">
+              <span className="text-[11px] font-semibold text-gray-600">{f.label}</span>
+              <select value={v || ''} onChange={(e) => onSet(f.key, e.target.value)} className={inputCls}>
+                <option value="">Choose a category</option>
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {!categories.length && (
+                <span className="mt-1 block text-[10px] text-gray-400">
+                  You have no categories yet. Add one to a product or service first.
+                </span>
+              )}
+            </label>
+          )
+        }
+
         const Tag = f.type === 'textarea' ? 'textarea' : 'input'
         return (
           <label key={f.key} className="block">
@@ -89,9 +125,9 @@ function SectionSettings({ section, onChange }) {
             <Tag
               value={v || ''}
               maxLength={f.max}
-              rows={f.type === 'textarea' ? 2 : undefined}
-              onChange={(e) => set(f.key, e.target.value)}
-              className="mt-1 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs outline-none focus:border-green-400"
+              rows={f.type === 'textarea' ? 3 : undefined}
+              onChange={(e) => onSet(f.key, e.target.value)}
+              className={inputCls}
             />
           </label>
         )
@@ -100,11 +136,44 @@ function SectionSettings({ section, onChange }) {
   )
 }
 
+/** A collapsible settings card. Keeps a long editor navigable on a phone. */
+function Panel({ icon: Icon, title, hint, open, onToggle, children }) {
+  return (
+    <div className="mb-3 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-2.5 p-4 text-left"
+      >
+        <Icon size={15} className="flex-shrink-0 text-gray-400" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-gray-900">{title}</span>
+          {hint ? <span className="mt-0.5 block text-[11px] leading-relaxed text-gray-500">{hint}</span> : null}
+        </span>
+        <ChevronRight size={15} className={`flex-shrink-0 text-gray-300 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open ? <div className="border-t border-gray-100 p-4">{children}</div> : null}
+    </div>
+  )
+}
+
+const DEVICES = [
+  { id: 'mobile', icon: Smartphone, width: 390, label: 'Phone' },
+  { id: 'tablet', icon: Tablet, width: 768, label: 'Tablet' },
+  { id: 'desktop', icon: Monitor, width: 0, label: 'Desktop' },
+]
+
 export default function StoreDesignTab({ store, storeUrl }) {
-  const [design, setDesign] = useState(defaultDesign())
+  const vendorType = String(store?.vendorType || 'products').toLowerCase()
+  const hasProducts = vendorHasProducts(vendorType)
+  const hasServices = vendorHasServices(vendorType)
+
+  const [design, setDesign] = useState(() => defaultDesign(vendorType))
   const [meta, setMeta] = useState({ eligible: false, live: false, plan: 'starter', hasSaved: false })
   const [products, setProducts] = useState([])
+  const [services, setServices] = useState([])
   const [openId, setOpenId] = useState(null)
+  const [panel, setPanel] = useState('sections')
   const [adding, setAdding] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -112,6 +181,16 @@ export default function StoreDesignTab({ store, storeUrl }) {
   const [success, setSuccess] = useState('')
   const [dirty, setDirty] = useState(false)
   const [dragId, setDragId] = useState(null)
+  const [device, setDevice] = useState('mobile')
+  // Undo/redo. Capped so a long session cannot grow without bound.
+  const [past, setPast] = useState([])
+  const [future, setFuture] = useState([])
+  const [draft, setDraft] = useState(null)
+  // Which layout the section list below is editing: the shop front, or one of
+  // the vendor's extra pages.
+  const [editing, setEditing] = useState('home')
+
+  const draftKey = `sp_design_draft_${store?.id || 'store'}`
 
   const authed = useCallback(async (url, options = {}) => {
     const token = await auth.currentUser?.getIdToken()
@@ -125,16 +204,27 @@ export default function StoreDesignTab({ store, storeUrl }) {
     let cancelled = false
     ;(async () => {
       try {
-        const [res, items] = await Promise.all([
+        const [res, items, svcs] = await Promise.all([
           authed('/api/store-design?action=get').then((r) => r.json()).catch(() => null),
-          getProducts(store.id, 12).catch(() => []),
+          hasProducts ? getProducts(store.id, 12).catch(() => []) : Promise.resolve([]),
+          hasServices ? getServices(store.id, 12).catch(() => []) : Promise.resolve([]),
         ])
         if (cancelled) return
         if (res?.success) {
-          setDesign(res.design || defaultDesign())
+          setDesign(res.design || defaultDesign(vendorType))
           setMeta({ eligible: res.eligible, live: res.live, plan: res.plan, hasSaved: res.hasSaved })
         }
         setProducts(items || [])
+        setServices(svcs || [])
+
+        // A draft is offered, never applied silently: overwriting what a vendor
+        // last published without asking is worse than losing an edit.
+        try {
+          const saved = localStorage.getItem(`sp_design_draft_${store.id}`)
+          if (saved) setDraft(JSON.parse(saved))
+        } catch {
+          // Unreadable or unavailable storage just means no draft to offer.
+        }
       } catch {
         if (!cancelled) setError('Could not load your design.')
       } finally {
@@ -142,9 +232,55 @@ export default function StoreDesignTab({ store, storeUrl }) {
       }
     })()
     return () => { cancelled = true }
-  }, [store?.id, authed])
+  }, [store?.id, authed, vendorType, hasProducts, hasServices])
 
-  const update = (next) => { setDesign(next); setDirty(true) }
+  // Autosave to this browser. Not a substitute for saving to the server, but it
+  // means a closed tab or a dead battery does not cost an afternoon's work.
+  useEffect(() => {
+    if (!dirty) return
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(design))
+      } catch {
+        // Storage full or blocked: the beforeunload guard below still warns.
+      }
+    }, 800)
+    return () => clearTimeout(id)
+  }, [design, dirty, draftKey])
+
+  // Leaving with unsaved work is the single most common way a builder loses a
+  // vendor's afternoon.
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  const update = (next) => {
+    setPast((p) => [...p, design].slice(-40))
+    setFuture([])
+    setDesign(next)
+    setDirty(true)
+  }
+
+  const undo = () => {
+    if (!past.length) return
+    setFuture((f) => [design, ...f].slice(0, 40))
+    setDesign(past[past.length - 1])
+    setPast((p) => p.slice(0, -1))
+    setDirty(true)
+  }
+
+  const redo = () => {
+    if (!future.length) return
+    setPast((p) => [...p, design].slice(-40))
+    setDesign(future[0])
+    setFuture((f) => f.slice(1))
+    setDirty(true)
+  }
+  const setTheme = (k, v) => update({ ...design, theme: { ...design.theme, [k]: v } })
+  const setCard = (which) => (k, v) => update({ ...design, [which]: { ...design[which], [k]: v } })
 
   const save = async (override) => {
     const payload = { ...design, ...(override || {}) }
@@ -159,6 +295,12 @@ export default function StoreDesignTab({ store, storeUrl }) {
       setDesign(d.design)
       setMeta((m) => ({ ...m, live: d.live, hasSaved: true }))
       setDirty(false)
+      setDraft(null)
+      try {
+        localStorage.removeItem(draftKey)
+      } catch {
+        // Nothing to clean up if storage is unavailable.
+      }
       setSuccess(d.live ? 'Saved and live on your store page.' : 'Saved.')
       setTimeout(() => setSuccess(''), 4000)
     } catch {
@@ -169,30 +311,56 @@ export default function StoreDesignTab({ store, storeUrl }) {
   }
 
   const move = (index, dir) => {
-    const next = [...design.sections]
+    const next = [...currentSections]
     const to = index + dir
     if (to < 0 || to >= next.length) return
     ;[next[index], next[to]] = [next[to], next[index]]
-    update({ ...design, sections: next })
+    setSections(next)
   }
 
   const dropOn = (targetId) => {
     if (!dragId || dragId === targetId) return
-    const next = [...design.sections]
+    const next = [...currentSections]
     const from = next.findIndex((s) => s.id === dragId)
     const to = next.findIndex((s) => s.id === targetId)
     if (from < 0 || to < 0) return
     const [moved] = next.splice(from, 1)
     next.splice(to, 0, moved)
-    update({ ...design, sections: next })
+    setSections(next)
     setDragId(null)
   }
 
-  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))]
-  const stats = [
-    { value: `${products.length}+`, label: 'Products' },
-    { value: `${categories.length}+`, label: 'Categories' },
-  ]
+  const currentSections =
+    editing === 'home' ? design.sections : design.pages?.[editing]?.sections || []
+
+  const setSections = (next) =>
+    update(
+      editing === 'home'
+        ? { ...design, sections: next }
+        : {
+            ...design,
+            pages: { ...design.pages, [editing]: { ...design.pages[editing], sections: next } },
+          },
+    )
+
+  const patchSection = (id, patch) =>
+    setSections(currentSections.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+
+  // Categories come from whichever catalogue the vendor actually has.
+  const categories = useMemo(
+    () => [...new Set([...products, ...services].map((p) => p.category).filter(Boolean))],
+    [products, services]
+  )
+
+  const stats = useMemo(() => {
+    const out = []
+    if (hasProducts && products.length) out.push({ value: `${products.length}+`, label: 'Products' })
+    if (hasServices && services.length) out.push({ value: `${services.length}+`, label: 'Services' })
+    if (categories.length) out.push({ value: `${categories.length}`, label: 'Categories' })
+    return out
+  }, [hasProducts, hasServices, products.length, services.length, categories.length])
+
+  const allowedTypes = useMemo(() => sectionsForVendor(vendorType), [vendorType])
 
   if (loading) {
     return (
@@ -203,6 +371,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
   }
 
   const locked = !meta.eligible
+  const deviceWidth = DEVICES.find((d) => d.id === device)?.width || 0
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
@@ -232,6 +401,35 @@ export default function StoreDesignTab({ store, storeUrl }) {
         </div>
       )}
 
+      {draft && !dirty && (
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center">
+          <RotateCcw size={16} className="flex-shrink-0 text-blue-600" />
+          <p className="min-w-0 flex-1 text-xs leading-relaxed text-blue-900">
+            <span className="font-bold">You have unsaved changes from last time.</span>{' '}
+            They are stored in this browser only.
+          </p>
+          <div className="flex flex-shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => { update(draft); setDraft(null) }}
+              className="rounded-xl bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white"
+            >
+              Restore
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(null)
+                try { localStorage.removeItem(draftKey) } catch { /* already gone */ }
+              }}
+              className="rounded-xl bg-white px-3 py-1.5 text-[11px] font-bold text-blue-700"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Master switch */}
       <div className={`mb-4 rounded-2xl border p-4 ${meta.live ? 'border-green-200 bg-green-50/60' : 'border-gray-100 bg-white'}`}>
         <div className="flex items-start justify-between gap-3">
@@ -256,39 +454,158 @@ export default function StoreDesignTab({ store, storeUrl }) {
       </div>
 
       <fieldset disabled={locked} className={locked ? 'opacity-60' : ''}>
-        {/* Global type and background */}
-        <div className="mb-4 rounded-2xl border border-gray-100 bg-white p-4">
-          <p className="mb-3 text-sm font-bold text-gray-900">Fonts and background</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              ['Headings', 'fontHeading'],
-              ['Body text', 'fontBody'],
-            ].map(([label, key]) => (
-              <label key={key} className="block">
-                <span className="text-[11px] font-semibold text-gray-600">{label}</span>
-                <select
-                  value={design.theme[key]}
-                  onChange={(e) => update({ ...design, theme: { ...design.theme, [key]: e.target.value } })}
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs outline-none focus:border-green-400"
-                >
-                  {FONT_OPTIONS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
-              </label>
+        <Panel
+          icon={Sparkles}
+          title="Ready-made looks"
+          hint="Pick a style to restyle your whole store at once. Your words are kept."
+          open={panel === 'presets'}
+          onToggle={() => setPanel(panel === 'presets' ? '' : 'presets')}
+        >
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => update(applyPreset(design, preset.id))}
+                className="flex items-center gap-3 rounded-xl border border-gray-100 p-3 text-left transition-colors hover:border-green-300 hover:bg-green-50/50"
+              >
+                <span className="flex flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
+                  {preset.swatch.map((c) => (
+                    <span key={c} className="block h-8 w-3.5" style={{ background: c }} />
+                  ))}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-gray-900">{preset.label}</span>
+                  <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-500">{preset.hint}</span>
+                </span>
+              </button>
             ))}
-            <div className="flex items-end">
-              <div className="w-full">
-                <ColorField
-                  label="Page background"
-                  value={design.theme.pageBg}
-                  onChange={(v) => update({ ...design, theme: { ...design.theme, pageBg: v } })}
-                />
-              </div>
-            </div>
           </div>
-        </div>
+          <p className="mt-3 text-[10px] leading-relaxed text-gray-400">
+            A look changes colours, fonts and card styling only. Your headlines, answers and
+            section order are left exactly as you wrote them, and you can undo it.
+          </p>
+        </Panel>
+
+        <Panel
+          icon={Type}
+          title="Colours and type"
+          hint="Fonts, colours, corners and width. These apply to the whole page."
+          open={panel === 'theme'}
+          onToggle={() => setPanel(panel === 'theme' ? '' : 'theme')}
+        >
+          <FieldList fields={THEME_FIELDS} values={design.theme} onSet={setTheme} />
+        </Panel>
+
+        {hasProducts && (
+          <Panel
+            icon={Package}
+            title="Product cards"
+            hint="How every product on your page looks: image shape, price, button."
+            open={panel === 'product'}
+            onToggle={() => setPanel(panel === 'product' ? '' : 'product')}
+          >
+            <FieldList fields={PRODUCT_CARD_FIELDS} values={design.productCard} onSet={setCard('productCard')} />
+          </Panel>
+        )}
+
+        {hasServices && (
+          <Panel
+            icon={CalendarClock}
+            title="Service booking cards"
+            hint="How every service on your page looks: duration, price, booking button."
+            open={panel === 'service'}
+            onToggle={() => setPanel(panel === 'service' ? '' : 'service')}
+          >
+            <FieldList fields={SERVICE_CARD_FIELDS} values={design.serviceCard} onSet={setCard('serviceCard')} />
+          </Panel>
+        )}
+
+        <Panel
+          icon={BellRing}
+          title="Welcome popup"
+          hint="One popup, shown once per visitor. Good for a first-order discount."
+          open={panel === 'popup'}
+          onToggle={() => setPanel(panel === 'popup' ? '' : 'popup')}
+        >
+          <FieldList
+            fields={POPUP_FIELDS}
+            values={design.popup}
+            onSet={(k, v) => update({ ...design, popup: { ...design.popup, [k]: v } })}
+          />
+        </Panel>
 
         {/* Sections */}
-        <div className="mb-4 rounded-2xl border border-gray-100 bg-white p-4">
+        <div className="mb-3 rounded-2xl border border-gray-100 bg-white p-4">
+          {/* Which page is being built. The shop front always exists; the rest
+              are extra pages the vendor switches on one at a time. */}
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {[{ key: 'home', label: 'Shop front' }, ...CUSTOM_PAGES].map((pg) => (
+              <button
+                key={pg.key}
+                type="button"
+                onClick={() => { setEditing(pg.key); setOpenId(null); setAdding(false) }}
+                className={`rounded-lg px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                  editing === pg.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {pg.label}
+              </button>
+            ))}
+          </div>
+
+          {editing !== 'home' && (
+            <div className="mb-3 rounded-xl bg-gray-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-gray-900">
+                    Publish this page
+                  </p>
+                  <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
+                    {CUSTOM_PAGES.find((x) => x.key === editing)?.hint}
+                  </p>
+                  {design.pages?.[editing]?.enabled && storeUrl ? (
+                    <a
+                      href={`${storeUrl}/${CUSTOM_PAGES.find((x) => x.key === editing)?.path}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-green-700 hover:underline"
+                    >
+                      <ExternalLink size={10} />
+                      {`${storeUrl}/${CUSTOM_PAGES.find((x) => x.key === editing)?.path}`}
+                    </a>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    update({
+                      ...design,
+                      pages: {
+                        ...design.pages,
+                        [editing]: {
+                          ...design.pages[editing],
+                          enabled: !design.pages[editing]?.enabled,
+                        },
+                      },
+                    })
+                  }
+                  aria-label="Publish this page"
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors ${
+                    design.pages?.[editing]?.enabled ? 'bg-green-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span className={`pointer-events-none mt-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${design.pages?.[editing]?.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              {!design.enabled && (
+                <p className="mt-2 text-[10px] font-semibold text-amber-700">
+                  Extra pages only go live while "Use my design" is on.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-sm font-bold text-gray-900">Sections</p>
             <button
@@ -302,12 +619,12 @@ export default function StoreDesignTab({ store, storeUrl }) {
 
           {adding && (
             <div className="mb-3 grid grid-cols-1 gap-1.5 rounded-xl bg-gray-50 p-2 sm:grid-cols-2">
-              {SECTION_ORDER.map((type) => (
+              {allowedTypes.map((type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => {
-                    update({ ...design, sections: [...design.sections, makeSection(type)] })
+                    setSections([...currentSections, makeSection(type)])
                     setAdding(false)
                   }}
                   className="rounded-lg bg-white p-2.5 text-left transition-colors hover:bg-green-50"
@@ -319,8 +636,17 @@ export default function StoreDesignTab({ store, storeUrl }) {
             </div>
           )}
 
+          {!currentSections.length && (
+            <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center">
+              <p className="text-xs font-bold text-gray-700">This page has no sections yet</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
+                Add one above to start building it.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            {design.sections.map((section, i) => (
+            {currentSections.map((section, i) => (
               <div
                 key={section.id}
                 draggable={!locked}
@@ -329,24 +655,32 @@ export default function StoreDesignTab({ store, storeUrl }) {
                 onDrop={() => dropOn(section.id)}
                 className={`rounded-xl border bg-white ${dragId === section.id ? 'border-green-400 opacity-60' : 'border-gray-100'}`}
               >
-                <div className="flex items-center gap-2 p-2.5">
+                <div className="flex items-center gap-1 p-2.5">
                   <GripVertical size={14} className="hidden flex-shrink-0 cursor-grab text-gray-300 sm:block" />
                   <div className="min-w-0 flex-1">
                     <p className={`truncate text-xs font-bold ${section.visible === false ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                       {SECTION_TYPES[section.type]?.label || section.type}
                     </p>
+                    {section.hideOnMobile || section.scheduleStart || section.scheduleEnd ? (
+                      <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                        {[
+                          section.hideOnMobile ? 'Desktop only' : '',
+                          section.scheduleStart || section.scheduleEnd ? 'Scheduled' : '',
+                        ].filter(Boolean).join(' · ')}
+                      </p>
+                    ) : null}
                   </div>
                   {/* Buttons, not drag, are the primary reorder control: HTML5
                       drag does not fire on touch and most vendors are on a phone. */}
                   <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded p-1 text-gray-400 disabled:opacity-30" aria-label="Move up">
                     <ChevronUp size={14} />
                   </button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={i === design.sections.length - 1} className="rounded p-1 text-gray-400 disabled:opacity-30" aria-label="Move down">
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === currentSections.length - 1} className="rounded p-1 text-gray-400 disabled:opacity-30" aria-label="Move down">
                     <ChevronDown size={14} />
                   </button>
                   <button
                     type="button"
-                    onClick={() => update({ ...design, sections: design.sections.map((x) => x.id === section.id ? { ...x, visible: x.visible === false } : x) })}
+                    onClick={() => patchSection(section.id, { visible: section.visible === false })}
                     className="rounded p-1 text-gray-400"
                     aria-label="Show or hide"
                   >
@@ -362,18 +696,56 @@ export default function StoreDesignTab({ store, storeUrl }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => update({ ...design, sections: design.sections.filter((x) => x.id !== section.id) })}
+                    onClick={() => setSections(currentSections.filter((x) => x.id !== section.id))}
                     className="rounded p-1 text-gray-300 hover:text-red-500"
                     aria-label="Remove section"
                   >
                     <Trash2 size={14} />
                   </button>
                 </div>
+
                 {openId === section.id && (
-                  <SectionSettings
-                    section={section}
-                    onChange={(next) => update({ ...design, sections: design.sections.map((x) => x.id === next.id ? next : x) })}
-                  />
+                  <div className="space-y-3 border-t border-gray-100 p-3">
+                    <FieldList
+                      fields={SECTION_TYPES[section.type]?.fields || []}
+                      values={section.settings}
+                      categories={categories}
+                      onSet={(k, v) => patchSection(section.id, { settings: { ...section.settings, [k]: v } })}
+                    />
+                    <div className="space-y-3 border-t border-gray-100 pt-3">
+                      <Toggle
+                        label="Hide this section on phones"
+                        value={!!section.hideOnMobile}
+                        onChange={(v) => patchSection(section.id, { hideOnMobile: v })}
+                      />
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600">
+                        <CalendarRange size={12} className="text-gray-400" /> Show only between these dates
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="block">
+                          <span className="text-[10px] font-semibold text-gray-500">From</span>
+                          <input
+                            type="date"
+                            value={section.scheduleStart || ''}
+                            onChange={(e) => patchSection(section.id, { scheduleStart: e.target.value })}
+                            className={inputCls}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[10px] font-semibold text-gray-500">Until</span>
+                          <input
+                            type="date"
+                            value={section.scheduleEnd || ''}
+                            onChange={(e) => patchSection(section.id, { scheduleEnd: e.target.value })}
+                            className={inputCls}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-[10px] leading-relaxed text-gray-400">
+                        Leave both empty to always show it. Dates run to the end of the day.
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
@@ -381,23 +753,50 @@ export default function StoreDesignTab({ store, storeUrl }) {
         </div>
       </fieldset>
 
-      {/* Preview: the real renderer, the real products. */}
+      {/* Preview: the real renderer, the real catalogue. */}
       <div className="mb-4 rounded-2xl border border-gray-100 bg-white p-4">
-        <p className="text-sm font-bold text-gray-900">Preview</p>
-        <p className="mt-0.5 text-[11px] text-gray-400">
-          This is the same code your store page uses, with your real products. What you see here is what customers get.
-        </p>
-        <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-900">Preview</p>
+            <p className="mt-0.5 text-[11px] text-gray-400">
+              The same code your store page uses, with your real items.
+            </p>
+          </div>
+          <div className="flex flex-shrink-0 gap-1 rounded-xl bg-gray-100 p-1">
+            {DEVICES.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setDevice(d.id)}
+                aria-label={d.label}
+                className={`rounded-lg px-2.5 py-1.5 transition-colors ${device === d.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
+              >
+                <d.icon size={14} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
           <div className="max-h-[540px] overflow-y-auto">
-            <DesignedStorefront
-              design={design}
-              store={store}
-              products={products}
-              categories={categories}
-              reviews={[]}
-              stats={stats}
-              whatsappUrl={store?.whatsappNumber ? `https://wa.me/${String(store.whatsappNumber).replace(/\D/g, '')}` : ''}
-            />
+            {/* A real width, not a CSS transform: the storefront's own
+                breakpoints then decide the layout, exactly as on a phone. */}
+            <div
+              className="mx-auto bg-white transition-all"
+              style={deviceWidth ? { width: deviceWidth, maxWidth: '100%' } : undefined}
+            >
+              <DesignedStorefront
+                design={{ ...design, sections: currentSections }}
+                store={store}
+                products={products}
+                services={services}
+                categories={categories}
+                reviews={[]}
+                stats={stats}
+                helpLinks={[]}
+                whatsappUrl={store?.whatsappNumber ? `https://wa.me/${String(store.whatsappNumber).replace(/\D/g, '')}` : ''}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -416,12 +815,30 @@ export default function StoreDesignTab({ store, storeUrl }) {
       )}
 
       {!locked && (
-        <div className="sticky bottom-3 z-10">
+        <div className="sticky bottom-3 z-10 flex gap-2">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!past.length}
+            aria-label="Undo"
+            className="flex flex-shrink-0 items-center justify-center rounded-xl bg-white px-3.5 py-3 text-gray-700 shadow-lg ring-1 ring-gray-200 transition-colors disabled:text-gray-300 disabled:shadow-none"
+          >
+            <Undo2 size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={!future.length}
+            aria-label="Redo"
+            className="flex flex-shrink-0 items-center justify-center rounded-xl bg-white px-3.5 py-3 text-gray-700 shadow-lg ring-1 ring-gray-200 transition-colors disabled:text-gray-300 disabled:shadow-none"
+          >
+            <Redo2 size={16} />
+          </button>
           <button
             type="button"
             onClick={() => save()}
             disabled={saving || !dirty}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-green-600/20 transition-all hover:bg-green-700 active:scale-[0.99] disabled:bg-gray-300 disabled:shadow-none"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-green-600/20 transition-all hover:bg-green-700 active:scale-[0.99] disabled:bg-gray-300 disabled:shadow-none"
           >
             {saving ? <><Loader2 size={15} className="animate-spin" /> Saving...</> : dirty ? 'Save design' : 'Saved'}
           </button>

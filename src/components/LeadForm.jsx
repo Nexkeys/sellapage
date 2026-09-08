@@ -3,7 +3,25 @@ import { useState } from 'react'
 import { CheckCircle, Loader2, MessageCircle, User, Phone, HelpCircle } from 'lucide-react'
 import { saveLead } from '../firebase/leads'
 
-export default function LeadForm({ storeId, storeName, whatsappNumber, leadType = 'product' }) {
+/**
+ * `theme` is optional and purely additive. When it is absent every style below
+ * is `undefined`, so the standard storefront renders exactly as it always has.
+ * When a custom Store Design passes one, inline styles override the Tailwind
+ * classes so the form matches the vendor's colours instead of sitting on the
+ * page as a white box. No logic changes either way: the same saveLead call, the
+ * same fields, the same validation.
+ */
+export default function LeadForm({ storeId, storeName, whatsappNumber, leadType = 'product', theme = null }) {
+  const card = theme ? { background: theme.card, borderColor: theme.border, borderRadius: theme.radius } : undefined
+  const head = theme ? { background: 'transparent', borderColor: theme.border } : undefined
+  const strong = theme ? { color: theme.text } : undefined
+  const muted = theme ? { color: theme.text, opacity: 0.7 } : undefined
+  const field = theme
+    ? { background: theme.field, borderColor: theme.border, color: theme.text, borderRadius: theme.radius }
+    : undefined
+  const cta = theme
+    ? { background: theme.primary, color: theme.onPrimary, borderRadius: theme.radius }
+    : undefined
   const [form, setForm]         = useState({ name: '', phone: '', interest: '' })
   const [loading, setLoading]   = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -44,16 +62,16 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
+    <div style={card} className="bg-white rounded-2xl border border-gray-100 shadow-sm shadow-gray-100/80 overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-start gap-3">
+      <div style={head} className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-start gap-3">
         <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
           <MessageCircle size={18} className="text-green-600" />
         </div>
         <div>
-          <h3 className="font-bold text-gray-900 text-base">Have a question?</h3>
-          <p className="text-gray-500 text-sm mt-0.5">
-            Leave your details and <span className="font-medium text-gray-700">{storeName}</span> will reply via WhatsApp.
+          <h3 style={strong} className="font-bold text-gray-900 text-base">Have a question?</h3>
+          <p style={muted} className="text-gray-500 text-sm mt-0.5">
+            Leave your details and <span style={strong} className="font-medium text-gray-700">{storeName}</span> will reply via WhatsApp.
           </p>
         </div>
       </div>
@@ -62,7 +80,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+            <label style={muted} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               <User size={12} />Your Name
             </label>
             <input
@@ -70,11 +88,12 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
               value={form.name}
               onChange={update('name')}
               placeholder="E.g. Amara Okafor"
+              style={field}
               className="w-full px-4 py-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
             />
           </div>
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+            <label style={muted} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               <Phone size={12} />WhatsApp Number
             </label>
             <input
@@ -82,13 +101,14 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
               value={form.phone}
               onChange={update('phone')}
               placeholder="E.g. 08012345678"
+              style={field}
               className="w-full px-4 py-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
             />
           </div>
         </div>
 
         <div>
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+          <label style={muted} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
             <HelpCircle size={12} />What are you looking for?
             <span className="text-gray-400 font-normal normal-case tracking-normal ml-1">(Optional)</span>
           </label>
@@ -97,6 +117,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
             onChange={update('interest')}
             placeholder="E.g. I'm interested in the blue dress, do you have size M?"
             rows={3}
+            style={field}
             className="w-full px-4 py-3 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl outline-none placeholder:text-gray-400 transition-all focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 resize-none"
           />
         </div>
@@ -110,6 +131,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
         <button
           type="submit"
           disabled={loading}
+          style={loading ? undefined : cta}
           className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
         >
           {loading

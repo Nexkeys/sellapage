@@ -18,6 +18,8 @@ import LeadForm from "../components/LeadForm";
 import ServiceCard from "../components/ServiceCard";
 import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
+import DesignedStorefront from "../components/storefront/DesignedStorefront";
+import { isDesignLive, livePages } from "../utils/storeDesign";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import { SkeletonStorefront } from "../components/Skeleton";
@@ -597,6 +599,31 @@ export default function ServiceStorePage() {
   ).filter((service) => service.isActive !== false);
 
   const vendorType = store?.vendorType || "services";
+
+  // Presentation only. Nothing below changes how a booking is made.
+  const designLive = isDesignLive(store);
+  const designCategories = [
+    ...new Set((services || []).map((s) => s.category).filter(Boolean)),
+  ];
+  const designStats = [
+    { value: `${(services || []).length}+`, label: "Services" },
+    { value: `${designCategories.length}+`, label: "Categories" },
+  ];
+  const designWhatsappUrl = store?.whatsappNumber
+    ? `https://wa.me/${String(store.whatsappNumber).replace(/\D/g, "")}`
+    : "";
+  // This page has no orders tab, so its footer must not offer one.
+  const designHelpLinks = [
+    { label: "Browse categories", onClick: () => setActiveTab("categories") },
+    // Only pages the vendor actually published, so no link can 404.
+    ...livePages(store).map((pg) => ({
+      label: pg.label,
+      onClick: () => navigate(`/${store.slug || store.storeName}/${pg.path}`),
+    })),
+    ...(designWhatsappUrl
+      ? [{ label: "Contact us", href: designWhatsappUrl }]
+      : []),
+  ];
   const storeLayout = store?.storeLayout || "grid";
   const minBookingDate = formatDateInputMin();
   const isProOrPremium =
@@ -664,7 +691,26 @@ export default function ServiceStorePage() {
           />
         )}
 
-        {activeTab === "home" && (
+        {activeTab === "home" && designLive && (
+          <DesignedStorefront
+            design={store.storeDesign}
+            store={store}
+            services={services}
+            categories={designCategories}
+            reviews={[]}
+            stats={designStats}
+            whatsappUrl={designWhatsappUrl}
+            helpLinks={designHelpLinks}
+            activeCategory={activeCategory}
+            onBook={openBookingModal}
+            onCategory={(cat) => setActiveCategory(cat)}
+            onClearCategory={() => setActiveCategory("All")}
+            onViewAll={() => setActiveTab("categories")}
+            onCta={() => setActiveTab("categories")}
+          />
+        )}
+
+        {activeTab === "home" && !designLive && (
           <>
             <div
               className="relative overflow-hidden shadow-inner shadow-black/10"
@@ -922,7 +968,7 @@ export default function ServiceStorePage() {
           </>
         )}
 
-        {activeTab === "home" && (
+        {activeTab === "home" && !designLive && (
           <StoreFooter
             storeName={store.businessName}
             customFooterText={footerText}

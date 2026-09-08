@@ -178,12 +178,25 @@ service cloud.firestore {
       return ['sellaStaffAccess'];
     }
 
+    // Store Design (Premium). Written ONLY by /api/store-design, which runs on
+    // the Admin SDK and therefore bypasses these rules entirely.
+    //
+    // Locked against direct client writes because that handler is where the
+    // plan gate and the sanitiser live. Without this, a vendor on any plan
+    // could write storeDesign straight from the browser SDK: skipping the
+    // Premium check, and storing unsanitised colours, urls and section data
+    // that then render on a public storefront.
+    function designFields() {
+      return ['storeDesign'];
+    }
+
     function lockedStoreFields() {
       return moneyFields()
         .concat(verificationFields())
         .concat(integrationFields())
         .concat(planFields())
-        .concat(aiFields());
+        .concat(aiFields())
+        .concat(designFields());
     }
 
     match /stores/{storeId} {
@@ -202,6 +215,7 @@ service cloud.firestore {
                     && !request.resource.data.keys().hasAny(moneyFields())
                     && !request.resource.data.keys().hasAny(verificationFields())
                     && !request.resource.data.keys().hasAny(integrationFields())
+                    && !request.resource.data.keys().hasAny(designFields())
                     && request.resource.data.get('plan', 'starter') == 'starter'
                     && request.resource.data.get('hasGrowthFeatures', false) == false
                     && request.resource.data.get('hasProFeatures', false) == false
