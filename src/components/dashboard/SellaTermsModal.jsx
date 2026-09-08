@@ -78,7 +78,7 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
               <H>What {assistantName} is</H>
               <P>
                 {assistantName} is an AI assistant available on the Premium plan. It can read your dashboard and, with your
-                confirmation, make changes to it. It is a tool that assists you — it is not an employee, an accountant, a
+                confirmation, make changes to it. It is a tool that assists you. It is not an employee, an accountant, a
                 lawyer or a business adviser, and its output is not professional advice.
               </P>
 
@@ -86,7 +86,7 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
               <P>
                 {assistantName} is built on large language models, which can be confidently wrong. It may misread a number,
                 misunderstand a request or state something inaccurate. <B>You are responsible for checking anything you act
-                on</B> — especially prices, stock levels, order statuses and anything shown to customers. Sellapage is not
+                on</B>, especially prices, stock levels, order statuses and anything shown to customers. Sellapage is not
                 liable for losses arising from acting on {assistantName}&apos;s output without verifying it.
               </P>
 
@@ -94,14 +94,14 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
               <P>
                 {assistantName} never edits your store silently. Every change is shown to you first as a confirmation card
                 naming the exact field and value, and nothing is saved until you approve it. Approving a change makes it
-                yours — it is recorded against your account exactly as if you had made it yourself.
+                yours. It is recorded against your account exactly as if you had made it yourself.
               </P>
 
               <H>What it can never touch</H>
               <P>
                 Regardless of what you ask, {assistantName} cannot write to {NEVER_WRITES}. It also cannot alter
                 system-managed values such as your plan, verification status or referral balance. These limits are enforced
-                on our servers, not in the chat — they hold even if {assistantName} is asked directly.
+                on our servers, not in the chat, so they hold even if {assistantName} is asked directly.
               </P>
 
               <H>Staff access</H>
@@ -136,12 +136,12 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
                 <Li>Orders, bookings, receipts and sales figures</Li>
                 <Li>Analytics, discounts, loyalty and marketing settings</Li>
                 <Li>
-                  <B>Customer personal data</B> — names, phone numbers, delivery addresses and order history — where your
+                  <B>Customer personal data</B>: names, phone numbers, delivery addresses and order history, where your
                   question requires it
                 </Li>
               </ul>
 
-              <H>Your customers did not agree to this — you did</H>
+              <H>Your customers did not agree to this, you did</H>
               <P>
                 You can consent to sharing your own business data. You cannot consent on your customers&apos; behalf. Under
                 the Nigeria Data Protection Act 2023 you remain responsible for the personal data you hold about them. Ask{" "}

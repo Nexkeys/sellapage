@@ -167,11 +167,23 @@ service cloud.firestore {
       ];
     }
 
+    // Sella AI consent state. sellaStaffAccess decides whether people who are
+    // NOT the account holder can send this store's data - including customer
+    // names, phone numbers and addresses - to third-party AI providers. Every
+    // flip is audit-logged server-side in sella-ai.js (action: staff-access),
+    // and that record is the evidence of consent under NDPA 2023. Leaving the
+    // field client-writable would let the owner flip it straight through the
+    // SDK and leave no trace, so it is server-only by rule, not by convention.
+    function aiFields() {
+      return ['sellaStaffAccess'];
+    }
+
     function lockedStoreFields() {
       return moneyFields()
         .concat(verificationFields())
         .concat(integrationFields())
-        .concat(planFields());
+        .concat(planFields())
+        .concat(aiFields());
     }
 
     match /stores/{storeId} {

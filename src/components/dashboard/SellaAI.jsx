@@ -529,7 +529,7 @@ export default function SellaAI({ store }) {
                     <button onClick={() => setTermsTab("terms")} className="text-gray-400 hover:text-green-400 underline underline-offset-2 transition-colors">Terms of Service</button>
                     {" & "}
                     <button onClick={() => setTermsTab("privacy")} className="text-gray-400 hover:text-green-400 underline underline-offset-2 transition-colors">Privacy Policy</button>
-                    . {assistantName} is AI and can make mistakes &mdash; it always asks you to confirm before changing anything.
+                    . {assistantName} is AI and can make mistakes, so it always asks you to confirm before changing anything.
                   </p>
                 </div>
               </>
@@ -609,8 +609,8 @@ export default function SellaAI({ store }) {
                         <p className="text-[11px] text-amber-200/90 leading-relaxed flex gap-2">
                           <ShieldAlert size={13} className="flex-shrink-0 mt-0.5" />
                           <span>
-                            Questions your staff ask send store data &mdash; including customer names,
-                            phone numbers and addresses &mdash; to third-party AI providers outside Nigeria.
+                            Questions your staff ask send store data, including customer names,
+                            phone numbers and addresses, to third-party AI providers outside Nigeria.
                             You remain responsible for that data under the NDPA 2023.{" "}
                             <button onClick={() => setTermsTab("privacy")} className="underline underline-offset-2 hover:text-amber-100">
                               What gets shared

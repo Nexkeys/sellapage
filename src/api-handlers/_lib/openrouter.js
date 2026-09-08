@@ -6,7 +6,7 @@
 // OpenAI-API-compatible, so this is a base-URL + model-id change rather than a
 // rewrite, and it lets one request fall through several providers.
 //
-// NVIDIA is NOT removed from the codebase — ai-describe.js still uses it for
+// NVIDIA is NOT removed from the codebase, ai-describe.js still uses it for
 // product/service/job descriptions. This module governs Sella only.
 //
 // FAILOVER is silent and per-request: on a 5xx, timeout or rate-limit we try
@@ -15,7 +15,7 @@
 // can be refunded exactly as before.
 //
 // IDs below were read from OpenRouter's live /api/v1/models catalogue (431
-// models) and each confirmed to support `tools` — tool calling is the whole
+// models) and each confirmed to support `tools`, tool calling is the whole
 // point of Sella, and not every model offers it. They still drift, which is
 // what assertModelsExist() is for.
 
@@ -34,10 +34,14 @@ export const TIERS = {
   // Free models ARE rate limited (google/gemma-4-31b-it:free returned 429 in
   // testing), so this tier deliberately falls through to the PAID standard
   // tier. A vendor must never be blocked because the free pool was busy.
+  // Every id here was verified with a REAL 1-token call, not just catalogue
+  // presence. thinkingmachines/inkling:free looked perfect on paper and 403s on
+  // every call ("only available on agentic harnesses"). Providers are mixed
+  // deliberately so one provider going down does not take the whole tier.
   read: [
-    'thinkingmachines/inkling:free',              // 1M ctx
-    'nvidia/nemotron-3.5-lightning:free',   // 1M ctx
-    'openrouter/free',                      // OpenRouter's own free auto-router
+    'nvidia/nemotron-3-ultra-550b-a55b:free',  // 1M ctx, strongest free option
+    'google/gemma-4-31b-it:free',              // different provider, 262K ctx
+    'openrouter/free',                         // OpenRouter's own free auto-router
     'poolside/laguna-s-2.1:free',
   ],
   // Greetings, trivial formatting. Cheap paid, used when free is exhausted.
@@ -110,11 +114,16 @@ function isRetryable(status) {
   // limits, which cap PROMPT tokens at ~2085. Sella's prompt (30-tab registry
   // + tool defs) is ~2165, so every tool-carrying request 402d while short
   // greetings still succeeded on the free models. Treating 402 as fatal meant
-  // Sella chatted fluently but never once reached a tool — indistinguishable,
-  // from the outside, from an assistant refusing to do the work.
+  // Sella chatted fluently but never once reached a tool, indistinguishable
+  // from the outside from an assistant refusing to do the work.
   // 413 is the same failure wearing a different status code.
-  return status === 400 || status === 402 || status === 404 || status === 408 ||
-         status === 409 || status === 413 || status === 429 || status >= 500
+  // 403 is a PER-MODEL refusal, not an auth failure (401 is auth). OpenRouter
+  // returns it for things like "only available on agentic harnesses" - the key
+  // is valid, that one model just will not serve this account. Failing over is
+  // exactly right; hard-failing would take Sella down over a single gated model.
+  return status === 400 || status === 402 || status === 403 || status === 404 ||
+         status === 408 || status === 409 || status === 413 || status === 429 ||
+         status >= 500
 }
 
 /**
@@ -335,7 +344,7 @@ export async function streamModel({ messages, tools, onToken, tier = DEFAULT_TIE
         new Error(e?.name === 'AbortError' ? 'AI provider timed out' : 'AI provider unreachable'),
         { status: e?.name === 'AbortError' ? 504 : 502 },
       )
-      // Already streaming to the browser — do not restart on another model.
+      // Already streaming to the browser, do not restart on another model.
       if (started) throw lastErr
       continue
     } finally {
@@ -352,7 +361,7 @@ export async function streamModel({ messages, tools, onToken, tier = DEFAULT_TIE
  *
  * Not decorative: OpenRouter listed 431 models and the catalogue moves
  * constantly. A renamed or retired id fails at RUNTIME, mid-conversation, with
- * a 400 that failover will not rescue — the same silent-until-production
+ * a 400 that failover will not rescue, the same silent-until-production
  * failure mode as the ERR_REQUIRE_ESM outages. Run from scripts/check-ai-models.js.
  *
  * @returns {Promise<{ok: boolean, missing: string[], noTools: string[]}>}
@@ -378,4 +387,58 @@ export async function assertModelsExist() {
   }
 
   return { ok: missing.length === 0 && noTools.length === 0, missing, noTools, checked: configured.length }
+}
+
+/**
+ * Catalogue presence is NOT proof of usability. thinkingmachines/inkling:free
+ * was listed, advertised tools, and passed assertModelsExist() cleanly, then
+ * returned 403 on every real call: "only available on agentic harnesses".
+ * A model that cannot be called is as useless as one that does not exist, and
+ * the difference is invisible until a vendor is mid-conversation.
+ *
+ * So this actually calls each configured model with a 1-token request.
+ *
+ * The two failure kinds are deliberately separated:
+ *   unusable - 403/404/400. OUR configuration is wrong and a different model id
+ *              fixes it, so this should fail a build.
+ *   billing  - 402. The account is out of credit. Real, and worth shouting
+ *              about, but not a code defect and not a reason to block a deploy
+ *              of the entire site.
+ */
+export async function assertModelsUsable() {
+  const configured = [...new Set(Object.values(TIERS).flat())]
+  const unusable = []
+  const billing = []
+  const transient = []
+  const ok = []
+
+  for (const model of configured) {
+    try {
+      const resp = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model, messages: [{ role: "user", content: "hi" }], max_tokens: 1 }),
+        signal: AbortSignal.timeout(30000),
+      })
+      if (resp.ok) { ok.push(model); continue }
+      const body = await resp.text()
+      let reason = body.slice(0, 160)
+      try { reason = JSON.parse(body).error?.message || reason } catch { /* keep raw */ }
+      // 429 means the free pool is busy right now, not that the id is wrong.
+      // Failing a build on it would block deploys for a reason that fixes
+      // itself in a minute, so it is reported and tolerated like billing is.
+      if (resp.status === 402) billing.push({ model, reason })
+      else if (resp.status === 429) transient.push({ model, reason })
+      else unusable.push({ model, status: resp.status, reason })
+    } catch (err) {
+      // A network blip is not evidence the model is bad.
+      console.warn(`  . ${model} could not be reached (${err.message})`)
+      ok.push(model)
+    }
+  }
+
+  return { ok: unusable.length === 0, usable: ok, unusable, billing, transient, checked: configured.length }
 }
