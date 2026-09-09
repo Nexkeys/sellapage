@@ -11,6 +11,7 @@ import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
 import ReviewsAdmin from '../components/admin/ReviewsAdmin';
 import CacRequests from '../components/admin/CacRequests';
+import WhatsAppConsole from '../components/admin/WhatsAppConsole';
 import { SkeletonRows } from '../components/Skeleton';
 
 const ADMIN_TABS = [
@@ -671,6 +672,12 @@ export default function Admin() {
         {/* HEALTH */}
         {activeTab === 'health' && <div className="space-y-4 animate-in fade-in duration-200">
           {healthError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{healthError}</div>}
+
+          {/* WhatsApp Cloud API - Sellapage's own business number. Sits beside
+              Termii because both are outbound messaging providers whose silent
+              failure (expired token, empty wallet) is invisible until sends
+              start bouncing. */}
+          <WhatsAppConsole authHeaders={H} />
 
           {/* Termii SMS - wallet + sender ID. An empty wallet or a missing
               sender ID makes phone verification fail for every vendor with no

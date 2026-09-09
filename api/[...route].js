@@ -321,6 +321,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/admin-sella-ai.js")
         return handler(req, res)
       }
+      case "admin-whatsapp": {
+        const { default: handler } = await import("../src/api-handlers/admin-whatsapp.js")
+        return handler(req, res)
+      }
 
       case "submit-report": {
         const { default: handler } = await import("../src/api-handlers/submit-report.js")
