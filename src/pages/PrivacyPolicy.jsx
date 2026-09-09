@@ -93,9 +93,22 @@ const sections = [
   {
     title: 'Your Rights',
     content: [
-      'You can delete your account and all associated data at any time from your dashboard Settings page.',
-      'You can update your store information anytime.',
+      'You can update your store information at any time from your dashboard.',
       'To request a full data export or raise a data concern, contact us at the address below.',
+    ],
+  },
+  {
+    title: 'How To Delete Your Account And Data',
+    content: [
+      'You can delete your Sellapage account and everything in it yourself, at any time. You do not need to email us or wait for approval.',
+      'Step 1: Sign in at sellapage.com.ng and open your dashboard.',
+      'Step 2: Go to Settings from the menu on the left (tap the menu icon first on mobile).',
+      'Step 3: Scroll to the bottom and choose Delete Account.',
+      'Step 4: We email a verification code to the address on your account. Enter that code to confirm it is really you.',
+      'Step 5: Confirm. Deletion begins immediately and cannot be undone.',
+      'What gets deleted: your login, your store page, and every product, service, order, booking, customer record and analytics record attached to it.',
+      'What may remain: records we are required to keep for legal, tax or fraud-prevention reasons, such as payment records held by Paystack, and anything already delivered to a third party at your instruction (for example events sent to Meta by a pixel you connected).',
+      'If you cannot sign in, email us at the address below from the email address on the account and we will delete it for you.',
     ],
   },
   {
