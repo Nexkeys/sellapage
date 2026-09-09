@@ -7,9 +7,9 @@ import {
   Home,
   Grid,
   ShoppingCart,
-  ShieldCheck,
 } from "lucide-react";
 import { buildEnquiryURL } from "../utils/whatsapp";
+import VerifiedBadge from "./VerifiedBadge";
 
 const getInitials = (name = "") => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -32,7 +32,13 @@ export default function StoreNavbar({
   hasProducts = false,
   activeStoreSection = "products",
   onSectionChange = null,
+  // Defaults to the store's own flag so nothing that mounts this navbar without
+  // knowing about placement loses the badge.
+  showVerified = undefined,
+  verifiedTone: verifiedToneObj = null,
 }) {
+  const showBadge =
+    showVerified === undefined ? store?.cacVerified === true : showVerified === true;
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef(null);
 
@@ -122,12 +128,10 @@ export default function StoreNavbar({
             >
               {store?.businessName}
             </span>
-            {store?.cacVerified && (
-              <div className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 flex-shrink-0">
-                <ShieldCheck size={10} className="text-green-600 flex-shrink-0" />
-                <span className="text-[10px] font-bold text-green-700 whitespace-nowrap">CAC Verified</span>
-              </div>
-            )}
+            {/* Whether this appears at all is decided by the page, which asks
+                verifiedBadgeAt(store, 'navbar'). A designed store can move it
+                to the hero or the footer instead. */}
+            {showBadge && <VerifiedBadge tone={verifiedToneObj} />}
           </div>
 
           {/* Desktop Section Tabs */}

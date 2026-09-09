@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Shield, Truck, Lock } from 'lucide-react'
 import GuaranteeBadge from './GuaranteeBadge'
+import VerifiedBadge from './VerifiedBadge'
 
 const TRUST_BADGES = [
   { icon: Shield, title: '100% Authentic',   sub: 'Genuine products' },
@@ -8,7 +9,7 @@ const TRUST_BADGES = [
   { icon: Lock,   title: 'Secure Shopping',  sub: 'Your data is safe' },
 ]
 
-export default function StoreFooter({ storeName, customFooterText, guarantee }) {
+export default function StoreFooter({ storeName, customFooterText, guarantee, verified = false }) {
   return (
     <footer className="mt-10 mb-20 md:mb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -37,6 +38,17 @@ export default function StoreFooter({ storeName, customFooterText, guarantee }) 
             </div>
           ))}
         </div>
+
+        {/* CAC. Sits below the generic badges and above the Sellapage line
+            because, unlike "100% Authentic", this one is checked: the vendor's
+            RC number was matched against the Corporate Affairs Commission. */}
+        {verified && (
+          <div className="mt-4 flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-green-50/70 px-3.5 py-1.5">
+              <VerifiedBadge variant="line" size="md" />
+            </div>
+          </div>
+        )}
 
         {/* Powered by */}
         <div className="text-center mt-6 pb-4">

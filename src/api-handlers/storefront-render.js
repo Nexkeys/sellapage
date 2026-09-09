@@ -348,6 +348,16 @@ function buildNoscript({ store, seo, listings, canonical }) {
     if (guarantee.details) lines.push(`<p>${esc(guarantee.details)}</p>`)
   }
 
+  // Only when it is true on the document, which only the Admin SDK can set.
+  // Said in the crawlable text as well as on the page because a claim that
+  // exists only in structured data is one an assistant is right to discount.
+  if (store.cacVerified === true) {
+    lines.push(
+      `<p>${esc(name)} is CAC verified: its business registration has been checked ` +
+        `against the Corporate Affairs Commission of Nigeria.</p>`,
+    )
+  }
+
   lines.push(
     `<p>${esc(name)} is an independent business selling online with Sellapage. ` +
       `Store address: <a href="${esc(canonical)}">${esc(canonical)}</a>.</p>`,

@@ -25,6 +25,7 @@ import {
   ChevronUp, ChevronDown, ChevronRight, Settings2, Palette, GripVertical, X,
   Smartphone, Tablet, Monitor, Package, CalendarClock, Type,
   Undo2, Redo2, Sparkles, BellRing, CalendarRange, RotateCcw, FileText, ExternalLink, Search,
+  ShieldCheck,
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { getProducts } from '../../firebase/products'
@@ -33,6 +34,7 @@ import {
   SECTION_TYPES, FONT_OPTIONS, THEME_FIELDS, PRODUCT_CARD_FIELDS, SERVICE_CARD_FIELDS,
   POPUP_FIELDS, PRESETS, applyPreset, CUSTOM_PAGES, TRACKING_FIELDS, TRACKING_STATUSES,
   sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, defaultDesign,
+  BADGE_FIELDS, VERIFIED_LABEL, VERIFIED_LINE,
 } from '../../utils/storeDesign'
 import DesignedStorefront from '../storefront/DesignedStorefront'
 
@@ -537,6 +539,54 @@ export default function StoreDesignTab({ store, storeUrl }) {
             <FieldList fields={SERVICE_CARD_FIELDS} values={design.serviceCard} onSet={setCard('serviceCard')} />
           </Panel>
         )}
+
+        <Panel
+          icon={ShieldCheck}
+          title="CAC verified badge"
+          hint={
+            store?.cacVerified
+              ? 'Your business is verified. Choose where the badge sits on your page.'
+              : 'Shown once your business registration is verified.'
+          }
+          open={panel === 'badge'}
+          onToggle={() => setPanel(panel === 'badge' ? '' : 'badge')}
+        >
+          {store?.cacVerified ? (
+            <>
+              <div className="mb-4 rounded-xl border border-green-100 bg-green-50/60 p-3">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck size={13} className="flex-shrink-0 text-green-600" />
+                  <span className="text-[11px] font-bold text-green-700">{VERIFIED_LABEL}</span>
+                </div>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-green-800/70">
+                  In the footer this reads &ldquo;{VERIFIED_LINE}&rdquo;. The wording is fixed
+                  because it is our statement about your business, not marketing copy. Where it
+                  goes, and what colour it is, is yours.
+                </p>
+              </div>
+
+              <FieldList
+                fields={BADGE_FIELDS}
+                values={design.badge}
+                onSet={(k, v) => update({ ...design, badge: { ...design.badge, [k]: v } })}
+              />
+
+              <p className="mt-3 text-[10px] leading-relaxed text-gray-400">
+                Badge style applies to the header and hero. In the footer it always takes your
+                footer text colour, so it stays readable whatever background you pick.
+              </p>
+            </>
+          ) : (
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3.5">
+              <p className="text-xs font-bold text-gray-800">Not verified yet</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
+                Verify your CAC registration in the CAC Verification tab. Once it goes through,
+                the badge appears here and you can place it on your page. There is nothing to
+                switch on from this screen.
+              </p>
+            </div>
+          )}
+        </Panel>
 
         <Panel
           icon={BellRing}

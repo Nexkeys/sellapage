@@ -169,6 +169,37 @@ export const POPUP_FIELDS = [
 ]
 
 /**
+ * Where the CAC verified badge appears, and in what colour.
+ *
+ * PLACEMENT IS THE VENDOR'S. THE CLAIM IS NOT.
+ * A vendor can move this badge, restyle it or hide it, because it is their
+ * page. What they cannot do is write its words or switch it on: the badge only
+ * ever renders when `store.cacVerified === true`, which is set by
+ * api/verify-cac or api/admin-cac through the Admin SDK and is locked against
+ * client writes in firestore.rules. There is deliberately no `label` field
+ * here, because "CAC Verified" is a statement Sellapage is making about a
+ * business, not copy for the business to edit.
+ */
+export const BADGE_FIELDS = [
+  { key: 'navbar', label: 'Show in the header', type: 'toggle', default: true },
+  { key: 'hero', label: 'Show under the hero headline', type: 'toggle', default: false },
+  { key: 'footer', label: 'Show in the footer', type: 'toggle', default: true },
+  {
+    key: 'tone',
+    label: 'Badge style',
+    type: 'select',
+    options: ['green', 'neutral', 'accent', 'outline'],
+    default: 'green',
+  },
+]
+
+/** The wording, in one place, so no two surfaces can ever disagree. */
+export const VERIFIED_LABEL = 'CAC Verified'
+export const VERIFIED_LINE = 'This store is CAC verified'
+export const VERIFIED_TITLE =
+  'Business registration verified with the Corporate Affairs Commission of Nigeria'
+
+/**
  * Every section type the builder can place.
  *
  * `appliesTo` gates which vendors are offered it:
@@ -511,6 +542,7 @@ export function defaultDesign(vendorType = 'products') {
     productCard: { ...fieldDefaults(PRODUCT_CARD_FIELDS) },
     serviceCard: { ...fieldDefaults(SERVICE_CARD_FIELDS) },
     popup: { ...fieldDefaults(POPUP_FIELDS) },
+    badge: { ...fieldDefaults(BADGE_FIELDS) },
     pages: defaultPages(),
     tracking: defaultTracking(),
     // The service page has its OWN layout. See defaultServiceSections().
@@ -642,6 +674,7 @@ export function sanitizeDesign(input, vendorType = 'products') {
     productCard: cleanFields(PRODUCT_CARD_FIELDS, raw.productCard),
     serviceCard: cleanFields(SERVICE_CARD_FIELDS, raw.serviceCard),
     popup: cleanFields(POPUP_FIELDS, raw.popup),
+    badge: cleanFields(BADGE_FIELDS, raw.badge),
     pages: cleanPages(raw.pages),
     tracking: cleanTracking(raw.tracking),
     // Falls back to the seeded service layout rather than an empty page, so a
@@ -1053,4 +1086,43 @@ export function designTokens(design) {
     border: theme.border || '#e2e8f0',
     radius: radiusValue(theme.radius),
   }
+}
+
+/**
+ * Whether the CAC verified badge should render at one spot on a storefront.
+ *
+ *   spot: 'navbar' | 'hero' | 'footer'
+ *
+ * Two gates, in this order:
+ *
+ *  1. The business is actually verified. `cacVerified` is written only by
+ *     api/verify-cac and api/admin-cac through the Admin SDK, and is in
+ *     lockedStoreFields() in firestore.rules, so a vendor cannot award it to
+ *     themselves from the browser. Nothing below can turn the badge on.
+ *
+ *  2. Placement. A store on the standard theme has no layout to configure, so
+ *     it gets the header and the footer, which is where a trust mark belongs.
+ *     A store with a live design uses whatever the vendor chose in the editor.
+ *
+ * A design saved before this existed has no `badge` key at all, so it falls
+ * back to the same header-and-footer default rather than losing its badge.
+ */
+export function verifiedBadgeAt(store, spot) {
+  if (store?.cacVerified !== true) return false
+
+  const cfg = isDesignLive(store) ? store?.storeDesign?.badge : null
+  if (!cfg || typeof cfg !== 'object') return spot === 'navbar' || spot === 'footer'
+
+  return cfg[spot] === true
+}
+
+/** Colours for the badge, resolved against the design so it never clashes. */
+export function verifiedTone(design) {
+  const tone = design?.badge?.tone || 'green'
+  const t = designTokens(design)
+
+  if (tone === 'neutral') return { bg: `${t.textColor}12`, fg: t.textColor, border: `${t.textColor}26` }
+  if (tone === 'accent') return { bg: t.accent, fg: '#ffffff', border: t.accent }
+  if (tone === 'outline') return { bg: 'transparent', fg: t.textColor, border: t.border }
+  return { bg: '#ecfdf5', fg: '#047857', border: '#a7f3d0' }
 }

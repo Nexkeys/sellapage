@@ -25,6 +25,8 @@ import {
   isTrackingLive,
   defaultServiceSections,
   designTokens,
+  verifiedBadgeAt,
+  verifiedTone,
 } from "../utils/storeDesign";
 import ServiceDetailOverlay from "../components/storefront/ServiceDetailOverlay";
 import NotFound from "./NotFound";
@@ -713,6 +715,8 @@ export default function ServiceStorePage() {
                 if (section === "products") navigate(`/${store.storeName}`);
               }
         }
+        showVerified={verifiedBadgeAt(store, "navbar")}
+        verifiedTone={designLive ? verifiedTone(store.storeDesign) : null}
       />
 
       <main className="relative z-0 pb-24 md:pb-0">
@@ -1018,6 +1022,7 @@ export default function ServiceStorePage() {
           <StoreFooter
             storeName={store.businessName}
             customFooterText={footerText}
+            verified={verifiedBadgeAt(store, "footer")}
           />
         )}
       </main>

@@ -41,6 +41,8 @@ import {
   fontStack,
   isTrackingLive,
   designTokens,
+  verifiedBadgeAt,
+  verifiedTone,
 } from "../utils/storeDesign";
 
 const EMPTY_CHECKOUT_FORM = {
@@ -1759,6 +1761,10 @@ export default function StorePage() {
         onCartOpen={isCartEnabled ? () => setCartOpen(true) : null}
         activeThemeObj={previewThemeObj}
         hasProducts={hasProducts}
+        // Only shows when the business is actually CAC verified. A designed
+        // store can move this mark to the hero or the footer instead.
+        showVerified={verifiedBadgeAt(store, "navbar")}
+        verifiedTone={designLive ? verifiedTone(store.storeDesign) : null}
       />
 
       <main className="relative z-0 pb-24 md:pb-0">
@@ -2098,6 +2104,7 @@ export default function StorePage() {
             storeName={store.businessName}
             customFooterText={footerText}
             guarantee={store.guarantee}
+            verified={verifiedBadgeAt(store, "footer")}
           />
         )}
       </main>

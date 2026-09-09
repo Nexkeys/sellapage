@@ -20,6 +20,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Star, ShoppingCart, MessageCircle, ArrowRight, Clock, MapPin, Check, X } from 'lucide-react'
 import LeadForm from '../LeadForm'
+import VerifiedBadge from '../VerifiedBadge'
 import {
   fontStack,
   fontHref,
@@ -28,6 +29,7 @@ import {
   ratioValue,
   widthValue,
   isSectionLiveNow,
+  verifiedTone,
 } from '../../utils/storeDesign'
 
 const naira = (v) => {
@@ -121,7 +123,7 @@ function Announcement({ s }) {
   )
 }
 
-function Hero({ s, store, stats, t, onCta }) {
+function Hero({ s, store, stats, t, badge, onCta }) {
   const banner = store?.heroBannerUrl || store?.coverImage
   const pad = s.height === 'tall' ? 'py-20 sm:py-28' : s.height === 'compact' ? 'py-8 sm:py-10' : 'py-12 sm:py-16'
   const centered = s.layout === 'centered'
@@ -135,6 +137,11 @@ function Hero({ s, store, stats, t, onCta }) {
       >
         {s.headline}
       </h1>
+      {badge?.hero ? (
+        <div className={`mt-3 flex ${centered || behind ? 'justify-center' : ''}`}>
+          <VerifiedBadge tone={badge.tone} radius={t.radius === '0px' ? '0px' : '999px'} size="md" />
+        </div>
+      ) : null}
       {s.sub ? (
         <p className={`mt-4 text-sm leading-relaxed opacity-80 ${centered || behind ? 'mx-auto max-w-lg' : 'max-w-lg'}`}>
           {s.sub}
@@ -864,7 +871,7 @@ const PAYMENTS = ['Card', 'Transfer', 'Bank', 'USSD']
  *                      that page actually has
  *   phone / address -> tel: and maps links
  */
-function RichFooter({ s, store, categories, helpLinks, t, onCategory }) {
+function RichFooter({ s, store, categories, helpLinks, t, badge, onCategory }) {
   const name = store?.businessName || store?.storeName || 'Store'
   const cats = (categories || []).filter(Boolean).slice(0, 5)
   const addr = store?.pickupAddress
@@ -882,6 +889,13 @@ function RichFooter({ s, store, categories, helpLinks, t, onCategory }) {
           <div className="min-w-0">
             <p className="text-lg font-extrabold uppercase" style={{ fontFamily: t.headingFont }}>{name}</p>
             {s.about ? <p className="mt-2 whitespace-pre-line break-words text-xs leading-relaxed opacity-70">{s.about}</p> : null}
+            {/* Under the business name, where a customer looks to confirm who
+                they just bought from. */}
+            {badge?.footer ? (
+              <div className="mt-3">
+                <VerifiedBadge variant="line" size="md" tone={{ fg: s.fg }} />
+              </div>
+            ) : null}
           </div>
 
           {cats.length ? (
@@ -1028,7 +1042,7 @@ function useDesignFonts(theme) {
  */
 function CatalogueView({
   browse, products, services, productCard, serviceCard, t, footer, store, categories,
-  helpLinks, kind, onAddToCart, onOrder, onBook, onOpenService, onCategory, onBrowseAll, onClear,
+  helpLinks, kind, badge, onAddToCart, onOrder, onBook, onOpenService, onCategory, onBrowseAll, onClear,
 }) {
   const [sort, setSort] = useState('newest')
 
@@ -1183,6 +1197,7 @@ function CatalogueView({
           store={store}
           categories={categories}
           helpLinks={helpLinks}
+          badge={badge}
           onCategory={onCategory}
         />
       ) : null}
@@ -1239,6 +1254,24 @@ export default function DesignedStorefront({
   const productCard = design.productCard || {}
   const serviceCard = design.serviceCard || {}
 
+  // The CAC mark. `cacVerified` is the only gate that matters; the design can
+  // only move it or hide it, never award it. Resolved here rather than in each
+  // section so the header, the hero and the footer cannot disagree.
+  //
+  // Placement is read straight off the design instead of through
+  // verifiedBadgeAt() because this component also renders the editor preview,
+  // where the design is not yet published and that helper would correctly say
+  // "not live" and show the vendor nothing while they are configuring it.
+  const badgeCfg = design.badge && typeof design.badge === 'object' ? design.badge : null
+  const verified = store?.cacVerified === true
+  const badge = {
+    // A design saved before this setting existed keeps the badge in the footer,
+    // which is where it would have been by default.
+    hero: verified && (badgeCfg ? badgeCfg.hero === true : false),
+    footer: verified && (badgeCfg ? badgeCfg.footer === true : true),
+    tone: verifiedTone(design),
+  }
+
   // The hero's button target is resolved here rather than in the hero, because
   // only this component knows which callbacks the mounting page supplied.
   const heroCta = (s) => () => {
@@ -1265,6 +1298,7 @@ export default function DesignedStorefront({
           categories={categories}
           helpLinks={helpLinks}
           kind={catalogueKind}
+          badge={badge}
           footer={design.sections.find((x) => x.type === 'richFooter' && isSectionLiveNow(x))}
           onAddToCart={onAddToCart}
           onOrder={onOrder}
@@ -1292,6 +1326,7 @@ export default function DesignedStorefront({
               reviews={reviews}
               stats={stats}
               helpLinks={helpLinks}
+              badge={badge}
               productCard={productCard}
               serviceCard={serviceCard}
               whatsappUrl={whatsappUrl}
