@@ -1,5 +1,6 @@
 //src/components/dashboard/OrdersTab.jsx/
 import { useState, useMemo, useEffect } from 'react'
+import OrderDetail from './OrderDetail'
 import {
   AlertCircle,
   Calendar,
@@ -247,6 +248,8 @@ export default function OrdersTab({
   navigateTo,
 }) {
   const [ledgerError, setLedgerError] = useState('')
+  // The full record for one order. Read only: every action stays in the table.
+  const [detailOrder, setDetailOrder] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -1044,6 +1047,17 @@ export default function OrdersTab({
     )
   }
 
+  if (detailOrder) {
+    return (
+      <OrderDetail
+        record={detailOrder}
+        kind="order"
+        store={store}
+        onBack={() => setDetailOrder(null)}
+      />
+    )
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -1216,9 +1230,13 @@ export default function OrdersTab({
                       </td>
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
                         <div className="flex flex-col gap-1">
-                          <p className="text-xs font-bold leading-tight text-gray-900">
-                            {order.customerName || '-'}
-                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setDetailOrder(order)}
+                            className="text-left text-xs font-bold leading-tight text-gray-900 underline-offset-2 hover:text-green-700 hover:underline"
+                          >
+                            {order.customerName || 'View order'}
+                          </button>
                           {order.orderType && (
                             <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold bg-green-50 text-green-700 border-green-200">
                               Order
@@ -1344,9 +1362,13 @@ export default function OrdersTab({
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-bold leading-tight text-gray-900">
-                        {order.customerName || 'Unknown customer'}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setDetailOrder(order)}
+                        className="truncate text-left text-sm font-bold leading-tight text-gray-900 underline-offset-2 active:text-green-700 active:underline"
+                      >
+                        {order.customerName || 'View order'}
+                      </button>
                       {order.orderType && (
                         <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold bg-green-50 text-green-700 border-green-200">
                           Order

@@ -24,14 +24,14 @@ import {
   Loader2, Check, AlertCircle, Lock, Plus, Trash2, Eye, EyeOff,
   ChevronUp, ChevronDown, ChevronRight, Settings2, Palette, GripVertical, X,
   Smartphone, Tablet, Monitor, Package, CalendarClock, Type,
-  Undo2, Redo2, Sparkles, BellRing, CalendarRange, RotateCcw, FileText, ExternalLink,
+  Undo2, Redo2, Sparkles, BellRing, CalendarRange, RotateCcw, FileText, ExternalLink, Search,
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { getProducts } from '../../firebase/products'
 import { getServices } from '../../firebase/services'
 import {
   SECTION_TYPES, FONT_OPTIONS, THEME_FIELDS, PRODUCT_CARD_FIELDS, SERVICE_CARD_FIELDS,
-  POPUP_FIELDS, PRESETS, applyPreset, CUSTOM_PAGES,
+  POPUP_FIELDS, PRESETS, applyPreset, CUSTOM_PAGES, TRACKING_FIELDS, TRACKING_STATUSES,
   sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, defaultDesign,
 } from '../../utils/storeDesign'
 import DesignedStorefront from '../storefront/DesignedStorefront'
@@ -182,6 +182,9 @@ export default function StoreDesignTab({ store, storeUrl }) {
   const [dirty, setDirty] = useState(false)
   const [dragId, setDragId] = useState(null)
   const [device, setDevice] = useState('mobile')
+  // Which of the two real storefronts the preview is simulating. Only ever
+  // shown to a vendor who has both, because only they have two pages.
+  const [previewAs, setPreviewAs] = useState(hasProducts ? 'shop' : 'services')
   // Undo/redo. Capped so a long session cannot grow without bound.
   const [past, setPast] = useState([])
   const [future, setFuture] = useState([])
@@ -535,6 +538,65 @@ export default function StoreDesignTab({ store, storeUrl }) {
           />
         </Panel>
 
+        <Panel
+          icon={Search}
+          title="Order tracking page"
+          hint="Customers paste their order ID and see where it is, in your words."
+          open={panel === 'tracking'}
+          onToggle={() => setPanel(panel === 'tracking' ? '' : 'tracking')}
+        >
+          <FieldList
+            fields={TRACKING_FIELDS}
+            values={design.tracking}
+            onSet={(k, v) => update({ ...design, tracking: { ...design.tracking, [k]: v } })}
+          />
+
+          {design.tracking?.enabled && storeUrl ? (
+            <a
+              href={`${storeUrl}/track`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-green-700 hover:underline"
+            >
+              <ExternalLink size={10} /> {`${storeUrl}/track`}
+            </a>
+          ) : null}
+
+          <div className="mt-5 border-t border-gray-100 pt-4">
+            <p className="text-xs font-bold text-gray-900">What each status says</p>
+            <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
+              You choose the words. Which status an order is in comes from your Orders tab and
+              cannot be changed from here.
+            </p>
+            <div className="mt-3 space-y-3">
+              {TRACKING_STATUSES.filter((st) =>
+                st.kind === 'both' ||
+                (st.kind === 'order' && hasProducts) ||
+                (st.kind === 'booking' && hasServices),
+              ).map((st) => (
+                <label key={st.key} className="block">
+                  <span className="text-[11px] font-semibold text-gray-600">{st.label}</span>
+                  <textarea
+                    rows={2}
+                    maxLength={200}
+                    value={design.tracking?.messages?.[st.key] ?? st.default}
+                    onChange={(e) =>
+                      update({
+                        ...design,
+                        tracking: {
+                          ...design.tracking,
+                          messages: { ...design.tracking?.messages, [st.key]: e.target.value },
+                        },
+                      })
+                    }
+                    className={inputCls}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        </Panel>
+
         {/* Sections */}
         <div className="mb-3 rounded-2xl border border-gray-100 bg-white p-4">
           {/* Which page is being built. The shop front always exists; the rest
@@ -762,7 +824,30 @@ export default function StoreDesignTab({ store, storeUrl }) {
               The same code your store page uses, with your real items.
             </p>
           </div>
-          <div className="flex flex-shrink-0 gap-1 rounded-xl bg-gray-100 p-1">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {hasProducts && hasServices && (
+              // A "both" vendor has two live pages: the shop at /store and the
+              // service page at /store/services. They render the same design
+              // with different catalogues, so the preview has to show both.
+              <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+                {[
+                  { id: 'shop', label: 'Shop front' },
+                  { id: 'services', label: 'Service page' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setPreviewAs(m.id)}
+                    className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+                      previewAs === m.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-shrink-0 gap-1 rounded-xl bg-gray-100 p-1">
             {DEVICES.map((d) => (
               <button
                 key={d.id}
@@ -774,6 +859,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
                 <d.icon size={14} />
               </button>
             ))}
+            </div>
           </div>
         </div>
 
@@ -788,7 +874,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
               <DesignedStorefront
                 design={{ ...design, sections: currentSections }}
                 store={store}
-                products={products}
+                products={previewAs === 'services' ? [] : products}
                 services={services}
                 categories={categories}
                 reviews={[]}

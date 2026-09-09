@@ -19,7 +19,7 @@ import ServiceCard from "../components/ServiceCard";
 import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
 import DesignedStorefront from "../components/storefront/DesignedStorefront";
-import { isDesignLive, livePages } from "../utils/storeDesign";
+import { isDesignLive, livePages, isTrackingLive } from "../utils/storeDesign";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import { SkeletonStorefront } from "../components/Skeleton";
@@ -183,6 +183,8 @@ export default function ServiceStorePage() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("home");
   const [activeCategory, setActiveCategory] = useState("All");
+  // Catalogue state for the designed storefront only.
+  const [designBrowse, setDesignBrowse] = useState(null);
   const [highlightedService, setHighlightedService] = useState(null);
   const [hasInteracted, setHasInteracted] = useState(false);
 
@@ -615,11 +617,27 @@ export default function ServiceStorePage() {
   // This page has no orders tab, so its footer must not offer one.
   const designHelpLinks = [
     { label: "Browse categories", onClick: () => setActiveTab("categories") },
+    ...(String(store?.vendorType || "").toLowerCase() === "both"
+      ? [
+          {
+            label: "Shop products",
+            onClick: () => navigate(`/${store.slug || store.storeName}`),
+          },
+        ]
+      : []),
     // Only pages the vendor actually published, so no link can 404.
     ...livePages(store).map((pg) => ({
       label: pg.label,
       onClick: () => navigate(`/${store.slug || store.storeName}/${pg.path}`),
     })),
+    ...(isTrackingLive(store)
+      ? [
+          {
+            label: "Track your order",
+            onClick: () => navigate(`/${store.slug || store.storeName}/track`),
+          },
+        ]
+      : []),
     ...(designWhatsappUrl
       ? [{ label: "Contact us", href: designWhatsappUrl }]
       : []),
@@ -701,12 +719,13 @@ export default function ServiceStorePage() {
             stats={designStats}
             whatsappUrl={designWhatsappUrl}
             helpLinks={designHelpLinks}
-            activeCategory={activeCategory}
+            browse={designBrowse}
             onBook={openBookingModal}
-            onCategory={(cat) => setActiveCategory(cat)}
-            onClearCategory={() => setActiveCategory("All")}
-            onViewAll={() => setActiveTab("categories")}
-            onCta={() => setActiveTab("categories")}
+            onCategory={(cat) => setDesignBrowse(cat)}
+            onBrowseAll={() => setDesignBrowse("all")}
+            onClearBrowse={() => setDesignBrowse(null)}
+            onViewAll={() => setDesignBrowse("all")}
+            onCta={() => setDesignBrowse("all")}
           />
         )}
 

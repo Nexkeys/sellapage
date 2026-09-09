@@ -21,6 +21,7 @@
 // works exactly as it does today. This is why nothing here throws.
 
 import { getAdminDb } from './_lib/firebase-admin.js'
+import { isPageLive, CUSTOM_PAGES } from '../utils/storeDesign.js'
 
 const SITE_URL = 'https://sellapage.com.ng'
 // BOTH apex and www stay listed regardless of which one Vercel treats as
@@ -355,6 +356,86 @@ function buildNoscript({ store, seo, listings, canonical }) {
   return `<noscript><main>\n        ${lines.join('\n        ')}\n      </main></noscript>`
 }
 
+/**
+ * Server rendered HTML for a vendor's custom page (/store/about and friends).
+ *
+ * These pages exist so Google and an AI assistant can read a business's own
+ * words. Served from the same section data the browser renders, so the crawler
+ * and the customer are never shown different content, which is cloaking.
+ *
+ * Everything is escaped: this is vendor written text going into HTML.
+ */
+function pageText(sections) {
+  const out = []
+  for (const sec of sections || []) {
+    if (sec?.visible === false) continue
+    const st = sec.settings || {}
+    if (sec.type === 'hero') {
+      if (st.headline) out.push({ tag: 'h1', text: st.headline })
+      if (st.sub) out.push({ tag: 'p', text: st.sub })
+    }
+    if (sec.type === 'textBlock') {
+      if (st.title) out.push({ tag: 'h2', text: st.title })
+      for (const para of String(st.body || '').split('\n\n')) {
+        if (para.trim()) out.push({ tag: 'p', text: para.trim() })
+      }
+    }
+    if (sec.type === 'trustBadges') {
+      const items = [st.item1, st.item2, st.item3, st.item4].filter(Boolean)
+      if (st.title) out.push({ tag: 'h2', text: st.title })
+      for (const it of items) out.push({ tag: 'li', text: it })
+    }
+    if (sec.type === 'faq') {
+      if (st.title) out.push({ tag: 'h2', text: st.title })
+      for (const [q, a] of [[st.q1, st.a1], [st.q2, st.a2], [st.q3, st.a3]]) {
+        if (q && a) {
+          out.push({ tag: 'h3', text: q })
+          out.push({ tag: 'p', text: a })
+        }
+      }
+    }
+    if (sec.type === 'ctaBanner' && st.headline) out.push({ tag: 'p', text: st.headline })
+    if (sec.type === 'socialLinks' && st.title) out.push({ tag: 'h2', text: st.title })
+  }
+  return out
+}
+
+function buildPageNoscript({ store, blocks, canonical, label }) {
+  const name = store.businessName || store.storeName
+  const body = blocks
+    .map((b) => `<${b.tag}>${esc(b.text)}</${b.tag}>`)
+    .join('\n      ')
+
+  return `<noscript>
+    <div>
+      <p><a href="${esc(canonical)}">${esc(name)}</a> &rsaquo; ${esc(label)}</p>
+      ${body}
+    </div>
+  </noscript>`
+}
+
+/** FAQ entries as schema.org, so the answers can surface directly in search. */
+function faqJsonLd(sections) {
+  const pairs = []
+  for (const sec of sections || []) {
+    if (sec?.type !== 'faq' || sec?.visible === false) continue
+    const st = sec.settings || {}
+    for (const [q, a] of [[st.q1, st.a1], [st.q2, st.a2], [st.q3, st.a3]]) {
+      if (q && a) pairs.push({ q, a })
+    }
+  }
+  if (!pairs.length) return null
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: pairs.map((p) => ({
+      '@type': 'Question',
+      name: p.q,
+      acceptedAnswer: { '@type': 'Answer', text: p.a },
+    })),
+  }
+}
+
 export default async function handler(req, res) {
   let shell = '<!doctype html><html><head></head><body><div id="root"></div></body></html>'
   try {
@@ -395,6 +476,63 @@ export default async function handler(req, res) {
     // Explicit opt-in. Indexing a vendor's business without asking is not ours
     // to decide, so nothing is served until they switch it on.
     if (s.enabled !== true) return serveShell(res, shell, 'seo-disabled')
+
+    // A vendor built page (/store/about and friends). Same opt-in as the
+    // storefront: the vendor must have published the page AND switched SEO on,
+    // because this is what puts their words in front of a crawler. Anything
+    // else falls through to the SPA, which still serves the page to people.
+    const pageKey = String(req.query?.page || '').trim().toLowerCase()
+    if (pageKey) {
+      const meta = CUSTOM_PAGES.find((p) => p.key === pageKey)
+      if (!meta || !isPageLive(store, pageKey)) return serveShell(res, shell, 'page-off')
+
+      const sections = store.storeDesign?.pages?.[pageKey]?.sections || []
+      const blocks = pageText(sections)
+      const bizName = store.businessName || store.storeName
+      const pageUrl = `${canonical}/${meta.path}`
+      const desc =
+        (blocks.find((b) => b.tag === 'p')?.text || '').slice(0, 300) ||
+        `${meta.label} for ${bizName}, a Nigerian business on Sellapage.`
+
+      const faq = faqJsonLd(sections)
+      const pageHead = [
+        `<title>${esc(`${meta.label} - ${bizName}`)}</title>`,
+        `<meta name="description" content="${esc(desc)}">`,
+        `<link rel="canonical" href="${esc(pageUrl)}">`,
+        `<meta property="og:title" content="${esc(`${meta.label} - ${bizName}`)}">`,
+        `<meta property="og:description" content="${esc(desc)}">`,
+        `<meta property="og:url" content="${esc(pageUrl)}">`,
+        `<meta property="og:type" content="website">`,
+        store.logo ? `<meta property="og:image" content="${esc(store.logo)}">` : '',
+        `<meta name="twitter:card" content="summary">`,
+        `<script type="application/ld+json">${JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: `${meta.label} - ${bizName}`,
+          description: desc,
+          url: pageUrl,
+          isPartOf: { '@type': 'WebSite', name: bizName, url: canonical },
+          publisher: { '@type': 'Organization', name: bizName },
+        })}</script>`,
+        faq ? `<script type="application/ld+json">${JSON.stringify(faq)}</script>` : '',
+      ]
+        .filter(Boolean)
+        .join('
+  ')
+
+      let pageHtml = shell.replace('</head>', `  ${pageHead}
+  </head>`)
+      pageHtml = pageHtml.replace(
+        '<div id="root"></div>',
+        `${buildPageNoscript({ store, blocks, canonical, label: meta.label })}
+    <div id="root"></div>`,
+      )
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400')
+      res.setHeader('X-Sellapage-Render', `custom-page-${pageKey}`)
+      return res.status(200).send(pageHtml)
+    }
 
     const name = store.businessName || store.storeName
 

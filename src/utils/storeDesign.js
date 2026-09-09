@@ -464,6 +464,7 @@ export function defaultDesign(vendorType = 'products') {
     serviceCard: { ...fieldDefaults(SERVICE_CARD_FIELDS) },
     popup: { ...fieldDefaults(POPUP_FIELDS) },
     pages: defaultPages(),
+    tracking: defaultTracking(),
     sections: [
       makeSection('announcement'),
       makeSection('hero'),
@@ -592,6 +593,7 @@ export function sanitizeDesign(input, vendorType = 'products') {
     serviceCard: cleanFields(SERVICE_CARD_FIELDS, raw.serviceCard),
     popup: cleanFields(POPUP_FIELDS, raw.popup),
     pages: cleanPages(raw.pages),
+    tracking: cleanTracking(raw.tracking),
     sections: cleaned.length ? cleaned : base.sections,
     updatedAt: Date.now(),
   }
@@ -864,4 +866,111 @@ export function isPageLive(store, key) {
 /** Enabled custom pages, for building footer and nav links. */
 export function livePages(store) {
   return CUSTOM_PAGES.filter((p) => isPageLive(store, p.key))
+}
+
+/**
+ * The public order tracking page.
+ *
+ * A customer pastes the order id from their receipt and sees where their order
+ * is, in the vendor's own words, on the vendor's own design.
+ *
+ * ID ONLY, AND THAT IS SAFE. Order ids are Firestore auto ids: 20 random
+ * characters, around 119 bits. That is not a guessable reference number, it is
+ * effectively a secret token, so possession of it is the authorisation. Asking
+ * for a phone number as well would only punish the customer who ordered three
+ * times from the same shop.
+ *
+ * The lookup still runs server side through the Admin SDK (api/order-track),
+ * because orders are owner-read-only in firestore.rules and must stay that way.
+ * That handler returns tracking fields only, never the payment reference or the
+ * vendor's internal notes.
+ */
+
+/** Every status either an order or a booking can be in, with default wording. */
+export const TRACKING_STATUSES = [
+  { key: 'pending', label: 'Order received', kind: 'both', default: 'We have your order and we are getting it ready.' },
+  { key: 'confirmed', label: 'Confirmed', kind: 'both', default: 'Your order is confirmed and being prepared.' },
+  { key: 'dispatched', label: 'Dispatched', kind: 'order', default: 'Your order has left us and is on its way.' },
+  { key: 'in_transit', label: 'In transit', kind: 'order', default: 'Your order is with the courier and moving.' },
+  { key: 'delivered', label: 'Delivered', kind: 'order', default: 'Delivered. Thank you for shopping with us.' },
+  { key: 'in_progress', label: 'In progress', kind: 'booking', default: 'We are working on your booking right now.' },
+  { key: 'rescheduled', label: 'Rescheduled', kind: 'booking', default: 'Your booking has been moved. Check your messages for the new time.' },
+  { key: 'completed', label: 'Completed', kind: 'booking', default: 'All done. Thank you for choosing us.' },
+  { key: 'no_show', label: 'Missed', kind: 'booking', default: 'This booking was marked as missed. Message us to rebook.' },
+  { key: 'cancelled', label: 'Cancelled', kind: 'both', default: 'This order was cancelled. Message us if that looks wrong.' },
+  { key: 'refunded', label: 'Refunded', kind: 'booking', default: 'This booking was refunded.' },
+]
+
+/** Page level copy the vendor can change. Wording only, never the logic. */
+export const TRACKING_FIELDS = [
+  { key: 'enabled', label: 'Publish the tracking page', type: 'toggle', default: false },
+  { key: 'title', label: 'Heading', type: 'text', max: 60, default: 'Track your order' },
+  { key: 'sub', label: 'Supporting line', type: 'textarea', max: 200, default: 'Paste the order ID from your receipt to see where your order is.' },
+  { key: 'placeholder', label: 'Box placeholder', type: 'text', max: 60, default: 'Paste your order ID' },
+  { key: 'buttonLabel', label: 'Button text', type: 'text', max: 30, default: 'Track order' },
+  { key: 'notFound', label: 'When the ID is not found', type: 'textarea', max: 200, default: 'We could not find that order ID. Check it and try again, or message us and we will look it up.' },
+  { key: 'helpText', label: 'Help line under the box', type: 'text', max: 120, default: 'Your order ID is on the receipt we sent you.' },
+  { key: 'showItems', label: 'Show what was ordered', type: 'toggle', default: true },
+  { key: 'showTotal', label: 'Show the amount paid', type: 'toggle', default: true },
+]
+
+function defaultTracking() {
+  const out = {}
+  for (const f of TRACKING_FIELDS) out[f.key] = f.default
+  out.messages = {}
+  for (const s of TRACKING_STATUSES) out.messages[s.key] = s.default
+  return out
+}
+
+function cleanTracking(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {}
+  const out = cleanFields(TRACKING_FIELDS, src)
+  const msgs = src.messages && typeof src.messages === 'object' ? src.messages : {}
+  out.messages = {}
+  for (const s of TRACKING_STATUSES) {
+    out.messages[s.key] = clampText(msgs[s.key] ?? s.default, 200)
+  }
+  return out
+}
+
+/**
+ * Whether the public tracking page should be served.
+ *
+ * Same two keys as everything else: the plan must allow the design, and the
+ * vendor must have switched this page on.
+ */
+export function isTrackingLive(store) {
+  return isDesignLive(store) && store?.storeDesign?.tracking?.enabled === true
+}
+
+/** The vendor's wording for a status, falling back to the shipped default. */
+export function trackingMessage(tracking, status) {
+  const key = String(status || 'pending').toLowerCase()
+  const known = TRACKING_STATUSES.find((s) => s.key === key)
+  return tracking?.messages?.[key] || known?.default || 'We are working on your order.'
+}
+
+/** The label for a status, for the badge and the timeline. */
+export function trackingLabel(status) {
+  const key = String(status || 'pending').toLowerCase()
+  return TRACKING_STATUSES.find((s) => s.key === key)?.label || 'Received'
+}
+
+/**
+ * Progress through the normal happy path, for the stepper. Terminal states that
+ * are not "finished" return -1 so the page shows a plain message instead of a
+ * progress bar implying the order is still moving.
+ */
+export const ORDER_STEPS = ['pending', 'confirmed', 'dispatched', 'delivered']
+export const BOOKING_STEPS = ['pending', 'confirmed', 'in_progress', 'completed']
+
+export function trackingStep(status, kind) {
+  const key = String(status || 'pending').toLowerCase()
+  if (key === 'cancelled' || key === 'refunded' || key === 'no_show') return -1
+  const steps = kind === 'booking' ? BOOKING_STEPS : ORDER_STEPS
+  // in_transit sits between dispatched and delivered on the courier's path.
+  if (key === 'in_transit') return steps.indexOf('dispatched')
+  if (key === 'rescheduled') return steps.indexOf('confirmed')
+  const i = steps.indexOf(key)
+  return i === -1 ? 0 : i
 }

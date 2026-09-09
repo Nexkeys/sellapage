@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { generateBookingReceipt } from '../../utils/generateReceipt'
 import BookingsCalendar from './BookingsCalendar'
+import OrderDetail from './OrderDetail'
 import { SkeletonRows } from '../Skeleton'
 
 const BOOKING_STATUS_OPTIONS = [
@@ -148,6 +149,8 @@ export default function BookingsTab({
   navigateTo,
 }) {
   const [statusError, setStatusError] = useState('')
+  // The full record for one booking. Read only: actions stay in the table.
+  const [detailBooking, setDetailBooking] = useState(null)
   const [statusUpdatingId, setStatusUpdatingId] = useState(null)
   const [expandedBookingId, setExpandedBookingId] = useState(null)
 
@@ -392,6 +395,17 @@ export default function BookingsTab({
     )
   }
 
+  if (detailBooking) {
+    return (
+      <OrderDetail
+        record={detailBooking}
+        kind="booking"
+        store={store}
+        onBack={() => setDetailBooking(null)}
+      />
+    )
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -596,7 +610,13 @@ export default function BookingsTab({
                             )}
                           </td>
                           <td className="border-r border-gray-100 px-3 py-3.5 align-top">
-                            <p className="text-xs font-bold leading-tight text-gray-900">{booking.customerName || '-'}</p>
+                            <button
+                              type="button"
+                              onClick={() => setDetailBooking(booking)}
+                              className="text-left text-xs font-bold leading-tight text-gray-900 underline-offset-2 hover:text-green-700 hover:underline"
+                            >
+                              {booking.customerName || 'View booking'}
+                            </button>
                             <p className="mt-0.5 text-[10px] text-gray-400">{booking.customerPhone || '-'}</p>
                           </td>
                           <td className="border-r border-gray-100 px-3 py-3.5 align-top">
@@ -675,7 +695,13 @@ export default function BookingsTab({
                     <div className="flex min-w-0 flex-1 items-start gap-2">
                       <User size={14} className="mt-0.5 flex-shrink-0 text-gray-300" />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-gray-900">{booking.customerName || '-'}</p>
+                        <button
+                          type="button"
+                          onClick={() => setDetailBooking(booking)}
+                          className="truncate text-left text-sm font-bold text-gray-900 underline-offset-2 active:text-green-700 active:underline"
+                        >
+                          {booking.customerName || 'View booking'}
+                        </button>
                         <p className="truncate text-[11px] text-gray-400">{booking.customerPhone || '-'}</p>
                       </div>
                     </div>

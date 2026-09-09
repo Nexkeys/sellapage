@@ -35,7 +35,7 @@ import { initMetaPixel, trackPixel } from '../utils/metaPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
 import GuaranteeBadge from "../components/GuaranteeBadge";
 import DesignedStorefront from "../components/storefront/DesignedStorefront";
-import { isDesignLive, livePages, fontStack } from "../utils/storeDesign";
+import { isDesignLive, livePages, fontStack, isTrackingLive } from "../utils/storeDesign";
 
 const EMPTY_CHECKOUT_FORM = {
   customerName: "",
@@ -1053,6 +1053,9 @@ export default function StorePage() {
   // Only fetched for vendors selling both, and only used by a live custom
   // design. The standard product page does not read this.
   const [designServices, setDesignServices] = useState([]);
+  // Catalogue state for the designed storefront only. Kept apart from
+  // activeCategory so the standard storefront behaves exactly as before.
+  const [designBrowse, setDesignBrowse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [search, setSearch] = useState("");
@@ -1317,6 +1320,22 @@ export default function StorePage() {
       onClick: () =>
         navigate(`/${store.slug || store.storeName}/${pg.path}`),
     })),
+    ...(designServices.length
+      ? [
+          {
+            label: "Services",
+            onClick: () => navigate(`/${store.slug || store.storeName}/services`),
+          },
+        ]
+      : []),
+    ...(isTrackingLive(store)
+      ? [
+          {
+            label: "Track your order",
+            onClick: () => navigate(`/${store.slug || store.storeName}/track`),
+          },
+        ]
+      : []),
     ...(designWhatsappUrl
       ? [{ label: "Contact us", href: designWhatsappUrl }]
       : []),
@@ -1767,14 +1786,16 @@ export default function StorePage() {
             stats={designStats}
             whatsappUrl={designWhatsappUrl}
             helpLinks={designHelpLinks}
-            activeCategory={activeCategory}
+            browse={designBrowse}
             onAddToCart={handleAddToCart}
             onOrder={(p) => setSelectedProduct(p)}
             onBook={() => navigate(`/${store.storeName}/services`)}
-            onCategory={(cat) => setActiveCategory(cat)}
-            onClearCategory={() => setActiveCategory("All")}
-            onViewAll={() => setActiveTab("categories")}
-            onCta={() => setActiveTab("categories")}
+            onCategory={(cat) => setDesignBrowse(cat)}
+            onBrowseAll={() => setDesignBrowse("all")}
+            onClearBrowse={() => setDesignBrowse(null)}
+            onViewAll={() => setDesignBrowse("all")}
+            onViewAllServices={() => navigate(`/${store.storeName}/services`)}
+            onCta={() => setDesignBrowse("all")}
           />
         )}
 

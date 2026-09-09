@@ -30,6 +30,7 @@ const BillingCallback = lazy(() => import('./pages/BillingCallback'))
 const StorePage        = lazy(() => import('./pages/StorePage'))
 const ServiceStorePage = lazy(() => import('./pages/ServiceStorePage'))
 const StoreCustomPage  = lazy(() => import('./pages/StoreCustomPage'))
+const StoreTrackPage   = lazy(() => import('./pages/StoreTrackPage'))
 const ReviewPage       = lazy(() => import('./pages/ReviewPage'))
 
 // Comparison pages
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="/:storeName/about" element={<StoreCustomPage pageKey="about" />} />
             <Route path="/:storeName/contact" element={<StoreCustomPage pageKey="contact" />} />
             <Route path="/:storeName/policies" element={<StoreCustomPage pageKey="policies" />} />
+            <Route path="/:storeName/track" element={<StoreTrackPage />} />
             <Route path="*"           element={<NotFound />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>

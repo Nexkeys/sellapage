@@ -389,7 +389,7 @@ function ServiceCard({ sv, cfg, t, onBook }) {
   )
 }
 
-function ServiceRow({ s, services, serviceCard, t, onBook, onViewAll }) {
+function ServiceRow({ s, services, serviceCard, t, onBook, onViewAll, onViewAllServices }) {
   const list = useMemo(() => {
     let out = Array.isArray(services) ? [...services] : []
     if (s.source === 'category' && s.category) {
@@ -410,11 +410,11 @@ function ServiceRow({ s, services, serviceCard, t, onBook, onViewAll }) {
             <ServiceCard key={sv.id} sv={sv} cfg={serviceCard} t={t} onBook={onBook} />
           ))}
         </div>
-        {s.showViewAll && onViewAll ? (
+        {s.showViewAll && (onViewAllServices || onViewAll) ? (
           <div className="mt-8 text-center">
             <button
               type="button"
-              onClick={onViewAll}
+              onClick={onViewAllServices || onViewAll}
               style={buttonStyle('outline', t)}
               className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold"
             >
@@ -1008,70 +1008,159 @@ function useDesignFonts(theme) {
 }
 
 /**
- * The filtered catalogue a category click leads to.
+ * The full catalogue: everything, or one category.
  *
- * A designed home page is a curated layout, not a full listing, so the store's
- * normal "filter the product grid" behaviour has nothing to filter here. Rather
- * than leave every category control looking dead, the design gets its own
- * listing view built from the same cards, with a way back.
+ * A designed home page is a curated layout, not a listing, so "View all" and
+ * every category control need somewhere real to land. This is that place, built
+ * from the same cards as the rest of the design so it never looks like a
+ * different site.
+ *
+ * Products and services both appear here, under their own headings, because a
+ * vendor selling both has customers who do not care which bucket a thing is in.
  */
-function CategoryView({
-  category, products, services, productCard, serviceCard, t, footer, store, categories,
-  helpLinks, onAddToCart, onOrder, onBook, onCategory, onClear,
+function CatalogueView({
+  browse, products, services, productCard, serviceCard, t, footer, store, categories,
+  helpLinks, onAddToCart, onOrder, onBook, onCategory, onBrowseAll, onClear,
 }) {
-  const match = (x) => String(x.category || '').toLowerCase() === String(category).toLowerCase()
-  const p = (products || []).filter(match)
-  const sv = (services || []).filter(match)
-  const empty = !p.length && !sv.length
+  const [sort, setSort] = useState('newest')
+
+  const all = browse === 'all'
+  const inScope = (x) =>
+    all || String(x.category || '').toLowerCase() === String(browse).toLowerCase()
+
+  const sorter = (a, b) => {
+    if (sort === 'low') return Number(a.price || 0) - Number(b.price || 0)
+    if (sort === 'high') return Number(b.price || 0) - Number(a.price || 0)
+    if (sort === 'name') return String(a.name || '').localeCompare(String(b.name || ''))
+    return 0
+  }
+
+  const p = (products || []).filter(inScope).sort(sorter)
+  const sv = (services || []).filter(inScope).sort(sorter)
+  const total = p.length + sv.length
+  const bothKinds = p.length > 0 && sv.length > 0
+
+  const chip = (active) => ({
+    background: active ? t.primary : 'transparent',
+    color: active ? t.onPrimary : t.textColor,
+    border: `1px solid ${active ? t.primary : t.border}`,
+    borderRadius: '999px',
+  })
 
   return (
     <>
-      <section className="px-4 py-8">
+      <section className="px-4 py-6 sm:py-8">
         <Wrap t={t}>
           <button
             type="button"
             onClick={onClear}
-            className="inline-flex items-center gap-1.5 text-xs font-bold opacity-60 hover:opacity-100"
+            className="inline-flex items-center gap-1.5 text-xs font-bold opacity-60 transition-opacity hover:opacity-100"
           >
             <ArrowRight size={13} className="rotate-180" /> Back to store
           </button>
-          <h1
-            className={`mt-3 text-2xl font-extrabold sm:text-3xl ${t.headingCase === 'uppercase' ? 'uppercase' : ''}`}
-            style={{ fontFamily: t.headingFont }}
-          >
-            {category}
-          </h1>
-          <p className="mt-1 text-xs opacity-60">
-            {p.length + sv.length} {p.length + sv.length === 1 ? 'item' : 'items'}
-          </p>
 
-          {empty ? (
-            <div className="mt-8 p-10 text-center" style={{ border: `1px dashed ${t.border}`, borderRadius: t.radius }}>
-              <p className="text-sm font-bold">Nothing in this category yet</p>
-              <button
-                type="button"
-                onClick={onClear}
-                style={buttonStyle('solid', t)}
-                className="mt-4 px-5 py-2.5 text-xs font-bold"
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h1
+                className={`text-2xl font-extrabold sm:text-3xl ${t.headingCase === 'uppercase' ? 'uppercase' : ''}`}
+                style={{ fontFamily: t.headingFont }}
               >
-                Browse the store
-              </button>
+                {all ? 'Everything we sell' : browse}
+              </h1>
+              <p className="mt-1 text-xs opacity-60">
+                {total} {total === 1 ? 'item' : 'items'}
+              </p>
+            </div>
+
+            {total > 1 ? (
+              <label className="flex flex-shrink-0 items-center gap-2 text-xs">
+                <span className="opacity-60">Sort</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  style={{ border: `1px solid ${t.border}`, borderRadius: t.radius, background: 'transparent', color: t.textColor }}
+                  className="px-2.5 py-1.5 text-xs font-semibold outline-none"
+                >
+                  <option value="newest">Featured</option>
+                  <option value="low">Price: low to high</option>
+                  <option value="high">Price: high to low</option>
+                  <option value="name">Name A to Z</option>
+                </select>
+              </label>
+            ) : null}
+          </div>
+
+          {/* Category filter. Horizontally scrollable on a phone rather than
+              wrapping into a wall of chips that pushes the grid off screen. */}
+          {categories?.length ? (
+            <div className="-mx-4 mt-5 overflow-x-auto px-4 pb-1">
+              <div className="flex w-max gap-2">
+                <button type="button" onClick={onBrowseAll} style={chip(all)} className="px-4 py-2 text-xs font-bold">
+                  All
+                </button>
+                {categories.map((c) => {
+                  const label = typeof c === 'string' ? c : c.label || c.name
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => onCategory?.(label)}
+                      style={chip(!all && String(browse).toLowerCase() === String(label).toLowerCase())}
+                      className="whitespace-nowrap px-4 py-2 text-xs font-bold"
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {!total ? (
+            <div
+              className="mt-8 p-10 text-center"
+              style={{ border: `1px dashed ${t.border}`, borderRadius: t.radius }}
+            >
+              <p className="text-sm font-bold">Nothing here yet</p>
+              <p className="mt-1 text-xs opacity-60">
+                {all ? 'This store has not added anything yet.' : 'Try another category.'}
+              </p>
+              {!all ? (
+                <button
+                  type="button"
+                  onClick={onBrowseAll}
+                  style={buttonStyle('solid', t)}
+                  className="mt-4 px-5 py-2.5 text-xs font-bold"
+                >
+                  See everything
+                </button>
+              ) : null}
             </div>
           ) : null}
 
           {p.length ? (
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-              {p.map((x) => (
-                <ProductCard key={x.id} p={x} cfg={productCard} t={t} onAddToCart={onAddToCart} onOrder={onOrder} />
-              ))}
+            <div className="mt-6">
+              {bothKinds ? (
+                <p className="mb-3 text-[11px] font-extrabold uppercase tracking-widest opacity-50">Products</p>
+              ) : null}
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+                {p.map((x) => (
+                  <ProductCard key={x.id} p={x} cfg={productCard} t={t} onAddToCart={onAddToCart} onOrder={onOrder} />
+                ))}
+              </div>
             </div>
           ) : null}
 
           {sv.length ? (
-            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 ${p.length ? 'mt-8' : 'mt-6'}`}>
-              {sv.map((x) => (
-                <ServiceCard key={x.id} sv={x} cfg={serviceCard} t={t} onBook={onBook} />
-              ))}
+            <div className={p.length ? 'mt-10' : 'mt-6'}>
+              {bothKinds ? (
+                <p className="mb-3 text-[11px] font-extrabold uppercase tracking-widest opacity-50">Services</p>
+              ) : null}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {sv.map((x) => (
+                  <ServiceCard key={x.id} sv={x} cfg={serviceCard} t={t} onBook={onBook} />
+                ))}
+              </div>
             </div>
           ) : null}
         </Wrap>
@@ -1100,14 +1189,16 @@ export default function DesignedStorefront({
   reviews = [],
   stats = [],
   helpLinks = [],
-  activeCategory,
+  browse,
   whatsappUrl,
   onAddToCart,
   onOrder,
   onBook,
   onCategory,
-  onClearCategory,
+  onBrowseAll,
+  onClearBrowse,
   onViewAll,
+  onViewAllServices,
   onCta,
 }) {
   const theme = design?.theme
@@ -1144,15 +1235,15 @@ export default function DesignedStorefront({
     return onCta?.()
   }
 
-  // A category is being browsed, so show that catalogue instead of the curated
+  // Something is being browsed, so show the catalogue instead of the curated
   // home layout. The footer stays, so the page never loses its navigation.
-  const filtering = activeCategory && String(activeCategory).toLowerCase() !== 'all'
+  const filtering = !!browse
 
   return (
     <div style={{ background: theme?.pageBg || '#ffffff', color: t.textColor, fontFamily: t.bodyFont }}>
       {filtering ? (
-        <CategoryView
-          category={activeCategory}
+        <CatalogueView
+          browse={browse}
           products={products}
           services={services}
           productCard={productCard}
@@ -1166,7 +1257,8 @@ export default function DesignedStorefront({
           onOrder={onOrder}
           onBook={onBook}
           onCategory={onCategory}
-          onClear={onClearCategory}
+          onBrowseAll={onBrowseAll}
+          onClear={onClearBrowse}
         />
       ) : (
         design.sections
@@ -1194,6 +1286,7 @@ export default function DesignedStorefront({
               onBook={onBook}
               onCategory={onCategory}
               onViewAll={onViewAll}
+              onViewAllServices={onViewAllServices}
               onCta={heroCta(section.settings)}
             />
           )
