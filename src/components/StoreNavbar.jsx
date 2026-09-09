@@ -36,9 +36,34 @@ export default function StoreNavbar({
   // knowing about placement loses the badge.
   showVerified = undefined,
   verifiedTone: verifiedToneObj = null,
+  // A designed storefront browses inside its own layout, so it hands over its
+  // own handlers here. Without them this dock would drop a customer onto the
+  // standard-theme Categories tab, which looks like a different website.
+  onCategories = null,
+  onHome = null,
+  categoriesActive = false,
 }) {
   const showBadge =
     showVerified === undefined ? store?.cacVerified === true : showVerified === true;
+
+  const dockItems = [
+    {
+      id: "home",
+      label: "Home",
+      icon: Home,
+      onClick: () => (onHome ? onHome() : setActiveTab("home")),
+      active: onCategories
+        ? activeTab === "home" && !categoriesActive
+        : activeTab === "home",
+    },
+    {
+      id: "categories",
+      label: "Categories",
+      icon: Grid,
+      onClick: () => (onCategories ? onCategories() : setActiveTab("categories")),
+      active: onCategories ? categoriesActive : activeTab === "categories",
+    },
+  ];
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef(null);
 
@@ -278,24 +303,21 @@ export default function StoreNavbar({
         style={{ backgroundColor: cardBg, borderColor: "rgba(0,0,0,0.1)" }}
       >
         <div className="mx-auto flex min-h-[4.25rem] max-w-3xl items-center justify-around gap-1 px-2 py-2">
-          {[
-            { id: "home", label: "Home", icon: Home },
-            { id: "categories", label: "Categories", icon: Grid },
-          ].map(({ id, label, icon: Icon }) => (
+          {dockItems.map(({ id, label, icon: Icon, onClick, active }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={onClick}
               className="relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1 transition-all"
               style={{
-                color: activeTab === id ? primaryCol : textCol,
-                opacity: activeTab === id ? 1 : 0.5,
+                color: active ? primaryCol : textCol,
+                opacity: active ? 1 : 0.5,
               }}
             >
-              <Icon size={20} strokeWidth={activeTab === id ? 2.5 : 1.8} />
+              <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
               <span className="max-w-full truncate text-[10px] font-semibold">
                 {label}
               </span>
-              {activeTab === id && (
+              {active && (
                 <span
                   className="w-1 h-1 rounded-full mt-0.5"
                   style={{ backgroundColor: primaryCol }}

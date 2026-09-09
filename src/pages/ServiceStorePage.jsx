@@ -29,6 +29,7 @@ import {
   verifiedTone,
 } from "../utils/storeDesign";
 import ServiceDetailOverlay from "../components/storefront/ServiceDetailOverlay";
+import SEO from "../components/SEO";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import { SkeletonStorefront } from "../components/Skeleton";
@@ -625,9 +626,24 @@ export default function ServiceStorePage() {
   const designWhatsappUrl = store?.whatsappNumber
     ? `https://wa.me/${String(store.whatsappNumber).replace(/\D/g, "")}`
     : "";
+  // Browsing happens INSIDE the design. setActiveTab("categories") renders the
+  // standard-theme Service Categories tab, which on a designed store looks like
+  // a different website, so nothing here may call it.
+  const openDesignCatalogue = () => {
+    setActiveTab("home");
+    setDesignBrowse("all");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const closeDesignCatalogue = () => {
+    setActiveTab("home");
+    setDesignBrowse(null);
+    setSearch("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // This page has no orders tab, so its footer must not offer one.
   const designHelpLinks = [
-    { label: "Browse categories", onClick: () => setActiveTab("categories") },
+    { label: "Browse categories", onClick: openDesignCatalogue },
     ...(String(store?.vendorType || "").toLowerCase() === "both"
       ? [
           {
@@ -695,6 +711,41 @@ export default function ServiceStorePage() {
         fontFamily: bodyFont,
       }}
     >
+      {/* This page had NO SEO component at all, so its tab and every shared
+          link read "Sellapage - Run Your Entire Business...". Kept in step with
+          what api/storefront-render now sends for the same URL, so a crawler
+          that executes JS and one that does not are told the same thing. */}
+      <SEO
+        title={`Book ${store.businessName || store.storeName} services`}
+        description={
+          store.description ||
+          `Book services from ${store.businessName || store.storeName} online. Check what they offer and reserve a time.`
+        }
+        url={`/${store.slug || store.storeName}/services`}
+        image={store.logo || store.coverImage}
+        jsonLd={
+          store.id
+            ? {
+                '@context': 'https://schema.org',
+                '@type': 'LocalBusiness',
+                name: store.businessName || store.storeName,
+                description: store.description,
+                url: `https://sellapage.com.ng/${store.slug || store.storeName}/services`,
+                logo: store.logo,
+                image: store.coverImage || store.logo,
+                address: store.pickupAddress
+                  ? {
+                      '@type': 'PostalAddress',
+                      streetAddress: store.pickupAddress.streetAddress,
+                      addressLocality: store.pickupAddress.city,
+                      addressRegion: store.pickupAddress.state,
+                      addressCountry: 'NG',
+                    }
+                  : undefined,
+              }
+            : null
+        }
+      />
       <StoreNavbar
         store={store}
         search={search}
@@ -717,6 +768,9 @@ export default function ServiceStorePage() {
         }
         showVerified={verifiedBadgeAt(store, "navbar")}
         verifiedTone={designLive ? verifiedTone(store.storeDesign) : null}
+        onCategories={designLive ? openDesignCatalogue : null}
+        onHome={designLive ? closeDesignCatalogue : null}
+        categoriesActive={designLive ? designBrowse !== null || !!search.trim() : false}
       />
 
       <main className="relative z-0 pb-24 md:pb-0">
@@ -754,9 +808,11 @@ export default function ServiceStorePage() {
             onOpenService={(sv) => setDesignService(sv)}
             onCategory={(cat) => setDesignBrowse(cat)}
             onBrowseAll={() => setDesignBrowse("all")}
-            onClearBrowse={() => setDesignBrowse(null)}
+            onClearBrowse={closeDesignCatalogue}
             onViewAll={() => setDesignBrowse("all")}
             onCta={() => setDesignBrowse("all")}
+            query={search}
+            onClearSearch={() => setSearch("")}
           />
         )}
 

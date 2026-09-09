@@ -142,12 +142,12 @@ function preferredUrl(store) {
 }
 
 /** Up to 24 listings, enough to describe the shop without bloating the page. */
-async function loadListings(db, storeId) {
+async function loadListings(db, storeId, kind = 'products') {
   try {
     const snap = await db
       .collection('stores')
       .doc(storeId)
-      .collection('products')
+      .collection(kind === 'services' ? 'services' : 'products')
       .limit(24)
       .get()
     return snap.docs
@@ -307,7 +307,7 @@ function buildJsonLd({ store, seo, listings, canonical, storeUrl }) {
  * mirrors the JSON-LD: assistants discount structured data that has no visible
  * counterpart, so the claims and the prose have to agree.
  */
-function buildNoscript({ store, seo, listings, canonical }) {
+function buildNoscript({ store, seo, listings, canonical, kind = 'products' }) {
   const name = store.businessName || store.storeName
   const lines = []
 
@@ -321,7 +321,13 @@ function buildNoscript({ store, seo, listings, canonical }) {
   }
 
   if (listings.length) {
-    lines.push(`<h2>What ${esc(name)} sells</h2>`)
+    // A service business does not "sell" a haircut off a shelf, and a crawler
+    // reading the wrong verb is a crawler filing the business wrongly.
+    lines.push(
+      kind === 'services'
+        ? `<h2>Services ${esc(name)} offers</h2>`
+        : `<h2>What ${esc(name)} sells</h2>`,
+    )
     lines.push('<ul>')
     for (const p of listings.slice(0, 24)) {
       const price = naira(p.price)
@@ -565,7 +571,38 @@ export default async function handler(req, res) {
       category: s.category || '',
     }
 
-    const listings = await loadListings(db, store.id)
+    // The services page is a different page with different content, so it gets
+    // its own canonical, its own title and its own listings. Serving the shop
+    // front's metadata on /services was telling a crawler the two URLs are the
+    // same page, and listing products on a page that shows none.
+    //
+    // A services-only vendor has no product page at all, so their root URL
+    // lists services too.
+    const servicesUrl = String(req.query?.view || '').trim().toLowerCase() === 'services'
+    const servicesOnly = String(store.vendorType || '').toLowerCase() === 'services'
+    const listKind = servicesUrl || servicesOnly ? 'services' : 'products'
+
+    const listings = await loadListings(db, store.id, listKind)
+    const pageUrl = servicesUrl ? `${canonical}/services` : canonical
+
+    if (listKind === 'services') {
+      const serviceTitle = clamp(
+        `Book ${name} services${s.tagline ? ` - ${s.tagline}` : ''} | Sellapage`,
+        70,
+      )
+      // On /services the vendor's own SEO title is DELIBERATELY not reused: it
+      // is the shop front's title, and two URLs carrying one title is exactly
+      // the duplicate a crawler collapses. A services-only vendor has one page,
+      // so their configured title still wins there.
+      seo.title = servicesUrl ? serviceTitle : s.title ? seo.title : serviceTitle
+      seo.description = clamp(
+        s.description ||
+          store.description ||
+          `Book services from ${name} online. Check what they offer and reserve a time.`,
+        160,
+      )
+    }
+
     const image = store.logo || store.coverImage || `${SITE_URL}/og-image.png`
 
     const head = [
@@ -574,12 +611,12 @@ export default async function handler(req, res) {
       seo.keywords.length
         ? `<meta name="keywords" content="${esc(seo.keywords.join(', '))}">`
         : '',
-      `<link rel="canonical" href="${esc(canonical)}">`,
+      `<link rel="canonical" href="${esc(pageUrl)}">`,
       `<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">`,
       `<meta property="og:type" content="website">`,
       `<meta property="og:title" content="${esc(seo.title)}">`,
       `<meta property="og:description" content="${esc(seo.description)}">`,
-      `<meta property="og:url" content="${esc(canonical)}">`,
+      `<meta property="og:url" content="${esc(pageUrl)}">`,
       `<meta property="og:image" content="${esc(image)}">`,
       `<meta property="og:site_name" content="${esc(name)}">`,
       `<meta property="og:locale" content="en_NG">`,
@@ -614,7 +651,7 @@ export default async function handler(req, res) {
     let html = shell.replace('</head>', `  ${head}\n  ${pixelTag}\n  </head>`)
     html = html.replace(
       '<div id="root"></div>',
-      `${buildNoscript({ store, seo, listings, canonical })}\n    <div id="root"></div>`,
+      `${buildNoscript({ store, seo, listings, canonical, kind: listKind })}\n    <div id="root"></div>`,
     )
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
@@ -622,7 +659,7 @@ export default async function handler(req, res) {
     // minutes rather than on every visit, and stale content still serves
     // instantly while it refreshes in the background.
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400')
-    res.setHeader('X-Sellapage-Render', 'storefront-seo')
+    res.setHeader('X-Sellapage-Render', servicesUrl ? 'storefront-seo-services' : 'storefront-seo')
     return res.status(200).send(html)
   } catch (err) {
     console.error('[storefront-render] falling back to SPA:', err)

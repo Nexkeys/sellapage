@@ -1042,13 +1042,23 @@ function useDesignFonts(theme) {
  */
 function CatalogueView({
   browse, products, services, productCard, serviceCard, t, footer, store, categories,
-  helpLinks, kind, badge, onAddToCart, onOrder, onBook, onOpenService, onCategory, onBrowseAll, onClear,
+  helpLinks, kind, badge, query, onAddToCart, onOrder, onBook, onOpenService, onCategory, onBrowseAll,
+  onClear, onClearSearch,
 }) {
   const [sort, setSort] = useState('newest')
 
   const all = browse === 'all'
   const inScope = (x) =>
     all || String(x.category || '').toLowerCase() === String(browse).toLowerCase()
+
+  // The navbar search box is visible on a designed store, so it has to work on
+  // one. Same fields the standard theme searches, so a customer gets the same
+  // answer whichever page they are on.
+  const q = String(query || '').trim().toLowerCase()
+  const matches = (x) =>
+    !q ||
+    String(x.name || '').toLowerCase().includes(q) ||
+    String(x.description || '').toLowerCase().includes(q)
 
   const sorter = (a, b) => {
     if (sort === 'low') return Number(a.price || 0) - Number(b.price || 0)
@@ -1059,8 +1069,8 @@ function CatalogueView({
 
   // The shop front lists products; the service page lists services. They are
   // different businesses to a customer, and mixing them here was wrong.
-  const p = kind === 'services' ? [] : (products || []).filter(inScope).sort(sorter)
-  const sv = kind === 'products' ? [] : (services || []).filter(inScope).sort(sorter)
+  const p = kind === 'services' ? [] : (products || []).filter(inScope).filter(matches).sort(sorter)
+  const sv = kind === 'products' ? [] : (services || []).filter(inScope).filter(matches).sort(sorter)
   const total = p.length + sv.length
   const bothKinds = p.length > 0 && sv.length > 0
 
@@ -1089,7 +1099,13 @@ function CatalogueView({
                 className={`text-2xl font-extrabold sm:text-3xl ${t.headingCase === 'uppercase' ? 'uppercase' : ''}`}
                 style={{ fontFamily: t.headingFont }}
               >
-                {all ? (kind === 'services' ? 'All our services' : 'Everything we sell') : browse}
+                {q
+                  ? `Results for "${String(query).trim()}"`
+                  : all
+                  ? kind === 'services'
+                    ? 'All our services'
+                    : 'Everything we sell'
+                  : browse}
               </h1>
               <p className="mt-1 text-xs opacity-60">
                 {total} {total === 1 ? 'item' : 'items'}
@@ -1145,14 +1161,25 @@ function CatalogueView({
               className="mt-8 p-10 text-center"
               style={{ border: `1px dashed ${t.border}`, borderRadius: t.radius }}
             >
-              <p className="text-sm font-bold">Nothing here yet</p>
-              <p className="mt-1 text-xs opacity-60">
-                {all ? 'This store has not added anything yet.' : 'Try another category.'}
+              <p className="text-sm font-bold">
+                {q ? 'Nothing matched that search' : 'Nothing here yet'}
               </p>
-              {!all ? (
+              <p className="mt-1 text-xs opacity-60">
+                {q
+                  ? 'Check the spelling, or browse everything instead.'
+                  : all
+                  ? 'This store has not added anything yet.'
+                  : 'Try another category.'}
+              </p>
+              {!all || q ? (
                 <button
                   type="button"
-                  onClick={onBrowseAll}
+                  onClick={() => {
+                    // "See everything" has to undo BOTH filters, or a customer
+                    // clears the category and still sees an empty page.
+                    if (q) onClearSearch?.()
+                    if (!all) onBrowseAll?.()
+                  }}
                   style={buttonStyle('solid', t)}
                   className="mt-4 px-5 py-2.5 text-xs font-bold"
                 >
@@ -1226,7 +1253,9 @@ export default function DesignedStorefront({
   onViewAll,
   onViewAllServices,
   onCta,
+  onClearSearch,
   catalogueKind,
+  query,
 }) {
   const theme = design?.theme
   useDesignFonts(theme)
@@ -1280,15 +1309,23 @@ export default function DesignedStorefront({
     return onCta?.()
   }
 
-  // Something is being browsed, so show the catalogue instead of the curated
-  // home layout. The footer stays, so the page never loses its navigation.
-  const filtering = !!browse
+  // Something is being browsed or searched, so show the catalogue instead of
+  // the curated home layout. The footer stays, so the page never loses its
+  // navigation.
+  //
+  // A search with no category selected browses everything: without this the
+  // catalogue would compare each item's category against the string "null" and
+  // find nothing.
+  const searching = !!String(query || '').trim()
+  const filtering = !!browse || searching
 
   return (
     <div style={{ background: theme?.pageBg || '#ffffff', color: t.textColor, fontFamily: t.bodyFont }}>
       {filtering ? (
         <CatalogueView
-          browse={browse}
+          browse={browse || 'all'}
+          query={query}
+          onClearSearch={onClearSearch}
           products={products}
           services={services}
           productCard={productCard}

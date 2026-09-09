@@ -1317,9 +1317,26 @@ export default function StorePage() {
     : "";
   // Only tabs this page actually renders. A footer link with no destination is
   // worse than no link at all.
+  // Browsing happens INSIDE the design. setActiveTab("categories") renders the
+  // standard-theme Categories tab, which on a designed store looks like a
+  // different website, so nothing here may call it.
+  const openDesignCatalogue = () => {
+    setActiveTab("home");
+    setDesignBrowse("all");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const closeDesignCatalogue = () => {
+    setActiveTab("home");
+    setDesignBrowse(null);
+    setSearch("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const designHelpLinks = [
-    { label: "My orders", onClick: () => setActiveTab("orders") },
-    { label: "Browse categories", onClick: () => setActiveTab("categories") },
+    // "My orders" is deliberately absent: it opened a standard-theme
+    // placeholder that only said "message us", which Track your order and
+    // Contact us below already do properly.
+    { label: "Browse categories", onClick: openDesignCatalogue },
     // Only pages the vendor actually published, so no link can 404.
     ...livePages(store).map((pg) => ({
       label: pg.label,
@@ -1765,6 +1782,9 @@ export default function StorePage() {
         // store can move this mark to the hero or the footer instead.
         showVerified={verifiedBadgeAt(store, "navbar")}
         verifiedTone={designLive ? verifiedTone(store.storeDesign) : null}
+        onCategories={designLive ? openDesignCatalogue : null}
+        onHome={designLive ? closeDesignCatalogue : null}
+        categoriesActive={designLive ? designBrowse !== null || !!search.trim() : false}
       />
 
       <main className="relative z-0 pb-24 md:pb-0">
@@ -1802,11 +1822,15 @@ export default function StorePage() {
             onBook={() => navigate(`/${store.storeName}/services`)}
             onCategory={(cat) => setDesignBrowse(cat)}
             onBrowseAll={() => setDesignBrowse("all")}
-            onClearBrowse={() => setDesignBrowse(null)}
+            onClearBrowse={closeDesignCatalogue}
             onViewAll={() => setDesignBrowse("all")}
             onViewAllServices={() => navigate(`/${store.storeName}/services`)}
             catalogueKind="products"
             onCta={() => setDesignBrowse("all")}
+            // The navbar search box is on screen for designed stores too, so
+            // it has to actually search them.
+            query={search}
+            onClearSearch={() => setSearch("")}
           />
         )}
 

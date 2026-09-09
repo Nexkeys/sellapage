@@ -143,7 +143,7 @@
     },
     {
       "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/services",
-      "destination": "/api/storefront-render?route=storefront-render&slug=:slug"
+      "destination": "/api/storefront-render?route=storefront-render&slug=:slug&view=services"
     },
     {
       "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/about",
