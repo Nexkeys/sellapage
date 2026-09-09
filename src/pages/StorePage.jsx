@@ -35,7 +35,13 @@ import { initMetaPixel, trackPixel } from '../utils/metaPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
 import GuaranteeBadge from "../components/GuaranteeBadge";
 import DesignedStorefront from "../components/storefront/DesignedStorefront";
-import { isDesignLive, livePages, fontStack, isTrackingLive } from "../utils/storeDesign";
+import {
+  isDesignLive,
+  livePages,
+  fontStack,
+  isTrackingLive,
+  designTokens,
+} from "../utils/storeDesign";
 
 const EMPTY_CHECKOUT_FORM = {
   customerName: "",
@@ -1292,12 +1298,10 @@ export default function StorePage() {
 
   // Presentation only. Nothing below changes how an order is placed.
   const designLive = isDesignLive(store);
+  // Product categories only. The service page has its own, and showing a
+  // service category on the shop front sends a customer to an empty grid.
   const designCategories = [
-    ...new Set(
-      [...(products || []), ...(designServices || [])]
-        .map((p) => p.category)
-        .filter(Boolean),
-    ),
+    ...new Set((products || []).map((p) => p.category).filter(Boolean)),
   ];
   const designStats = [
     { value: `${(products || []).length}+`, label: "Products" },
@@ -1345,7 +1349,7 @@ export default function StorePage() {
   // otherwise tapping a product drops the customer back into the old theme.
   // Only the presentation props are swapped: the overlay's cart, variation and
   // order logic is untouched.
-  const designTokens = designLive
+  const overlayTokens = designLive
     ? {
         primary: store.storeDesign?.theme?.primary || themePrimary,
         card: store.storeDesign?.theme?.pageBg || themeCard,
@@ -1795,6 +1799,7 @@ export default function StorePage() {
             onClearBrowse={() => setDesignBrowse(null)}
             onViewAll={() => setDesignBrowse("all")}
             onViewAllServices={() => navigate(`/${store.storeName}/services`)}
+            catalogueKind="products"
             onCta={() => setDesignBrowse("all")}
           />
         )}
@@ -2106,11 +2111,11 @@ export default function StorePage() {
           isCartEnabled={isCartEnabled}
           isProOrPremium={isProOrPremium}
           activeThemeObj={activeThemeObj}
-          themePrimary={designTokens?.primary || themePrimary}
-          themeCard={designTokens?.card || themeCard}
-          themeText={designTokens?.text || themeText}
-          bodyFont={designTokens?.body || bodyFont}
-          headerFont={designTokens?.header || headerFont}
+          themePrimary={overlayTokens?.primary || themePrimary}
+          themeCard={overlayTokens?.card || themeCard}
+          themeText={overlayTokens?.text || themeText}
+          bodyFont={overlayTokens?.body || bodyFont}
+          headerFont={overlayTokens?.header || headerFont}
           whatsappNumber={store.whatsappNumber}
           storeUrl={storeUrl}
         />
@@ -2118,6 +2123,7 @@ export default function StorePage() {
 
       {cartOpen && isCartEnabled && (
         <CartDrawer
+          design={designLive ? designTokens(store.storeDesign) : null}
           cartItems={cart}
           onUpdateQuantity={handleUpdateQuantity}
           onRemoveItem={handleRemoveItem}

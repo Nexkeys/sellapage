@@ -451,11 +451,59 @@ const fieldDefaults = (fields) => Object.fromEntries(fields.map((f) => [f.key, f
  * where most people give up. Seeded from vendorType so a service vendor never
  * opens the builder onto a product grid they cannot fill.
  */
+/**
+ * The starting layout for the SERVICE page.
+ *
+ * Separate from the shop front on purpose. A service business sells time, not
+ * stock: the hero speaks about booking rather than browsing, the listing is
+ * booking cards, and there is no product row anywhere on it. Sharing one
+ * section list between the two pages was wrong, and produced a service page
+ * that rendered a product row with no products, so nothing at all.
+ */
+export function defaultServiceSections() {
+  const hero = makeSection('hero')
+  hero.settings = {
+    ...hero.settings,
+    headline: 'Book us for your next one.',
+    sub: 'Pick a service, choose a time, and we will take it from there.',
+    ctaLabel: 'See services',
+  }
+  const row = makeSection('serviceRow')
+  const cats = makeSection('categoryGrid')
+  cats.settings = { ...cats.settings, title: 'Browse services' }
+  // "Fast delivery" is product language. A service business is trusted on
+  // punctuality and skill, not shipping.
+  const trust = makeSection('trustBadges')
+  trust.settings = {
+    ...trust.settings,
+    item1: 'On time, every time',
+    item2: 'Experienced hands',
+    item3: 'Secure payment',
+    item4: '',
+  }
+  const faq = makeSection('faq')
+  faq.settings = {
+    ...faq.settings,
+    q1: 'How far in advance should I book?',
+    q2: 'Can I reschedule?',
+  }
+  return [
+    makeSection('announcement'),
+    hero,
+    row,
+    cats,
+    trust,
+    makeSection('reviews'),
+    faq,
+    makeSection('ctaBanner'),
+    makeSection('richFooter'),
+  ]
+}
+
 export function defaultDesign(vendorType = 'products') {
   const t = String(vendorType || 'products').toLowerCase()
   const rows = []
   if (vendorHasProducts(t)) rows.push(makeSection('productRow'))
-  if (vendorHasServices(t)) rows.push(makeSection('serviceRow'))
 
   return {
     enabled: false,
@@ -465,6 +513,8 @@ export function defaultDesign(vendorType = 'products') {
     popup: { ...fieldDefaults(POPUP_FIELDS) },
     pages: defaultPages(),
     tracking: defaultTracking(),
+    // The service page has its OWN layout. See defaultServiceSections().
+    serviceSections: vendorHasServices(t) ? defaultServiceSections() : [],
     sections: [
       makeSection('announcement'),
       makeSection('hero'),
@@ -594,6 +644,15 @@ export function sanitizeDesign(input, vendorType = 'products') {
     popup: cleanFields(POPUP_FIELDS, raw.popup),
     pages: cleanPages(raw.pages),
     tracking: cleanTracking(raw.tracking),
+    // Falls back to the seeded service layout rather than an empty page, so a
+    // design saved before service pages existed still renders something.
+    serviceSections: (() => {
+      const cleanedSvc = cleanSections(raw.serviceSections)
+      if (cleanedSvc.length) return cleanedSvc
+      return vendorHasServices(String(vendorType || 'products').toLowerCase())
+        ? defaultServiceSections()
+        : []
+    })(),
     sections: cleaned.length ? cleaned : base.sections,
     updatedAt: Date.now(),
   }
@@ -973,4 +1032,25 @@ export function trackingStep(status, kind) {
   if (key === 'rescheduled') return steps.indexOf('confirmed')
   const i = steps.indexOf(key)
   return i === -1 ? 0 : i
+}
+
+/**
+ * Resolved style tokens for a design, for anything rendering outside
+ * DesignedStorefront that still has to match it exactly (detail overlays, the
+ * cart drawer). One definition means an overlay can never drift from the page
+ * it opened on top of.
+ */
+export function designTokens(design) {
+  const theme = design?.theme || {}
+  return {
+    headingFont: fontStack(theme.fontHeading),
+    bodyFont: fontStack(theme.fontBody),
+    pageBg: theme.pageBg || '#ffffff',
+    textColor: theme.textColor || '#0f172a',
+    primary: theme.primary || '#0f172a',
+    onPrimary: theme.onPrimary || '#ffffff',
+    accent: theme.accent || '#0f766e',
+    border: theme.border || '#e2e8f0',
+    radius: radiusValue(theme.radius),
+  }
 }

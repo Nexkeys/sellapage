@@ -184,14 +184,13 @@ export default function StoreDesignTab({ store, storeUrl }) {
   const [device, setDevice] = useState('mobile')
   // Which of the two real storefronts the preview is simulating. Only ever
   // shown to a vendor who has both, because only they have two pages.
-  const [previewAs, setPreviewAs] = useState(hasProducts ? 'shop' : 'services')
   // Undo/redo. Capped so a long session cannot grow without bound.
   const [past, setPast] = useState([])
   const [future, setFuture] = useState([])
   const [draft, setDraft] = useState(null)
   // Which layout the section list below is editing: the shop front, or one of
   // the vendor's extra pages.
-  const [editing, setEditing] = useState('home')
+  const [editing, setEditing] = useState(vendorHasProducts(vendorType) ? 'home' : 'service')
 
   const draftKey = `sp_design_draft_${store?.id || 'store'}`
 
@@ -333,13 +332,22 @@ export default function StoreDesignTab({ store, storeUrl }) {
     setDragId(null)
   }
 
+  // Three kinds of layout live in one editor: the shop front, the service page
+  // (a different business to a customer, so a different section list), and the
+  // vendor's extra pages.
   const currentSections =
-    editing === 'home' ? design.sections : design.pages?.[editing]?.sections || []
+    editing === 'home'
+      ? design.sections
+      : editing === 'service'
+      ? design.serviceSections || []
+      : design.pages?.[editing]?.sections || []
 
   const setSections = (next) =>
     update(
       editing === 'home'
         ? { ...design, sections: next }
+        : editing === 'service'
+        ? { ...design, serviceSections: next }
         : {
             ...design,
             pages: { ...design.pages, [editing]: { ...design.pages[editing], sections: next } },
@@ -363,7 +371,13 @@ export default function StoreDesignTab({ store, storeUrl }) {
     return out
   }, [hasProducts, hasServices, products.length, services.length, categories.length])
 
-  const allowedTypes = useMemo(() => sectionsForVendor(vendorType), [vendorType])
+  // A service page is never offered a product row, and the shop front is never
+  // offered a service list, whatever the vendor sells.
+  const allowedTypes = useMemo(() => {
+    if (editing === 'home') return sectionsForVendor(hasProducts ? 'products' : vendorType)
+    if (editing === 'service') return sectionsForVendor('services')
+    return sectionsForVendor(vendorType)
+  }, [vendorType, editing, hasProducts])
 
   if (loading) {
     return (
@@ -602,7 +616,11 @@ export default function StoreDesignTab({ store, storeUrl }) {
           {/* Which page is being built. The shop front always exists; the rest
               are extra pages the vendor switches on one at a time. */}
           <div className="mb-3 flex flex-wrap gap-1.5">
-            {[{ key: 'home', label: 'Shop front' }, ...CUSTOM_PAGES].map((pg) => (
+            {[
+              ...(hasProducts ? [{ key: 'home', label: 'Shop front' }] : []),
+              ...(hasServices ? [{ key: 'service', label: 'Service page' }] : []),
+              ...CUSTOM_PAGES,
+            ].map((pg) => (
               <button
                 key={pg.key}
                 type="button"
@@ -616,7 +634,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
             ))}
           </div>
 
-          {editing !== 'home' && (
+          {editing !== 'home' && editing !== 'service' && (
             <div className="mb-3 rounded-xl bg-gray-50 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -825,28 +843,6 @@ export default function StoreDesignTab({ store, storeUrl }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {hasProducts && hasServices && (
-              // A "both" vendor has two live pages: the shop at /store and the
-              // service page at /store/services. They render the same design
-              // with different catalogues, so the preview has to show both.
-              <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
-                {[
-                  { id: 'shop', label: 'Shop front' },
-                  { id: 'services', label: 'Service page' },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setPreviewAs(m.id)}
-                    className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
-                      previewAs === m.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            )}
             <div className="flex flex-shrink-0 gap-1 rounded-xl bg-gray-100 p-1">
             {DEVICES.map((d) => (
               <button
@@ -874,8 +870,9 @@ export default function StoreDesignTab({ store, storeUrl }) {
               <DesignedStorefront
                 design={{ ...design, sections: currentSections }}
                 store={store}
-                products={previewAs === 'services' ? [] : products}
-                services={services}
+                products={editing === 'service' ? [] : products}
+                services={editing === 'service' ? services : []}
+                catalogueKind={editing === 'service' ? 'services' : 'products'}
                 categories={categories}
                 reviews={[]}
                 stats={stats}

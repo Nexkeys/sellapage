@@ -67,7 +67,12 @@ export default async function handler(req, res) {
         vendorType,
         // Live requires BOTH the plan and the vendor's own switch.
         live: eligible && store.storeDesign?.enabled === true,
-        design: store.storeDesign || defaultDesign(vendorType),
+        // Normalised on the way out, so a design saved before a field existed
+        // (service sections, custom pages, tracking) opens complete instead of
+        // showing the vendor an empty editor for it.
+        design: store.storeDesign
+          ? sanitizeDesign(store.storeDesign, vendorType)
+          : defaultDesign(vendorType),
         hasSaved: !!store.storeDesign,
       })
     }

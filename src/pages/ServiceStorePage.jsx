@@ -19,7 +19,14 @@ import ServiceCard from "../components/ServiceCard";
 import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
 import DesignedStorefront from "../components/storefront/DesignedStorefront";
-import { isDesignLive, livePages, isTrackingLive } from "../utils/storeDesign";
+import {
+  isDesignLive,
+  livePages,
+  isTrackingLive,
+  defaultServiceSections,
+  designTokens,
+} from "../utils/storeDesign";
+import ServiceDetailOverlay from "../components/storefront/ServiceDetailOverlay";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import { SkeletonStorefront } from "../components/Skeleton";
@@ -185,6 +192,8 @@ export default function ServiceStorePage() {
   const [activeCategory, setActiveCategory] = useState("All");
   // Catalogue state for the designed storefront only.
   const [designBrowse, setDesignBrowse] = useState(null);
+  // The service a customer tapped to read about, before deciding to book.
+  const [designService, setDesignService] = useState(null);
   const [highlightedService, setHighlightedService] = useState(null);
   const [hasInteracted, setHasInteracted] = useState(false);
 
@@ -694,9 +703,16 @@ export default function ServiceStorePage() {
         hasServices={true}
         hasProducts={store?.vendorType === "both"}
         activeStoreSection="services"
-        onSectionChange={(section) => {
-          if (section === "products") navigate(`/${store.storeName}`);
-        }}
+        // A designed storefront navigates from its FOOTER, not from a toggle
+        // bolted into the navbar. Withholding this handler removes the tabs;
+        // a store on the standard theme keeps them exactly as before.
+        onSectionChange={
+          designLive
+            ? null
+            : (section) => {
+                if (section === "products") navigate(`/${store.storeName}`);
+              }
+        }
       />
 
       <main className="relative z-0 pb-24 md:pb-0">
@@ -711,7 +727,16 @@ export default function ServiceStorePage() {
 
         {activeTab === "home" && designLive && (
           <DesignedStorefront
-            design={store.storeDesign}
+            // The service page has its OWN layout. A design saved before that
+            // existed has none, so it falls back to the seeded service layout
+            // rather than rendering a product row with no products, which is
+            // what produced a service page with nothing on it.
+            design={{
+              ...store.storeDesign,
+              sections: store.storeDesign?.serviceSections?.length
+                ? store.storeDesign.serviceSections
+                : defaultServiceSections(),
+            }}
             store={store}
             services={services}
             categories={designCategories}
@@ -720,7 +745,9 @@ export default function ServiceStorePage() {
             whatsappUrl={designWhatsappUrl}
             helpLinks={designHelpLinks}
             browse={designBrowse}
+            catalogueKind="services"
             onBook={openBookingModal}
+            onOpenService={(sv) => setDesignService(sv)}
             onCategory={(cat) => setDesignBrowse(cat)}
             onBrowseAll={() => setDesignBrowse("all")}
             onClearBrowse={() => setDesignBrowse(null)}
@@ -994,6 +1021,15 @@ export default function ServiceStorePage() {
           />
         )}
       </main>
+
+      {designLive && designService && (
+        <ServiceDetailOverlay
+          service={designService}
+          t={designTokens(store.storeDesign)}
+          onClose={() => setDesignService(null)}
+          onBook={openBookingModal}
+        />
+      )}
 
       {selectedBookingService && (
         <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center">

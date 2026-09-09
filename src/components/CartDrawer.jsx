@@ -12,6 +12,10 @@ export default function CartDrawer({
   storeName,
   activeThemeObj = null,
   onProceedToCheckout,
+  // Optional, and purely additive: the tokens of a live Store Design. Absent,
+  // every value below falls back to exactly what it used before, so a store on
+  // the standard theme renders identically.
+  design = null,
 }) {
   const [name, setName]   = useState('')
   const [phone, setPhone] = useState('')
@@ -53,10 +57,10 @@ export default function CartDrawer({
   }
 
   const cardBg = activeThemeObj?.defaultColors?.card || '#ffffff'
-  const bgCol = activeThemeObj?.defaultColors?.background || '#f9fafb'
-  const textCol = activeThemeObj?.defaultColors?.text || '#111827'
+  const bgCol = design?.pageBg || activeThemeObj?.defaultColors?.background || '#f9fafb'
+  const textCol = design?.textColor || activeThemeObj?.defaultColors?.text || '#111827'
   const primaryCol = activeThemeObj?.defaultColors?.primary || '#16a34a'
-  const fontFam = activeThemeObj?.typography?.bodyFontFamily
+  const fontFam = design?.bodyFont || activeThemeObj?.typography?.bodyFontFamily
 
   return (
     /* ── Overlay ── */
@@ -239,7 +243,8 @@ export default function CartDrawer({
             <button
               onClick={onProceedToCheckout}
               disabled={cartItems.length === 0}
-              className={`w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 text-sm transition-all shadow-sm ${activeThemeObj?.structuralStyle?.buttonClasses || 'bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold'}`}
+              style={design ? { background: design.primary, color: design.onPrimary, borderRadius: design.radius } : undefined}
+              className={`w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 text-sm font-bold transition-all shadow-sm ${design ? '' : activeThemeObj?.structuralStyle?.buttonClasses || 'bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold'}`}
             >
               Proceed to Checkout
             </button>
@@ -247,7 +252,8 @@ export default function CartDrawer({
             <button
               onClick={handleSendOrder}
               disabled={cartItems.length === 0}
-              className={`w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 text-sm transition-all shadow-sm ${activeThemeObj?.structuralStyle?.buttonClasses || 'bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold'}`}
+              style={design ? { background: design.primary, color: design.onPrimary, borderRadius: design.radius } : undefined}
+              className={`w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 text-sm font-bold transition-all shadow-sm ${design ? '' : activeThemeObj?.structuralStyle?.buttonClasses || 'bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold'}`}
             >
               <MessageCircle size={15} />
               Send Order on WhatsApp

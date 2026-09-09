@@ -314,7 +314,7 @@ function ProductRow({ s, products, productCard, t, onAddToCart, onOrder, onViewA
 }
 
 /** One service booking card. A different object to a product, so a different card. */
-function ServiceCard({ sv, cfg, t, onBook }) {
+function ServiceCard({ sv, cfg, t, onBook, onOpen }) {
   const img = sv.imageUrls?.[0]
   const btn = buttonStyle(cfg.buttonStyle, t)
   const horizontal = cfg.layout === 'horizontal'
@@ -331,7 +331,10 @@ function ServiceCard({ sv, cfg, t, onBook }) {
       }}
     >
       {img ? (
-        <div
+        <button
+          type="button"
+          onClick={() => onOpen?.(sv)}
+          aria-label={sv.name}
           className={`overflow-hidden bg-black/5 ${horizontal ? 'w-28 flex-shrink-0 sm:w-40' : 'w-full'}`}
           style={horizontal ? undefined : { aspectRatio: ratioValue(cfg.imageRatio) }}
         >
@@ -341,13 +344,18 @@ function ServiceCard({ sv, cfg, t, onBook }) {
             className={`h-full w-full object-cover transition-transform duration-300 ${imgHoverClass(cfg.hover)}`}
             loading="lazy"
           />
-        </div>
+        </button>
       ) : null}
 
       <div className={`flex min-w-0 flex-1 flex-col p-4 ${cfg.align === 'center' && !horizontal ? 'text-center' : ''}`}>
-        <p className="truncate text-base font-bold" style={{ color: t.textColor, fontFamily: t.headingFont }}>
+        <button
+          type="button"
+          onClick={() => onOpen?.(sv)}
+          className="truncate text-left text-base font-bold"
+          style={{ color: t.textColor, fontFamily: t.headingFont }}
+        >
           {sv.name}
-        </p>
+        </button>
 
         {cfg.showDescription && sv.description ? (
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-70" style={{ color: t.textColor }}>
@@ -389,7 +397,7 @@ function ServiceCard({ sv, cfg, t, onBook }) {
   )
 }
 
-function ServiceRow({ s, services, serviceCard, t, onBook, onViewAll, onViewAllServices }) {
+function ServiceRow({ s, services, serviceCard, t, onBook, onOpenService, onViewAll, onViewAllServices }) {
   const list = useMemo(() => {
     let out = Array.isArray(services) ? [...services] : []
     if (s.source === 'category' && s.category) {
@@ -407,7 +415,7 @@ function ServiceRow({ s, services, serviceCard, t, onBook, onViewAll, onViewAllS
         <Heading t={t} color={s.fg} sub={s.sub}>{s.title}</Heading>
         <div className={`mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 ${lg}`}>
           {list.map((sv) => (
-            <ServiceCard key={sv.id} sv={sv} cfg={serviceCard} t={t} onBook={onBook} />
+            <ServiceCard key={sv.id} sv={sv} cfg={serviceCard} t={t} onBook={onBook} onOpen={onOpenService} />
           ))}
         </div>
         {s.showViewAll && (onViewAllServices || onViewAll) ? (
@@ -1020,7 +1028,7 @@ function useDesignFonts(theme) {
  */
 function CatalogueView({
   browse, products, services, productCard, serviceCard, t, footer, store, categories,
-  helpLinks, onAddToCart, onOrder, onBook, onCategory, onBrowseAll, onClear,
+  helpLinks, kind, onAddToCart, onOrder, onBook, onOpenService, onCategory, onBrowseAll, onClear,
 }) {
   const [sort, setSort] = useState('newest')
 
@@ -1035,8 +1043,10 @@ function CatalogueView({
     return 0
   }
 
-  const p = (products || []).filter(inScope).sort(sorter)
-  const sv = (services || []).filter(inScope).sort(sorter)
+  // The shop front lists products; the service page lists services. They are
+  // different businesses to a customer, and mixing them here was wrong.
+  const p = kind === 'services' ? [] : (products || []).filter(inScope).sort(sorter)
+  const sv = kind === 'products' ? [] : (services || []).filter(inScope).sort(sorter)
   const total = p.length + sv.length
   const bothKinds = p.length > 0 && sv.length > 0
 
@@ -1065,7 +1075,7 @@ function CatalogueView({
                 className={`text-2xl font-extrabold sm:text-3xl ${t.headingCase === 'uppercase' ? 'uppercase' : ''}`}
                 style={{ fontFamily: t.headingFont }}
               >
-                {all ? 'Everything we sell' : browse}
+                {all ? (kind === 'services' ? 'All our services' : 'Everything we sell') : browse}
               </h1>
               <p className="mt-1 text-xs opacity-60">
                 {total} {total === 1 ? 'item' : 'items'}
@@ -1158,7 +1168,7 @@ function CatalogueView({
               ) : null}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {sv.map((x) => (
-                  <ServiceCard key={x.id} sv={x} cfg={serviceCard} t={t} onBook={onBook} />
+                  <ServiceCard key={x.id} sv={x} cfg={serviceCard} t={t} onBook={onBook} onOpen={onOpenService} />
                 ))}
               </div>
             </div>
@@ -1194,12 +1204,14 @@ export default function DesignedStorefront({
   onAddToCart,
   onOrder,
   onBook,
+  onOpenService,
   onCategory,
   onBrowseAll,
   onClearBrowse,
   onViewAll,
   onViewAllServices,
   onCta,
+  catalogueKind,
 }) {
   const theme = design?.theme
   useDesignFonts(theme)
@@ -1252,10 +1264,12 @@ export default function DesignedStorefront({
           store={store}
           categories={categories}
           helpLinks={helpLinks}
+          kind={catalogueKind}
           footer={design.sections.find((x) => x.type === 'richFooter' && isSectionLiveNow(x))}
           onAddToCart={onAddToCart}
           onOrder={onOrder}
           onBook={onBook}
+          onOpenService={onOpenService}
           onCategory={onCategory}
           onBrowseAll={onBrowseAll}
           onClear={onClearBrowse}
@@ -1284,6 +1298,7 @@ export default function DesignedStorefront({
               onAddToCart={onAddToCart}
               onOrder={onOrder}
               onBook={onBook}
+              onOpenService={onOpenService}
               onCategory={onCategory}
               onViewAll={onViewAll}
               onViewAllServices={onViewAllServices}
