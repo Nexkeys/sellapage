@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite",
     "check:cjs": "node scripts/check-cjs-safe.js",
-    "prebuild": "node -e \"const{existsSync}=require('fs'),{execFileSync}=require('child_process');for(const s of ['scripts/check-cjs-safe.js','scripts/check-ai-models.js']){if(!existsSync(s)){console.warn('· '+s+' missing from repo - guard SKIPPED');continue}execFileSync(process.execPath,[s],{stdio:'inherit'})}\"",
+    "prebuild": "node -e \"const{existsSync}=require('fs'),{execFileSync}=require('child_process');for(const s of ['scripts/check-cjs-safe.js','scripts/check-ai-models.js','scripts/check-api-syntax.mjs']){if(!existsSync(s)){console.warn('\u00b7 '+s+' missing from repo - guard SKIPPED');continue}execFileSync(process.execPath,[s],{stdio:'inherit'})}\"",
     "build": "vite build",
     "postbuild": "node scripts/prerender-seo.mjs",
     "preview": "vite preview",
-    "check:ai": "node scripts/check-ai-models.js"
+    "check:ai": "node scripts/check-ai-models.js",
+    "check:api": "node scripts/check-api-syntax.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

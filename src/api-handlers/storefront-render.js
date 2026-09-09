@@ -517,8 +517,7 @@ export default async function handler(req, res) {
         faq ? `<script type="application/ld+json">${JSON.stringify(faq)}</script>` : '',
       ]
         .filter(Boolean)
-        .join('
-  ')
+        .join('\n  ')
 
       let pageHtml = shell.replace('</head>', `  ${pageHead}
   </head>`)
