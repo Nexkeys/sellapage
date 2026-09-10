@@ -4,6 +4,8 @@ import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
 import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
 import { markRecovered } from "./abandoned-checkout.js";
+import { sendTikTokPurchase } from "./tiktok-events.js";
+import { getTikTokEventsToken } from "./store-secrets.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
 // Moved verbatim out of paystack-webhook.js's former single checkout branch - logic
@@ -241,6 +243,47 @@ export async function handleProductCheckout(db, data, res) {
   // This checkout is no longer abandoned. Fire and forget: markRecovered never
   // throws, and a missing record is the normal case for a non-Premium store.
   markRecovered(db, storeId, data.reference, customerEmail);
+
+  // ------------------------------------------------------------------
+  // TikTok CompletePayment, server side.
+  //
+  // The browser pixel already fires this on the success screen, but that screen
+  // is missed constantly: ad blockers, in-app browsers, and customers who close
+  // the tab the moment Paystack redirects. This is the copy that always lands,
+  // because it runs where the money is actually confirmed.
+  //
+  // Both carry the SAME event_id (the Paystack reference), and TikTok
+  // deduplicates on it for 48 hours, so a vendor's reported revenue is never
+  // doubled by having both.
+  //
+  // Ordered so a store with no TikTok pixel costs NOTHING: the field is already
+  // on the store document fetched above, so the token read never happens for
+  // them. Wrapped whole and never awaited into the response path, for the same
+  // reason as the loyalty block: no tracking call is worth failing a paid order.
+  // ------------------------------------------------------------------
+  try {
+    if (storeData.tiktokPixelId) {
+      const tiktokToken = await getTikTokEventsToken(db, storeId);
+      if (tiktokToken) {
+        const appUrl = process.env.APP_URL || "https://www.sellapage.com.ng";
+        await sendTikTokPurchase({
+          pixelId: storeData.tiktokPixelId,
+          accessToken: tiktokToken,
+          eventId: data.reference,
+          value: Number(grandTotal) || 0,
+          currency: "NGN",
+          contents: parsedCartItems || [],
+          email: customerEmail,
+          phone: customerPhone,
+          pageUrl: storeData.customDomain
+            ? `https://${storeData.customDomain}`
+            : `${appUrl}/${storeData.storeName || ""}`,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[handle-product-checkout] tiktok events failed", err);
+  }
 
   // The code also renders on the success screen, but the Paystack redirect
   // usually beats this webhook, so on a first order that screen may load before

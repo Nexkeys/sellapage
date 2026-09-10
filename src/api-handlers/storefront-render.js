@@ -648,7 +648,25 @@ export default async function handler(req, res) {
     const pixelTag = /^[1-9]\d{14,15}$/.test(pixelId)
       ? "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','" + pixelId + "');window.__sellapagePixel='" + pixelId + "';</script>"
       : ''
-    let html = shell.replace('</head>', `  ${head}\n  ${pixelTag}\n  </head>`)
+    // TikTok Pixel base code, server rendered. Same reasoning as the Meta block
+    // directly above: TikTok Events Manager fetches the raw HTML to confirm a
+    // pixel is installed, and reports the site as unverified without one, even
+    // while Test Events is happily receiving events from the hydrated page.
+    //
+    // Also init WITHOUT ttq.page(). The client fires the page view
+    // (src/utils/tiktokPixel.js), so it comes from exactly one place and cannot
+    // be double counted. `window.__sellapageTikTokPixel` is the handshake that
+    // tells the client this already ran, so it adopts rather than loading the
+    // SDK a second time.
+    //
+    // Written as a template literal on purpose: the snippet contains both quote
+    // characters, and a real newline inside a single-quoted string is exactly
+    // what took every storefront down on 2026-09-09.
+    const ttPixelId = String(store.tiktokPixelId || '').trim().toUpperCase()
+    const ttPixelTag = /^[A-Z0-9]{20}$/.test(ttPixelId)
+      ? `<script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var s=d.createElement("script");s.type="text/javascript",s.async=!0,s.src=r+"?sdkid="+e+"&lib="+t;var a=d.getElementsByTagName("script")[0];a.parentNode.insertBefore(s,a)};ttq.load("${ttPixelId}");w.__sellapageTikTokPixel="${ttPixelId}";}(window,document,"ttq");</script>`
+      : ''
+    let html = shell.replace('</head>', `  ${head}\n  ${pixelTag}\n  ${ttPixelTag}\n  </head>`)
     html = html.replace(
       '<div id="root"></div>',
       `${buildNoscript({ store, seo, listings, canonical, kind: listKind })}\n    <div id="root"></div>`,

@@ -289,6 +289,11 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "tiktok-events-config": {
+        const { default: handler } = await import("../src/api-handlers/tiktok-events-config.js")
+        return handler(req, res)
+      }
+
       case "admin-cac": {
         const { default: handler } = await import("../src/api-handlers/admin-cac.js")
         return handler(req, res)

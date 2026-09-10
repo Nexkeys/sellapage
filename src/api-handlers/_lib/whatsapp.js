@@ -158,7 +158,7 @@ export async function createTemplate({ name, body, category = 'UTILITY', languag
  * service window, Meta only permits templates, and every send Sellapage makes
  * is a notification the customer was not already in a conversation about.
  */
-export async function sendTemplate({ to, template, language = 'en_US' }) {
+export async function sendTemplate({ to, template, language = 'en_US', bodyParams = [] }) {
   const { phoneNumberId } = whatsappConfig()
   if (!phoneNumberId) return { ok: false, error: 'not_configured' }
 
@@ -166,13 +166,45 @@ export async function sendTemplate({ to, template, language = 'en_US' }) {
   if (!digits) return { ok: false, error: 'invalid_number' }
   if (!template) return { ok: false, error: 'invalid_template' }
 
+  // A template whose body contains {{1}} is rejected with Meta error 132012
+  // unless a matching parameter list is sent, and one with no placeholders is
+  // rejected by the same code if parameters ARE sent. So the components array
+  // is included only when there is something to put in it.
+  const params = (Array.isArray(bodyParams) ? bodyParams : [])
+    .map((v) => String(v ?? '').trim())
+    .filter(Boolean)
+
+  const templateObj = { name: template, language: { code: language } }
+  if (params.length) {
+    templateObj.components = [{
+      type: 'body',
+      parameters: params.map((text) => ({ type: 'text', text })),
+    }]
+  }
+
   return graph(`${phoneNumberId}/messages`, {
     method: 'POST',
     body: {
       messaging_product: 'whatsapp',
       to: digits,
       type: 'template',
-      template: { name: template, language: { code: language } },
+      template: templateObj,
     },
   })
+}
+
+/**
+ * How many {{n}} placeholders a template's BODY carries.
+ *
+ * Meta does not report this as a number, so it is counted from the body text.
+ * The UI uses it to show the right number of inputs rather than letting an
+ * admin discover the requirement from a 132012 rejection.
+ */
+export function countBodyParams(template) {
+  const body = (template?.components || []).find((c) => c.type === 'BODY')
+  const matches = String(body?.text || '').match(/\{\{\s*\d+\s*\}\}/g)
+  if (!matches) return 0
+  // {{1}} may legitimately appear more than once; the count Meta wants is the
+  // highest index, not the number of occurrences.
+  return Math.max(...matches.map((m) => parseInt(m.replace(/\D/g, ''), 10) || 0))
 }

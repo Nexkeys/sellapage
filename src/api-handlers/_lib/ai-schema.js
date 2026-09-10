@@ -177,6 +177,13 @@ export const TAB_SCHEMA = {
     label: 'Meta Pixel', source: STORE_DOC, writable: true,
     summary: 'Meta pixel id for conversion tracking.',
   },
+  'tiktok-pixel': {
+    label: 'TikTok Pixel', source: STORE_DOC, writable: true,
+    summary: 'TikTok pixel id for conversion tracking. Premium only.',
+    fields: {
+      tiktokPixelId: 'TikTok Pixel ID, exactly 20 uppercase letters and numbers. Empty means tracking is off.',
+    },
+  },
   'job-listings': {
     label: 'Job Listings', source: TOP('jobListings', 'storeId'), writable: true,
     summary: 'Vacancies posted to the public jobs board. Admin-reviewed.',

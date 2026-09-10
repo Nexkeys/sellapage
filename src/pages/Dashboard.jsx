@@ -116,6 +116,7 @@ import TeamTab from "../components/dashboard/TeamTab";
 import LoyaltyTab from "../components/dashboard/LoyaltyTab";
 import AbandonedCheckoutsTab from "../components/dashboard/AbandonedCheckoutsTab";
 import MetaPixelTab from "../components/dashboard/MetaPixelTab";
+import TikTokPixelTab from "../components/dashboard/TikTokPixelTab";
 
 const EMPTY_FORM = {
   name: "",
@@ -2117,6 +2118,18 @@ export default function Dashboard() {
             </p>
           </div>
           <MetaPixelTab store={store} isPremium={isPremium} navigateTo={setActiveTab} />
+        </div>
+      )}
+      {activeTab === 'tiktok-pixel' && (
+        <div className="mx-auto max-w-4xl p-4 sm:p-5 space-y-4">
+          <div>
+            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">Advertising</p>
+            <h1 className="text-xl font-bold tracking-tight text-gray-900">TikTok Pixel</h1>
+            <p className="mt-0.5 text-xs text-gray-400">
+              Track which TikTok ads actually lead to sales.
+            </p>
+          </div>
+          <TikTokPixelTab store={store} isPremium={isPremium} navigateTo={setActiveTab} />
         </div>
       )}
       {activeTab === 'abandoned' && (

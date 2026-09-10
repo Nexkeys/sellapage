@@ -32,6 +32,7 @@ import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import SEO from '../components/SEO';
 import { initMetaPixel, trackPixel } from '../utils/metaPixel';
+import { initTikTokPixel, trackTikTok, trackTikTokPage } from '../utils/tiktokPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
 import GuaranteeBadge from "../components/GuaranteeBadge";
 import DesignedStorefront from "../components/storefront/DesignedStorefront";
@@ -1094,6 +1095,16 @@ export default function StorePage() {
     if (initMetaPixel(store.metaPixelId)) trackPixel('PageView');
   }, [store?.metaPixelId]);
 
+  // Vendor's own TikTok Pixel. Independent of the Meta one above: a store can
+  // run either, both, or neither, and each loads only when its own id is set.
+  //
+  // TikTok's page view is ttq.page(), not a track() call, which is why it goes
+  // through its own helper rather than trackTikTok('PageView').
+  useEffect(() => {
+    if (!store?.tiktokPixelId) return;
+    if (initTikTokPixel(store.tiktokPixelId)) trackTikTokPage();
+  }, [store?.tiktokPixelId]);
+
   useEffect(() => {
     if (!store?.id || cartRestoredRef.current) return;
     cartRestoredRef.current = true;
@@ -1167,6 +1178,45 @@ export default function StorePage() {
       eventID: ref,
     });
   }, [completedOrder?.reference, completedOrder, store?.metaPixelId]);
+
+  // TikTok's purchase equivalent, fired once per paid order.
+  //
+  // Deliberately a SEPARATE effect from the Meta one above, with its own
+  // sessionStorage key, so a store running only TikTok still fires and neither
+  // marker can suppress the other's event.
+  //
+  // Two TikTok-specific details that fail silently if got wrong:
+  //   - the event is CompletePayment, not Purchase
+  //   - event_id is TikTok's dedup key and goes in the THIRD argument, not the
+  //     properties. It is the Paystack reference, which is also what the
+  //     server-side Events API sends, so a browser event and a server event for
+  //     the same order collapse into one instead of double counting revenue.
+  useEffect(() => {
+    const ref = completedOrder?.reference;
+    if (!ref || !store?.tiktokPixelId) return;
+    const key = `sellapage_ttq_purchase_${ref}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch {
+      // Storage blocked. The event_id below still protects TikTok's side.
+    }
+    trackTikTok(
+      'CompletePayment',
+      {
+        value: Number(completedOrder.grandTotal) || 0,
+        currency: 'NGN',
+        contents: (completedOrder.cartItems || []).map((i) => ({
+          content_id: i.id,
+          content_type: 'product',
+          content_name: i.name,
+          quantity: Number(i.quantity) || 1,
+          price: Number(i.price) || 0,
+        })),
+      },
+      ref,
+    );
+  }, [completedOrder?.reference, completedOrder, store?.tiktokPixelId]);
 
   const [receiptDownloading, setReceiptDownloading] = useState(false);
   const [verifyError, setVerifyError] = useState("");
@@ -1387,6 +1437,17 @@ export default function StorePage() {
       value: Number(product.price) || 0,
       currency: 'NGN',
     });
+    trackTikTok('AddToCart', {
+      value: Number(product.price) || 0,
+      currency: 'NGN',
+      contents: [{
+        content_id: product.id,
+        content_type: 'product',
+        content_name: product.name,
+        quantity: 1,
+        price: Number(product.price) || 0,
+      }],
+    });
     const productVariations = product.selectedVariations || {};
     const variationLabel = product.variationLabel || '';
     setCart((prev) => {
@@ -1417,6 +1478,40 @@ export default function StorePage() {
         },
       ];
     });
+  };
+
+  // Opening a product. Fires ViewContent to both pixels, then opens the overlay.
+  //
+  // This exists as a shared handler rather than an inline arrow because the two
+  // storefront layouts had already drifted: the standard theme fired
+  // ViewContent inline, while the DESIGNED storefront passed a bare
+  // `(p) => setSelectedProduct(p)` and fired nothing. So Premium vendors with a
+  // custom design, who are exactly the vendors entitled to a pixel, were the
+  // only ones whose ViewContent never reached Meta at all. Pre-existing, found
+  // while adding the TikTok pixel, fixed for both providers at once.
+  //
+  // One function used by both mounts means they cannot drift apart again.
+  const handleViewProduct = (p) => {
+    if (!p) return;
+    trackPixel('ViewContent', {
+      content_name: p.name,
+      content_ids: [p.id],
+      content_type: 'product',
+      value: Number(p.price) || 0,
+      currency: 'NGN',
+    });
+    trackTikTok('ViewContent', {
+      value: Number(p.price) || 0,
+      currency: 'NGN',
+      contents: [{
+        content_id: p.id,
+        content_type: 'product',
+        content_name: p.name,
+        quantity: 1,
+        price: Number(p.price) || 0,
+      }],
+    });
+    setSelectedProduct(p);
   };
 
   const handleUpdateQuantity = (productId, newQuantity) => {
@@ -1595,6 +1690,17 @@ export default function StorePage() {
       num_items: cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0),
       value: calcSubtotal(cart),
       currency: 'NGN',
+    });
+    trackTikTok('InitiateCheckout', {
+      value: calcSubtotal(cart),
+      currency: 'NGN',
+      contents: cart.map((i) => ({
+        content_id: i.id,
+        content_type: 'product',
+        content_name: i.name,
+        quantity: Number(i.quantity) || 1,
+        price: Number(i.price) || 0,
+      })),
     });
 
     const subtotal = calcSubtotal(cart);
@@ -1818,7 +1924,7 @@ export default function StorePage() {
             helpLinks={designHelpLinks}
             browse={designBrowse}
             onAddToCart={handleAddToCart}
-            onOrder={(p) => setSelectedProduct(p)}
+            onOrder={handleViewProduct}
             onBook={() => navigate(`/${store.storeName}/services`)}
             onCategory={(cat) => setDesignBrowse(cat)}
             onBrowseAll={() => setDesignBrowse("all")}
@@ -2074,16 +2180,7 @@ export default function StorePage() {
                             activeThemeObj.structuralStyle.buttonClasses
                           }
                           structuralClasses={`${activeThemeObj.structuralStyle.cardBorderRadius} ${activeThemeObj.structuralStyle.cardBorder}`}
-                          onViewProduct={(p) => {
-                            trackPixel('ViewContent', {
-                              content_name: p?.name,
-                              content_ids: [p?.id],
-                              content_type: 'product',
-                              value: Number(p?.price) || 0,
-                              currency: 'NGN',
-                            });
-                            setSelectedProduct(p);
-                          }}
+                          onViewProduct={handleViewProduct}
                         />
                       ))}
                     </div>

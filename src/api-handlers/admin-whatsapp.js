@@ -16,17 +16,24 @@ import { verifyAdmin } from './_lib/verify-admin.js'
 import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 import {
   isConfigured, missingConfig, whatsappConfig,
-  listTemplates, createTemplate, sendTemplate,
+  listTemplates, createTemplate, sendTemplate, countBodyParams,
 } from './_lib/whatsapp.js'
 
-/** Maps a client result from _lib/whatsapp.js onto an HTTP response. */
+/**
+ * Maps a client result from _lib/whatsapp.js onto an HTTP response.
+ *
+ * A template Meta REFUSES (wrong parameters, not approved, recipient has no
+ * WhatsApp) is a business outcome, not a server fault. Those come back 200 with
+ * `success: false`, so the browser console stays clean and a genuine 5xx in the
+ * Vercel log still means something is actually broken. Only transport failure
+ * and an expired token get a non-2xx status.
+ */
 function respond(res, result) {
   if (result.ok) return res.status(200).json({ success: true, data: result.data })
 
-  const status = result.error === 'token_expired' ? 401
-    : result.error === 'unreachable' ? 503
-    : result.error?.startsWith('invalid') ? 400
-    : 502
+  const status = result.error === 'unreachable' ? 503
+    : result.error === 'token_expired' ? 401
+    : 200
 
   return res.status(status).json({
     success: false,
@@ -76,7 +83,18 @@ export default async function handler(req, res) {
 
   if (action === 'templates') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
-    return respond(res, await listTemplates(25))
+    const result = await listTemplates(25)
+
+    // Annotate each template with how many {{n}} values it needs. Counting it
+    // here keeps the browser out of _lib/whatsapp.js, which reads process.env
+    // and has no business being bundled for the client.
+    if (result.ok && Array.isArray(result.data?.data)) {
+      result.data.data = result.data.data.map((t) => ({
+        ...t,
+        paramCount: countBodyParams(t),
+      }))
+    }
+    return respond(res, result)
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -106,7 +124,13 @@ export default async function handler(req, res) {
     if (!memoryRateLimit('wa-send', clientKey(req), 20, 3600000)) {
       return tooManyRequests(res)
     }
-    const result = await sendTemplate({ to: body.to, template: body.template })
+    const result = await sendTemplate({
+      to: body.to,
+      template: body.template,
+      // Templates carrying {{1}} are refused with error 132012 unless a matching
+      // parameter is supplied. Optional, because a plain notification has none.
+      bodyParams: Array.isArray(body.bodyParams) ? body.bodyParams : [],
+    })
     if (result.ok) {
       // The number is intentionally not logged. Who sent it and which template
       // is enough for an audit trail; the recipient is customer data.

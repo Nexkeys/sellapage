@@ -23,6 +23,7 @@ export default function WhatsAppConsole({ authHeaders }) {
   const [loading, setLoading] = useState(true)
   const [to, setTo] = useState('')
   const [template, setTemplate] = useState('')
+  const [params, setParams] = useState([])
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState(null)
 
@@ -40,8 +41,14 @@ export default function WhatsAppConsole({ authHeaders }) {
         setTemplates(list)
         // Default to something that can actually be sent. Selecting a PENDING
         // template would fail at Meta with a message the admin has to decode.
-        const firstApproved = list.find((x) => x.status === 'APPROVED')
-        if (firstApproved) setTemplate((prev) => prev || firstApproved.name)
+        // Preference goes to a template with no variables, because that is the
+        // one that sends cleanly on the first try.
+        const approved = list.filter((x) => x.status === 'APPROVED')
+        const preferred = approved.find((x) => !x.paramCount) || approved[0]
+        if (preferred) {
+          setTemplate((prev) => prev || preferred.name)
+          setParams((prev) => (prev.length ? prev : Array.from({ length: preferred.paramCount || 0 }, () => '')))
+        }
       }
     } catch {
       setStatus({ success: false, error: 'unreachable' })
@@ -59,7 +66,7 @@ export default function WhatsAppConsole({ authHeaders }) {
       const res = await fetch('/api/admin-whatsapp?action=send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ to, template }),
+        body: JSON.stringify({ to, template, bodyParams: params }),
       })
       const data = await res.json().catch(() => ({}))
       setResult(
@@ -129,7 +136,12 @@ export default function WhatsAppConsole({ authHeaders }) {
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => t.status === 'APPROVED' && setTemplate(t.name)}
+                    onClick={() => {
+                      if (t.status !== 'APPROVED') return
+                      setTemplate(t.name)
+                      setParams(Array.from({ length: t.paramCount || 0 }, () => ''))
+                      setResult(null)
+                    }}
                     disabled={t.status !== 'APPROVED'}
                     title={t.status === 'APPROVED' ? 'Use this template' : `Cannot send: ${t.status}`}
                     className={`rounded-lg border px-2 py-1 text-[10px] font-bold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
@@ -139,11 +151,29 @@ export default function WhatsAppConsole({ authHeaders }) {
                     }`}
                   >
                     {t.name} · {t.status}
+                    {t.paramCount > 0 && <span className="opacity-70"> · {t.paramCount} field{t.paramCount === 1 ? '' : 's'}</span>}
                   </button>
                 ))}
               </div>
             )}
           </div>
+
+          {params.length > 0 && (
+            <div className="mt-4 space-y-1.5">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                This template needs {params.length} value{params.length === 1 ? '' : 's'}
+              </p>
+              {params.map((v, i) => (
+                <input
+                  key={i}
+                  value={v}
+                  onChange={(e) => setParams((p) => p.map((x, j) => (j === i ? e.target.value : x)))}
+                  placeholder={`Value for {{${i + 1}}}`}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                />
+              ))}
+            </div>
+          )}
 
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
@@ -156,7 +186,7 @@ export default function WhatsAppConsole({ authHeaders }) {
             <button
               type="button"
               onClick={send}
-              disabled={sending || !to.trim() || !template}
+              disabled={sending || !to.trim() || !template || params.some((p) => !p.trim())}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1fba5a] disabled:bg-gray-200 disabled:text-gray-400"
             >
               {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
