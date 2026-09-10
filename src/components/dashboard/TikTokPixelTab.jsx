@@ -32,6 +32,7 @@ import {
 import { updateStore, auth } from '../../firebase/auth'
 import { isValidTikTokPixelId } from '../../utils/tiktokPixel'
 import { SkeletonRows } from '../Skeleton'
+import TikTokAccountPanel from './TikTokAccountPanel'
 
 // What the storefront actually sends. CompletePayment is TikTok's purchase
 // event: without it TikTok cannot optimise a campaign for sales at all, which
@@ -180,6 +181,12 @@ export default function TikTokPixelTab({ store, isPremium, navigateTo }) {
 
   return (
     <div className="space-y-4">
+      {/* Account connection. First because it is the part a vendor recognises:
+          "show my TikTok on my store" needs no explanation, whereas a pixel
+          does. The tracking below is the part that actually makes their ad
+          money work, but it is not the part that gets them to read the page. */}
+      <TikTokAccountPanel store={store} />
+
       {/* Status */}
       <div className="rounded-2xl border border-gray-100 bg-white p-4">
         <div className="flex items-center gap-2.5">

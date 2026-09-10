@@ -293,6 +293,18 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/tiktok-events-config.js")
         return handler(req, res)
       }
+      case "tiktok-auth": {
+        const { default: handler } = await import("../src/api-handlers/tiktok-auth.js")
+        return handler(req, res)
+      }
+      case "tiktok-callback": {
+        const { default: handler } = await import("../src/api-handlers/tiktok-callback.js")
+        return handler(req, res)
+      }
+      case "tiktok-account": {
+        const { default: handler } = await import("../src/api-handlers/tiktok-account.js")
+        return handler(req, res)
+      }
 
       case "admin-cac": {
         const { default: handler } = await import("../src/api-handlers/admin-cac.js")

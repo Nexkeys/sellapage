@@ -411,6 +411,26 @@ export const SECTION_TYPES = {
       { key: 'fg', label: 'Text colour', type: 'color', default: '#0f172a' },
     ],
   },
+  tiktokFeed: {
+    label: 'TikTok videos',
+    hint: 'Show your real TikTok posts on your store. Connect your account in the TikTok tab first.',
+    appliesTo: 'any',
+    fields: [
+      { key: 'title', label: 'Heading', type: 'text', max: 60, default: 'As seen on TikTok' },
+      { key: 'sub', label: 'Supporting line', type: 'text', max: 120, default: '' },
+      // The videos themselves are NOT editable here. They come from
+      // store.tiktokVideos, written only by the server after the vendor
+      // connects their account, so a vendor cannot type arbitrary image urls
+      // or outbound links into a page their customers trust. What they control
+      // is presentation, which is the whole point of this builder.
+      { key: 'showStats', label: 'Show follower count', type: 'toggle', default: true },
+      { key: 'showCaptions', label: 'Show video captions', type: 'toggle', default: false },
+      { key: 'columns', label: 'Videos per row', type: 'select', options: ['2', '3', '4'], default: '3' },
+      { key: 'ctaLabel', label: 'Button text', type: 'text', max: 30, default: 'Follow us on TikTok' },
+      { key: 'bg', label: 'Background', type: 'color', default: '#ffffff' },
+      { key: 'fg', label: 'Text colour', type: 'color', default: '#0f172a' },
+    ],
+  },
   richFooter: {
     label: 'Footer',
     hint: 'Links, contact details and the payment methods you accept.',

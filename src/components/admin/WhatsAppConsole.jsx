@@ -9,7 +9,7 @@
 // No Meta credential exists in this component. It calls /api/admin-whatsapp,
 // which holds the token server-side.
 import { useState, useEffect, useCallback } from 'react'
-import { MessageCircle, Loader2, Send, RefreshCw, Check, AlertCircle } from 'lucide-react'
+import { MessageCircle, Loader2, Send, RefreshCw, Check, AlertCircle, Plus } from 'lucide-react'
 
 const STATUS_STYLE = {
   APPROVED: 'bg-green-50 text-green-700 border-green-200',
@@ -26,6 +26,12 @@ export default function WhatsAppConsole({ authHeaders }) {
   const [params, setParams] = useState([])
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newBody, setNewBody] = useState('')
+  const [newCategory, setNewCategory] = useState('UTILITY')
+  const [creating, setCreating] = useState(false)
+  const [createResult, setCreateResult] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -78,6 +84,36 @@ export default function WhatsAppConsole({ authHeaders }) {
       setResult({ ok: false, message: 'Could not reach the server.' })
     } finally {
       setSending(false)
+    }
+  }
+
+  // Creating a template is a separate Meta permission from sending one
+  // (whatsapp_business_management vs whatsapp_business_messaging), which is why
+  // it lives here rather than being done in Meta's own dashboard.
+  const createTemplate = async () => {
+    setCreating(true)
+    setCreateResult(null)
+    try {
+      const res = await fetch('/api/admin-whatsapp?action=create-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ name: newName, body: newBody, category: newCategory }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.success) {
+        setCreateResult({ ok: true, id: data.data?.id || null, status: data.data?.status || 'PENDING' })
+        setNewName('')
+        setNewBody('')
+        // Pull the list again so the new template appears with its real status
+        // rather than the admin having to guess whether it registered.
+        load()
+      } else {
+        setCreateResult({ ok: false, message: data.message || data.error || 'Could not create template' })
+      }
+    } catch {
+      setCreateResult({ ok: false, message: 'Could not reach the server.' })
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -223,6 +259,90 @@ export default function WhatsAppConsole({ authHeaders }) {
               </div>
             </div>
           )}
+
+          {/* Template creation. Collapsed by default because it is a rarer job
+              than sending, and because a half-filled form sitting open invites
+              an accidental submission to Meta's review queue. */}
+          <div className="mt-4 border-t border-gray-100 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowCreate((v) => !v)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-green-600"
+            >
+              <Plus size={12} className={showCreate ? 'rotate-45 transition-transform' : 'transition-transform'} />
+              {showCreate ? 'Cancel' : 'New message template'}
+            </button>
+
+            {showCreate && (
+              <div className="mt-3 space-y-2">
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Template name, e.g. sellapage_payout_sent"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                />
+                <textarea
+                  value={newBody}
+                  onChange={(e) => setNewBody(e.target.value)}
+                  rows={3}
+                  placeholder="Message body. Use {{1}} where a value should be filled in."
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm leading-relaxed outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="flex gap-1.5">
+                    {['UTILITY', 'MARKETING'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewCategory(c)}
+                        className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition-all ${
+                          newCategory === c
+                            ? 'bg-gray-900 text-white border-gray-900'
+                            : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={createTemplate}
+                    disabled={creating || !newName.trim() || !newBody.trim()}
+                    className="sm:ml-auto inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-xs font-bold text-white hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400"
+                  >
+                    {creating ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    {creating ? 'Creating' : 'Create template'}
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 leading-relaxed">
+                  Name is lowercased and spaces become underscores, which is what Meta
+                  requires. New templates arrive PENDING and cannot be sent until Meta
+                  approves them, usually within a few hours.
+                </p>
+
+                {createResult && (
+                  <div className={`flex items-start gap-2 rounded-lg border p-2.5 text-xs leading-relaxed ${
+                    createResult.ok
+                      ? 'bg-green-50 border-green-200 text-green-800'
+                      : 'bg-red-50 border-red-200 text-red-700'
+                  }`}>
+                    {createResult.ok ? <Check size={13} className="mt-0.5 flex-shrink-0" /> : <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />}
+                    <div className="min-w-0">
+                      {createResult.ok ? (
+                        <>
+                          <strong>Created, {createResult.status}.</strong>{' '}
+                          {createResult.id && <span className="font-mono break-all">{createResult.id}</span>}
+                        </>
+                      ) : (
+                        <><strong>Not created.</strong> {createResult.message}</>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

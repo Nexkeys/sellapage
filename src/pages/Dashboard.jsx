@@ -2124,9 +2124,9 @@ export default function Dashboard() {
         <div className="mx-auto max-w-4xl p-4 sm:p-5 space-y-4">
           <div>
             <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-green-600">Advertising</p>
-            <h1 className="text-xl font-bold tracking-tight text-gray-900">TikTok Pixel</h1>
+            <h1 className="text-xl font-bold tracking-tight text-gray-900">TikTok</h1>
             <p className="mt-0.5 text-xs text-gray-400">
-              Track which TikTok ads actually lead to sales.
+              Show your TikTok videos on your store, and track which TikTok ads actually lead to sales.
             </p>
           </div>
           <TikTokPixelTab store={store} isPremium={isPremium} navigateTo={setActiveTab} />

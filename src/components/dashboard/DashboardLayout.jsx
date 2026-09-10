@@ -69,7 +69,10 @@ const NAV_ITEMS = [
   { id: "referral-program", label: "Referral Program", icon: Share2 },
   { id: "google-ads", label: "Google Ads", icon: Target },
   { id: "meta-pixel", label: "Meta Pixel", icon: Activity },
-  { id: "tiktok-pixel", label: "TikTok Pixel", icon: Music2 },
+  // Id stays `tiktok-pixel` because it is the tab id in staff roles, the Sella
+  // AI registry and the OAuth callback's redirect. The LABEL is just "TikTok"
+  // because the tab now holds the account connection as well as the pixel.
+  { id: "tiktok-pixel", label: "TikTok", icon: Music2 },
   { id: "job-listings", label: "Job Listings", icon: Briefcase },
   { id: "store-design", label: "Store Design", icon: Palette },
   { type: "group", label: "Business" },

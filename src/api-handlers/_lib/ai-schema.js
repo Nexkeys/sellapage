@@ -178,10 +178,14 @@ export const TAB_SCHEMA = {
     summary: 'Meta pixel id for conversion tracking.',
   },
   'tiktok-pixel': {
-    label: 'TikTok Pixel', source: STORE_DOC, writable: true,
-    summary: 'TikTok pixel id for conversion tracking. Premium only.',
+    label: 'TikTok', source: STORE_DOC, writable: true,
+    summary: 'TikTok conversion tracking and the connected TikTok account. Premium only.',
     fields: {
-      tiktokPixelId: 'TikTok Pixel ID, exactly 20 uppercase letters and numbers. Empty means tracking is off.',
+      tiktokPixelId: 'TikTok Pixel ID, exactly 20 uppercase letters and numbers. Empty means tracking is off. This is the only TikTok field that can be changed here.',
+      tiktokConnected: 'READ ONLY. Whether a TikTok account is linked. Only connecting or disconnecting from the TikTok tab changes it.',
+      tiktokUsername: 'READ ONLY. The linked TikTok handle.',
+      tiktokFollowerCount: 'READ ONLY. Follower count from TikTok. Shown publicly on the storefront, so it is written by the server and never by hand.',
+      tiktokVideos: 'READ ONLY. Cached public videos used by the TikTok videos storefront section.',
     },
   },
   'job-listings': {
@@ -344,6 +348,19 @@ const NEVER_SETTABLE = new Set([
   'phoneVerified', 'phoneGateExempt', 'referralAvailable', 'referralTotalEarned',
   'referralBankAccount', 'referralBankVerified', 'subaccountCode',
   'googleAdsRefreshToken', 'paymentStatus', 'grandTotal', 'amountPaid',
+  // TikTok CONNECTION state. Locked in firestore.rules (integrationFields), and
+  // locked here too because Sella writes through the Admin SDK, which bypasses
+  // those rules entirely - so without this line the AI could do exactly what a
+  // browser console cannot. These render publicly as social proof: a settable
+  // tiktokFollowerCount is a vendor asking the assistant to type 900,000
+  // followers onto their own storefront, and a settable tiktokVideos is
+  // arbitrary image urls and outbound links on a page customers trust.
+  // `tiktokPixelId` is deliberately NOT here: it is public, claims nothing, and
+  // is a legitimate thing to ask Sella to set.
+  'tiktokConnected', 'tiktokConnectedAt', 'tiktokUsername', 'tiktokAvatarUrl',
+  'tiktokProfileLink', 'tiktokIsVerified', 'tiktokFollowerCount',
+  'tiktokLikesCount', 'tiktokVideoCount', 'tiktokVideos',
+  'tiktokVideosSyncedAt', 'tiktokStatsSyncedAt',
 ])
 
 /**

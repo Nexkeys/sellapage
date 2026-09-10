@@ -994,6 +994,135 @@ function RichFooter({ s, store, categories, helpLinks, t, badge, onCategory }) {
   )
 }
 
+/**
+ * 12.4k rather than 12400. A follower count is a glance, not a figure.
+ *
+ * The decimal is kept until 100k, which is what TikTok and Instagram themselves
+ * do. An earlier cut dropped it at 10k, so a vendor with 12,400 followers saw a
+ * flat "12k" and lost 400 followers of social proof to a rounding choice.
+ * Caught by rendering it, not by reading it.
+ */
+function compactCount(n) {
+  const v = Number(n) || 0
+  if (v >= 1000000) return `${(v / 1000000).toFixed(v >= 10000000 ? 0 : 1).replace(/\.0$/, '')}m`
+  if (v >= 1000) return `${(v / 1000).toFixed(v >= 100000 ? 0 : 1).replace(/\.0$/, '')}k`
+  return String(v)
+}
+
+/**
+ * The vendor's real TikTok posts.
+ *
+ * The videos come from `store.tiktokVideos`, which ONLY the server writes
+ * (tiktok-account.js, after the vendor connects their own account). The vendor
+ * controls how this looks and nothing about what it claims, which is the same
+ * rule the CAC badge follows: a follower count and a verified tick are
+ * statements about a business, so the business cannot type them itself.
+ *
+ * Renders nothing at all when there are no videos. A vendor who adds this
+ * section before connecting their account gets an absent section, not an empty
+ * box with a heading over a hole.
+ *
+ * Cover images only, linking out to TikTok. Embedding real players would mean
+ * an iframe per video on a storefront that Nigerian shoppers open on slow
+ * connections, and the whole point of caching the covers is that this section
+ * costs a page nothing.
+ */
+function TikTokFeed({ s, t, store }) {
+  const videos = Array.isArray(store?.tiktokVideos) ? store.tiktokVideos : []
+  if (!videos.length) return null
+
+  const cols = Number(s.columns) || 3
+  // Always 2 up on the smallest phones regardless of the vendor's choice: a
+  // 4-column grid at 280px is four unreadable slivers.
+  const gridCls = cols === 2
+    ? 'grid-cols-2'
+    : cols === 4
+      ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+      : 'grid-cols-2 sm:grid-cols-3'
+
+  const followers = Number(store?.tiktokFollowerCount) || 0
+  const likes = Number(store?.tiktokLikesCount) || 0
+  const handle = store?.tiktokUsername || ''
+  const profile = store?.tiktokProfileLink || (handle ? `https://tiktok.com/@${handle}` : '')
+
+  return (
+    <section style={{ background: s.bg, color: s.fg }} className="px-4 py-10">
+      <Wrap t={t}>
+        <Heading t={t} color={s.fg} sub={s.sub}>{s.title}</Heading>
+
+        {s.showStats && (followers > 0 || handle) ? (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm">
+            {handle ? <span className="font-bold opacity-90">@{handle}</span> : null}
+            {store?.tiktokIsVerified ? (
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider opacity-70" style={{ border: `1px solid ${t.border}` }}>
+                Verified
+              </span>
+            ) : null}
+            {followers > 0 ? <span className="opacity-70">{compactCount(followers)} followers</span> : null}
+            {likes > 0 ? <span className="opacity-70">{compactCount(likes)} likes</span> : null}
+          </div>
+        ) : null}
+
+        <div className={`mt-6 grid gap-3 ${gridCls}`}>
+          {videos.map((v) => (
+            <a
+              key={v.id}
+              href={v.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ borderRadius: t.radius, border: `1px solid ${t.border}` }}
+              className="group relative block overflow-hidden transition-transform hover:scale-[1.02]"
+            >
+              <div className="relative aspect-[9/16] w-full overflow-hidden bg-black/5">
+                {v.cover ? (
+                  <img
+                    src={v.cover}
+                    alt={v.title || 'TikTok video'}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+                {/* Play affordance. An inline SVG, so this costs no icon import
+                    and no extra request on a storefront. */}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-90 transition-opacity group-hover:opacity-100">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 shadow-sm">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="#111">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </span>
+                </span>
+                {v.views > 0 ? (
+                  <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {compactCount(v.views)} views
+                  </span>
+                ) : null}
+              </div>
+              {s.showCaptions && v.title ? (
+                <p className="line-clamp-2 px-2 py-1.5 text-[11px] leading-snug opacity-80">{v.title}</p>
+              ) : null}
+            </a>
+          ))}
+        </div>
+
+        {profile && s.ctaLabel ? (
+          <div className="mt-6 text-center">
+            <a
+              href={profile}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ background: t.primary, color: t.onPrimary, borderRadius: t.radius }}
+              className="inline-block px-6 py-2.5 text-sm font-bold transition-transform hover:scale-[1.03]"
+            >
+              {s.ctaLabel}
+            </a>
+          </div>
+        ) : null}
+      </Wrap>
+    </section>
+  )
+}
+
 const RENDERERS = {
   announcement: Announcement,
   hero: Hero,
@@ -1009,6 +1138,7 @@ const RENDERERS = {
   countdown: Countdown,
   imageBanner: ImageBanner,
   socialLinks: SocialLinks,
+  tiktokFeed: TikTokFeed,
   ctaBanner: CtaBanner,
   richFooter: RichFooter,
 }

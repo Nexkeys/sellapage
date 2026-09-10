@@ -4,6 +4,24 @@
 // Last updated: 2026-09-01 (loyalty cards)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-10  Locked the TikTok CONNECTION fields (integrationFields):
+//               tiktokConnected, tiktokUsername, tiktokAvatarUrl,
+//               tiktokProfileLink, tiktokIsVerified, tiktokFollowerCount,
+//               tiktokLikesCount, tiktokVideoCount, tiktokVideos,
+//               tiktokVideosSyncedAt, tiktokStatsSyncedAt. Written ONLY by
+//               tiktok-callback.js and tiktok-account.js on the Admin SDK.
+//               NOT YET PUBLISHED. Load-bearing: these render on a PUBLIC
+//               storefront as social proof, so a client-writable
+//               tiktokFollowerCount would let any vendor type 900,000
+//               followers onto their own store page, and a writable
+//               tiktokVideos would let them put arbitrary image urls and
+//               links in front of their customers. Same reasoning as
+//               cacVerified: Sellapage is making the claim, so Sellapage
+//               writes it.
+//               `tiktokPixelId` is deliberately NOT locked - it is public by
+//               design, exactly like metaPixelId, and the TikTok tab writes it
+//               from the browser. Safe to publish any time: no client writes
+//               any of the locked fields.
 //   2026-09-08  Added top-level `match /cacRequests/{requestId}`, server only.
 //               NOT YET PUBLISHED. Holds vendor email and phone.
 //   2026-09-05  Added `match /abandonedCheckouts/{reference}` inside
@@ -146,13 +164,30 @@ service cloud.firestore {
       ];
     }
 
-    // Third-party integrations. Written only by google-ads-*.js and
-    // *-custom-domain.js.
+    // Third-party integrations. Written only by google-ads-*.js,
+    // *-custom-domain.js and tiktok-*.js.
+    //
+    // The tiktok* entries below are the CONNECTION state, not the pixel.
+    // They render on the public storefront as social proof (follower count,
+    // verified tick, the vendor's actual videos), so they carry the same rule
+    // as cacVerified: the platform states them, the vendor cannot. A writable
+    // tiktokFollowerCount is a vendor typing their own social proof; a writable
+    // tiktokVideos is a vendor putting arbitrary image urls and outbound links
+    // on a page their customers trust.
+    //
+    // `tiktokPixelId` is intentionally absent: it is public by design, is not a
+    // claim about anything, and is written from the browser exactly like
+    // metaPixelId. The Events API token is not here either, because it never
+    // touches this document - it lives in private/tiktokAds.
     function integrationFields() {
       return [
         'googleAdsConnected', 'googleAdsCustomerId', 'googleAdsRefreshToken',
         'googleAdsAccountName', 'googleAdsCurrency', 'googleAdsTimezone',
-        'customDomain', 'customDomainStatus', 'customDomainAddedAt'
+        'customDomain', 'customDomainStatus', 'customDomainAddedAt',
+        'tiktokConnected', 'tiktokConnectedAt', 'tiktokUsername',
+        'tiktokAvatarUrl', 'tiktokProfileLink', 'tiktokIsVerified',
+        'tiktokFollowerCount', 'tiktokLikesCount', 'tiktokVideoCount',
+        'tiktokVideos', 'tiktokVideosSyncedAt', 'tiktokStatsSyncedAt'
       ];
     }
 
