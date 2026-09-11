@@ -118,9 +118,17 @@ export default function TikTokAccountPanel({ store }) {
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-4">
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-1 flex flex-wrap items-center gap-2">
         <Link2 size={15} className="flex-shrink-0 text-gray-400" />
         <h3 className="text-sm font-bold text-gray-900">Your TikTok account</h3>
+        {/* Only ever shown while TikTok is still reviewing the app. In sandbox
+            only accounts added as test users can connect at all, so without
+            this badge a vendor hitting that wall would read it as a bug. */}
+        {state.env === 'sandbox' && !state.loading ? (
+          <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700">
+            Sandbox
+          </span>
+        ) : null}
       </div>
       <p className="mb-4 text-[11px] leading-relaxed text-gray-500">
         Connect your account to show your real TikTok videos on your store page. Shoppers

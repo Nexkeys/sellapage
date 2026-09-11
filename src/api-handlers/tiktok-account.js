@@ -18,7 +18,7 @@ import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { applyCors } from './_lib/http.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { getTikTokAuth, setTikTokAuth, clearTikTokAuth } from './_lib/store-secrets.js'
-import { refreshAccessToken, getUserInfo, listVideos, isTikTokConfigured } from './_lib/tiktok-client.js'
+import { refreshAccessToken, getUserInfo, listVideos, isTikTokConfigured, getTikTokEnv } from './_lib/tiktok-client.js'
 
 const TIKTOK_PLANS = new Set(['premium'])
 const TAB_ID = 'tiktok-pixel'
@@ -89,6 +89,9 @@ export default async function handler(req, res) {
         plan,
         eligible,
         configured: isTikTokConfigured(),
+        // Surfaced so a sandbox connection is never mistaken for a real one
+        // while the app is still going through TikTok's review.
+        env: getTikTokEnv(),
         connected: store.tiktokConnected === true,
         profile: store.tiktokConnected
           ? {

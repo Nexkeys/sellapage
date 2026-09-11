@@ -33,8 +33,66 @@ if (existsSync('.env')) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// NVIDIA NIM - ai-describe.js's provider (product, service and job descriptions)
+//
+// ADDED 2026-09-11 after 'meta/llama-3.1-8b-instruct' was retired by NVIDIA on
+// 2026-08-26 and nobody found out until a vendor hit Generate. This script
+// already existed and would have caught it, except it only ever read
+// openrouter.js - a hardcoded id inside a handler was invisible to it. Now both
+// providers are covered.
+//
+// FAILS the build ONLY on 404, which is NVIDIA's retired/renamed/not-entitled
+// signature. A 503 ("Service temporarily overloaded") or 429 is the provider
+// being busy, which is a fact about this minute, not a defect in the code.
+// ---------------------------------------------------------------------------
+if (process.env.NVIDIA_API_KEY) {
+  const { NVIDIA_MODELS } = await import('../src/api-handlers/ai-describe.js')
+  const retired = []
+
+  for (const model of NVIDIA_MODELS) {
+    try {
+      const r = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.NVIDIA_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'hi' }],
+          chat_template_kwargs: { thinking: false },
+        }),
+        signal: AbortSignal.timeout(20000),
+      })
+
+      if (r.ok) {
+        console.log(`  nvidia    ${model}  OK`)
+      } else if (r.status === 404) {
+        const body = await r.text().catch(() => '')
+        retired.push({ model, reason: body.slice(0, 140).replace(/\s+/g, ' ') })
+      } else {
+        console.warn(`  nvidia    ${model}  ${r.status} (transient, not failing the build)`)
+      }
+    } catch (err) {
+      console.warn(`  nvidia    ${model}  unreachable (${err.name}), not failing the build`)
+    }
+  }
+
+  if (retired.length) {
+    console.error(`\n✖ ${retired.length} NVIDIA model(s) in ai-describe.js are no longer available:`)
+    for (const r of retired) console.error(`    ${r.model} -> ${r.reason}`)
+    console.error('\n  Fix NVIDIA_MODELS in src/api-handlers/ai-describe.js.')
+    console.error('  Live catalogue: curl -H "Authorization: Bearer $NVIDIA_API_KEY" https://integrate.api.nvidia.com/v1/models\n')
+    process.exit(1)
+  }
+} else {
+  console.log('· NVIDIA_API_KEY not set, skipping description-model check.')
+}
+
 if (!process.env.OPEN_ROUTER_API_KEY && !process.env.OPENROUTER_API_KEY) {
-  console.log('· OPEN_ROUTER_API_KEY not set, skipping AI model check.')
+  console.log('· OPEN_ROUTER_API_KEY not set, skipping Sella AI model check.')
   process.exit(0)
 }
 

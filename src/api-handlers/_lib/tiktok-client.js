@@ -48,27 +48,63 @@ const VIDEO_FIELDS = [
   'like_count', 'comment_count', 'share_count', 'view_count',
 ].join(',')
 
+/**
+ * Sandbox and production are SEPARATE TikTok apps with separate credentials, and
+ * TikTok requires an unapproved app to demonstrate the integration in sandbox
+ * before it will review it for production. So both sets of keys have to coexist
+ * and the switch has to be one variable, not a code change.
+ *
+ * Same shape as TOPSHIP_ENV in _lib/topship-booking.js, which has already been
+ * through exactly this staging-then-production cycle in production.
+ *
+ * Defaults to 'sandbox'. That direction is deliberate: an unset variable should
+ * fail toward the environment that cannot touch a real vendor's account.
+ *
+ * SANDBOX_ variables fall back to the bare ones, so a deployment that only ever
+ * had one set of keys keeps working rather than silently resolving to nothing.
+ */
+export function getTikTokEnv() {
+  return String(process.env.TIKTOK_ENV || 'sandbox').toLowerCase() === 'production'
+    ? 'production'
+    : 'sandbox'
+}
+
 export function getTikTokConfig() {
+  const sandbox = getTikTokEnv() === 'sandbox'
   return {
-    clientKey: process.env.TIKTOK_CLIENT_KEY || '',
-    clientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
-    redirectUri: process.env.TIKTOK_REDIRECT_URI || '',
+    env: sandbox ? 'sandbox' : 'production',
+    clientKey: (sandbox
+      ? process.env.TIKTOK_SANDBOX_CLIENT_KEY || process.env.TIKTOK_CLIENT_KEY
+      : process.env.TIKTOK_CLIENT_KEY) || '',
+    clientSecret: (sandbox
+      ? process.env.TIKTOK_SANDBOX_CLIENT_SECRET || process.env.TIKTOK_CLIENT_SECRET
+      : process.env.TIKTOK_CLIENT_SECRET) || '',
+    redirectUri: (sandbox
+      ? process.env.TIKTOK_SANDBOX_REDIRECT_URI || process.env.TIKTOK_REDIRECT_URI
+      : process.env.TIKTOK_REDIRECT_URI) || '',
   }
 }
 
-/** True when all three env vars are present, so callers can fail with a clear message. */
+/** True when all three values resolve, so callers can fail with a clear message. */
 export function isTikTokConfigured() {
   const c = getTikTokConfig()
   return !!(c.clientKey && c.clientSecret && c.redirectUri)
 }
 
-/** Names what is missing, for the admin/vendor-facing error. Never returns values. */
+/**
+ * Names what is missing, for the vendor-facing error. Never returns values.
+ *
+ * Reports the variable names for the ENVIRONMENT actually in use, so an admin
+ * chasing a misconfiguration is told to set TIKTOK_SANDBOX_CLIENT_KEY rather
+ * than being sent to the production one that is already set.
+ */
 export function missingTikTokConfig() {
   const c = getTikTokConfig()
+  const p = c.env === 'sandbox' ? 'TIKTOK_SANDBOX_' : 'TIKTOK_'
   return [
-    !c.clientKey && 'TIKTOK_CLIENT_KEY',
-    !c.clientSecret && 'TIKTOK_CLIENT_SECRET',
-    !c.redirectUri && 'TIKTOK_REDIRECT_URI',
+    !c.clientKey && `${p}CLIENT_KEY`,
+    !c.clientSecret && `${p}CLIENT_SECRET`,
+    !c.redirectUri && `${p}REDIRECT_URI`,
   ].filter(Boolean)
 }
 
