@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { sendEmail, escapeHtml } from './_lib/send-email.js'
 import { sendPush } from './_lib/send-push.js'
+import { notifyStore } from './_lib/notifications.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { reverseOrderLoyalty } from './_lib/loyalty.js'
 
@@ -135,19 +136,40 @@ export default async function handler(req, res) {
     }
 
     if (newStatus === 'delivered') {
+      const pushTitle = 'Order Delivered ✅'
+      const pushBody = `${orderData.customerName || 'A customer'}'s order has been marked as delivered.`
+
       try {
         const storeSnapForPush = await db.collection('stores').doc(storeId).get()
         const fcmToken = storeSnapForPush.data()?.fcmToken
         if (fcmToken) {
           await sendPush(
             fcmToken,
-            'Order Delivered ✅',
-            `${orderData.customerName || 'A customer'}'s order has been marked as delivered.`,
+            pushTitle,
+            pushBody,
             { orderId, type: 'order_delivered' }
           )
         }
       } catch (pushErr) {
         console.error('[update-order-status] Push notification failed:', pushErr)
+      }
+
+      // Mobile app: push the device registry and leave a feed record.
+      //
+      // Runs ALONGSIDE the legacy fcmToken push above rather than replacing it,
+      // because the web dashboard still writes that field and the registry is
+      // still filling. A vendor on both surfaces can briefly get two pushes;
+      // that is the accepted cost of not going dark on either during the
+      // transition, and the legacy call goes away once coverage is good.
+      try {
+        await notifyStore(db, storeId, {
+          type: 'order_delivered',
+          title: pushTitle,
+          body: pushBody,
+          data: { orderId },
+        })
+      } catch (notifyErr) {
+        console.error('[update-order-status] notifyStore failed:', notifyErr)
       }
     }
 

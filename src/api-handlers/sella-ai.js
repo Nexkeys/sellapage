@@ -18,6 +18,7 @@ import { buildStoreContext } from './_lib/sella-ai-context.js'
 import { readTab, describeTabsForPrompt, describeFields, TAB_SCHEMA, writableTabs, validateGenericWrite, applyGenericWrite } from './_lib/ai-schema.js'
 import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-tools.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
+import { validateReminder, formatWat, nowInWat } from './_lib/reminders.js'
 import { callModel, streamModel } from './_lib/openrouter.js'
 
 // Model selection now lives in _lib/openrouter.js, which fails over across
@@ -28,7 +29,7 @@ import { callModel, streamModel } from './_lib/openrouter.js'
 // loop budget below, so a slow provider degrades cleanly, never a 60s 504.
 // Tier is chosen per message (see classifyTier). Reads and research run on
 // OpenRouter's FREE models; anything that might write runs on paid.
-const WRITE_INTENT = /\b(add|create|new|update|change|edit|set|delete|remove|log|record|mark|confirm|dispatch|deliver|cancel|reschedule|refund|apply|activate|deactivate|rename|increase|reduce|withdraw)\b/i
+const WRITE_INTENT = /\b(add|create|new|update|change|edit|set|delete|remove|log|record|mark|confirm|dispatch|deliver|cancel|reschedule|refund|apply|activate|deactivate|rename|increase|reduce|withdraw|remind|reminder)\b/i
 // Anything needing the open web, or judgement about the outside world.
 const RESEARCH_INTENT = /(search|google|online|internet|market|competitor|trend|price of|cost of|supplier|import|research|latest|news|best selling|compare|benchmark|industry)/i
 
@@ -71,7 +72,7 @@ const getTodayKey = () =>
 
 // Names the model can call. Writes are intercepted (never auto-run); web_search runs inline.
 const WRITE_ACTIONS = new Set([
-  'update_tab_record',
+  'update_tab_record', 'create_reminder',
   'add_ledger_entry', 'add_product', 'add_service', 'create_discount',
   'update_order_status', 'update_booking_status', 'update_delivery_pickup', 'update_store_settings',
 ])
@@ -88,6 +89,7 @@ const ACTION_TAB = {
   update_booking_status: 'bookings',
   update_delivery_pickup: 'delivery',
   update_store_settings: 'settings',
+  create_reminder: 'reminders',
 }
 
 function tabForAction(pending) {
@@ -125,6 +127,27 @@ async function logSellaWrite(db, storeId, actor, pending, result) {
 }
 
 const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'create_reminder',
+      description:
+        'Set a reminder for the vendor. Use when they ask to be reminded of something at a time, ' +
+        'for example "remind me at 2pm to check my products". Resolve the time yourself against the ' +
+        'CURRENT TIME given below and pass an absolute date-time, never a relative phrase. If the time ' +
+        'they named has already passed today, use tomorrow. Reminders send once and then switch ' +
+        'themselves off, unless the vendor explicitly asks for a repeating one.',
+      parameters: {
+        type: 'object',
+        properties: {
+          message: { type: 'string', description: 'What to remind them about, in their own words. Example: Check my products.' },
+          dueAtLocal: { type: 'string', description: 'Absolute Nigerian local date-time, format YYYY-MM-DDTHH:MM in 24-hour time. Example: 2026-09-11T14:00.' },
+          repeat: { type: 'string', enum: ['none', 'daily', 'weekly'], description: 'Defaults to none. Only use daily or weekly if the vendor actually asked for a repeating reminder.' },
+        },
+        required: ['message', 'dueAtLocal'],
+      },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -321,6 +344,10 @@ HOW TO ANSWER - read this carefully:
 4. Money is in Nigerian Naira (₦). Keep replies concise and mobile-friendly, but human - not robotic. Never expose IDs, raw JSON, or internal wording.
 5. STYLE: NEVER use em dashes or en dashes in your replies. Not one. Use commas, full stops, colons or brackets instead. Ordinary hyphens in words like "best-selling" are fine. This vendor dislikes them, so a single em dash is a visible mistake.
 
+CURRENT TIME (Nigeria, WAT): ${nowInWat().toISOString().slice(0, 16).replace("T", " ")}
+Use this to resolve any time the vendor mentions ("2pm", "tomorrow morning", "in 3 hours").
+Never guess the date. If a time they name has already passed today, use tomorrow.
+
 DASHBOARD TABS you can read with read_tab (this is the COMPLETE list - if a
 vendor asks about anything here, read it rather than guessing, and never claim
 you lack access to a tab on this list):
@@ -516,7 +543,7 @@ export default async function handler(req, res) {
         }
       }
 
-      const result = await executeWriteAction(db, storeId, pending)
+      const result = await executeWriteAction(db, storeId, { ...pending, actor })
       await logSellaWrite(db, storeId, actor, pending, result)
 
       // Append the outcome to the session transcript.
@@ -653,6 +680,19 @@ export default async function handler(req, res) {
           // Generic writes are validated BEFORE the confirm card is shown, so a
           // read-only tab or a system-managed field is refused with a reason the
           // vendor can act on - rather than being confirmed and then failing.
+          if (writeCall.function.name === 'create_reminder') {
+            const check = validateReminder({ message: args.message, dueAtLocal: args.dueAtLocal, repeat: args.repeat })
+            if (!check.ok) {
+              reply = check.reason
+              sse('token', { t: reply })
+              pendingAction = null
+              break
+            }
+            // Carry the resolved absolute timestamp through, so the confirm card
+            // and the write agree on one instant rather than re-parsing later.
+            args = { ...args, ...check.value }
+          }
+
           if (writeCall.function.name === 'update_tab_record') {
             const check = validateGenericWrite({ tab: args.tab, docId: args.docId, changes: args.changes })
             if (!check.ok) {

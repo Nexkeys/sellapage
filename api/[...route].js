@@ -134,6 +134,14 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/booking-reminder-cron.js");
         return await handlerFunc(req, res);
       }
+      case "reminders": {
+        const { default: handlerFunc } = await import("../src/api-handlers/reminders.js");
+        return await handlerFunc(req, res);
+      }
+      case "reminders-cron": {
+        const { default: handlerFunc } = await import("../src/api-handlers/reminders-cron.js");
+        return await handlerFunc(req, res);
+      }
       case "platform-review-submit": {
         const { default: handlerFunc } = await import("../src/api-handlers/platform-review-submit.js");
         return await handlerFunc(req, res);
@@ -173,6 +181,26 @@ export default async function handler(req, res) {
       case "notify": {
         const { default: handlerFunc } = await import("../src/api-handlers/notify.js");
         return await handlerFunc(req, res);
+      }
+
+      // Push device registry + the vendor notification feed. Registration is
+      // callable without auth on purpose: the app asks for notification
+      // permission on first open, before any sign-in exists.
+      case "device-register": {
+        const { default: handler } = await import("../src/api-handlers/device-register.js")
+        return handler(req, res)
+      }
+      case "device-unlink": {
+        const { default: handler } = await import("../src/api-handlers/device-unlink.js")
+        return handler(req, res)
+      }
+      case "notifications": {
+        const { default: handler } = await import("../src/api-handlers/notifications.js")
+        return handler(req, res)
+      }
+      case "admin-push": {
+        const { default: handler } = await import("../src/api-handlers/admin-push.js")
+        return handler(req, res)
       }
       case "reset-password": {
         const { default: handlerFunc } = await import("../src/api-handlers/reset-password.js");

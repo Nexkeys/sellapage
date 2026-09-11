@@ -31,6 +31,11 @@ const TAB_ACCESS = {
   domains:        ['super_admin', 'operations'],
   flags:          ['super_admin'],
   announcements:  ['super_admin'],
+  // Broadcast push. Reaches every vendor's phone in one press and cannot be
+  // recalled once delivered, so it is deliberately narrower than announcements
+  // in nothing but intent: marketing owns the messaging, super_admin owns
+  // everything. Support and operations have no business waking the whole base.
+  push:           ['super_admin', 'marketing'],
   tickets:        ['super_admin', 'support'],
   analytics:      ['super_admin', 'marketing'],
   revenue:        ['super_admin', 'finance'],

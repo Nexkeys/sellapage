@@ -32,6 +32,11 @@ import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import SEO from '../components/SEO';
 import { initMetaPixel, trackPixel } from '../utils/metaPixel';
+import {
+  trackStoreView,
+  trackEngagement,
+  trackProductClick,
+} from '../utils/analytics';
 import { initTikTokPixel, trackTikTok, trackTikTokPage } from '../utils/tiktokPixel';
 import { SkeletonStorefront } from "../components/Skeleton";
 import GuaranteeBadge from "../components/GuaranteeBadge";
@@ -1238,11 +1243,7 @@ export default function StorePage() {
   const triggerSessionEngagement = () => {
     if (!hasInteracted && store?.id) {
       setHasInteracted(true);
-      setDoc(
-        doc(db, "stores", store.id, "analytics", "storeSummary"),
-        { engagedViews: increment(1), updatedAt: new Date() },
-        { merge: true },
-      ).catch(() => {});
+      trackEngagement(store.id).catch(() => {});
     }
   };
 
@@ -1278,11 +1279,7 @@ export default function StorePage() {
         if (!viewCountedRef.current) {
           viewCountedRef.current = true;
           try {
-            await setDoc(
-              doc(db, "stores", storeData.id, "analytics", "storeSummary"),
-              { totalViews: increment(1), updatedAt: new Date() },
-              { merge: true },
-            );
+            await trackStoreView(storeData.id);
           } catch {
             // silently ignore
           }
@@ -1338,14 +1335,7 @@ export default function StorePage() {
   const handleProductClick = (productId) => {
     if (!store?.id) return;
     triggerSessionEngagement();
-    setDoc(
-      doc(db, "stores", store.id, "analytics", "storeSummary"),
-      { totalClicks: increment(1), updatedAt: new Date() },
-      { merge: true },
-    ).catch(() => {});
-    updateDoc(doc(db, "stores", store.id, "products", productId), {
-      clicks: increment(1),
-    }).catch(() => {});
+    trackProductClick(store.id, productId).catch(() => {});
   };
 
   // Presentation only. Nothing below changes how an order is placed.
@@ -1511,6 +1501,10 @@ export default function StorePage() {
         price: Number(p.price) || 0,
       }],
     });
+    // A designed storefront routes every product card here instead of through
+    // handleProductClick, which is why Premium stores were recording zero
+    // clicks and zero engagement while the ad pixels fired normally.
+    handleProductClick(p.id);
     setSelectedProduct(p);
   };
 
@@ -1923,7 +1917,13 @@ export default function StorePage() {
             whatsappUrl={designWhatsappUrl}
             helpLinks={designHelpLinks}
             browse={designBrowse}
-            onAddToCart={handleAddToCart}
+            // The designed card's Add to cart button calls ONLY onAddToCart,
+            // where the standard card also reports the tap. Counted here so
+            // both layouts record the same customer action.
+            onAddToCart={(p) => {
+              if (p?.id) handleProductClick(p.id);
+              handleAddToCart(p);
+            }}
             onOrder={handleViewProduct}
             onBook={() => navigate(`/${store.storeName}/services`)}
             onCategory={(cat) => setDesignBrowse(cat)}

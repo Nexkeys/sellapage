@@ -59,6 +59,26 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, doc: snap.exists ? serializeDoc(snap) : null })
     }
 
+    // Per-day counters. Staff cannot read these directly for the same reason
+    // they cannot read the summary: the rule is `request.auth.uid == storeId`
+    // and a staff member has a different uid. Without this branch the Analytics
+    // tab would show a staff member a load error where a vendor sees history.
+    // Bounded and ordered here so the caller cannot ask for the whole life of
+    // a busy store in one request.
+    if (type === 'analyticsDaily') {
+      const access = await resolveStoreAccess(decoded.uid, storeId, 'analytics', false)
+      if (!access.allowed) return res.status(403).json({ error: 'Forbidden' })
+      const max = Math.min(Math.max(parseInt(req.query.limit, 10) || 180, 1), 365)
+      const snap = await db
+        .collection('stores')
+        .doc(storeId)
+        .collection('analyticsDaily')
+        .orderBy('date', 'desc')
+        .limit(max)
+        .get()
+      return res.status(200).json({ success: true, items: snap.docs.map(serializeDoc) })
+    }
+
     const collectionName = SUBCOLLECTION_TYPES[type]
     if (!collectionName) return res.status(400).json({ error: 'Invalid type' })
 

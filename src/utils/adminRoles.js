@@ -22,6 +22,9 @@ const TAB_ACCESS = {
   domains: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.OPERATIONS],
   flags: [ADMIN_ROLES.SUPER_ADMIN],
   announcements: [ADMIN_ROLES.SUPER_ADMIN],
+  // Must stay in step with TAB_ACCESS in _lib/verify-admin.js. This copy only
+  // decides whether the tab renders; that copy decides what the API permits.
+  push: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
   tickets: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.SUPPORT],
   analytics: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
   revenue: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.FINANCE],

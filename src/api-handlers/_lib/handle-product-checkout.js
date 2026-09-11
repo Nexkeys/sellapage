@@ -2,6 +2,7 @@
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
+import { notifyStore } from "./notifications.js";
 import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
 import { markRecovered } from "./abandoned-checkout.js";
 import { sendTikTokPurchase } from "./tiktok-events.js";
@@ -392,6 +393,20 @@ export async function handleProductCheckout(db, data, res) {
             { orderId: orderRef.id, type: "new_order" },
           )
         : Promise.resolve(),
+      // Mobile app: every registered device for this store, plus a record for
+      // the bell. Runs alongside the legacy single-token push above while the
+      // device registry fills; see update-order-status.js for the same note.
+      //
+      // notifyStore never throws, which matters here specifically: this whole
+      // block sits inside a Paystack webhook that has already taken the money.
+      // An exception escaping would return a non-2xx, Paystack would retry, and
+      // the order could be processed twice.
+      notifyStore(db, storeId, {
+        type: "new_order",
+        title: "New Order Received 🛍️",
+        body: `${customerName} just placed an order - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
+        data: { orderId: orderRef.id },
+      }),
       storeData.email
         ? sendEmail(
             storeData.email,

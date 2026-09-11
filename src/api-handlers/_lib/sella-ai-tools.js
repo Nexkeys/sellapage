@@ -10,7 +10,8 @@
 import crypto from 'crypto'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendEmail } from './send-email.js'
-import { applyGenericWrite, TAB_SCHEMA } from './ai-schema.js'
+import { applyGenericWrite, TAB_SCHEMA } from './ai-schema.js'
+import { createReminder, formatWat } from './reminders.js'
 
 const money = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`
 
@@ -77,6 +78,18 @@ export async function executeWriteAction(db, storeId, action) {
   // a fixed action type - it covers every writable tab/field described in
   // ai-schema.js, which is what stopped Sella having to say "do that yourself
   // from the X tab" for anything outside the eight specific tools.
+  if (action?.type === 'create_reminder') {
+    const a = action.args || {}
+    // actor is carried on the action so the reminder records who set it, and
+    // that it came from the assistant rather than the Reminders tab.
+    const actor = action.actor || { uid: storeId, label: 'Owner' }
+    return createReminder(db, storeId, { ...actor, viaAi: true }, {
+      message: a.message,
+      dueAt: a.dueAt,
+      repeat: a.repeat || 'none',
+    })
+  }
+
   if (action?.type === 'update_tab_record') {
     const a = action.args || {}
     return applyGenericWrite(db, storeId, { tab: a.tab, docId: a.docId, changes: a.changes })
@@ -339,6 +352,12 @@ export async function executeWriteAction(db, storeId, action) {
 export function describeAction(action) {
   // Generic write: spell out the tab and each field change, so the confirm card
   // is specific ("set price to 5,000 on Products") rather than vague.
+  if (action?.type === 'create_reminder') {
+    const a = action.args || {}
+    const rep = a.repeat && a.repeat !== 'none' ? `, repeating ${a.repeat}` : ''
+    return `Set a reminder for ${formatWat(a.dueAt)}${rep}: "${a.message}"`
+  }
+
   if (action?.type === 'update_tab_record') {
     const a = action.args || {}
     const tab = TAB_SCHEMA[a.tab]?.label || a.tab

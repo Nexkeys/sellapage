@@ -131,7 +131,10 @@ export default async function handler(req, res) {
 
       await Promise.all([
         emailTo ? sendEmail(emailTo, subject, html) : Promise.resolve(),
-        fcm ? sendPush(fcm, pushTitle, pushBody, { itemId, storeId }) : Promise.resolve(),
+        // `type` was the one push in the system missing it. The app switches on
+        // data.type to route a tap, so without it a review notification is the
+        // single case that cannot be opened to anywhere.
+        fcm ? sendPush(fcm, pushTitle, pushBody, { type: 'new_review', itemId, storeId }) : Promise.resolve(),
       ]).catch(err => console.error('[Notify] partial failure', err))
     } catch (err) {
       console.error('[Notify] failed', err)

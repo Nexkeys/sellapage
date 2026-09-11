@@ -30,6 +30,12 @@ import {
 } from "../utils/storeDesign";
 import ServiceDetailOverlay from "../components/storefront/ServiceDetailOverlay";
 import SEO from "../components/SEO";
+import {
+  trackStoreView,
+  trackEngagement,
+  trackServiceClick,
+  trackBookingRequest,
+} from '../utils/analytics';
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import { SkeletonStorefront } from "../components/Skeleton";
@@ -224,11 +230,7 @@ export default function ServiceStorePage() {
   const triggerSessionEngagement = () => {
     if (!hasInteracted && store?.id) {
       setHasInteracted(true);
-      setDoc(
-        doc(db, "stores", store.id, "analytics", "storeSummary"),
-        { engagedViews: increment(1), updatedAt: new Date() },
-        { merge: true },
-      ).catch(() => {});
+      trackEngagement(store.id).catch(() => {});
     }
   };
 
@@ -253,11 +255,7 @@ export default function ServiceStorePage() {
         if (!viewCountedRef.current) {
           viewCountedRef.current = true;
           try {
-            await setDoc(
-              doc(db, "stores", storeData.id, "analytics", "storeSummary"),
-              { totalViews: increment(1), updatedAt: new Date() },
-              { merge: true },
-            );
+            await trackStoreView(storeData.id);
           } catch {
             // silently ignore
           }
@@ -385,14 +383,7 @@ export default function ServiceStorePage() {
   const handleServiceClick = (serviceId) => {
     if (!store?.id) return;
     triggerSessionEngagement();
-    setDoc(
-      doc(db, "stores", store.id, "analytics", "storeSummary"),
-      { totalClicks: increment(1), updatedAt: new Date() },
-      { merge: true },
-    ).catch(() => {});
-    updateDoc(doc(db, "stores", store.id, "services", serviceId), {
-      clicks: increment(1),
-    }).catch(() => {});
+    trackServiceClick(store.id, serviceId).catch(() => {});
   };
 
   const resetBookingForm = () => {
@@ -410,6 +401,9 @@ export default function ServiceStorePage() {
   };
 
   const openBookingModal = (service) => {
+    // The designed storefront's Book button lands here and nowhere else, so
+    // without this a Premium service store recorded no service interest at all.
+    if (service?.id) handleServiceClick(service.id);
     setSelectedBookingService(service);
     setBookingName("");
     setBookingEmail("");
@@ -463,21 +457,6 @@ export default function ServiceStorePage() {
 
     setBookingSubmitting(true);
     setBookingError("");
-
-    const analyticsRef = doc(
-      db,
-      "stores",
-      store.id,
-      "analytics",
-      "storeSummary",
-    );
-    const serviceRef = doc(
-      db,
-      "stores",
-      store.id,
-      "services",
-      selectedBookingService.id,
-    );
 
     try {
       if (isProOrPremium) {
@@ -540,6 +519,13 @@ export default function ServiceStorePage() {
           }),
         );
 
+        // A booking request is a request on BOTH paths. This one counted
+        // nothing at all, so a Pro or Premium vendor taking card payments
+        // watched their booking analytics sit at zero forever while a vendor
+        // on WhatsApp saw the real number. Awaited before the redirect,
+        // because navigation cancels in-flight writes.
+        await trackBookingRequest(store.id, selectedBookingService.id);
+
         window.location.href = data.authorization_url;
       } else {
         const message = formatBookingWhatsAppMessage({
@@ -556,14 +542,7 @@ export default function ServiceStorePage() {
         const whatsappUrl = buildBookingWhatsAppUrl(store.whatsappNumber, message);
         window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 
-        await Promise.all([
-          setDoc(
-            analyticsRef,
-            { totalBookingRequests: increment(1), updatedAt: new Date() },
-            { merge: true },
-          ),
-          updateDoc(serviceRef, { bookingRequests: increment(1) }),
-        ]);
+        await trackBookingRequest(store.id, selectedBookingService.id);
 
         setBookingDone(true);
       }
@@ -805,7 +784,12 @@ export default function ServiceStorePage() {
             browse={designBrowse}
             catalogueKind="services"
             onBook={openBookingModal}
-            onOpenService={(sv) => setDesignService(sv)}
+            onOpenService={(sv) => {
+              // Opening a service card is interest in that service. Without
+              // this, tapping a card on a designed store recorded nothing.
+              if (sv?.id) handleServiceClick(sv.id);
+              setDesignService(sv);
+            }}
             onCategory={(cat) => setDesignBrowse(cat)}
             onBrowseAll={() => setDesignBrowse("all")}
             onClearBrowse={closeDesignCatalogue}

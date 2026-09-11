@@ -88,6 +88,7 @@ import OverviewTab from "../components/dashboard/Overview";
 import ProductsTab from "../components/dashboard/Products";
 import ServicesTab from "../components/dashboard/ServicesTab";
 import LeadsTab from "../components/dashboard/LeadsTab";
+import RemindersTab from "../components/dashboard/RemindersTab";
 import SettingsTab from "../components/dashboard/Settings";
 import SupportTab from "../components/dashboard/SupportTab";
 import OrdersTab from "../components/dashboard/OrdersTab";
@@ -117,6 +118,28 @@ import LoyaltyTab from "../components/dashboard/LoyaltyTab";
 import AbandonedCheckoutsTab from "../components/dashboard/AbandonedCheckoutsTab";
 import MetaPixelTab from "../components/dashboard/MetaPixelTab";
 import TikTokPixelTab from "../components/dashboard/TikTokPixelTab";
+
+// The analytics summary shape, in one place. `productClicks` and
+// `serviceClicks` split what used to be a single `totalClicks`; `totalClicks`
+// is still read so a vendor's long-standing all-time figure stays continuous.
+const EMPTY_ANALYTICS = {
+  totalViews: 0,
+  totalClicks: 0,
+  productClicks: 0,
+  serviceClicks: 0,
+  engagedViews: 0,
+  totalBookingRequests: 0,
+};
+
+const readAnalytics = (data) => ({
+  totalViews: data?.totalViews ?? 0,
+  totalClicks: data?.totalClicks ?? 0,
+  productClicks: data?.productClicks ?? 0,
+  serviceClicks: data?.serviceClicks ?? 0,
+  engagedViews: data?.engagedViews ?? 0,
+  totalBookingRequests: data?.totalBookingRequests ?? 0,
+});
+
 
 const EMPTY_FORM = {
   name: "",
@@ -259,12 +282,7 @@ export default function Dashboard() {
   const [bookingsSynced, setBookingsSynced] = useState(false);
 
   // Analytics - lifted here so Overview and AnalyticsTab share the same data
-  const [analyticsData, setAnalyticsData] = useState({
-    totalViews: 0,
-    totalClicks: 0,
-    engagedViews: 0,
-    totalBookingRequests: 0,
-  });
+  const [analyticsData, setAnalyticsData] = useState(EMPTY_ANALYTICS);
 
   const limitReached = productCount >= maxProducts;
   const storeUrl = store?.customDomain
@@ -372,12 +390,7 @@ export default function Dashboard() {
 
     if (isActingAsStaffFor(store.id)) {
       fetchStoreDocAsStaff("analytics", store.id).then((data) => {
-        setAnalyticsData({
-          totalViews: data?.totalViews ?? 0,
-          totalClicks: data?.totalClicks ?? 0,
-          engagedViews: data?.engagedViews ?? 0,
-          totalBookingRequests: data?.totalBookingRequests ?? 0,
-        });
+        setAnalyticsData(readAnalytics(data));
       });
       return;
     }
@@ -385,31 +398,9 @@ export default function Dashboard() {
     const unsubscribe = onSnapshot(
       doc(db, "stores", store.id, "analytics", "storeSummary"),
       (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          setAnalyticsData({
-            totalViews: data.totalViews ?? 0,
-            totalClicks: data.totalClicks ?? 0,
-            engagedViews: data.engagedViews ?? 0,
-            totalBookingRequests: data.totalBookingRequests ?? 0,
-          });
-        } else {
-          setAnalyticsData({
-            totalViews: 0,
-            totalClicks: 0,
-            engagedViews: 0,
-            totalBookingRequests: 0,
-          });
-        }
+        setAnalyticsData(snap.exists() ? readAnalytics(snap.data()) : EMPTY_ANALYTICS);
       },
-      () => {
-        setAnalyticsData({
-          totalViews: 0,
-          totalClicks: 0,
-          engagedViews: 0,
-          totalBookingRequests: 0,
-        });
-      },
+      () => setAnalyticsData(EMPTY_ANALYTICS),
     );
     return unsubscribe;
   }, [store?.id, isGrowthOrPro]);
@@ -1895,6 +1886,10 @@ export default function Dashboard() {
           handleDelete={handleDeleteService}
           onToggleActive={handleToggleServiceActive}
         />
+      )}
+
+      {activeTab === "reminders" && (
+        <RemindersTab storeId={store?.id} assistantName={store?.sellaAiName || "Sella"} />
       )}
 
       {activeTab === "leads" && (

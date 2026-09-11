@@ -131,6 +131,19 @@ export const TAB_SCHEMA = {
       totalSpent: 'Lifetime spend in naira', orderCount: 'Number of orders',
     },
   },
+  reminders: {
+    label: 'Reminders', source: TOP('reminders', 'storeId'), writable: false,
+    summary: 'Reminders the vendor asked for. Created through create_reminder, not by editing this tab. ' +
+      'A reminder sends once and switches itself off unless it repeats.',
+    fields: {
+      message: 'What the reminder says',
+      dueAtLabel: 'When it is due, in Nigerian time',
+      repeat: 'none, daily or weekly',
+      enabled: 'False means it is off and will not send',
+      status: 'scheduled, sent, paused',
+    },
+  },
+
   leads: {
     label: 'Leads', source: TOP('leads', 'storeId'), writable: true,
     summary: 'Enquiries captured from the storefront lead form.',

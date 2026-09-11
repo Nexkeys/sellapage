@@ -37,6 +37,7 @@ import {
   Activity,
   Palette,
   Music2,
+  Bell,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -60,6 +61,7 @@ const NAV_ITEMS = [
   { id: "delivery", label: "Delivery", icon: Truck },
   { id: "customers", label: "Customers", icon: Users },
   { id: "leads", label: "Leads", icon: Users },
+  { id: "reminders", label: "Reminders", icon: Bell },
   { type: "group", label: "Grow" },
   { id: "analytics", label: "Analytics", icon: BarChart2 },
   { id: "marketing", label: "Marketing", icon: Megaphone },

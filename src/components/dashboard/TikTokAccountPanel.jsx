@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Loader2, RefreshCw, Link2, Unlink, CheckCircle2, AlertCircle, ExternalLink,
-  BadgeCheck,
+  BadgeCheck, Palette,
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { SkeletonRows } from '../Skeleton'
@@ -26,7 +26,7 @@ function compact(n) {
   return String(v)
 }
 
-export default function TikTokAccountPanel({ store }) {
+export default function TikTokAccountPanel({ store, navigateTo }) {
   const [state, setState] = useState({ loading: true })
   const [busy, setBusy] = useState('')
   const [note, setNote] = useState(null)
@@ -190,10 +190,24 @@ export default function TikTokAccountPanel({ store }) {
               ready to show on your store.
               {videos.length === 0
                 ? ' Tap Refresh to pull them in.'
-                : ' Add the "TikTok videos" section in Store Design to put them on your page.'}
+                : ' They do not appear on your store until you add the section below.'}
               {' '}Tap Refresh after you post something new; we do not pull automatically,
               so your store page stays fast.
             </p>
+            {/* Pulling videos and PLACING them are two different steps, and the
+                second one is easy to miss: the vendor has to find one entry in a
+                17-item palette inside another tab. Nex could not find it, which
+                is the whole reason this button exists rather than a sentence
+                telling them where to look. */}
+            {videos.length > 0 && navigateTo ? (
+              <button
+                type="button"
+                onClick={() => navigateTo('store-design')}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-gray-800"
+              >
+                <Palette size={11} /> Put them on my store
+              </button>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">

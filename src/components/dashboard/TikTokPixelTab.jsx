@@ -185,7 +185,7 @@ export default function TikTokPixelTab({ store, isPremium, navigateTo }) {
           "show my TikTok on my store" needs no explanation, whereas a pixel
           does. The tracking below is the part that actually makes their ad
           money work, but it is not the part that gets them to read the page. */}
-      <TikTokAccountPanel store={store} />
+      <TikTokAccountPanel store={store} navigateTo={navigateTo} />
 
       {/* Status */}
       <div className="rounded-2xl border border-gray-100 bg-white p-4">

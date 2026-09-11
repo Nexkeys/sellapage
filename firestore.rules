@@ -4,6 +4,23 @@
 // Last updated: 2026-09-01 (loyalty cards)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-11  Mobile push. Added top-level `match /devices/{deviceId}` and
+//               `match /broadcasts/{broadcastId}`, both server only, plus
+//               `match /notifications/{notificationId}` (owner read) and
+//               `match /meta/{docId}` (server only) inside /stores/{storeId}.
+//               NOT YET PUBLISHED.
+//               ORDER: publish these BEFORE the app ships, because `devices`
+//               holds FCM registration tokens and `broadcasts` holds the plan
+//               filters a message was targeted with. Nothing legitimate reads
+//               either from a browser - every path goes through
+//               /api/device-register, /api/device-unlink, /api/notifications
+//               and /api/admin-push on the Admin SDK - so publishing early
+//               breaks nothing and publishing late leaves tokens exposed.
+//               Note the token exposure this FIXES: `fcmToken` still sits on
+//               stores/{storeId}, which is `allow read: if true`, so every
+//               vendor's push token is world readable today. That field stays
+//               during the transition and should be deleted once every client
+//               writes to the registry instead.
 //   2026-09-10  Locked the TikTok CONNECTION fields (integrationFields):
 //               tiktokConnected, tiktokUsername, tiktokAvatarUrl,
 //               tiktokProfileLink, tiktokIsVerified, tiktokFollowerCount,
@@ -335,20 +352,40 @@ service cloud.firestore {
       // known counter fields AND to monotonic single-step increments. Without
       // the value bounds, anyone could set totalViews to an arbitrary number or
       // hammer this endpoint to burn the Spark plan's daily write quota.
-      match /analytics/{docId} {
-        allow read: if request.auth != null && request.auth.uid == storeId;
+      // `productClicks` and `serviceClicks` split what used to be one
+      // `totalClicks` number. `totalClicks` is still written so a vendor's
+      // all-time figure stays continuous; the two new fields are the honest
+      // breakdown. Adding them here is NOT optional: hasOnly() rejects the
+      // whole write if a key is missing from this list, and because the client
+      // swallows analytics errors the failure would be completely silent.
+      function summaryCounters() {
+        return ['totalViews', 'totalClicks', 'productClicks', 'serviceClicks',
+                'engagedViews', 'totalBookingRequests', 'updatedAt'];
+      }
 
-        allow create: if request.resource.data.keys().hasOnly(
-                           ['totalViews', 'totalClicks', 'engagedViews',
-                            'totalBookingRequests', 'updatedAt'])
+      // The owner resetting their own analytics to zero. This was missing, so
+      // "Reset All Analytics" wrote 0 over a non-zero counter, failed the
+      // monotonic check below, and rolled back the whole batch. The button
+      // spun and then quietly did nothing.
+      function isStoreOwner() {
+        return request.auth != null && request.auth.uid == storeId;
+      }
+
+      match /analytics/{docId} {
+        allow read: if isStoreOwner();
+
+        allow create: if isStoreOwner()
+                      || (request.resource.data.keys().hasOnly(summaryCounters())
                       && request.resource.data.get('totalViews', 0) <= 1
                       && request.resource.data.get('totalClicks', 0) <= 1
+                      && request.resource.data.get('productClicks', 0) <= 1
+                      && request.resource.data.get('serviceClicks', 0) <= 1
                       && request.resource.data.get('engagedViews', 0) <= 1
-                      && request.resource.data.get('totalBookingRequests', 0) <= 1;
+                      && request.resource.data.get('totalBookingRequests', 0) <= 1);
 
-        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-                           ['totalViews', 'totalClicks', 'engagedViews',
-                            'totalBookingRequests', 'updatedAt'])
+        allow update: if isStoreOwner()
+                      || (request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(summaryCounters())
                       && request.resource.data.get('totalViews', 0)
                            >= resource.data.get('totalViews', 0)
                       && request.resource.data.get('totalViews', 0)
@@ -357,6 +394,14 @@ service cloud.firestore {
                            >= resource.data.get('totalClicks', 0)
                       && request.resource.data.get('totalClicks', 0)
                            <= resource.data.get('totalClicks', 0) + 1
+                      && request.resource.data.get('productClicks', 0)
+                           >= resource.data.get('productClicks', 0)
+                      && request.resource.data.get('productClicks', 0)
+                           <= resource.data.get('productClicks', 0) + 1
+                      && request.resource.data.get('serviceClicks', 0)
+                           >= resource.data.get('serviceClicks', 0)
+                      && request.resource.data.get('serviceClicks', 0)
+                           <= resource.data.get('serviceClicks', 0) + 1
                       && request.resource.data.get('engagedViews', 0)
                            >= resource.data.get('engagedViews', 0)
                       && request.resource.data.get('engagedViews', 0)
@@ -364,9 +409,63 @@ service cloud.firestore {
                       && request.resource.data.get('totalBookingRequests', 0)
                            >= resource.data.get('totalBookingRequests', 0)
                       && request.resource.data.get('totalBookingRequests', 0)
-                           <= resource.data.get('totalBookingRequests', 0) + 1;
+                           <= resource.data.get('totalBookingRequests', 0) + 1);
 
         allow delete: if false;
+      }
+
+      // Per-day counters, one document per Lagos calendar day, id "YYYY-MM-DD".
+      //
+      // Same shape of protection as the all-time summary: anonymous visitors
+      // may only nudge a known counter by one, so nobody can invent a day, set
+      // a view count to a million, or write arbitrary fields into a document a
+      // vendor reads in their dashboard. `date` is a plain string copy of the
+      // id, which is what the ordered query reads.
+      //
+      // Unlike the summary, the owner MAY delete these: resetting analytics
+      // should remove the history, not leave a trail of zeroed days.
+      match /analyticsDaily/{day} {
+        allow read: if isStoreOwner();
+
+        allow create: if isStoreOwner()
+                      || (request.resource.data.keys().hasOnly(
+                           ['date', 'views', 'productClicks', 'serviceClicks',
+                            'bookings', 'engagedSessions', 'updatedAt'])
+                      && request.resource.data.date is string
+                      && request.resource.data.date == day
+                      && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+                      && request.resource.data.get('views', 0) <= 1
+                      && request.resource.data.get('productClicks', 0) <= 1
+                      && request.resource.data.get('serviceClicks', 0) <= 1
+                      && request.resource.data.get('bookings', 0) <= 1
+                      && request.resource.data.get('engagedSessions', 0) <= 1);
+
+        allow update: if isStoreOwner()
+                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                           ['date', 'views', 'productClicks', 'serviceClicks',
+                            'bookings', 'engagedSessions', 'updatedAt'])
+                      && request.resource.data.get('views', 0)
+                           >= resource.data.get('views', 0)
+                      && request.resource.data.get('views', 0)
+                           <= resource.data.get('views', 0) + 1
+                      && request.resource.data.get('productClicks', 0)
+                           >= resource.data.get('productClicks', 0)
+                      && request.resource.data.get('productClicks', 0)
+                           <= resource.data.get('productClicks', 0) + 1
+                      && request.resource.data.get('serviceClicks', 0)
+                           >= resource.data.get('serviceClicks', 0)
+                      && request.resource.data.get('serviceClicks', 0)
+                           <= resource.data.get('serviceClicks', 0) + 1
+                      && request.resource.data.get('bookings', 0)
+                           >= resource.data.get('bookings', 0)
+                      && request.resource.data.get('bookings', 0)
+                           <= resource.data.get('bookings', 0) + 1
+                      && request.resource.data.get('engagedSessions', 0)
+                           >= resource.data.get('engagedSessions', 0)
+                      && request.resource.data.get('engagedSessions', 0)
+                           <= resource.data.get('engagedSessions', 0) + 1);
+
+        allow delete: if isStoreOwner();
       }
 
       match /subscriptions/{subId} {
@@ -389,6 +488,27 @@ service cloud.firestore {
       match /sessions/{sessionId} {
         allow read: if request.auth != null && request.auth.uid == storeId;
         allow write: if false;
+      }
+
+      // Notification feed behind the bell in the mobile app. Written only by
+      // the Admin SDK (_lib/notifications.js), so client writes are denied
+      // outright - a vendor who could write here could forge an order alert.
+      //
+      // Owner read is direct. STAFF cannot read through this rule, because it
+      // tests uid == storeId and a staff uid never matches; they go through
+      // /api/notifications, which resolves store access server-side. That is
+      // the same split as every other staff-visible collection.
+      match /notifications/{notificationId} {
+        allow read: if request.auth != null && request.auth.uid == storeId;
+        allow write: if false;
+      }
+
+      // Per-store read state for PLATFORM BROADCASTS. Broadcast documents are
+      // shared by every vendor, so "I have seen this one" cannot be stored on
+      // the broadcast itself. Server-only: read state is set through
+      // /api/notifications?action=read so staff and owner behave identically.
+      match /meta/{docId} {
+        allow read, write: if false;
       }
 
       // Staff role definitions - server-only (Admin SDK). Explicitly denied so
@@ -543,6 +663,41 @@ service cloud.firestore {
     }
 
     match /cache/{docId} {
+      allow read, write: if false;
+    }
+
+    // Vendor reminders, set through Sella and managed from the Reminders tab.
+    //
+    // SERVER ONLY. Every read and write goes through /api/reminders, which
+    // verifies an id token and authorises via resolveStoreAccess, so the tab is
+    // staff-assignable with per-role read/write. Client access is denied
+    // outright because nextDueAt is the field the cron scans: a vendor who could
+    // write it directly could schedule a reminder onto another store, and one
+    // who could read the collection could read every other store's reminders.
+    match /reminders/{reminderId} {
+      allow read, write: if false;
+    }
+
+    // Push device registry. One document per FCM token, id = sha256(token).
+    //
+    // SERVER ONLY, and that is the whole point of the collection existing.
+    // Tokens used to live in an `fcmToken` field on stores/{storeId}, which is
+    // `allow read: if true` because public storefronts read that document - so
+    // every vendor's push token was world readable. Registration and unlinking
+    // both go through /api/device-register and /api/device-unlink, which derive
+    // storeId from a verified id token and never from the request body.
+    match /devices/{deviceId} {
+      allow read, write: if false;
+    }
+
+    // Platform broadcast history, written by /api/admin-push.
+    //
+    // Client read is denied deliberately. Each document carries the plan and
+    // vendorType filters it was sent with, so a starter vendor reading this
+    // collection directly could see a message targeted at Growth and Pro, and
+    // the filters would be decoration rather than a rule. The app receives an
+    // already-filtered, already-merged feed from /api/notifications instead.
+    match /broadcasts/{broadcastId} {
       allow read, write: if false;
     }
   }

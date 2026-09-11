@@ -2,6 +2,34 @@
 import crypto from 'crypto'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb } from './_lib/firebase-admin.js'
+import { notifyStore } from './_lib/notifications.js'
+
+// Which courier transitions are worth waking a vendor for, and what to say.
+//
+// SCOPED TO WHAT THE CODE ACTUALLY RECEIVES. STATUS_MAP below accepts exactly
+// four Sendbox status_code values and ignores everything else, so those are the
+// only transitions that can reach here at all. Note that Sendbox's own
+// documented payloads also contain `in_delivery`, which STATUS_MAP does NOT
+// list and therefore drops on the floor today. If real webhook logs confirm
+// Sendbox sends it, add it to STATUS_MAP first and give it an entry here
+// second; adding it here alone would do nothing.
+//
+// 'delivered' is intentionally absent: update-order-status.js already notifies
+// on delivered, and duplicating it here would send two pushes for one event.
+const DELIVERY_PUSH_STATUSES = {
+  dispatched: {
+    title: 'Parcel picked up 📦',
+    body: (name) => `The courier has collected ${name}'s order.`,
+  },
+  in_transit: {
+    title: 'Parcel on the move 🚚',
+    body: (name) => `${name}'s order is with the courier and moving.`,
+  },
+  cancelled: {
+    title: 'Delivery cancelled',
+    body: (name) => `The courier cancelled ${name}'s delivery. Check the Delivery tab.`,
+  },
+}
 
 // Sendbox does not document any webhook signing mechanism (checked against
 // docs.sendbox.co - the WooCommerce webhook guide covers OAuth setup but no
@@ -76,6 +104,11 @@ export default async function handler(req, res) {
     }
 
     const orderDoc = ordersQuery.docs[0]
+    const orderData = orderDoc.data() || {}
+    const previousStatus = orderData.status || null
+    // stores/{storeId}/orders/{orderId} - storeId is not a field on the order,
+    // it only exists in the path, so it is read back off the reference.
+    const storeId = orderDoc.ref.parent.parent?.id || null
 
     // Strict vocabulary. The previous chain defaulted unknown status codes to
     // 'dispatched', so an arbitrary or malformed value still moved a real order
@@ -107,6 +140,34 @@ export default async function handler(req, res) {
     })
 
     console.log(`[sendbox-webhook] Updated order ${orderDoc.id} - status: ${statusCode}`)
+
+    // Notify the vendor ON TRANSITIONS ONLY.
+    //
+    // Couriers re-send the same status, sometimes several times for one parcel.
+    // A vendor who gets four "in transit" pushes for a single delivery turns
+    // notifications off, and then never sees the order ones either. The
+    // previous status was read before the update above for exactly this.
+    //
+    // 'delivered' is excluded here deliberately: update-order-status.js already
+    // pushes when an order reaches delivered, and two notifications for one
+    // event is the same annoyance from a different direction.
+    if (storeId && firestoreStatus !== previousStatus && DELIVERY_PUSH_STATUSES[firestoreStatus]) {
+      try {
+        const label = DELIVERY_PUSH_STATUSES[firestoreStatus]
+        await notifyStore(db, storeId, {
+          type: 'delivery_update',
+          title: label.title,
+          body: label.body(orderData.customerName || 'A customer'),
+          data: { orderId: orderDoc.id, status: firestoreStatus, courier: 'sendbox' },
+        })
+      } catch (notifyErr) {
+        // The status write already succeeded and Sendbox must still get its 200,
+        // or it will redeliver the webhook and the transition check will then
+        // suppress the very notification this failed to send.
+        console.error('[sendbox-webhook] notify failed:', notifyErr?.message || notifyErr)
+      }
+    }
+
     return res.status(200).json({ received: true })
   } catch (err) {
     console.error('[sendbox-webhook] Error:', err)
