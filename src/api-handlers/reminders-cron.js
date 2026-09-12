@@ -31,7 +31,16 @@ function timingSafeMatch(provided, expected) {
 // delivering a stale alert at 3am.
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000
 
-const BATCH = 100
+// cron-job.org caps its request timeout at 30 seconds, and that is a hard
+// ceiling we cannot raise - Vercel's 60s maxDuration is irrelevant, because the
+// caller has already hung up and marked the job failed. So the run is bounded
+// by TIME, not by a guessed row count: whatever is left is simply picked up on
+// the next tick a minute later. A count alone cannot be safe here because the
+// per-reminder cost varies wildly - a store with a device token is one fast FCM
+// call, while a store without one falls through to email, which is far slower,
+// and most stores currently have no token at all.
+const TIME_BUDGET_MS = 20000
+const BATCH = 25
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).send('Method not allowed')
@@ -42,7 +51,8 @@ export default async function handler(req, res) {
 
   try {
     const db = getAdminDb()
-    const now = Date.now()
+    const startedAt = Date.now()
+    const now = startedAt
 
     // Single-field range query on a top-level collection: served by the
     // automatic index, so there is no composite index to deploy. See the note
@@ -55,7 +65,10 @@ export default async function handler(req, res) {
 
     let pushed = 0, emailed = 0, skipped = 0, stale = 0
 
+    let ranOut = false
+
     for (const doc of due.docs) {
+      if (Date.now() - startedAt > TIME_BUDGET_MS) { ranOut = true; break }
       const r = doc.data()
 
       if (r.enabled === false) { skipped++; continue }
@@ -119,7 +132,7 @@ export default async function handler(req, res) {
       await markFired(db, doc.ref, r, delivered)
     }
 
-    const summary = { scanned: due.size, pushed, emailed, skipped, stale }
+    const summary = { scanned: due.size, pushed, emailed, skipped, stale, ranOut, ms: Date.now() - startedAt }
     console.log('[reminders-cron]', JSON.stringify(summary))
     return res.status(200).json({ ok: true, ...summary })
   } catch (err) {

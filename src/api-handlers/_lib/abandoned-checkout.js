@@ -13,6 +13,7 @@
 // has given us everything, and was one tap from paying.
 import { createHash } from 'node:crypto'
 import { Timestamp } from 'firebase-admin/firestore'
+import { notifyStore } from './notifications.js'
 
 const COLLECTION = 'abandonedCheckouts'
 
@@ -75,6 +76,16 @@ export async function recordCheckoutAttempt(db, storeId, storeData, attempt) {
     // customer contact details forever. This function is already fire and
     // forget from checkout-initialize, so the cost is invisible to the shopper.
     if (Math.random() < 0.1) sweepExpired(db, storeId)
+
+    // Abandoned recovery is already Premium-only and opt-in (isRecoveryActive
+    // above), so by the time this runs the vendor has explicitly asked for it.
+    // The plan gate inside notifyStore is belt and braces.
+    await notifyStore(db, storeId, {
+      type: 'abandoned_checkout',
+      title: 'Someone left a cart behind 🛒',
+      body: `${attempt.customerName || 'A customer'} started checking out and did not finish. Send them a reminder.`,
+      data: { reference: attempt.reference },
+    }, storeData)
 
     return true
   } catch (err) {

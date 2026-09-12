@@ -1,5 +1,6 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { FieldValue } from 'firebase-admin/firestore'
+import { notifyStore } from './_lib/notifications.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -58,6 +59,19 @@ export default async function handler(req, res) {
       })
       return true
     })
+
+    // Notifies the REFERRER, not the store that just signed up. referrerId is
+    // the referrer's storeId, and the referral tab is ungated, so every plan
+    // gets this. Only on a real credit: the transaction returns false for a
+    // repeat call, and pushing then would notify twice for one signup.
+    if (credited) {
+      await notifyStore(db, referrerId, {
+        type: 'referral_signup',
+        title: 'Someone joined with your code 🎉',
+        body: 'A new vendor signed up using your referral code. You earn when they upgrade to a paid plan.',
+        data: { referrerId },
+      })
+    }
 
     return res.status(200).json({ success: true, credited })
   } catch (err) {

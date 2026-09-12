@@ -15,6 +15,7 @@ function timingSafeMatch(provided, expected) {
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { sendEmail } from './_lib/send-email.js'
+import { notifyStore } from './_lib/notifications.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -102,8 +103,16 @@ export default async function handler(req, res) {
         batch.update(storeDoc.ref, { planStatus: 'active' })
         summary.warning++
 
-        // 👉 [OPTIONAL] TRIGGER PUSH NOTIFICATION HERE IF YOU WANT IT
-        // await db.collection('notifications').add({ userId: storeDoc.id, message: "Your plan expires in 3 days!" })
+        // The TODO that used to sit here is now real. Ungated deliberately: a
+        // vendor must always be told their own plan is ending, and the whole
+        // point of the message is that they are about to lose the paid tier
+        // any gate would have tested for.
+        await notifyStore(db, storeDoc.id, {
+          type: 'plan_expiring',
+          title: 'Your plan expires in 3 days ⏰',
+          body: `Your ${displayPlan} plan ends on ${planEndDate.toDate().toDateString()}. Renew to keep your paid features.`,
+          data: { plan: displayPlan, planEndDate: planEndDate.toDate().toISOString() },
+        })
 
         if (vendorEmail) {
           try {
@@ -162,6 +171,18 @@ export default async function handler(req, res) {
       else {
         batch.update(storeDoc.ref, STARTER_RESET)
         summary.expired++
+
+        // Sent BEFORE the batch commits the downgrade, but notifyStore reads
+        // the plan itself and this type is ungated, so the ordering does not
+        // matter. Ungated is correct here for the obvious reason: the vendor is
+        // being moved to Starter, and a gate would silence the one message
+        // explaining why their features just disappeared.
+        await notifyStore(db, storeDoc.id, {
+          type: 'plan_expiring',
+          title: 'Your plan has expired',
+          body: `Your ${displayPlan} plan has ended and your store is back on Starter. Renew any time to restore your features.`,
+          data: { plan: 'starter', previousPlan: displayPlan },
+        })
 
         // Loyalty cards are frozen rather than deleted: the customer did nothing
         // wrong, so their balance is preserved and returns intact if the vendor

@@ -30,6 +30,7 @@ import {
 } from "../utils/storeDesign";
 import ServiceDetailOverlay from "../components/storefront/ServiceDetailOverlay";
 import SEO from "../components/SEO";
+import { fetchStoreReviews } from "../firebase/reviews";
 import {
   trackStoreView,
   trackEngagement,
@@ -203,6 +204,8 @@ export default function ServiceStorePage() {
   const [designBrowse, setDesignBrowse] = useState(null);
   // The service a customer tapped to read about, before deciding to book.
   const [designService, setDesignService] = useState(null);
+  // Real customer reviews for the designed Reviews section.
+  const [designReviews, setDesignReviews] = useState([]);
   const [highlightedService, setHighlightedService] = useState(null);
   const [hasInteracted, setHasInteracted] = useState(false);
 
@@ -268,6 +271,27 @@ export default function ServiceStorePage() {
     };
     load();
   }, [storeName, navigate]);
+
+  // Customer reviews for the designed Reviews section. The service page reads
+  // its OWN sections list, which is serviceSections, not the shop front's.
+  useEffect(() => {
+    if (!store?.id || !isDesignLive(store)) return;
+    const list = store.storeDesign?.serviceSections?.length
+      ? store.storeDesign.serviceSections
+      : defaultServiceSections();
+    if (!list.some((sec) => sec?.type === "reviews" && sec?.visible !== false)) return;
+
+    let cancelled = false;
+    const items = (services || []).map((sv) => ({ ...sv, kind: "service" }));
+    fetchStoreReviews(store.id, items)
+      .then((rows) => {
+        if (!cancelled) setDesignReviews(rows);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [store, services]);
 
   useEffect(() => {
     if (!store || searchParams.get("checkout") !== "success") return;
@@ -777,7 +801,7 @@ export default function ServiceStorePage() {
             store={store}
             services={services}
             categories={designCategories}
-            reviews={[]}
+            reviews={designReviews}
             stats={designStats}
             whatsappUrl={designWhatsappUrl}
             helpLinks={designHelpLinks}

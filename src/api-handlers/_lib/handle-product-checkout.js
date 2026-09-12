@@ -7,6 +7,7 @@ import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
 import { markRecovered } from "./abandoned-checkout.js";
 import { sendTikTokPurchase } from "./tiktok-events.js";
 import { getTikTokEventsToken } from "./store-secrets.js";
+import { recordSale } from "./store-counters.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
 // Moved verbatim out of paystack-webhook.js's former single checkout branch - logic
@@ -116,6 +117,10 @@ export async function handleProductCheckout(db, data, res) {
     }],
   });
 
+  // Counted here, after the order document exists and past the idempotency
+  // check above, so "orders received" means exactly what the Orders tab shows.
+  await recordSale(db, storeId, "order");
+
   if (typeof promoCode === "string" && promoCode.trim()) {
     try {
       const normalizedPromoCode = promoCode.trim().toUpperCase();
@@ -129,8 +134,31 @@ export async function handleProductCheckout(db, data, res) {
         .get();
 
       if (!discountSnap.empty) {
-        await discountSnap.docs[0].ref.update({
+        const discountDoc = discountSnap.docs[0];
+        const discount = discountDoc.data() || {};
+        await discountDoc.ref.update({
           usageCount: FieldValue.increment(1),
+        });
+
+        // Used count AFTER this order, so the message matches what the vendor
+        // sees when they open the tab a second later.
+        const used = Number(discount.usageCount || 0) + 1;
+        const limit = discount.usageLimit == null ? null : Number(discount.usageLimit);
+        const remaining = limit == null ? null : limit - used;
+
+        await notifyStore(db, storeId, {
+          type: "discount_used",
+          title: "Discount code used 🏷️",
+          body: remaining === null
+            ? `${customerName} used ${normalizedPromoCode}. Used ${used} time(s) so far.`
+            : remaining <= 0
+              ? `${normalizedPromoCode} has now hit its limit of ${limit} and will stop working.`
+              : `${customerName} used ${normalizedPromoCode}. ${remaining} use(s) left.`,
+          data: { code: normalizedPromoCode, used, remaining: remaining ?? "" },
+          // No storeData argument on purpose: this block runs BEFORE the store
+          // document is fetched further down (const storeData, temporal dead
+          // zone), so passing it here throws inside a webhook that has already
+          // taken the customer's money. notifyStore does its own read.
         });
       }
     } catch (error) {
@@ -236,6 +264,20 @@ export async function handleProductCheckout(db, data, res) {
         loyaltyEarned: loyaltyResult?.earned || 0,
         loyaltyRedeemed: loyaltySpent,
       });
+    }
+
+    // Only when points actually moved. earnPointsForOrder returns a result with
+    // earned: 0 for a card that exists but gained nothing, and notifying on
+    // that would be noise.
+    if (loyaltyResult && loyaltyResult.earned > 0) {
+      await notifyStore(db, storeId, {
+        type: "loyalty_earned",
+        title: loyaltyResult.isNew ? "New loyalty customer 🎁" : "Loyalty points earned 🎁",
+        body: loyaltyResult.isNew
+          ? `${customerName} joined your loyalty programme and earned ${loyaltyResult.earned} point(s).`
+          : `${customerName} earned ${loyaltyResult.earned} point(s), now on ${loyaltyResult.points}.`,
+        data: { code: loyaltyResult.code, earned: loyaltyResult.earned, points: loyaltyResult.points },
+      }, storeData);
     }
   } catch (err) {
     console.error("[handle-product-checkout] loyalty failed", err);

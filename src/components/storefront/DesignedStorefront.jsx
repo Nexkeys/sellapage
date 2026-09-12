@@ -600,12 +600,22 @@ function Reviews({ s, reviews, t }) {
                   />
                 ))}
               </div>
-              <p className="mt-2 text-sm font-bold" style={{ color: s.fg }}>
+              {/* api/submit-review writes `reviewText`. This read `r.comment`,
+                  a field nothing has ever written, so every review rendered as
+                  a name and some stars with the customer's actual words
+                  dropped on the floor. `comment` stays as a fallback in case
+                  any old document used it. */}
+              {r.reviewText || r.comment ? (
+                <p className="mt-2 break-words text-sm leading-relaxed" style={{ color: s.fg }}>
+                  {r.reviewText || r.comment}
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs font-bold" style={{ color: s.fg }}>
                 {r.customerName || 'Verified buyer'}
               </p>
-              {r.comment ? (
-                <p className="mt-1 break-words text-xs leading-relaxed opacity-70" style={{ color: s.fg }}>
-                  {r.comment}
+              {r.itemName ? (
+                <p className="mt-0.5 truncate text-[11px] opacity-60" style={{ color: s.fg }}>
+                  on {r.itemName}
                 </p>
               ) : null}
             </div>
@@ -830,9 +840,24 @@ function Popup({ cfg, t, storeId, whatsappUrl }) {
 
   if (!cfg?.enabled || !open) return null
 
+  // Every branch either goes somewhere or the vendor chose "Nothing, just
+  // close". What it must never do again is present a button reading "Claim on
+  // WhatsApp", open nothing, and leave the customer thinking the page is
+  // broken. `ctaUrl` is sanitised by safeUrl on save, so it is already known to
+  // be an absolute http(s) address by the time it gets here.
   const act = () => {
-    if (cfg.ctaAction === 'whatsapp' && whatsappUrl) window.open(whatsappUrl, '_blank', 'noopener')
-    if (cfg.ctaAction === 'enquiry') document.getElementById('sp-enquiry')?.scrollIntoView({ behavior: 'smooth' })
+    const action = cfg.ctaAction || 'whatsapp'
+    if (action === 'whatsapp' && whatsappUrl) window.open(whatsappUrl, '_blank', 'noopener')
+    else if (action === 'link' && cfg.ctaUrl) window.open(cfg.ctaUrl, '_blank', 'noopener')
+    else if (action === 'enquiry') {
+      const el = document.getElementById('sp-enquiry')
+      // Scrolling to a section the page does not have is the same dead end in
+      // a different costume, so fall back to the chat the store definitely has.
+      if (el) el.scrollIntoView({ behavior: 'smooth' })
+      else if (whatsappUrl) window.open(whatsappUrl, '_blank', 'noopener')
+    } else if (action === 'whatsapp' && !whatsappUrl && cfg.ctaUrl) {
+      window.open(cfg.ctaUrl, '_blank', 'noopener')
+    }
     close()
   }
 

@@ -161,9 +161,38 @@ export const POPUP_FIELDS = [
   { key: 'title', label: 'Heading', type: 'text', max: 60, default: 'Get 10% off your first order' },
   { key: 'body', label: 'Message', type: 'textarea', max: 240, default: 'Message us on WhatsApp to claim it before you order.' },
   { key: 'ctaLabel', label: 'Button text', type: 'text', max: 30, default: 'Claim on WhatsApp' },
-  { key: 'ctaAction', label: 'Button does', type: 'select', options: ['whatsapp', 'enquiry', 'close'], default: 'whatsapp' },
+  {
+    key: 'ctaAction',
+    label: 'Button does',
+    type: 'select',
+    options: ['whatsapp', 'link', 'enquiry', 'close'],
+    // Raw values were shown to the vendor as-is, so this dropdown literally
+    // read "everyVisit" and "close". `optionLabels` is what the editor renders.
+    optionLabels: {
+      whatsapp: 'Open a WhatsApp chat with you',
+      link: 'Open a link you choose',
+      enquiry: 'Jump to the enquiry form',
+      close: 'Nothing, just close',
+    },
+    default: 'whatsapp',
+  },
+  {
+    key: 'ctaUrl',
+    label: 'Link to open',
+    type: 'url',
+    max: 500,
+    default: '',
+    help: 'Only used when the button is set to open a link. Must start with https://',
+  },
   { key: 'delay', label: 'Show after (seconds)', type: 'select', options: ['3', '6', '10', '20'], default: '6' },
-  { key: 'frequency', label: 'How often', type: 'select', options: ['once', 'everyVisit'], default: 'once' },
+  {
+    key: 'frequency',
+    label: 'How often',
+    type: 'select',
+    options: ['once', 'everyVisit'],
+    optionLabels: { once: 'Once per visitor', everyVisit: 'Every visit' },
+    default: 'once',
+  },
   { key: 'bg', label: 'Background', type: 'color', default: '#ffffff' },
   { key: 'fg', label: 'Text colour', type: 'color', default: '#0f172a' },
 ]
@@ -227,7 +256,18 @@ export const SECTION_TYPES = {
       { key: 'headline', label: 'Headline', type: 'text', max: 90, default: 'Quality you can feel.' },
       { key: 'sub', label: 'Supporting line', type: 'textarea', max: 220, default: 'Browse the collection and order in minutes.' },
       { key: 'ctaLabel', label: 'Button text', type: 'text', max: 30, default: 'Shop Now' },
-      { key: 'ctaAction', label: 'Button goes to', type: 'select', options: ['catalogue', 'enquiry', 'whatsapp'], default: 'catalogue' },
+      {
+        key: 'ctaAction',
+        label: 'Button goes to',
+        type: 'select',
+        options: ['catalogue', 'enquiry', 'whatsapp'],
+        optionLabels: {
+          catalogue: 'Everything you sell',
+          enquiry: 'The enquiry form',
+          whatsapp: 'A WhatsApp chat with you',
+        },
+        default: 'catalogue',
+      },
       { key: 'layout', label: 'Layout', type: 'select', options: ['split', 'centered', 'imageBehind'], default: 'split' },
       { key: 'height', label: 'Height', type: 'select', options: ['compact', 'normal', 'tall'], default: 'normal' },
       { key: 'showStats', label: 'Show counts', type: 'toggle', default: true },
@@ -328,9 +368,9 @@ export const SECTION_TYPES = {
     fields: [
       { key: 'title', label: 'Heading', type: 'text', max: 60, default: 'Questions people ask' },
       { key: 'q1', label: 'Question 1', type: 'text', max: 120, default: 'How long does delivery take?' },
-      { key: 'a1', label: 'Answer 1', type: 'textarea', max: 400, default: '' },
+      { key: 'a1', label: 'Answer 1', type: 'textarea', max: 400, default: 'Most orders arrive in 2 to 4 working days, depending on where you are. We message you as soon as yours is on the way.' },
       { key: 'q2', label: 'Question 2', type: 'text', max: 120, default: 'Can I pay on delivery?' },
-      { key: 'a2', label: 'Answer 2', type: 'textarea', max: 400, default: '' },
+      { key: 'a2', label: 'Answer 2', type: 'textarea', max: 400, default: 'Message us before you order and we will tell you what we can arrange for your area.' },
       { key: 'q3', label: 'Question 3', type: 'text', max: 120, default: '' },
       { key: 'a3', label: 'Answer 3', type: 'textarea', max: 400, default: '' },
       { key: 'bg', label: 'Background', type: 'color', default: '#ffffff' },
@@ -536,7 +576,9 @@ export function defaultServiceSections() {
   faq.settings = {
     ...faq.settings,
     q1: 'How far in advance should I book?',
+    a1: 'A few days ahead is usually enough, but the sooner you ask the more times we have open.',
     q2: 'Can I reschedule?',
+    a2: 'Yes. Message us as early as you can and we will find another time that works.',
   }
   return [
     makeSection('announcement'),
@@ -1145,4 +1187,105 @@ export function verifiedTone(design) {
   if (tone === 'accent') return { bg: t.accent, fg: '#ffffff', border: t.accent }
   if (tone === 'outline') return { bg: 'transparent', fg: t.textColor, border: t.border }
   return { bg: '#ecfdf5', fg: '#047857', border: '#a7f3d0' }
+}
+
+/**
+ * Why a section will render nothing, or null if it will render.
+ *
+ * EVERY renderer in DesignedStorefront returns null when it has nothing to
+ * show, which is right on a live storefront: a Reviews band with no reviews, a
+ * countdown with no date and a brand strip with no names are all worse than
+ * absent. What was wrong was that the EDITOR said nothing either, so a vendor
+ * added a section, saw the row appear in their list, saw nothing in the preview
+ * or on their store, and had no way to find out why.
+ *
+ * This is the one place that knows those conditions. It is deliberately kept
+ * beside the renderers' own checks rather than inferred from them, so if a
+ * renderer gains a new empty case, this gets a line too.
+ */
+export function sectionEmptyReason(section, ctx = {}) {
+  const s = section?.settings || {}
+  const { products = 0, services = 0, categories = 0, reviews = 0, tiktokVideos = 0 } = ctx
+
+  switch (section?.type) {
+    case 'announcement':
+      return s.text ? null : 'Add the announcement text and this will appear.'
+    case 'brandStrip':
+      return s.items && String(s.items).trim()
+        ? null
+        : 'Add at least one name, separated by commas, and this will appear.'
+    case 'productRow':
+      return products > 0 ? null : 'You have no live products yet, so this row has nothing to show.'
+    case 'serviceRow':
+      return services > 0 ? null : 'You have no live services yet, so this row has nothing to show.'
+    case 'categoryGrid':
+      return categories > 0
+        ? null
+        : 'None of your items have a category yet, so this grid has nothing to show.'
+    case 'textBlock':
+      return s.title || s.body ? null : 'Add a heading or some text and this will appear.'
+    case 'faq':
+      return (s.q1 && s.a1) || (s.q2 && s.a2) || (s.q3 && s.a3)
+        ? null
+        : 'Fill in at least one question AND its answer, and this will appear.'
+    case 'reviews':
+      return reviews > 0
+        ? null
+        : 'You have no customer reviews yet. This section stays hidden until a customer leaves one, because reviews cannot be invented.'
+    case 'tiktokFeed':
+      return tiktokVideos > 0
+        ? null
+        : 'Connect your TikTok account in the TikTok tab and this will fill with your real videos.'
+    case 'countdown':
+      return s.endsAt ? null : 'Pick the date this ends and the timer will appear.'
+    case 'imageBanner':
+      return s.imageUrl ? null : 'Add an image URL and this banner will appear.'
+    case 'socialLinks':
+      return SOCIAL_KEYS.some((k) => s[k])
+        ? null
+        : 'Add at least one social handle and this will appear.'
+    case 'trustBadges':
+      return s.item1 || s.item2 || s.item3 || s.item4
+        ? null
+        : 'Add at least one badge and this will appear.'
+    default:
+      return null
+  }
+}
+
+/**
+ * The social handle fields, derived from the section declaration itself rather
+ * than typed out again, so this cannot drift from the fields the editor shows.
+ */
+export const SOCIAL_KEYS = SECTION_TYPES.socialLinks.fields
+  .filter((f) => f.type === 'handle')
+  .map((f) => f.key)
+
+/**
+ * Why a popup's button will do nothing when a customer taps it, or null.
+ *
+ * The popup's LABEL and its ACTION are separate fields, so a vendor can ship a
+ * button reading "Claim on WhatsApp" that is wired to close the popup and go
+ * nowhere. That is not a bug the customer can report; it just looks like the
+ * store is broken. The editor says it instead.
+ */
+export function popupIssue(popup, ctx = {}) {
+  if (!popup?.enabled) return null
+  if (!popup.ctaLabel) return null
+
+  const action = popup.ctaAction || 'whatsapp'
+
+  if (action === 'link' && !popup.ctaUrl) {
+    return 'This button is set to open a link, but no link is set, so tapping it will only close the popup.'
+  }
+  if (action === 'whatsapp' && !ctx.hasWhatsapp && !popup.ctaUrl) {
+    return 'This button opens WhatsApp, but your store has no WhatsApp number, so tapping it will only close the popup.'
+  }
+  if (action === 'enquiry' && !ctx.hasEnquirySection && !ctx.hasWhatsapp) {
+    return 'This button jumps to the enquiry form, but this page has no enquiry section, so tapping it will only close the popup.'
+  }
+  if (action === 'close' && /whatsapp|shop|buy|claim|order|book|get/i.test(popup.ctaLabel)) {
+    return `Your button says "${popup.ctaLabel}" but is set to do nothing except close. Pick what it should open.`
+  }
+  return null
 }

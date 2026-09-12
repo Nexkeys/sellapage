@@ -129,6 +129,9 @@ const EMPTY_ANALYTICS = {
   serviceClicks: 0,
   engagedViews: 0,
   totalBookingRequests: 0,
+  // Sales actually received. Written server side only, after payment.
+  totalOrders: 0,
+  totalBookings: 0,
 };
 
 const readAnalytics = (data) => ({
@@ -138,6 +141,8 @@ const readAnalytics = (data) => ({
   serviceClicks: data?.serviceClicks ?? 0,
   engagedViews: data?.engagedViews ?? 0,
   totalBookingRequests: data?.totalBookingRequests ?? 0,
+  totalOrders: data?.totalOrders ?? 0,
+  totalBookings: data?.totalBookings ?? 0,
 });
 
 

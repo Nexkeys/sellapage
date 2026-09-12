@@ -182,7 +182,11 @@ export async function trackBookingRequest(storeId, serviceId) {
   const now = new Date()
   await Promise.allSettled([
     setDoc(summaryRef(storeId), { totalBookingRequests: increment(1), updatedAt: now }, { merge: true }),
-    setDoc(dayRef(storeId, day), { date: day, bookings: increment(1), updatedAt: now }, { merge: true }),
+    setDoc(
+      dayRef(storeId, day),
+      { date: day, bookingRequests: increment(1), updatedAt: now },
+      { merge: true },
+    ),
     serviceId
       ? updateDoc(doc(db, 'stores', storeId, 'services', serviceId), {
           bookingRequests: increment(1),
@@ -197,6 +201,11 @@ export const emptyDay = (date) => ({
   views: 0,
   productClicks: 0,
   serviceClicks: 0,
+  // A customer ASKING to book. Written by the storefront.
+  bookingRequests: 0,
+  // Paid and received. Written ONLY by the server, after Paystack confirms and
+  // the order or booking document exists. See _lib/store-counters.js.
+  orders: 0,
   bookings: 0,
   engagedSessions: 0,
 })
@@ -218,10 +227,13 @@ export async function fetchDailyAnalytics(storeId, max = DAILY_FETCH_LIMIT) {
   return snap.docs.map((d) => ({ ...emptyDay(d.id), ...d.data(), date: d.data()?.date || d.id }))
 }
 
-/** Engagement as a percentage, clamped, with the zero case spelled out. */
-export function engagementRate(engaged, views) {
-  const v = Number(views) || 0
-  const e = Number(engaged) || 0
-  if (v <= 0) return 0
-  return Math.min((e / v) * 100, 100)
-}
+// engagementRate() was removed deliberately. Engaged sessions divided by views
+// FALLS as a store grows, because a shop with 40 visitors and 10 buyers reads
+// worse than one with 4 visitors and 2 buyers. Vendors read a falling number as
+// "my store is getting worse" and it was telling them the opposite of the
+// truth. Orders and bookings received replaced it: a count, not a ratio, that
+// can only go up.
+//
+// `engagedSessions` is still recorded. It costs one write per visitor session,
+// it is a real signal, and throwing away history for a number nobody currently
+// displays would be the harder thing to undo.

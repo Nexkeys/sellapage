@@ -23,17 +23,19 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Loader2, Check, AlertCircle, Lock, Plus, Trash2, Eye, EyeOff,
   ChevronUp, ChevronDown, ChevronRight, Settings2, Palette, GripVertical, X,
-  Smartphone, Tablet, Monitor, Package, CalendarClock, Type,
+  Smartphone, Tablet, Monitor, Package, CalendarClock, Type, AlertTriangle,
   Undo2, Redo2, Sparkles, BellRing, CalendarRange, RotateCcw, FileText, ExternalLink, Search,
   ShieldCheck,
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { getProducts } from '../../firebase/products'
 import { getServices } from '../../firebase/services'
+import { fetchStoreReviews } from '../../firebase/reviews'
 import {
   SECTION_TYPES, FONT_OPTIONS, THEME_FIELDS, PRODUCT_CARD_FIELDS, SERVICE_CARD_FIELDS,
   POPUP_FIELDS, PRESETS, applyPreset, CUSTOM_PAGES, TRACKING_FIELDS, TRACKING_STATUSES,
   sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, defaultDesign,
+  sectionEmptyReason, popupIssue,
   BADGE_FIELDS, VERIFIED_LABEL, VERIFIED_LINE,
 } from '../../utils/storeDesign'
 import DesignedStorefront from '../storefront/DesignedStorefront'
@@ -90,13 +92,16 @@ function FieldList({ fields, values, onSet, categories = [] }) {
         if (f.type === 'font' || f.type === 'select') {
           const opts = f.type === 'font'
             ? FONT_OPTIONS.map((o) => [o.id, o.label])
-            : f.options.map((o) => [o, o])
+            // Without optionLabels this dropdown showed the vendor the raw
+            // stored value, so "How often" read "everyVisit".
+            : f.options.map((o) => [o, f.optionLabels?.[o] || o])
           return (
             <label key={f.key} className="block">
               <span className="text-[11px] font-semibold text-gray-600">{f.label}</span>
               <select value={v} onChange={(e) => onSet(f.key, e.target.value)} className={inputCls}>
                 {opts.map(([val, lab]) => <option key={val} value={val}>{lab}</option>)}
               </select>
+              {f.help ? <span className="mt-1 block text-[10px] leading-snug text-gray-400">{f.help}</span> : null}
             </label>
           )
         }
@@ -128,9 +133,12 @@ function FieldList({ fields, values, onSet, categories = [] }) {
               value={v || ''}
               maxLength={f.max}
               rows={f.type === 'textarea' ? 3 : undefined}
+              inputMode={f.type === 'url' ? 'url' : undefined}
+              placeholder={f.type === 'url' ? 'https://' : undefined}
               onChange={(e) => onSet(f.key, e.target.value)}
               className={inputCls}
             />
+            {f.help ? <span className="mt-1 block text-[10px] leading-snug text-gray-400">{f.help}</span> : null}
           </label>
         )
       })}
@@ -174,6 +182,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
   const [meta, setMeta] = useState({ eligible: false, live: false, plan: 'starter', hasSaved: false })
   const [products, setProducts] = useState([])
   const [services, setServices] = useState([])
+  const [reviews, setReviews] = useState([])
   const [openId, setOpenId] = useState(null)
   const [panel, setPanel] = useState('sections')
   const [adding, setAdding] = useState(false)
@@ -220,6 +229,18 @@ export default function StoreDesignTab({ store, storeUrl }) {
         }
         setProducts(items || [])
         setServices(svcs || [])
+
+        // The preview renders the SAME component as the live storefront, so it
+        // needs the same reviews or the vendor styles a section they cannot
+        // see. Best effort: an empty result just means the warning shows.
+        fetchStoreReviews(store.id, [
+          ...(items || []),
+          ...(svcs || []).map((sv) => ({ ...sv, kind: 'service' })),
+        ])
+          .then((rows) => {
+            if (!cancelled) setReviews(rows)
+          })
+          .catch(() => {})
 
         // A draft is offered, never applied silently: overwriting what a vendor
         // last published without asking is worse than losing an edit.
@@ -363,6 +384,33 @@ export default function StoreDesignTab({ store, storeUrl }) {
   const categories = useMemo(
     () => [...new Set([...products, ...services].map((p) => p.category).filter(Boolean))],
     [products, services]
+  )
+
+  // Every condition that makes a section render nothing, answered for THIS
+  // store's real data. A vendor adding a section and seeing an empty preview
+  // with no explanation is what made this necessary.
+  const emptyReason = useCallback(
+    (section) =>
+      sectionEmptyReason(section, {
+        products: products.length,
+        services: services.length,
+        categories: categories.length,
+        reviews: reviews.length,
+        tiktokVideos: Array.isArray(store?.tiktokVideos) ? store.tiktokVideos.length : 0,
+      }),
+    [products.length, services.length, categories.length, reviews.length, store?.tiktokVideos],
+  )
+
+  // A popup button whose label promises something its action does not do.
+  const popupWarning = useMemo(
+    () =>
+      popupIssue(design?.popup, {
+        hasWhatsapp: !!store?.whatsappNumber,
+        hasEnquirySection: currentSections.some(
+          (sec) => sec?.type === 'enquiry' && sec?.visible !== false,
+        ),
+      }),
+    [design?.popup, store?.whatsappNumber, currentSections],
   )
 
   const stats = useMemo(() => {
@@ -595,6 +643,12 @@ export default function StoreDesignTab({ store, storeUrl }) {
           open={panel === 'popup'}
           onToggle={() => setPanel(panel === 'popup' ? '' : 'popup')}
         >
+          {popupWarning ? (
+            <p className="mb-3 flex items-start gap-1.5 rounded-lg border border-amber-100 bg-amber-50 p-2.5 text-[11px] leading-snug text-amber-700">
+              <AlertTriangle size={12} className="mt-px flex-shrink-0" />
+              <span>{popupWarning}</span>
+            </p>
+          ) : null}
           <FieldList
             fields={POPUP_FIELDS}
             values={design.popup}
@@ -791,6 +845,12 @@ export default function StoreDesignTab({ store, storeUrl }) {
                     <p className={`truncate text-xs font-bold ${section.visible === false ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                       {SECTION_TYPES[section.type]?.label || section.type}
                     </p>
+                    {emptyReason(section) ? (
+                      <p className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-amber-600">
+                        <AlertTriangle size={11} className="mt-px flex-shrink-0" />
+                        <span>{emptyReason(section)}</span>
+                      </p>
+                    ) : null}
                     {section.hideOnMobile || section.scheduleStart || section.scheduleEnd ? (
                       <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-gray-400">
                         {[
@@ -924,7 +984,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
                 services={editing === 'service' ? services : []}
                 catalogueKind={editing === 'service' ? 'services' : 'products'}
                 categories={categories}
-                reviews={[]}
+                reviews={reviews}
                 stats={stats}
                 helpLinks={[]}
                 whatsappUrl={store?.whatsappNumber ? `https://wa.me/${String(store.whatsappNumber).replace(/\D/g, '')}` : ''}

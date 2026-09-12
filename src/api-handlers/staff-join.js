@@ -5,6 +5,7 @@
 // precedent for server-side account provisioning.
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { FieldValue } from 'firebase-admin/firestore'
+import { notifyStore } from './_lib/notifications.js'
 
 export default async function handler(req, res) {
   if (req.method === 'GET' && req.query.action === 'check') {
@@ -105,6 +106,15 @@ export default async function handler(req, res) {
     batch.update(inviteRef, { usedByUid: uid, claiming: false })
     batch.update(storeRef, { staffPendingInviteCount: FieldValue.increment(-1) })
     await batch.commit()
+
+    // Notifies the OWNER that someone accepted their invite. Team is a Premium
+    // tab, and the plan gate in notifyStore enforces that independently.
+    await notifyStore(db, invite.storeId, {
+      type: 'team_joined',
+      title: 'A team member joined 👥',
+      body: `${name.trim()} accepted your invite and now has access to your store.`,
+      data: { staffUid: uid, roleId: invite.roleId },
+    })
 
     const customToken = await auth.createCustomToken(uid)
     return res.status(200).json({ success: true, customToken })

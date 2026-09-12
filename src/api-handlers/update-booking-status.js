@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { sendEmail, escapeHtml } from './_lib/send-email.js'
 import { sendPush } from './_lib/send-push.js'
+import { notifyStore } from './_lib/notifications.js'
 import { generateWhatsAppLink } from '../utils/whatsapp.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
@@ -149,19 +150,26 @@ export default async function handler(req, res) {
     const storeData = storeSnap.data() || {}
 
     if (newStatus === 'completed') {
+      const pushTitle = 'Booking Completed ✅'
+      const pushBody = `${bookingData.customerName || 'A customer'}'s booking has been marked as completed.`
+
       try {
         const fcmToken = storeData.fcmToken
         if (fcmToken) {
-          await sendPush(
-            fcmToken,
-            'Booking Completed ✅',
-            `${bookingData.customerName || 'A customer'}'s booking has been marked as completed.`,
-            { bookingId, type: 'booking_completed' }
-          )
+          await sendPush(fcmToken, pushTitle, pushBody, { bookingId, type: 'booking_completed' })
         }
       } catch (pushErr) {
         console.error('[update-booking-status] Push notification failed:', pushErr)
       }
+
+      // Device registry + bell record, alongside the legacy single-token push
+      // above while the registry fills.
+      await notifyStore(db, storeId, {
+        type: 'booking_completed',
+        title: pushTitle,
+        body: pushBody,
+        data: { bookingId },
+      }, storeData)
     }
 
     const customerEmail = bookingData.customerEmail

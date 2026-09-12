@@ -1,5 +1,6 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
+import { notifyStore } from './_lib/notifications.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
 export default async function handler(req, res) {
@@ -147,6 +148,32 @@ export default async function handler(req, res) {
       }
 
       await db.collection('stores').doc(storeId).update(updateData)
+
+      // The CAC tab sits in the nav for every plan but paywalls internally on
+      // `if (!isPro)` in CACVerificationTab.jsx, so the plan gate inside
+      // notifyStore keeps the push in step with what the vendor can open.
+      const CAC_MESSAGE = {
+        verified: {
+          title: 'CAC verified ✅',
+          body: 'Your business is verified. The CAC badge now shows on your storefront.',
+        },
+        rejected: {
+          title: 'CAC verification rejected',
+          body: `Your CAC submission was not approved. Reason: ${updateData.cacRejectionReason}`,
+        },
+        pending: {
+          title: 'CAC verification pending',
+          body: 'Your CAC submission is being reviewed. We will let you know once it is done.',
+        },
+      }
+
+      await notifyStore(db, storeId, {
+        type: 'cac_status',
+        title: CAC_MESSAGE[status].title,
+        body: CAC_MESSAGE[status].body,
+        data: { status },
+      })
+
       return res.status(200).json({ success: true, storeId, updated: updateData })
     }
 

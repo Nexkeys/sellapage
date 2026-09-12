@@ -3,6 +3,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { sendEmail, escapeHtml } from './_lib/send-email.js'
 import { sendPush } from './_lib/send-push.js'
+import { notifyStore } from './_lib/notifications.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -135,6 +136,14 @@ export default async function handler(req, res) {
         // data.type to route a tap, so without it a review notification is the
         // single case that cannot be opened to anywhere.
         fcm ? sendPush(fcm, pushTitle, pushBody, { type: 'new_review', itemId, storeId }) : Promise.resolve(),
+        // Device registry + bell record. storeData is already loaded above, so
+        // the plan gate costs no extra read.
+        notifyStore(db, storeId, {
+          type: 'new_review',
+          title: pushTitle,
+          body: pushBody,
+          data: { itemId, rating: numericRating },
+        }, storeData),
       ]).catch(err => console.error('[Notify] partial failure', err))
     } catch (err) {
       console.error('[Notify] failed', err)

@@ -32,6 +32,7 @@ import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import SEO from '../components/SEO';
 import { initMetaPixel, trackPixel } from '../utils/metaPixel';
+import { fetchStoreReviews } from "../firebase/reviews";
 import {
   trackStoreView,
   trackEngagement,
@@ -1067,6 +1068,9 @@ export default function StorePage() {
   // Only fetched for vendors selling both, and only used by a live custom
   // design. The standard product page does not read this.
   const [designServices, setDesignServices] = useState([]);
+  // Real customer reviews for the designed Reviews section. This was a
+  // hardcoded [] , so that section rendered nothing on every store, forever.
+  const [designReviews, setDesignReviews] = useState([]);
   // Catalogue state for the designed storefront only. Kept apart from
   // activeCategory so the standard storefront behaves exactly as before.
   const [designBrowse, setDesignBrowse] = useState(null);
@@ -1292,6 +1296,35 @@ export default function StorePage() {
     };
     load();
   }, [storeName, navigate]);
+
+  // Customer reviews for the designed Reviews section.
+  //
+  // Fetched only when that section is actually live, and only for items whose
+  // `reviewCount` says they have any, so a store that does not use the section
+  // and a store with no reviews both pay nothing.
+  useEffect(() => {
+    if (!store?.id || !isDesignLive(store)) return;
+    const wantsReviews = (store.storeDesign?.sections || []).some(
+      (sec) => sec?.type === "reviews" && sec?.visible !== false,
+    );
+    if (!wantsReviews) return;
+
+    let cancelled = false;
+    const items = [
+      ...(products || []),
+      ...(designServices || []).map((sv) => ({ ...sv, kind: "service" })),
+    ];
+    fetchStoreReviews(store.id, items)
+      .then((rows) => {
+        if (!cancelled) setDesignReviews(rows);
+      })
+      .catch(() => {
+        // Presentation only: the section simply stays hidden.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [store, products, designServices]);
 
   const {
     activeThemeObj,
@@ -1912,7 +1945,7 @@ export default function StorePage() {
             products={products}
             services={designServices}
             categories={designCategories}
-            reviews={[]}
+            reviews={designReviews}
             stats={designStats}
             whatsappUrl={designWhatsappUrl}
             helpLinks={designHelpLinks}

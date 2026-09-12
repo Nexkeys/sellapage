@@ -25,12 +25,21 @@ export default function OverviewTab({
   }
 
   const pct = Math.min(100, Math.round((derivedCount / maxProducts) * 100))
-  const totalViews  = analyticsData?.totalViews  ?? 0
-  const engagedViews = analyticsData?.engagedViews ?? 0
+  const totalViews = analyticsData?.totalViews ?? 0
 
-  let engagementRateNum = totalViews > 0 ? (engagedViews / totalViews) * 100 : 0;
-  if (engagementRateNum > 100) engagementRateNum = 100;
-  const engagementRate = totalViews > 0 ? `${engagementRateNum.toFixed(0)}%` : '-';
+  // Engagement Rate used to sit here. It was engaged sessions over views, so it
+  // FELL as a store grew: 2 buyers from 4 visitors reads as 50%, and 10 buyers
+  // from 40 visitors reads as 25%, which looks like getting worse while being
+  // four times the sales. Replaced with what a vendor actually wants to know.
+  const totalOrders = analyticsData?.totalOrders ?? 0
+  const totalBookings = analyticsData?.totalBookings ?? 0
+  const salesReceived = totalOrders + totalBookings
+  const salesLabel =
+    vendorType === 'services'
+      ? 'Bookings Received'
+      : vendorType === 'both'
+      ? 'Orders & Bookings'
+      : 'Orders Received'
 
   const PLAN_LABEL = {
     starter: { text: 'Free Plan',    cls: 'bg-gray-100 text-gray-600' },
@@ -119,12 +128,10 @@ export default function OverviewTab({
             <TrendingUp size={14} className="text-amber-600" />
           </div>
           <p className="text-2xl font-bold text-gray-900 mt-0.5">
-            {isPro && totalViews > 0
-              ? `${((engagedViews / totalViews) * 100).toFixed(1)}%`
-              : '-'}
+            {isPro ? salesReceived.toLocaleString() : '-'}
           </p>
-          <p className="text-gray-400 text-[11px] mt-0.5">Engagement Rate</p>
-          <p className="text-[10px] text-gray-400 mt-1.5">of visitors who interacted</p>
+          <p className="text-gray-400 text-[11px] mt-0.5">{salesLabel}</p>
+          <p className="text-[10px] text-gray-400 mt-1.5">paid and confirmed, all time</p>
         </div>
       </div>
 

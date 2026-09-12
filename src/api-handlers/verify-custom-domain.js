@@ -1,4 +1,5 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
+import { notifyStore } from './_lib/notifications.js'
 
 const VERCEL_TOKEN = process.env.VERCEL_API_TOKEN
 const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID
@@ -67,9 +68,24 @@ export default async function handler(req, res) {
     if (verified) {
       status = 'active'
       userMessage = 'Your domain is verified and active.'
+      // Read BEFORE the write, so the transition is detectable. The dashboard
+      // polls this endpoint while a vendor waits for DNS to propagate, so
+      // without this check they would get a push on every poll.
+      const storeSnap = await db.collection('stores').doc(storeId).get()
+      const existingStatus = storeSnap.data()?.customDomainStatus
+
       await db.collection('stores').doc(storeId).update({
         customDomainStatus: 'active',
       })
+
+      if (existingStatus !== 'active') {
+        await notifyStore(db, storeId, {
+          type: 'domain_verified',
+          title: 'Custom domain is live 🌐',
+          body: `${domain} is verified and now serving your store.`,
+          data: { domain },
+        })
+      }
     } else {
       status = 'dns_error'
       userMessage = dnsType === 'A'

@@ -363,6 +363,14 @@ service cloud.firestore {
                 'engagedViews', 'totalBookingRequests', 'updatedAt'];
       }
 
+      // DELIBERATELY NOT listed above, and deliberately not in the daily
+      // allowlist either: totalOrders, totalBookings, and the daily `orders`
+      // and `bookings`. Those mean "sales received" and a vendor reads them as
+      // money, so they are written only by _lib/store-counters.js on the Admin
+      // SDK, after Paystack confirms and past the idempotency check. A visitor
+      // cannot touch them from a browser. The owner can still zero them on
+      // reset through the isStoreOwner() branch.
+
       // The owner resetting their own analytics to zero. This was missing, so
       // "Reset All Analytics" wrote 0 over a non-zero counter, failed the
       // monotonic check below, and rolled back the whole batch. The button
@@ -430,20 +438,20 @@ service cloud.firestore {
         allow create: if isStoreOwner()
                       || (request.resource.data.keys().hasOnly(
                            ['date', 'views', 'productClicks', 'serviceClicks',
-                            'bookings', 'engagedSessions', 'updatedAt'])
+                            'bookingRequests', 'engagedSessions', 'updatedAt'])
                       && request.resource.data.date is string
                       && request.resource.data.date == day
                       && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
                       && request.resource.data.get('views', 0) <= 1
                       && request.resource.data.get('productClicks', 0) <= 1
                       && request.resource.data.get('serviceClicks', 0) <= 1
-                      && request.resource.data.get('bookings', 0) <= 1
+                      && request.resource.data.get('bookingRequests', 0) <= 1
                       && request.resource.data.get('engagedSessions', 0) <= 1);
 
         allow update: if isStoreOwner()
                       || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                            ['date', 'views', 'productClicks', 'serviceClicks',
-                            'bookings', 'engagedSessions', 'updatedAt'])
+                            'bookingRequests', 'engagedSessions', 'updatedAt'])
                       && request.resource.data.get('views', 0)
                            >= resource.data.get('views', 0)
                       && request.resource.data.get('views', 0)
@@ -456,10 +464,10 @@ service cloud.firestore {
                            >= resource.data.get('serviceClicks', 0)
                       && request.resource.data.get('serviceClicks', 0)
                            <= resource.data.get('serviceClicks', 0) + 1
-                      && request.resource.data.get('bookings', 0)
-                           >= resource.data.get('bookings', 0)
-                      && request.resource.data.get('bookings', 0)
-                           <= resource.data.get('bookings', 0) + 1
+                      && request.resource.data.get('bookingRequests', 0)
+                           >= resource.data.get('bookingRequests', 0)
+                      && request.resource.data.get('bookingRequests', 0)
+                           <= resource.data.get('bookingRequests', 0) + 1
                       && request.resource.data.get('engagedSessions', 0)
                            >= resource.data.get('engagedSessions', 0)
                       && request.resource.data.get('engagedSessions', 0)

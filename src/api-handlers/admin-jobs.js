@@ -6,6 +6,7 @@
 // vendor - closing that gap for the first time in this codebase.
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
+import { notifyStore } from './_lib/notifications.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
@@ -86,6 +87,17 @@ export default async function handler(req, res) {
       const storeSnap = await db.collection('stores').doc(job.storeId).get()
       const store = storeSnap.exists ? storeSnap.data() : {}
       const vendorEmail = store.email
+
+      // Job listings are ungated in the dashboard nav, so this reaches every
+      // plan. The email below still goes out; push is an addition, not a swap.
+      await notifyStore(db, job.storeId, {
+        type: 'job_status',
+        title: status === 'approved' ? 'Job listing approved ✅' : 'Job listing rejected',
+        body: status === 'approved'
+          ? `"${job.title}" is now live on the public Jobs page.`
+          : `"${job.title}" was not approved. Reason: ${rejectionReason.trim()}`,
+        data: { jobId, status },
+      }, store)
 
       if (vendorEmail) {
         const appUrl = process.env.APP_URL || 'https://www.sellapage.com.ng'

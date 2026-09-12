@@ -4,6 +4,7 @@ import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail } from "./_lib/send-email.js";
 import { sendPush } from "./_lib/send-push.js";
+import { notifyStore } from "./_lib/notifications.js";
 import { setStoreCardsFrozen } from "./_lib/loyalty.js";
 
 async function getRawBody(req) {
@@ -449,6 +450,15 @@ export default async function handler(req, res) {
           referralBatch.update(db.collection("stores").doc(referredById), referrerUpdate)
           referralBatch.update(storeRef, { referralCreditedToReferrer: targetReward })
           await referralBatch.commit()
+
+          // Notifies the REFERRER that a vendor they brought in started paying.
+          // The referral tab is ungated, so this reaches every plan.
+          await notifyStore(db, referredById, {
+            type: "referral_upgrade",
+            title: "You earned a referral reward 💰",
+            body: `A vendor you referred upgraded their plan. ₦${Number(delta).toLocaleString("en-NG")} has been added to your referral balance.`,
+            data: { amount: delta },
+          })
         }
       }
     }
@@ -562,6 +572,15 @@ export default async function handler(req, res) {
             { type: "subscription", plan, billingPeriod },
           )
         : Promise.resolve(),
+      // Device registry + bell record, alongside the legacy single-token push
+      // above while the registry fills. Ungated deliberately: a vendor must
+      // always be told their own plan changed, whatever plan they are on.
+      notifyStore(db, storeId, {
+        type: "subscription",
+        title: `${planLabel} Plan Active ✅`,
+        body: `Your ${periodLabel} ${planLabel} plan is active until ${renewDate}.`,
+        data: { plan, billingPeriod },
+      }, storeData),
     ]);
   } catch (error) {
     console.error("[Subscription Notifications] Error:", error);

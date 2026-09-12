@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getStoreBySlug, getProducts } from '../firebase/products'
 import { getServices } from '../firebase/services'
+import { fetchStoreReviews } from '../firebase/reviews'
 import SEO from '../components/SEO'
 import NotFound from './NotFound'
 import DesignedStorefront from '../components/storefront/DesignedStorefront'
@@ -35,6 +36,7 @@ export default function StoreCustomPage({ pageKey }) {
   const [store, setStore] = useState(null)
   const [products, setProducts] = useState([])
   const [services, setServices] = useState([])
+  const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -58,7 +60,21 @@ export default function StoreCustomPage({ pageKey }) {
         ])
         if (cancelled) return
         setProducts(p || [])
-        setServices((s || []).filter((x) => x.isActive !== false))
+        const liveServices = (s || []).filter((x) => x.isActive !== false)
+        setServices(liveServices)
+
+        // A vendor can put the Reviews section on a custom page too, so it
+        // needs the same data the shop front gets. Only fetched when the page
+        // actually has that section.
+        const pageSections = data.storeDesign?.pages?.[pageKey]?.sections || []
+        if (pageSections.some((sec) => sec?.type === 'reviews' && sec?.visible !== false)) {
+          fetchStoreReviews(data.id, [
+            ...(p || []),
+            ...liveServices.map((sv) => ({ ...sv, kind: 'service' })),
+          ])
+            .then((rows) => { if (!cancelled) setReviews(rows) })
+            .catch(() => {})
+        }
       } catch {
         if (!cancelled) setNotFound(true)
       } finally {
@@ -160,7 +176,7 @@ export default function StoreCustomPage({ pageKey }) {
         products={products}
         services={services}
         categories={categories}
-        reviews={[]}
+        reviews={reviews}
         stats={[]}
         helpLinks={helpLinks}
         whatsappUrl={whatsappUrl}
