@@ -28,6 +28,7 @@ import crypto from 'crypto'
 import { getMessaging } from 'firebase-admin/messaging'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getFirebaseAdminApp } from './firebase-admin.js'
+import { filterDevicesForType } from './notification-access.js'
 
 export const DEVICES = 'devices'
 
@@ -217,6 +218,10 @@ export async function sendPushToDevices(devices, { title, body, data = {}, image
           priority: 'high',
           notification: {
             sound: 'default',
+            // Must match a channel the app creates at HIGH importance. Without a
+            // channelId FCM drops the push onto its fallback channel, which gets
+            // default importance: no heads-up banner, easy to miss.
+            channelId: 'default',
             ...(imageUrl ? { imageUrl } : {}),
           },
         },
@@ -271,13 +276,20 @@ async function disableDevices(deviceIds) {
  * try/catch, and a notification must never be the reason a paid order fails to
  * finish recording.
  */
-export async function sendPushToStore(storeId, { title, body, data = {}, imageUrl = null }) {
+export async function sendPushToStore(storeId, { title, body, data = {}, imageUrl = null }, { allowUids = [] } = {}) {
   try {
-    const devices = await listStoreDevices(storeId)
-    if (!devices.length) return { sent: 0, failed: 0, pruned: 0, devices: 0 }
+    const linked = await listStoreDevices(storeId)
+    if (!linked.length) return { sent: 0, failed: 0, pruned: 0, devices: 0 }
+
+    // Not every linked device may see every notification. Staff handsets only
+    // receive types their role's tabs cover, and deactivated staff receive
+    // nothing. See _lib/notification-access.js for the rule and its evidence.
+    const devices = await filterDevicesForType(storeId, linked, data?.type, allowUids)
+    const withheld = linked.length - devices.length
+    if (!devices.length) return { sent: 0, failed: 0, pruned: 0, devices: 0, withheld }
 
     const result = await sendPushToDevices(devices, { title, body, data, imageUrl })
-    return { ...result, devices: devices.length }
+    return { ...result, devices: devices.length, withheld }
   } catch (err) {
     console.error('[push-devices] sendPushToStore failed:', err?.message || err)
     return { sent: 0, failed: 0, pruned: 0, devices: 0 }

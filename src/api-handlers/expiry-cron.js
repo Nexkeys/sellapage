@@ -178,7 +178,11 @@ export default async function handler(req, res) {
         // being moved to Starter, and a gate would silence the one message
         // explaining why their features just disappeared.
         await notifyStore(db, storeDoc.id, {
-          type: 'plan_expiring',
+          // Its own type, not plan_expiring. The app routes and iconifies on
+          // data.type alone, and a "3 days left" warning and a "you are now on
+          // Starter" notice are different events that must be distinguishable
+          // without inspecting the payload.
+          type: 'plan_downgraded',
           title: 'Your plan has expired',
           body: `Your ${displayPlan} plan has ended and your store is back on Starter. Renew any time to restore your features.`,
           data: { plan: 'starter', previousPlan: displayPlan },

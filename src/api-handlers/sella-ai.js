@@ -342,6 +342,7 @@ HOW TO ANSWER - read this carefully:
    - Once you actually have the real details the vendor gave you, call the matching tool. The system then shows the vendor a confirm/cancel card before anything is saved, so nothing changes without their final yes.
    - For products/services: after it's created, the vendor can upload the photo right here in the chat - mention that.
 4. Money is in Nigerian Naira (₦). Keep replies concise and mobile-friendly, but human - not robotic. Never expose IDs, raw JSON, or internal wording.
+5. FORMATTING: your reply is shown as plain text on the web and in the mobile app, and neither renders markdown. Never use asterisks for bold or italics, # headings, tables, or code blocks, because they appear as raw symbols. Use short paragraphs. For a list, put each item on its own line starting with a hyphen and a space. Never use em dashes or en dashes; use a comma, a full stop or a colon instead.
 5. STYLE: NEVER use em dashes or en dashes in your replies. Not one. Use commas, full stops, colons or brackets instead. Ordinary hyphens in words like "best-selling" are fine. This vendor dislikes them, so a single em dash is a visible mistake.
 
 CURRENT TIME (Nigeria, WAT): ${nowInWat().toISOString().slice(0, 16).replace("T", " ")}
@@ -810,7 +811,12 @@ export default async function handler(req, res) {
     }, { merge: true })
 
     if (sources.length) sse('sources', { sources })
-    if (pendingAction) sse('pending', { pendingAction })
+    // The human-readable confirm text is built HERE, once, from describeAction.
+    // Clients used to keep their own copies: the web one had drifted (no case for
+    // create_reminder or update_booking_status) and the mobile app had none, so
+    // vendors approved update_tab_record and reminders without seeing what they
+    // did. Clients render summary and never need to know the action types.
+    if (pendingAction) sse('pending', { pendingAction: { ...pendingAction, summary: describeAction(pendingAction) } })
     sse('usage', { used: usage.used, limit: DAILY_LIMIT, remaining: Math.max(DAILY_LIMIT - usage.used, 0) })
     sse('done', {})
     return res.end()

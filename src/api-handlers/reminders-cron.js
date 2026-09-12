@@ -11,7 +11,7 @@
 
 import crypto from 'crypto'
 import { getAdminDb } from './_lib/firebase-admin.js'
-import { sendPushToStore } from './_lib/push-devices.js'
+import { notifyStore } from './_lib/notifications.js'
 import { sendPush } from './_lib/send-push.js'
 import { sendEmail } from './_lib/send-email.js'
 import { COLLECTION, markFired, formatWat } from './_lib/reminders.js'
@@ -95,11 +95,29 @@ export default async function handler(req, res) {
       // app - it is multi-device, it prunes dead tokens, and it carries an
       // android block that _lib/send-push.js does not. stores.fcmToken is the
       // deprecated, world-readable field that devices/ was built to replace.
-      const push = await sendPushToStore(r.storeId, {
+      //
+      // notifyStore rather than a bare sendPushToStore, so the reminder also
+      // leaves a record in the bell. Before this a fired reminder pushed and
+      // then vanished: tapping it in the app had no entry to open.
+      //
+      // WHO RECEIVES IT: the owner, plus whoever created it. Sella records the
+      // real caller as createdBy.uid (sella-ai.js builds the actor from
+      // decoded.uid), so a staff member who asks for a reminder gets their own
+      // reminder. Other staff do not. The owner is always a legitimate
+      // recipient because the Reminders tab already shows the owner every
+      // reminder on the store, which is also why the fallbacks below, which go
+      // to the owner's legacy token and email, remain correct.
+      const createdByUid = r.createdBy?.uid || null
+      const push = await notifyStore(db, r.storeId, {
+        type: 'reminder',
         title,
         body: r.message,
-        data: { type: 'reminder', reminderId: doc.id, storeId: r.storeId },
-      })
+        data: {
+          reminderId: doc.id,
+          storeId: r.storeId,
+          ...(createdByUid ? { createdByUid } : {}),
+        },
+      }, store, { allowUids: createdByUid ? [createdByUid] : [] })
       if (push.sent > 0) { delivered = 'push'; pushed++ }
 
       // FALLBACK 1: the legacy token, for vendors who registered before the

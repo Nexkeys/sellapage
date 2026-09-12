@@ -135,14 +135,20 @@ export default async function handler(req, res) {
         // `type` was the one push in the system missing it. The app switches on
         // data.type to route a tap, so without it a review notification is the
         // single case that cannot be opened to anywhere.
-        fcm ? sendPush(fcm, pushTitle, pushBody, { type: 'new_review', itemId, storeId }) : Promise.resolve(),
+        fcm ? sendPush(fcm, pushTitle, pushBody, { type: 'new_review', itemId, itemType, storeId }) : Promise.resolve(),
         // Device registry + bell record. storeData is already loaded above, so
         // the plan gate costs no extra read.
+        //
+        // itemType is 'product' or 'service' (orders set 'product' in
+        // handle-product-checkout.js, bookings set 'service' in
+        // handle-booking-checkout.js). Without it the app has an itemId but
+        // cannot tell which collection it lives in, so it cannot open the
+        // reviewed item.
         notifyStore(db, storeId, {
           type: 'new_review',
           title: pushTitle,
           body: pushBody,
-          data: { itemId, rating: numericRating },
+          data: { itemId, itemType, rating: numericRating },
         }, storeData),
       ]).catch(err => console.error('[Notify] partial failure', err))
     } catch (err) {

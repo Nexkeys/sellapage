@@ -19,6 +19,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveCallerStoreId } from './_lib/verify-store-access.js'
 import { NOTIFICATIONS } from './_lib/notifications.js'
+import { loadRecipient, recipientMayReceive } from './_lib/notification-access.js'
 
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 100
@@ -51,12 +52,19 @@ export default async function handler(req, res) {
     const storeId = access.storeId
     const action = req.query.action || 'list'
 
+    // Who the caller is relative to this store. The owner sees every record;
+    // a staff member sees only types their role's tabs cover, exactly as their
+    // devices are filtered when the push is sent. Without this the feed was a
+    // second copy of the leak: any staff member could read loyalty codes and
+    // order details for tabs they were never granted.
+    const recipient = await loadRecipient(storeId, decoded.uid)
+
     if (action === 'list' && req.method === 'GET') {
-      return await listFeed(db, storeId, req, res)
+      return await listFeed(db, storeId, recipient, req, res)
     }
 
     if (action === 'read' && req.method === 'POST') {
-      return await markRead(db, storeId, req, res)
+      return await markRead(db, storeId, recipient, req, res)
     }
 
     return res.status(400).json({ error: 'Invalid action' })
@@ -66,7 +74,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function listFeed(db, storeId, req, res) {
+async function listFeed(db, storeId, recipient, req, res) {
   const limit = Math.min(Number(req.query.limit) || DEFAULT_LIMIT, MAX_LIMIT)
   const storeRef = db.collection('stores').doc(storeId)
 
@@ -82,19 +90,30 @@ async function listFeed(db, storeId, req, res) {
   const store = storeSnap.data() || {}
   const readBroadcastIds = new Set(readSnap.data()?.ids || [])
 
-  const own = ownSnap.docs.map((d) => {
-    const data = d.data()
-    return {
-      id: d.id,
-      source: 'store',
-      type: data.type,
-      title: data.title,
-      body: data.body,
-      data: data.data || {},
-      createdAt: iso(data.createdAt),
-      read: Boolean(data.readAt),
-    }
-  })
+  const own = ownSnap.docs
+    .map((d) => {
+      const data = d.data()
+      return {
+        id: d.id,
+        source: 'store',
+        type: data.type,
+        title: data.title,
+        body: data.body,
+        data: data.data || {},
+        createdAt: iso(data.createdAt),
+        read: Boolean(data.readAt),
+      }
+    })
+    // Same rule as the push: staff see only types their role's tabs cover, and
+    // a reminder is also visible to the person who created it. Applied after
+    // the query limit, so a staff member can get fewer than `limit` store items
+    // on a page. That is the price of not needing a second query shape and the
+    // composite index it would require.
+    .filter((item) => recipientMayReceive(
+      recipient,
+      item.type,
+      item.data?.createdByUid ? [item.data.createdByUid] : [],
+    ))
 
   const broadcasts = broadcastSnap.docs
     .filter((d) => matchesStore(d.data().filters, store))
@@ -139,7 +158,7 @@ function matchesStore(filters, store) {
   return true
 }
 
-async function markRead(db, storeId, req, res) {
+async function markRead(db, storeId, recipient, req, res) {
   let body
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
@@ -159,11 +178,35 @@ async function markRead(db, storeId, req, res) {
   const storeRef = db.collection('stores').doc(storeId)
   let updated = 0
 
+  // Only records that EXIST and that this caller is allowed to see. Two reasons:
+  //   1. Read state lives on the record and is shared by everyone on the store,
+  //      so a staff member marking a record read clears the owner's unread
+  //      badge. They must not be able to do that to a record their role cannot
+  //      even see.
+  //   2. The previous set-with-merge created a document for ANY id sent, so a
+  //      made-up id left a ghost record holding only readAt, which then showed
+  //      in the feed as a blank item.
+  let markable = []
+  if (ids.length) {
+    const snaps = await db.getAll(...ids.map((id) => storeRef.collection(NOTIFICATIONS).doc(id)))
+    markable = snaps
+      .filter((snap) => snap.exists)
+      .filter((snap) => {
+        const record = snap.data() || {}
+        return recipientMayReceive(
+          recipient,
+          record.type,
+          record.data?.createdByUid ? [record.data.createdByUid] : [],
+        )
+      })
+      .map((snap) => snap.id)
+  }
+
   // Per-store records carry their own readAt. Batched because marking the whole
   // list read on opening the bell is the normal case, not the exception.
-  for (let i = 0; i < ids.length; i += 400) {
+  for (let i = 0; i < markable.length; i += 400) {
     const batch = db.batch()
-    for (const id of ids.slice(i, i + 400)) {
+    for (const id of markable.slice(i, i + 400)) {
       batch.set(
         storeRef.collection(NOTIFICATIONS).doc(id),
         { readAt: FieldValue.serverTimestamp() },

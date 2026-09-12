@@ -496,7 +496,7 @@ export default function SellaAI({ store }) {
                   {pending && (
                     <div className="mx-0.5 rounded-2xl border border-green-500/40 bg-green-500/10 p-3.5">
                       <p className="text-[10.5px] font-bold text-green-400 uppercase tracking-wider mb-1.5">Confirm this change</p>
-                      <p className="text-[13px] text-gray-100 mb-3 leading-relaxed">{describePending(pending)}</p>
+                      <p className="text-[13px] text-gray-100 mb-3 leading-relaxed">{pending.summary || describePending(pending)}</p>
                       <div className="flex gap-2">
                         <button onClick={confirmAction} disabled={confirming} className="flex-1 py-2.5 rounded-xl bg-gradient-to-br from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 disabled:opacity-60 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
                           {confirming ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />} Confirm
@@ -645,7 +645,8 @@ export default function SellaAI({ store }) {
   );
 }
 
-// Client-side mirror of the server's describeAction (kept simple).
+// Fallback only, for a pending action from an older server build. The server now
+// sends pendingAction.summary, which is the source of truth.
 function describePending(p) {
   const a = p?.args || {};
   const money = (n) => `₦${Number(n || 0).toLocaleString("en-NG")}`;

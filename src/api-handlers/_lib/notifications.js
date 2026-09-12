@@ -43,6 +43,7 @@ export const NOTIFICATION_TYPES = [
   'team_joined',
   'subscription',
   'plan_expiring',
+  'plan_downgraded',
   'security_alert',
   'broadcast',
   'reminder',
@@ -146,7 +147,7 @@ export async function recordNotification(db, storeId, { type, title, body, data 
  * Pass `store` when the caller already has the document in hand, which most do.
  * It only avoids a re-read; the gate is applied either way.
  */
-export async function notifyStore(db, storeId, { type, title, body, data = {} }, store = null) {
+export async function notifyStore(db, storeId, { type, title, body, data = {} }, store = null, { allowUids = [] } = {}) {
   if (!storeId || !type) return { sent: 0, failed: 0, pruned: 0, skipped: 'missing_args' }
 
   try {
@@ -161,8 +162,12 @@ export async function notifyStore(db, storeId, { type, title, body, data = {} },
       return { sent: 0, failed: 0, pruned: 0, skipped: 'plan' }
     }
 
+    // `allowUids` reaches specific people regardless of their role's tabs, for
+    // events that belong to a person rather than a tab (reminders). Staff
+    // filtering for everything else happens inside sendPushToStore. The record
+    // is store-wide; /api/notifications applies the same rule when reading it.
     const [push, notificationId] = await Promise.all([
-      sendPushToStore(storeId, { title, body, data: { ...data, type } }),
+      sendPushToStore(storeId, { title, body, data: { ...data, type } }, { allowUids }),
       recordNotification(db, storeId, { type, title, body, data }),
     ])
 
