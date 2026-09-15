@@ -34,12 +34,22 @@ export default function OverviewTab({
   const totalOrders = analyticsData?.totalOrders ?? 0
   const totalBookings = analyticsData?.totalBookings ?? 0
   const salesReceived = totalOrders + totalBookings
+  // Counted from the order and booking documents (src/utils/sales.js).
+  const salesStatus = analyticsData?.salesStatus ?? 'ready'
   const salesLabel =
     vendorType === 'services'
       ? 'Bookings Received'
       : vendorType === 'both'
       ? 'Orders & Bookings'
       : 'Orders Received'
+  const salesNote =
+    salesStatus === 'error'
+      ? 'could not load, refresh to try again'
+      : vendorType === 'services'
+      ? 'all time, from your Bookings tab'
+      : vendorType === 'both'
+      ? 'all time, from your Orders and Bookings tabs'
+      : 'all time, from your Orders tab'
 
   const PLAN_LABEL = {
     starter: { text: 'Free Plan',    cls: 'bg-gray-100 text-gray-600' },
@@ -128,10 +138,14 @@ export default function OverviewTab({
             <TrendingUp size={14} className="text-amber-600" />
           </div>
           <p className="text-2xl font-bold text-gray-900 mt-0.5">
-            {isPro ? salesReceived.toLocaleString() : '-'}
+            {!isPro || salesStatus === 'error'
+              ? '-'
+              : salesStatus === 'loading'
+              ? '...'
+              : salesReceived.toLocaleString()}
           </p>
           <p className="text-gray-400 text-[11px] mt-0.5">{salesLabel}</p>
-          <p className="text-[10px] text-gray-400 mt-1.5">paid and confirmed, all time</p>
+          <p className="text-[10px] text-gray-400 mt-1.5">{salesNote}</p>
         </div>
       </div>
 

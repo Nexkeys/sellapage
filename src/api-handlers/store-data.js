@@ -79,6 +79,35 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, items: snap.docs.map(serializeDoc) })
     }
 
+    // Orders and bookings received, for the Analytics tab and the dashboard
+    // card. Counted from the documents, not a counter; see src/utils/sales.js
+    // for why. Gated on the analytics grant, and returns only counts and
+    // creation times, never customer details, so an analytics-only staff role
+    // learns nothing the Orders tab would have hidden from them.
+    if (type === 'sales') {
+      const access = await resolveStoreAccess(decoded.uid, storeId, 'analytics', false)
+      if (!access.allowed) return res.status(403).json({ error: 'Forbidden' })
+      const days = Math.min(Math.max(parseInt(req.query.days, 10) || 0, 0), 367)
+      const storeRef = db.collection('stores').doc(storeId)
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      const out = { success: true }
+
+      await Promise.all(
+        [['orders', 'orderDates'], ['bookings', 'bookingDates']].map(async ([name, datesKey]) => {
+          const col = storeRef.collection(name)
+          const countSnap = await col.orderBy('createdAt').count().get()
+          out[name] = countSnap.data().count
+          if (days > 0) {
+            const snap = await col.where('createdAt', '>=', since).select('createdAt').get()
+            out[datesKey] = snap.docs
+              .map((d) => d.get('createdAt')?.toDate?.()?.toISOString())
+              .filter(Boolean)
+          }
+        }),
+      )
+      return res.status(200).json(out)
+    }
+
     const collectionName = SUBCOLLECTION_TYPES[type]
     if (!collectionName) return res.status(400).json({ error: 'Invalid type' })
 

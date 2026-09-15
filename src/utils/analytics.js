@@ -203,8 +203,9 @@ export const emptyDay = (date) => ({
   serviceClicks: 0,
   // A customer ASKING to book. Written by the storefront.
   bookingRequests: 0,
-  // Paid and received. Written ONLY by the server, after Paystack confirms and
-  // the order or booking document exists. See _lib/store-counters.js.
+  // Orders and bookings placed that day. Never written by the storefront: the
+  // Analytics tab fills these in by counting the order and booking documents
+  // themselves (src/utils/sales.js), so they always match the tabs.
   orders: 0,
   bookings: 0,
   engagedSessions: 0,

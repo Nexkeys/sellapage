@@ -365,11 +365,10 @@ service cloud.firestore {
 
       // DELIBERATELY NOT listed above, and deliberately not in the daily
       // allowlist either: totalOrders, totalBookings, and the daily `orders`
-      // and `bookings`. Those mean "sales received" and a vendor reads them as
-      // money, so they are written only by _lib/store-counters.js on the Admin
-      // SDK, after Paystack confirms and past the idempotency check. A visitor
-      // cannot touch them from a browser. The owner can still zero them on
-      // reset through the isStoreOwner() branch.
+      // and `bookings`. Sales are no longer stored as counters at all: the
+      // dashboard counts the order and booking documents directly
+      // (src/utils/sales.js). These names stay out of the allowlist anyway, so
+      // a visitor can never plant a fake sales figure that later code trusts.
 
       // The owner resetting their own analytics to zero. This was missing, so
       // "Reset All Analytics" wrote 0 over a non-zero counter, failed the

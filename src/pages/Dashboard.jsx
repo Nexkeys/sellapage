@@ -43,6 +43,7 @@ import {
 } from "firebase/firestore";
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
 import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
+import { countSales } from "../utils/sales";
 import OtpVerifyModal from "../components/OtpVerifyModal";
 import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
 import { SkeletonDashboard } from "../components/Skeleton";
@@ -129,9 +130,6 @@ const EMPTY_ANALYTICS = {
   serviceClicks: 0,
   engagedViews: 0,
   totalBookingRequests: 0,
-  // Sales actually received. Written server side only, after payment.
-  totalOrders: 0,
-  totalBookings: 0,
 };
 
 const readAnalytics = (data) => ({
@@ -141,8 +139,6 @@ const readAnalytics = (data) => ({
   serviceClicks: data?.serviceClicks ?? 0,
   engagedViews: data?.engagedViews ?? 0,
   totalBookingRequests: data?.totalBookingRequests ?? 0,
-  totalOrders: data?.totalOrders ?? 0,
-  totalBookings: data?.totalBookings ?? 0,
 });
 
 
@@ -409,6 +405,32 @@ export default function Dashboard() {
     );
     return unsubscribe;
   }, [store?.id, isGrowthOrPro]);
+
+  // Orders and bookings received, counted from the documents the Orders and
+  // Bookings tabs list, so the card can never disagree with them. Re-counted
+  // when either list changes length, so adding or removing an order in this
+  // session moves the number without a refresh. Status is not reset to
+  // loading on a re-count, so the figure does not flicker to "..." each time.
+  const [salesCounts, setSalesCounts] = useState({ orders: 0, bookings: 0, status: "loading" });
+  useEffect(() => {
+    if (!store?.id || !isGrowthOrPro) return;
+    const vt = store?.vendorType || "products";
+    let cancelled = false;
+    countSales(store.id, { orders: vt !== "services", bookings: vt !== "products" })
+      .then((c) => { if (!cancelled) setSalesCounts({ ...c, status: "ready" }); })
+      .catch((err) => {
+        console.error("Failed to count orders and bookings", err);
+        if (!cancelled) setSalesCounts((prev) => ({ ...prev, status: "error" }));
+      });
+    return () => { cancelled = true; };
+  }, [store?.id, store?.vendorType, isGrowthOrPro, orders.length, bookings.length]);
+
+  const analyticsView = {
+    ...analyticsData,
+    totalOrders: salesCounts.orders,
+    totalBookings: salesCounts.bookings,
+    salesStatus: salesCounts.status,
+  };
 
   // Mount-time Firestore re-fetch with self-healing migration for legacy store documents
   useEffect(() => {
@@ -1786,7 +1808,7 @@ export default function Dashboard() {
             copyLink={copyLink}
             navigateTo={setActiveTab}
             setShowForm={setShowForm}
-            analyticsData={analyticsData}
+            analyticsData={analyticsView}
           />
         </div>
       )}
@@ -2040,7 +2062,7 @@ export default function Dashboard() {
           isGrowthOrPro={isGrowthOrPro}
           isPro={isPro}
           navigateTo={setActiveTab}
-          analyticsData={analyticsData}
+          analyticsData={analyticsView}
         />
       )}
       {activeTab === "marketing" && (

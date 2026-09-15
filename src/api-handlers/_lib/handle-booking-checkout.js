@@ -4,7 +4,6 @@ import { sendEmail, escapeHtml } from "./send-email.js";
 import { sendPush } from "./send-push.js";
 import { notifyStore } from "./notifications.js";
 import { markRecovered } from "./abandoned-checkout.js";
-import { recordSale } from "./store-counters.js";
 
 // Service-booking branch of the paystack-webhook "checkout" dispatcher.
 // Writes to stores/{storeId}/bookings - a collection separate from stores/{storeId}/orders,
@@ -88,10 +87,6 @@ export async function handleBookingCheckout(db, data, res) {
       changedByLabel: "Booking Created",
     }],
   });
-
-  // Counted here for the same reason as an order: past idempotency, after the
-  // document exists, so the number matches the Bookings tab.
-  await recordSale(db, storeId, "booking");
 
   // This checkout is no longer abandoned. Fire and forget: markRecovered never
   // throws, and a missing record is the normal case for a non-Premium store.

@@ -7,7 +7,6 @@ import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
 import { markRecovered } from "./abandoned-checkout.js";
 import { sendTikTokPurchase } from "./tiktok-events.js";
 import { getTikTokEventsToken } from "./store-secrets.js";
-import { recordSale } from "./store-counters.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
 // Moved verbatim out of paystack-webhook.js's former single checkout branch - logic
@@ -116,10 +115,6 @@ export async function handleProductCheckout(db, data, res) {
       changedByLabel: "Order Placed",
     }],
   });
-
-  // Counted here, after the order document exists and past the idempotency
-  // check above, so "orders received" means exactly what the Orders tab shows.
-  await recordSale(db, storeId, "order");
 
   if (typeof promoCode === "string" && promoCode.trim()) {
     try {

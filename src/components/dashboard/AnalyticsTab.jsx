@@ -17,6 +17,7 @@ import {
   emptyDay,
   DAILY_FETCH_LIMIT,
 } from '../../utils/analytics'
+import { fetchSalesByDay } from '../../utils/sales'
 
 const DAYS_PER_PAGE = 10
 
@@ -140,6 +141,9 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
   const [page, setPage] = useState(0)
   const [metric, setMetric] = useState('views')
 
+  const hasServices = vendorType === 'services' || vendorType === 'both'
+  const hasProducts = vendorType === 'products' || vendorType === 'both'
+
   const loadDays = useCallback(async () => {
     if (!storeId || !isGrowthOrPro) {
       setDaysLoading(false)
@@ -148,16 +152,36 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
     setDaysLoading(true)
     setDaysError('')
     try {
-      // Staff have a different Firebase uid, so the direct read is denied by
-      // rules exactly as it is for the summary document. They go through the
-      // same server proxy the rest of the dashboard uses.
-      const rows = isActingAsStaffFor(storeId)
-        ? await fetchStoreCollectionAsStaff('analyticsDaily', storeId)
-        : await fetchDailyAnalytics(storeId)
+      const [rows, sales] = await Promise.all([
+        // Staff have a different Firebase uid, so the direct read is denied by
+        // rules exactly as it is for the summary document. They go through the
+        // same server proxy the rest of the dashboard uses.
+        isActingAsStaffFor(storeId)
+          ? fetchStoreCollectionAsStaff('analyticsDaily', storeId)
+          : fetchDailyAnalytics(storeId),
+        // Orders and bookings per day come from the documents themselves, so a
+        // day's figure matches the tabs, including orders added by hand and
+        // orders from before per-day counting existed.
+        fetchSalesByDay(storeId, { orders: hasProducts, bookings: hasServices }),
+      ])
+
+      const byDate = new Map()
+      for (const r of rows || []) {
+        const date = r.date || r.id
+        // Any orders/bookings a daily document still carries came from the
+        // retired server counter, which missed earlier and hand-added orders.
+        // Dropped so no sale is counted twice.
+        byDate.set(date, { ...blankDay(date), ...r, date, orders: 0, bookings: 0 })
+      }
+      // A day with a sale but no recorded visit still gets its row.
+      for (const [date, s] of sales) {
+        byDate.set(date, { ...(byDate.get(date) || blankDay(date)), orders: s.orders, bookings: s.bookings })
+      }
+
       setDays(
-        (rows || [])
-          .map((r) => ({ ...blankDay(r.date || r.id), ...r, date: r.date || r.id }))
-          .sort((a, b) => String(b.date).localeCompare(String(a.date))),
+        [...byDate.values()]
+          .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+          .slice(0, DAILY_FETCH_LIMIT),
       )
     } catch {
       // A read failure here is almost always rules or connectivity. It must be
@@ -167,12 +191,9 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
     } finally {
       setDaysLoading(false)
     }
-  }, [storeId, isGrowthOrPro])
+  }, [storeId, isGrowthOrPro, hasProducts, hasServices])
 
   useEffect(() => { loadDays() }, [loadDays])
-
-  const hasServices = vendorType === 'services' || vendorType === 'both'
-  const hasProducts = vendorType === 'products' || vendorType === 'both'
 
   // Today's row, whether or not a document exists yet. A store with no traffic
   // since midnight should read a confident zero, not a blank.
@@ -229,6 +250,11 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
   const totalBookingRequests = analyticsData?.totalBookingRequests ?? 0
   const totalOrders = analyticsData?.totalOrders ?? 0
   const totalBookings = analyticsData?.totalBookings ?? 0
+  // Counted from the order and booking documents by the Dashboard.
+  const salesStatus = analyticsData?.salesStatus ?? 'ready'
+  const salesValue = (n) => (salesStatus === 'loading' ? '...' : salesStatus === 'error' ? '-' : fmt(n))
+  const salesNote = (tab) =>
+    salesStatus === 'error' ? 'could not load, refresh to try again' : `all time, as listed in your ${tab} tab`
 
   // Clicks recorded before products and services were counted apart. Shown as
   // its own line rather than folded into either number, because guessing how
@@ -279,20 +305,20 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
     },
     // Engagement Rate lived here. It was engaged sessions over views, which
     // FALLS as a store grows, so a vendor doing better watched the number go
-    // down. A count of paid sales cannot mislead in that direction.
+    // down. A count of sales cannot mislead in that direction.
     ...(hasProducts ? [{
       key: 'orders',
       label: 'Orders Received',
-      value: fmt(totalOrders),
-      note: 'paid and confirmed, all time',
+      value: salesValue(totalOrders),
+      note: salesNote('Orders'),
       Icon: ShoppingBag,
       color: 'bg-green-50 text-green-600',
     }] : []),
     ...(hasServices ? [{
       key: 'bookingsPaid',
       label: 'Bookings Received',
-      value: fmt(totalBookings),
-      note: 'paid and confirmed, all time',
+      value: salesValue(totalBookings),
+      note: salesNote('Bookings'),
       Icon: TrendingUp,
       color: 'bg-green-50 text-green-600',
     }] : []),
@@ -331,7 +357,7 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
 
   // ── Reset handler ──
   const handleReset = async () => {
-    if (!window.confirm('Reset all store views, clicks, orders and bookings counted, per-item metrics AND your daily history to zero? Your actual orders and bookings are not deleted. This cannot be undone.')) return
+    if (!window.confirm('Reset all store views, clicks, booking requests, per-item metrics AND your daily history to zero? Orders and bookings are not affected: they are counted from your Orders and Bookings tabs. This cannot be undone.')) return
     setResetting(true)
     setResetError('')
     try {
@@ -345,10 +371,8 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
         serviceClicks: 0,
         engagedViews: 0,
         totalBookingRequests: 0,
-        // The order and booking DOCUMENTS are untouched; the Orders and
-        // Bookings tabs still show every sale. This only zeroes the counters.
-        totalOrders: 0,
-        totalBookings: 0,
+        // Orders and bookings are not here: they are counted from the
+        // documents, so there is no counter to reset.
         updatedAt: new Date(),
       }, { merge: true })
 
@@ -438,9 +462,10 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-start gap-3 text-blue-700 text-xs">
         <Info size={14} className="flex-shrink-0 mt-0.5" />
         <p>
-          Products and services are counted separately. Orders and bookings are counted once
-          payment is confirmed, so they match your Orders and Bookings tabs. Daily numbers
-          restart at zero every midnight; the cards below are all-time totals.
+          Products and services are counted separately. Orders and bookings are counted
+          straight from your Orders and Bookings tabs, so they always match, including orders
+          you added yourself. Daily numbers restart at zero every midnight; the cards below
+          are all-time totals.
         </p>
       </div>
 
