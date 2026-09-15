@@ -408,6 +408,21 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/cac-request.js")
         return handler(req, res)
       }
+      // Investors & Partners page. Public submit and admin triage are separate
+      // handlers so the unauthenticated path never shares a file with the
+      // authenticated one.
+      case "partner-enquiry": {
+        const { default: handler } = await import("../src/api-handlers/partner-enquiry.js")
+        return handler(req, res)
+      }
+      case "admin-partners": {
+        const { default: handler } = await import("../src/api-handlers/admin-partners.js")
+        return handler(req, res)
+      }
+      case "partners-content": {
+        const { default: handler } = await import("../src/api-handlers/partners-content.js")
+        return handler(req, res)
+      }
       case "abandoned-checkout-send": {
         const { default: handler } = await import("../src/api-handlers/abandoned-checkout-send.js")
         return handler(req, res)

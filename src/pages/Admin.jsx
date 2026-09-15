@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
@@ -13,6 +13,7 @@ import ReviewsAdmin from '../components/admin/ReviewsAdmin';
 import CacRequests from '../components/admin/CacRequests';
 import WhatsAppConsole from '../components/admin/WhatsAppConsole';
 import PushConsole from '../components/admin/PushConsole';
+import PartnersAdmin from '../components/admin/PartnersAdmin';
 import { SkeletonRows } from '../components/Skeleton';
 
 const ADMIN_TABS = [
@@ -32,6 +33,7 @@ const ADMIN_TABS = [
   { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },
   { id: 'blog', label: 'Blog', icon: BookOpen, short: 'Blog' },
   { id: 'reviews', label: 'Reviews', icon: Star, short: 'Reviews' },
+  { id: 'partners', label: 'Investors & Partners', icon: Rocket, short: 'Partners' },
   { id: 'recovery', label: 'Account Recovery', icon: KeyRound, short: 'Recovery' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
@@ -41,7 +43,7 @@ const ADMIN_TABS = [
 const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
-  { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics'] },
+  { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics', 'partners'] },
   { label: 'Engagement', ids: ['announcements', 'push', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews'] },
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
@@ -1114,6 +1116,9 @@ export default function Admin() {
 
         {/* REVIEWS */}
         {activeTab === 'reviews' && <ReviewsAdmin authHeaders={H} />}
+
+        {/* INVESTORS & PARTNERS */}
+        {activeTab === 'partners' && <PartnersAdmin authHeaders={H} />}
 
         {activeTab === 'push' && <PushConsole authHeaders={H} />}
 

@@ -193,6 +193,36 @@ export const PAGE_SEO = {
     ],
   },
 
+  '/partners': {
+    title: 'Investors & Partners',
+    description:
+      'Sellapage is a Nigerian commerce platform for small businesses, live since May 2026. Investors, strategic partners and prospective co-founders can start a conversation with the founder here.',
+    keywords:
+      'sellapage investors, nigerian ecommerce startup, nigerian startup investment, sellapage partners, strategic partnership nigeria sme, co-founder nigeria startup, ernest uwaoma, nexkeys agency',
+    jsonLd: [
+      breadcrumb([{ name: 'Home', path: '/' }, { name: 'Investors & Partners', path: '/partners' }]),
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: 'Ernest Uwaoma',
+        jobTitle: 'Founder and CTO',
+        worksFor: { '@id': `${SITE.url}/#organization` },
+        alumniOf: { '@type': 'CollegeOrUniversity', name: 'Middlesex University' },
+        sameAs: ['https://www.linkedin.com/in/ernest-uwaoma-446846409'],
+      },
+    ],
+    prose: [
+      'Sellapage is a live commerce platform for Nigerian small businesses, offering one store link with checkout, delivery and bookings, and one dashboard to run orders, customers and payments.',
+      // No live figures here on purpose. This text is baked in at build time,
+      // while the figures on the page are edited from the admin panel, so a
+      // number here would drift out of date the first time one changes.
+      'Sellapage launched in May 2026. Current traction figures are shown on the page and shared in more detail privately with investors.',
+      'Sellapage is looking for investors, strategic partners in payments, logistics, banking and SME finance, distribution partners, and a commercial co-founder.',
+      'Sellapage was founded by Ernest Uwaoma, its founder and CTO, who trained in Computer and Software Engineering at Middlesex University and leads NexKeys Agency, the studio that built the platform.',
+      'The page is for introductions only and is not an offer or invitation to subscribe for shares or any other investment.',
+    ],
+  },
+
   '/pricing': {
     title: 'Pricing',
     description:

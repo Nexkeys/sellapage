@@ -661,6 +661,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Investor and partner enquiries from the public /partners page. Hold
+    // names, emails and phone numbers. Written by /api/partner-enquiry and read
+    // by /api/admin-partners, both on the Admin SDK. Default deny would already
+    // cover this; it is listed so nobody mistakes its absence for an oversight.
+    match /partnerEnquiries/{enquiryId} {
+      allow read, write: if false;
+    }
+
     match /storeReports/{reportId} {
       allow read, write: if false;
     }

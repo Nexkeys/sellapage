@@ -44,6 +44,9 @@ const TAB_ACCESS = {
   jobs:           ['super_admin', 'operations'],
   blog:           ['super_admin', 'marketing'],
   reviews:        ['super_admin', 'marketing'],
+  // Investor and partner enquiries: names, emails and phone numbers attached to
+  // investment intentions. No other role needs them.
+  partners:       ['super_admin'],
 }
 
 /**

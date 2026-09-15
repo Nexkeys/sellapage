@@ -90,6 +90,10 @@
       "destination": "/success-stories/index.html"
     },
     {
+      "source": "/partners",
+      "destination": "/partners/index.html"
+    },
+    {
       "source": "/contact",
       "destination": "/contact/index.html"
     },
@@ -142,23 +146,23 @@
       "destination": "/api/product-feed?route=product-feed&slug=:slug"
     },
     {
-      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/services",
+      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|partners$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/services",
       "destination": "/api/storefront-render?route=storefront-render&slug=:slug&view=services"
     },
     {
-      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/about",
+      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|partners$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/about",
       "destination": "/api/storefront-render?route=storefront-render&slug=:slug&page=about"
     },
     {
-      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/contact",
+      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|partners$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/contact",
       "destination": "/api/storefront-render?route=storefront-render&slug=:slug&page=contact"
     },
     {
-      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/policies",
+      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|partners$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})/policies",
       "destination": "/api/storefront-render?route=storefront-render&slug=:slug&page=policies"
     },
     {
-      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})",
+      "source": "/:slug((?!about$|account-recovery$|admin$|billing$|compare$|contact$|dashboard$|jobs$|join-team$|live-stores$|login$|partners$|pricing$|privacy-policy$|register$|report-store$|reset-password$|review$|success-stories$|terms$|tools$)[a-z0-9][a-z0-9-]{1,60})",
       "destination": "/api/storefront-render?route=storefront-render&slug=:slug"
     },
     {

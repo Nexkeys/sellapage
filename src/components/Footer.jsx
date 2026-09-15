@@ -162,6 +162,7 @@ export default function Footer() {
             <ul className="space-y-2">
               {[
                 { label: 'About Us', to: '/about' },
+                { label: 'Investors & Partners', to: '/partners' },
                 { label: 'Privacy Policy', to: '/privacy-policy' },
                 { label: 'Terms of Service', to: '/terms' },
                 { label: 'Contact Us', to: '/contact' },

@@ -28,6 +28,9 @@ export const RESERVED_SLUGS = [
   'success-stories',
   'account-recovery',
   'join-team',
+  // Added 2026-09-15 with the Investors & Partners page. Checked in production
+  // first: no store owned this slug.
+  'partners',
 ]
 
 export function isReservedSlug(slug) {

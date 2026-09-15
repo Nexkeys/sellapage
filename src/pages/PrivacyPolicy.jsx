@@ -16,6 +16,7 @@ const sections = [
       'Products or services you add to your store: names, prices, descriptions, categories, stock details, and images.',
       'Customer enquiries submitted through your store page: their name, phone number, and interest note.',
       'Basic usage data: which pages you visit and how long you spend on them. This helps us improve the platform.',
+      'If you contact us through the Investors & Partners page: your name and email address, and, if you choose to give them, your phone number, organisation, a link, how you heard about us and your message, together with a record of your consent. We use these only to reply to that enquiry, never sell or share them, and delete them when you ask.',
     ],
   },
   {
