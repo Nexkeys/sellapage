@@ -122,18 +122,31 @@ export default async function handler(req, res) {
         // Async fetch leads counts + transform structure for the chunk
         const finalStores = await Promise.all(
           paginatedChunk.map(async (store) => {
-            let leadCount = 0;
-            try {
-              const leadsSnap = await adminDb
-                .collection('stores')
-                .doc(store.id)
-                .collection('leads')
-                .count()
-                .get();
-              leadCount = leadsSnap.data().count;
-            } catch (err) {
-              console.error(`Failed to fetch leads count for store ${store.id}`, err);
-            }
+            // Products, services and leads counted from the documents rather
+            // than any stored productCount field, which drifts the moment a
+            // listing is removed and would be hardest to spot here of all
+            // places. Count aggregation bills 1 read per 1,000 documents, so
+            // this is three cheap reads per merchant on the page being viewed.
+            const countSub = async (name) => {
+              try {
+                const snap = await adminDb
+                  .collection('stores')
+                  .doc(store.id)
+                  .collection(name)
+                  .count()
+                  .get();
+                return snap.data().count;
+              } catch (err) {
+                console.error(`Failed to count ${name} for store ${store.id}`, err);
+                return 0;
+              }
+            };
+
+            const [leadCount, productCount, serviceCount] = await Promise.all([
+              countSub('leads'),
+              countSub('products'),
+              countSub('services'),
+            ]);
 
             const isPremium = store.plan === 'premium';
             const hasWebhookFields =
@@ -167,6 +180,13 @@ export default async function handler(req, res) {
               isManualOverride,
               isPlanExpired,
               leadCount,
+              // What this merchant actually has live, split the way the
+              // dashboard splits it: products and services are different things.
+              listings: {
+                products: productCount,
+                services: serviceCount,
+                total: productCount + serviceCount,
+              },
               // Ensure payout/subaccount fields are included for admin directory
               subaccountCode: store.subaccountCode || null,
               payoutBankName: store.payoutBankName || null,
