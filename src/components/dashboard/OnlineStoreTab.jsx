@@ -42,7 +42,7 @@ const LAYOUT_OPTIONS = [
   },
 ]
 
-export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, navigateTo, onLogoUpload, onColorSave, onLayoutSave, onThemeSave, onStoreSave, previewProducts = [] }) {
+export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, navigateTo, onLogoUpload, logoError, onColorSave, onLayoutSave, onThemeSave, onStoreSave, previewProducts = [] }) {
   const url = storeUrl || `https://sellapage.com/store/${store?.storeName || 'your-store'}`
   const [copied, setCopied]                 = useState(false)
   const [selectedLayout, setSelectedLayout] = useState(store?.storeLayout || 'grid')
@@ -267,6 +267,55 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
         </div>
       </div>
 
+      {/* ── SECTION 1b: Logo ───────────────────────────────────────────────
+          Its own card, ABOVE the plan-dependent grid below, because the logo is
+          available on every plan. It used to sit inside the Growth branch,
+          which hid it from Starter vendors entirely and, by accident, from Pro
+          vendors too (the Pro branch never had an uploader). */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 shadow-sm shadow-gray-100/40 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-100/40">
+            <UploadCloud size={18} className="text-green-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-black text-gray-900 text-sm tracking-tight">Business Logo</p>
+            <p className="text-gray-400 text-[11px] font-medium">Shown on your store page, receipts and shared links. Free on every plan.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 border border-gray-200 bg-gray-50">
+            {store?.logoUrl
+              ? <img src={store.logoUrl} alt="Your business logo" className="w-full h-full object-cover" />
+              : <ImageIcon size={18} className="text-gray-300" />
+            }
+          </div>
+          <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer select-none flex-1 ${
+            logoUploading
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-900 hover:bg-gray-800 text-white'
+          }`}>
+            {logoUploading ? (
+              <><Loader2 size={13} className="animate-spin text-white" /> Uploading...</>
+            ) : (
+              <><UploadCloud size={13} /> {store?.logoUrl ? 'Change Logo' : 'Upload Logo'}</>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={logoUploading}
+              onChange={handleLogoFileChange}
+            />
+          </label>
+        </div>
+
+        {logoError
+          ? <p className="text-red-600 text-[11px] font-medium">{logoError}</p>
+          : <p className="text-gray-400 text-[11px]">PNG or JPG, max 5MB. A square image looks best.</p>
+        }
+      </div>
+
       {/* ── SECTION 2: Dynamic Styling Split Grid ─────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -418,44 +467,15 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               </div>
               <div>
                 <p className="font-black text-gray-900 text-sm tracking-tight">Customise Appearance</p>
-                <p className="text-gray-400 text-[11px] font-medium">Upload your logo and pick a colour.</p>
+                <p className="text-gray-400 text-[11px] font-medium">Pick your colour and layout.</p>
               </div>
             </div>
 
-            {/* Logo Controller Slot */}
-            <div className="space-y-2">
-              <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Logo</p>
-              <div className="flex items-center gap-3 bg-gray-50/50 border border-gray-100 p-2.5 rounded-xl">
-                {store?.logoUrl && (
-                  <img
-                    src={store.logoUrl}
-                    alt="Store Badge Logo"
-                    className="w-10 h-10 rounded-xl object-cover border border-gray-200 shadow-sm flex-shrink-0 bg-white"
-                  />
-                )}
-                <label className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer w-full select-none ${
-                  logoUploading
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-900 hover:bg-gray-800 text-white'
-                }`}>
-                  {logoUploading ? (
-                    <><Loader2 size={13} className="animate-spin text-white" /> Uploading...</>
-                  ) : (
-                    <><UploadCloud size={13} /> Upload Logo</>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={logoUploading}
-                    onChange={handleLogoFileChange}
-                  />
-                </label>
-              </div>
-            </div>
+            {/* The logo uploader used to live here. It moved above this grid so
+                every plan gets it; see SECTION 1b. */}
 
             {/* Base Swatch Color Node Row */}
-            <div className="space-y-2 pt-4 border-t border-gray-100">
+            <div className="space-y-2">
               <p className="font-extrabold text-gray-400 text-[10px] uppercase tracking-wider">Colour</p>
               <div className="flex flex-wrap items-center gap-2 bg-gray-50/50 border border-gray-100 p-2.5 rounded-xl">
                 {COLOUR_SWATCHES.map((swatch) => {
@@ -541,7 +561,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               <p className="text-[9px] font-extrabold uppercase tracking-widest text-purple-600">Upgrade Required</p>
               <h3 className="font-black text-gray-900 text-sm tracking-tight">Themes & Branding</h3>
               <p className="text-gray-400 text-xs max-w-[240px] mx-auto leading-relaxed font-medium">
-                Get access to premium themes, custom colours, logo upload, and banner images.
+                Get access to premium themes, custom colours, fonts and banner images. Your logo is free on every plan.
               </p>
             </div>
             <button

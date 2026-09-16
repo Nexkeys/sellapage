@@ -188,7 +188,12 @@ function buildJsonLd({ store, seo, listings, canonical, storeUrl }) {
     alternateName: [store.storeName, `${store.storeName} on Sellapage`].filter(Boolean),
     url: canonical,
     description: seo.description,
-    ...(store.logo ? { logo: store.logo, image: store.logo } : {}),
+    // `logoUrl` is what the dashboard uploader writes. `logo` was read here for
+    // a long time and is never set on a store document, so every storefront
+    // shipped without a logo in its structured data.
+    ...(store.logoUrl || store.logo
+      ? { logo: store.logoUrl || store.logo, image: store.logoUrl || store.logo }
+      : {}),
     ...(seo.category ? { knowsAbout: seo.keywords } : {}),
     areaServed: (seo.serviceAreas?.length ? seo.serviceAreas : ['Nigeria']).map((a) => ({
       '@type': 'Place',
@@ -519,7 +524,7 @@ export default async function handler(req, res) {
         `<meta property="og:description" content="${esc(desc)}">`,
         `<meta property="og:url" content="${esc(pageUrl)}">`,
         `<meta property="og:type" content="website">`,
-        store.logo ? `<meta property="og:image" content="${esc(store.logo)}">` : '',
+        store.logoUrl || store.logo ? `<meta property="og:image" content="${esc(store.logoUrl || store.logo)}">` : '',
         `<meta name="twitter:card" content="summary">`,
         `<script type="application/ld+json">${JSON.stringify({
           '@context': 'https://schema.org',
@@ -603,7 +608,7 @@ export default async function handler(req, res) {
       )
     }
 
-    const image = store.logo || store.coverImage || `${SITE_URL}/og-image.png`
+    const image = store.logoUrl || store.logo || store.coverImage || `${SITE_URL}/og-image.png`
 
     const head = [
       `<title>${esc(seo.title)}</title>`,

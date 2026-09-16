@@ -1883,15 +1883,17 @@ export default function StorePage() {
         title={store.storeName || store.name}
         description={store.description || `${store.storeName || store.name} - products, services, and more on Sellapage.`}
         url={`/${store.slug || store.storeName}`}
-        image={store.logo || store.coverImage}
+        image={store.logoUrl || store.logo || store.coverImage}
         jsonLd={store.id ? {
           '@context': 'https://schema.org',
           '@type': 'Store',
           name: store.storeName || store.name,
           description: store.description,
           url: `https://sellapage.com.ng/${store.slug || store.storeName}`,
-          logo: store.logo,
-          image: store.coverImage || store.logo,
+          // `logoUrl` is the field the uploader writes; `logo` never existed on
+          // a store document, so this block used to publish nothing at all.
+          logo: store.logoUrl || store.logo,
+          image: store.coverImage || store.logoUrl || store.logo,
           address: store.pickupAddress ? {
             '@type': 'PostalAddress',
             streetAddress: store.pickupAddress.streetAddress,

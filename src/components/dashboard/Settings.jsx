@@ -26,7 +26,7 @@ const PLAN_INFO = {
     label: 'Starter (Free)',
     products: '15 listings',
     images: '3 images / listing',
-    features: ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
+    features: ['Commerce page', 'Your business logo', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
     upgradeLabel: `Upgrade to Growth - ${formatPrice(PLAN_PRICES.growth.monthly)}/mo`,
     upgradePlan: 'growth',
   },
@@ -34,7 +34,7 @@ const PLAN_INFO = {
     label: 'Starter (Free)',
     products: '15 listings',
     images: '3 images / listing',
-    features: ['Commerce page', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
+    features: ['Commerce page', 'Your business logo', 'WhatsApp order button', 'Lead capture form', 'Shareable business link', 'Offer & Name Lab', 'Policy Generator'],
     upgradeLabel: `Upgrade to Growth - ${formatPrice(PLAN_PRICES.growth.monthly)}/mo`,
     upgradePlan: 'growth',
   },
@@ -42,7 +42,7 @@ const PLAN_INFO = {
     label: 'Growth',
     products: '50 listings',
     images: '10 images / listing',
-    features: ['Everything in Starter', 'Logo and brand colours', 'Analytics and click tracking', 'Offer visibility toggle', 'Priority WhatsApp support'],
+    features: ['Everything in Starter', 'Brand colours and fonts', 'Analytics and click tracking', 'Offer visibility toggle', 'Priority WhatsApp support'],
     upgradeLabel: `Upgrade to Pro - ${formatPrice(PLAN_PRICES.pro.monthly)}/mo`,
     upgradePlan: 'pro',
   },
@@ -66,10 +66,11 @@ const PLAN_INFO = {
 
 
 export default function SettingsTab({
-  store, plan, isGrowthOrPro, isPro, isPremium,
+  // `isGrowthOrPro` was dropped here when the logo stopped being plan gated.
+  store, plan, isPro, isPremium,
   onSave, saveLoading, saveError, saveSuccess,
   onDeleteAccount, deleteLoading, deleteError, onClearDeleteError,
-  onLogoUpload, logoUploading,
+  onLogoUpload, logoUploading, logoError,
   onWhatsAppToggle,
 }) {
   const hasCustomDomain = !!store?.customDomain
@@ -192,23 +193,19 @@ export default function SettingsTab({
               }
             </div>
             <div className="flex-1">
-              {isGrowthOrPro ? (
-                <>
-                  <label className="flex items-center gap-2 cursor-pointer px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors w-fit">
-                    {logoUploading
-                      ? <><Loader2 size={14} className="animate-spin text-green-500" /> Uploading...</>
-                      : <><UploadCloud size={14} className="text-green-500" /> Change Logo</>
-                    }
-                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files[0] && onLogoUpload(e.target.files[0])} disabled={logoUploading} />
-                  </label>
-                  <p className="text-gray-400 text-xs mt-1.5">PNG or JPG, max 5MB. Shown on your public commerce page.</p>
-                </>
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-dashed border-gray-200 rounded-xl w-fit">
-                  <Lock size={13} className="text-gray-400" />
-                  <p className="text-gray-500 text-xs font-medium">Logo upload available on Growth+</p>
-                </div>
-              )}
+              {/* Every plan, Starter included. A logo is basic credibility for
+                  a small business, not a premium extra. */}
+              <label className="flex items-center gap-2 cursor-pointer px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors w-fit">
+                {logoUploading
+                  ? <><Loader2 size={14} className="animate-spin text-green-500" /> Uploading...</>
+                  : <><UploadCloud size={14} className="text-green-500" /> {store?.logoUrl ? 'Change Logo' : 'Upload Logo'}</>
+                }
+                <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files[0] && onLogoUpload(e.target.files[0])} disabled={logoUploading} />
+              </label>
+              {logoError
+                ? <p className="text-red-600 text-xs mt-1.5">{logoError}</p>
+                : <p className="text-gray-400 text-xs mt-1.5">PNG or JPG, max 5MB. Shown on your store page, receipts and shared links.</p>
+              }
             </div>
           </div>
         </div>

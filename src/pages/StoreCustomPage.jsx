@@ -139,7 +139,7 @@ export default function StoreCustomPage({ pageKey }) {
         title={`${meta?.label || 'Page'} - ${name}`}
         description={textFor || `${meta?.label || 'Information'} for ${name}, a Nigerian business on Sellapage.`}
         url={`${base}/${meta?.path || pageKey}`}
-        image={store.logo || store.coverImage}
+        image={store.logoUrl || store.logo || store.coverImage}
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'WebPage',
@@ -151,7 +151,7 @@ export default function StoreCustomPage({ pageKey }) {
             name,
             url: `https://sellapage.com.ng${base}`,
           },
-          publisher: { '@type': 'Organization', name, logo: store.logo || undefined },
+          publisher: { '@type': 'Organization', name, logo: store.logoUrl || store.logo || undefined },
         }}
       />
 

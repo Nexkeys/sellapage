@@ -55,7 +55,7 @@ const PLAN_WELCOME = {
     features: [
       "Analytics & click tracking (store views, top clicks)",
       "AI product descriptions - 20 per day",
-      "Custom colours, fonts, and logo",
+      "Custom colours and fonts",
       "Up to 50 listings + structured multi-item cart",
       "Stock count management & categories",
       "Post up to 25 job listings",
@@ -265,6 +265,7 @@ export default function Dashboard() {
   // `run` fires only after the emailed code verifies.
   const [otpFlow, setOtpFlow] = useState(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState("");
 
   const [supportSubmitting, setSupportSubmitting] = useState(false);
   const [supportError, setSupportError] = useState("");
@@ -1348,14 +1349,37 @@ export default function Dashboard() {
     setStore((prev) => ({ ...prev, deliveryZones: zones }));
   };
 
+  // Available on every plan, including Starter. A logo is how a small business
+  // looks real to a stranger, so putting it behind a paywall cost trust on the
+  // free stores that need it most. `logoUrl` is not a locked field in
+  // firestore.rules, so no rules change was needed to open this up.
+  const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+
   const handleLogoUpload = async (file) => {
+    // Checked here rather than only in the file input, because `accept` is a
+    // hint a file picker can ignore.
+    if (!file.type?.startsWith("image/")) {
+      setLogoError("That file is not an image. Please choose a PNG or JPG.");
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoError("That image is larger than 5MB. Please choose a smaller one.");
+      return;
+    }
+
     setLogoUploading(true);
+    setLogoError("");
     try {
       const url = await uploadSingleImage(file, "sellapage/logos");
       await updateStore(store.id, { logoUrl: url });
       setStore((prev) => ({ ...prev, logoUrl: url }));
     } catch (err) {
+      // This used to fail silently: the spinner stopped, the logo did not
+      // change, and the vendor was left guessing.
       console.error("Logo upload failed", err);
+      setLogoError(
+        err?.message || "We could not upload that logo. Check your connection and try again.",
+      );
     } finally {
       setLogoUploading(false);
     }
@@ -1941,6 +1965,7 @@ export default function Dashboard() {
           onClearDeleteError={() => setDeleteError("")}
           onLogoUpload={handleLogoUpload}
           logoUploading={logoUploading}
+          logoError={logoError}
           onWhatsAppToggle={handleWhatsAppToggle}
           navigateTo={setActiveTab}
         />
@@ -2084,6 +2109,7 @@ export default function Dashboard() {
           isPremium={isPremium}
           navigateTo={setActiveTab}
           onLogoUpload={handleLogoUpload}
+          logoError={logoError}
           onColorSave={handleColorSave}
           onLayoutSave={handleLayoutSave}
           onThemeSave={handleThemeSave}

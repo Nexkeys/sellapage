@@ -32,7 +32,7 @@ export const PLAN_FEATURES = {
     'Everything in Starter',
     '50 total listings (products + services combined)',
     '10 images per listing',
-    'Custom visual palette (colours, fonts, logo)',
+    'Custom visual palette (colours and fonts)',
     'Analytics & click tracking (store views, top clicks)',
     'AI description generation - 20 per day',
     'Stock count management & out-of-stock sorting',

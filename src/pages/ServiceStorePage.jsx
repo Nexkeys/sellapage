@@ -725,7 +725,7 @@ export default function ServiceStorePage() {
           `Book services from ${store.businessName || store.storeName} online. Check what they offer and reserve a time.`
         }
         url={`/${store.slug || store.storeName}/services`}
-        image={store.logo || store.coverImage}
+        image={store.logoUrl || store.logo || store.coverImage}
         jsonLd={
           store.id
             ? {
@@ -734,8 +734,8 @@ export default function ServiceStorePage() {
                 name: store.businessName || store.storeName,
                 description: store.description,
                 url: `https://sellapage.com.ng/${store.slug || store.storeName}/services`,
-                logo: store.logo,
-                image: store.coverImage || store.logo,
+                logo: store.logoUrl || store.logo,
+                image: store.coverImage || store.logoUrl || store.logo,
                 address: store.pickupAddress
                   ? {
                       '@type': 'PostalAddress',
