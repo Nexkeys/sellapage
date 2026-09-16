@@ -267,6 +267,9 @@ export default function OrdersTab({
   const [senderPostalCode, setSenderPostalCode] = useState('')
   const [receiverPostalCode, setReceiverPostalCode] = useState('')
   const [topshipBookingDirect, setTopshipBookingDirect] = useState(false)
+  // TEMPORARY (2026-09-16) - mirrors topshipBookingDirect for the Sendbox no-payment
+  // test path. See bookSendboxDirect below.
+  const [sendboxBookingDirect, setSendboxBookingDirect] = useState(false)
   const [SendboxRates, setSendboxRates] = useState([])
   const [loadingRates, setLoadingRates] = useState(false)
   const [hasSearchedRates, setHasSearchedRates] = useState(false)
@@ -789,6 +792,96 @@ export default function OrdersTab({
     }
   }
 
+  // TEMPORARY (2026-09-16, logged in Changelog-README.md "Sendbox: payment-first
+  // temporarily OFF"): books a Sendbox shipment directly, skipping Paystack entirely -
+  // the same shape as bookTopshipDirect above. Nex asked for this to test the booking
+  // flow without the pay-first redirect; the Paystack path is commented out (not
+  // deleted) in initializeShipmentPayment below. See sendbox-create-shipment.js header
+  // for the exact revert.
+  const bookSendboxDirect = async () => {
+    if (!bookingShipmentOrder || !store?.id) return
+    const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
+    if (!selectedRate) {
+      setBookingError('Selected rate not found. Please recalculate rates.')
+      return
+    }
+    setSendboxBookingDirect(true)
+    setBookingError('')
+    try {
+      const token = await user?.getIdToken()
+      const senderDetails = {
+        name: senderName || store?.businessName || '',
+        phone: senderPhone || store?.whatsappNumber || '',
+        email: senderEmail || store?.email || '',
+        address: senderStreet,
+        city: senderCity,
+        state: senderState,
+      }
+      const receiverDetails = {
+        name: receiverName || '',
+        phone: receiverPhone || '',
+        email: receiverEmail || '',
+        address: receiverStreet,
+        city: receiverCity,
+        state: receiverState,
+        lga: receiverLga || '',
+      }
+      const res = await fetch('/api/sendbox-create-shipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          storeId: store.id,
+          orderId: bookingShipmentOrder.id,
+          // No `reference` - sendbox-create-shipment accepts courierId without a payment
+          // reference, and skips its Paystack verification block when reference is absent.
+          courierId: selectedCourierId,
+          senderDetails,
+          receiverDetails,
+          weight: Number(packageWeight) || 1,
+          pickupDate,
+          packageType,
+        }),
+      })
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        // Same 504 handling as bookTopshipDirect - a hard Vercel timeout returns a
+        // non-JSON body, which must not be reported as a network failure.
+        if (res.status === 504) {
+          setBookingError('The booking took too long to complete - this usually means Sendbox\'s server is slow or the courier is temporarily unavailable right now. Please try again.')
+        } else {
+          setBookingError('Could not connect to book the shipment. Please check your connection.')
+        }
+        return
+      }
+      if (res.ok && data.success) {
+        await onUpdateOrder?.(bookingShipmentOrder.id, {
+          SendboxTrackingId: data.trackingId || '',
+          sendboxTrackingId: data.trackingId || '',
+          SendboxOrderId: data.code || '',
+          sendboxOrderId: data.code || '',
+          SendboxStatus: 'created',
+          sendboxStatus: 'created',
+          SendboxTrackingUrl: data.trackingUrl || '',
+          sendboxTrackingUrl: data.trackingUrl || '',
+          SendboxWaybillUrl: data.waybillUrl || '',
+          sendboxWaybillUrl: data.waybillUrl || '',
+          status: 'dispatched',
+        })
+        setBookingShipmentOrder(null)
+        setShipmentPaymentResult({ success: true, trackingId: data.trackingId || '' })
+      } else {
+        setBookingError(data.error || 'Failed to book Sendbox shipment.')
+      }
+    } catch (err) {
+      console.error(err)
+      setBookingError('Could not connect to book the shipment. Please check your connection.')
+    } finally {
+      setSendboxBookingDirect(false)
+    }
+  }
+
   const initializeShipmentPayment = async () => {
     if (!bookingShipmentOrder || !store?.id) return
     if (!selectedCourierId) {
@@ -807,8 +900,13 @@ export default function OrdersTab({
       await bookTopshipDirect()
       return
     }
-    setShowPaymentModal(true)
-    setPaymentError('')
+    // TEMPORARY (2026-09-16, Nex's explicit instruction): payment-first is now OFF for
+    // Sendbox too, so the booking flow can be tested without the Paystack redirect.
+    // The Paystack path is commented out rather than deleted - to restore payment-first
+    // for Sendbox, uncomment the two lines below and delete the bookSendboxDirect call.
+    //   setShowPaymentModal(true)
+    //   setPaymentError('')
+    await bookSendboxDirect()
   }
 
   const proceedToPaystack = async () => {
@@ -2147,10 +2245,10 @@ export default function OrdersTab({
               <button
                 type="button"
                 onClick={initializeShipmentPayment}
-                disabled={bookingSubmitting || topshipBookingDirect || !selectedCourierId || loadingRates}
+                disabled={bookingSubmitting || topshipBookingDirect || sendboxBookingDirect || !selectedCourierId || loadingRates}
                 className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-700 disabled:bg-green-400 active:scale-95"
               >
-                {bookingSubmitting || topshipBookingDirect ? (
+                {bookingSubmitting || topshipBookingDirect || sendboxBookingDirect ? (
                   <>
                     <Loader2 size={13} className="animate-spin" />
                     Booking Shipment...
@@ -2158,7 +2256,8 @@ export default function OrdersTab({
                 ) : (
                   <>
                     <Check size={13} />
-                    {selectedProvider === 'topship' ? 'Book Shipment (No Payment)' : 'Confirm & Book Shipment'}
+                    {/* TEMPORARY (2026-09-16): payment-first is off for BOTH providers now. */}
+                    Book Shipment (No Payment)
                   </>
                 )}
               </button>

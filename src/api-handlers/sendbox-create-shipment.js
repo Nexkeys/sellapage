@@ -1,4 +1,19 @@
 //src/api-handlers/sendbox-create-shipment.js/
+//
+// !! PAYMENT-FIRST IS CURRENTLY OFF FOR SENDBOX !! (2026-09-16, Nex's explicit instruction:
+// test the Sendbox booking flow without the Paystack redirect first.) No gate was removed
+// from THIS file - the `if (!reference && !courierIdFromBody)` check below already allowed a
+// booking when a courierId is supplied without a payment reference, and the Paystack
+// verification block is skipped whenever `reference` is absent. What changed is the caller:
+// OrdersTab.jsx now routes Sendbox bookings to bookSendboxDirect() instead of opening the
+// Paystack modal, so `reference` arrives empty and a real Sendbox shipment is booked - and a
+// real Sendbox wallet charge incurred - with NO payment collected from anyone.
+//
+// The "Book Shipment (No Payment)" button is reachable by EVERY vendor on the live dashboard,
+// not just Nex - there is no store/account restriction, same as the Topship path.
+// To restore payment-first for Sendbox: uncomment the two `setShowPaymentModal(true)` /
+// `setPaymentError('')` lines in OrdersTab.jsx's initializeShipmentPayment and delete the
+// `await bookSendboxDirect()` call beneath them. See Changelog-README.md 2026-09-16 entry.
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { createSendboxShipment } from './_lib/sendbox-booking.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
@@ -92,6 +107,8 @@ export default async function handler(req, res) {
       // now - otherwise someone could pay for the cheapest courier and book the
       // most expensive one.
       courierId = txn.metadata?.courierId || courierId
+    } else {
+      console.warn(`[sendbox-create-shipment] Booking WITHOUT payment verification (payment-first temporarily off) - order ${orderId}`)
     }
 
     if (!courierId) {
