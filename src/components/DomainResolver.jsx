@@ -5,7 +5,12 @@ import { useAuth } from '../hooks/useAuth'
 // Both apex and www, so changing which one Vercel treats as primary does not
 // strand the other. `.vercel.app` is included because a preview deployment is
 // not a vendor custom domain and must not be resolved as one.
-const MAIN_DOMAINS = ['sellapage.com.ng', 'www.sellapage.com.ng', 'localhost']
+// `127.0.0.1` is here for the same reason as `localhost`: running the dev
+// server and opening the loopback IP otherwise falls through to the custom
+// domain lookup, which 404s locally and renders "Domain Not Configured" instead
+// of the site. No visitor can reach production over loopback, so this only ever
+// affects a machine running the app.
+const MAIN_DOMAINS = ['sellapage.com.ng', 'www.sellapage.com.ng', 'localhost', '127.0.0.1']
 const isMainDomain = (h) =>
   MAIN_DOMAINS.includes(h) || h.startsWith('localhost') || h.endsWith('.vercel.app')
 

@@ -669,6 +669,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Newsletter sign ups from the public footer box. Written by
+    // /api/newsletter-subscribe and read by /api/admin-newsletter, both on the
+    // Admin SDK. Client access denied outright: the document id IS the email
+    // address, so a readable collection would be a harvestable mailing list.
+    match /newsletterSubscribers/{subscriberId} {
+      allow read, write: if false;
+    }
+
     match /storeReports/{reportId} {
       allow read, write: if false;
     }

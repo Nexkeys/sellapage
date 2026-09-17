@@ -427,6 +427,18 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/partners-content.js")
         return handler(req, res)
       }
+
+      // Footer newsletter box. Public subscribe and admin list are separate
+      // handlers so the unauthenticated path never shares a file with the
+      // authenticated one.
+      case "newsletter-subscribe": {
+        const { default: handler } = await import("../src/api-handlers/newsletter-subscribe.js")
+        return handler(req, res)
+      }
+      case "admin-newsletter": {
+        const { default: handler } = await import("../src/api-handlers/admin-newsletter.js")
+        return handler(req, res)
+      }
       case "abandoned-checkout-send": {
         const { default: handler } = await import("../src/api-handlers/abandoned-checkout-send.js")
         return handler(req, res)

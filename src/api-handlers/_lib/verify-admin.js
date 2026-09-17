@@ -47,6 +47,8 @@ const TAB_ACCESS = {
   // Investor and partner enquiries: names, emails and phone numbers attached to
   // investment intentions. No other role needs them.
   partners:       ['super_admin'],
+  // A mailing list: marketing's job, and it holds no money or credentials.
+  newsletter:     ['super_admin', 'marketing'],
 }
 
 /**

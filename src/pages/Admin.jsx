@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
@@ -14,6 +14,7 @@ import CacRequests from '../components/admin/CacRequests';
 import WhatsAppConsole from '../components/admin/WhatsAppConsole';
 import PushConsole from '../components/admin/PushConsole';
 import PartnersAdmin from '../components/admin/PartnersAdmin';
+import NewsletterAdmin from '../components/admin/NewsletterAdmin';
 import { SkeletonRows } from '../components/Skeleton';
 
 const ADMIN_TABS = [
@@ -34,6 +35,7 @@ const ADMIN_TABS = [
   { id: 'blog', label: 'Blog', icon: BookOpen, short: 'Blog' },
   { id: 'reviews', label: 'Reviews', icon: Star, short: 'Reviews' },
   { id: 'partners', label: 'Investors & Partners', icon: Rocket, short: 'Partners' },
+  { id: 'newsletter', label: 'Newsletter', icon: Mail, short: 'Newsletter' },
   { id: 'recovery', label: 'Account Recovery', icon: KeyRound, short: 'Recovery' },
   { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
 ];
@@ -44,7 +46,7 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics', 'partners'] },
-  { label: 'Engagement', ids: ['announcements', 'push', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews'] },
+  { label: 'Engagement', ids: ['announcements', 'push', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
   // the mobile drawer iterates these groups. Any new tab must be added here too.
@@ -1120,6 +1122,9 @@ export default function Admin() {
 
         {/* INVESTORS & PARTNERS */}
         {activeTab === 'partners' && <PartnersAdmin authHeaders={H} />}
+
+        {/* NEWSLETTER */}
+        {activeTab === 'newsletter' && <NewsletterAdmin authHeaders={H} />}
 
         {activeTab === 'push' && <PushConsole authHeaders={H} />}
 

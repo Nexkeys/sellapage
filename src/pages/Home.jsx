@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import PlayStoreBadge from '../components/PlayStoreBadge'
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
@@ -358,6 +359,7 @@ export default function Home() {
                   Create Your Free Store
                   <ArrowRight className="w-4 h-4" />
                 </button>
+                <PlayStoreBadge className="justify-center sm:justify-start" />
               </div>
 
               {/* Social proof row */}
@@ -767,6 +769,71 @@ export default function Home() {
                 </div>
               </Reveal>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── MOBILE APP ──────────────────────────────────────────────────── */}
+      <section id="mobile-app" className="py-14 sm:py-20 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+            <Reveal direction="left">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-600 mb-3 block">
+                Sellapage on your phone
+              </span>
+              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4">
+                Run your shop from your pocket
+              </h2>
+              <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-6 max-w-lg">
+                The Sellapage app is on Google Play. See today's sales, confirm orders, record a walk in
+                sale, send a receipt on WhatsApp and ask Sella for help, all from your phone.
+              </p>
+
+              <ul className="space-y-2.5 mb-7">
+                {[
+                  'Today\'s sales and what you are still owed, at a glance',
+                  'Confirm and track orders while you are on the move',
+                  'Record offline sales, send receipts on WhatsApp',
+                  'Get a push alert the moment an order comes in',
+                ].map((line) => (
+                  <li key={line} className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-600 text-sm leading-relaxed">{line}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <PlayStoreBadge />
+                <span className="inline-flex items-center rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-400">
+                  iPhone coming soon
+                </span>
+              </div>
+            </Reveal>
+
+            <Reveal direction="right" delay={120} className="relative flex justify-center lg:justify-end">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] rounded-full bg-brand-50 blur-3xl opacity-70" />
+              </div>
+              <div className="relative flex items-end gap-3 sm:gap-5">
+                <img
+                  src="/mobile-app-screen-1.jpg"
+                  alt="The Sellapage app showing today's sales, orders waiting and quick actions"
+                  width={300}
+                  height={620}
+                  loading="lazy"
+                  className="relative z-10 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-2xl shadow-gray-300/60 object-contain"
+                />
+                <img
+                  src="/mobile-app-screen-2.jpg"
+                  alt="The Sellapage app showing the orders list with their payment status"
+                  width={300}
+                  height={620}
+                  loading="lazy"
+                  className="relative z-0 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-xl shadow-gray-300/50 object-contain mb-6 sm:mb-10"
+                />
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>

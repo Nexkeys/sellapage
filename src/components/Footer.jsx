@@ -1,5 +1,7 @@
 //src/components/Footer.jsx/
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import PlayStoreBadge from './PlayStoreBadge'
 
 const SOCIAL_LINKS = [
   {
@@ -40,28 +42,127 @@ const SOCIAL_LINKS = [
   },
 ]
 
+/**
+ * The "Get free tips" box.
+ *
+ * It used to be an input and a button with no handler at all, so every address
+ * typed into it was silently discarded. It now posts to /api/newsletter-subscribe
+ * and the list appears in the admin panel under Newsletter.
+ */
+function NewsletterSignup() {
+  const [email, setEmail] = useState('')
+  const [hp, setHp] = useState('')
+  const [status, setStatus] = useState('idle') // idle | sending | done
+  const [error, setError] = useState('')
+  // Lazy initialiser rather than useRef(Date.now()): reading the clock during
+  // render is impure, and React's rules lint says so.
+  const [startedAt, setStartedAt] = useState(() => Date.now())
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (status === 'sending') return
+
+    const value = email.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+
+    setStatus('sending')
+    setError('')
+    try {
+      const res = await fetch('/api/newsletter-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: value, source: 'footer', hp, elapsedMs: Date.now() - startedAt }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.message || 'That did not go through. Please try again.')
+        setStatus('idle')
+        return
+      }
+      setStatus('done')
+      setEmail('')
+    } catch {
+      setError('We could not reach Sellapage. Check your connection and try again.')
+      setStatus('idle')
+    }
+  }
+
+  if (status === 'done') {
+    return (
+      <div className="bg-gray-900 rounded-2xl p-5 sm:p-7 mb-10 sm:mb-14 border border-green-500/30" role="status">
+        <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-1">You are on the list</p>
+        <p className="font-display font-bold text-lg text-white leading-snug">
+          Thank you. Selling tips are on the way to your inbox.
+        </p>
+        <button
+          type="button"
+          onClick={() => { setStatus('idle'); setStartedAt(Date.now()) }}
+          className="mt-3 text-gray-400 text-xs font-semibold hover:text-gray-200 transition-colors"
+        >
+          Add another email
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      noValidate
+      className="bg-gray-900 rounded-2xl p-5 sm:p-7 mb-10 sm:mb-14 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border border-white/8"
+    >
+      <div>
+        <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-1">Grow your business</p>
+        <p className="font-display font-bold text-lg text-white leading-snug">
+          Get free tips on selling, marketing, and running your store
+        </p>
+        <p className="text-gray-500 text-[11px] mt-1.5">
+          No spam. Leave the list whenever you want.
+        </p>
+      </div>
+
+      {/* Honeypot: off screen, out of the tab order, ignored by screen readers. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label>
+          Leave this empty
+          <input type="text" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} />
+        </label>
+      </div>
+
+      <div className="w-full sm:w-auto">
+        <div className="flex w-full gap-2">
+          <label htmlFor="footer-newsletter-email" className="sr-only">Your email address</label>
+          <input
+            id="footer-newsletter-email"
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); if (error) setError('') }}
+            placeholder="Enter your email"
+            aria-invalid={!!error}
+            className={`bg-gray-800 text-white placeholder-gray-600 px-4 py-2.5 rounded-xl text-sm flex-1 sm:w-52 outline-none focus:ring-2 focus:ring-green-500/40 border ${error ? 'border-red-500/60' : 'border-gray-700/60'}`}
+          />
+          <button
+            type="submit"
+            disabled={status === 'sending'}
+            className="bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap"
+          >
+            {status === 'sending' ? 'Sending...' : 'Subscribe'}
+          </button>
+        </div>
+        {error && <p className="text-red-400 text-[11px] mt-1.5">{error}</p>}
+      </div>
+    </form>
+  )
+}
+
 export default function Footer() {
   return (
     <footer className="bg-gray-950 text-white font-body">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-        <div className="bg-gray-900 rounded-2xl p-5 sm:p-7 mb-10 sm:mb-14 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border border-white/8">
-          <div>
-            <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-1">Grow your business</p>
-            <p className="font-display font-bold text-lg text-white leading-snug">
-              Get free tips on selling, marketing, and running your store
-            </p>
-          </div>
-          <div className="flex w-full sm:w-auto gap-2">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="bg-gray-800 text-white placeholder-gray-600 px-4 py-2.5 rounded-xl text-sm flex-1 sm:w-52 outline-none focus:ring-2 focus:ring-green-500/40 border border-gray-700/60"
-            />
-            <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
+        <NewsletterSignup />
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 mb-10 sm:mb-12">
           <div className="col-span-2 sm:col-span-1">
@@ -82,6 +183,13 @@ export default function Footer() {
                   {badge}
                 </span>
               ))}
+            </div>
+
+            {/* The Android app. iPhone is not out yet, so nothing here
+                promises one beyond "coming soon". */}
+            <div className="mb-5">
+              <PlayStoreBadge tone="light" />
+              <p className="text-gray-600 text-[10px] mt-2">iPhone app coming soon</p>
             </div>
 
             <div className="flex items-center gap-2.5">
