@@ -60,7 +60,9 @@ export default async function handler(req, res) {
       notes,
       orderType,
       promoCode = "",
-      discountAmount = 0,
+      // `discountAmount` is deliberately NOT read from the body. The client's
+      // figure is advisory only and is recomputed from the discount document
+      // further down, so taking it here would invite someone to trust it.
       bookingDate,
       bookingTime,
       serviceId,
@@ -220,11 +222,35 @@ export default async function handler(req, res) {
 
         if (errors.length) {
           const soldOut = errors.find((e) => e.code === "sold_out");
+          // The vendor may have lowered the stock, or the cart may have been
+          // sitting open since before they did. Either way the customer needs
+          // to be told the number, not just "something is wrong".
+          const short = errors.find((e) => e.code === "not_enough_stock");
+          const tooMany = errors.find((e) => e.code === "too_many_of_one" || e.code === "bad_quantity");
+
+          if (soldOut) {
+            return res.status(400).json({
+              error: "option_sold_out",
+              message: `${soldOut.label} has just sold out. Please remove it and try again.`,
+            });
+          }
+          if (short) {
+            return res.status(400).json({
+              error: "option_stock",
+              message: short.available > 0
+                ? `Only ${short.available} ${short.label} left. Please lower the quantity and try again.`
+                : `${short.label} has just sold out. Please remove it and try again.`,
+            });
+          }
+          if (tooMany) {
+            return res.status(400).json({
+              error: "option_quantity",
+              message: `That is more ${tooMany.label} than we can take in one order. Please lower the quantity.`,
+            });
+          }
           return res.status(400).json({
-            error: soldOut ? "option_sold_out" : "invalid_option",
-            message: soldOut
-              ? `${soldOut.label} has just sold out. Please remove it and try again.`
-              : "One of the choices in your cart is no longer available. Please refresh and try again.",
+            error: "invalid_option",
+            message: "One of the choices in your cart is no longer available. Please refresh and try again.",
           });
         }
 

@@ -6,6 +6,7 @@ import {
 import { buildOrderURL } from '../utils/whatsapp'
 import {
   normaliseGroups, splitGroups, priceSelection, selectionLabel, missingRequired, isSoldOut,
+  qtyOf, maxQtyFor,
 } from '../utils/productOptions'
 
 export default function ProductDetailOverlay({
@@ -77,17 +78,36 @@ export default function ProductDetailOverlay({
     })
   }
 
-  const toggleExtra = (groupName, label) => {
+  /**
+   * Sets how many of one extra the customer wants.
+   *
+   * Extras are stored as { [groupName]: { [label]: qty } }. Setting 0 removes
+   * the extra, and removing the last one removes the group, so an untouched
+   * group never rides along in the cart or the order record.
+   */
+  const setExtraQty = (groupName, label, qty) => {
     setSelection(prev => {
-      const current = Array.isArray(prev[groupName]) ? prev[groupName] : []
-      const next = current.includes(label)
-        ? current.filter(l => l !== label)
-        : [...current, label]
+      const current = { ...(prev[groupName] && !Array.isArray(prev[groupName]) ? prev[groupName] : {}) }
+      // A selection made before quantities existed is a plain array of labels.
+      if (Array.isArray(prev[groupName])) {
+        for (const l of prev[groupName]) current[String(l)] = 1
+      }
+
+      const next = Math.max(0, Math.floor(Number(qty) || 0))
+      if (next <= 0) delete current[label]
+      else current[label] = next
+
       const out = { ...prev }
-      if (next.length) out[groupName] = next
+      if (Object.keys(current).length) out[groupName] = current
       else delete out[groupName]
       return out
     })
+  }
+
+  const toggleExtra = (groupName, label, option) => {
+    const current = qtyOf(selection, groupName, label)
+    // Tapping the row adds one, or clears it if it is already there.
+    setExtraQty(groupName, label, current > 0 ? 0 : Math.min(1, maxQtyFor(option)))
   }
 
   const opts = {
@@ -96,6 +116,7 @@ export default function ProductDetailOverlay({
     selection,
     selectSingle,
     toggleExtra,
+    setExtraQty,
     unitPrice,
     basePrice,
     extrasTotal,
@@ -377,8 +398,9 @@ function MobileContent({
               <ExtrasGroup
                 key={group.groupName}
                 group={group}
-                selected={opts.selection[group.groupName]}
+                selection={opts.selection}
                 onToggle={opts.toggleExtra}
+                onSetQty={opts.setExtraQty}
                 btnBg={btnBg}
               />
             ))}
@@ -530,8 +552,9 @@ function DesktopDetails({
               <ExtrasGroup
                 key={group.groupName}
                 group={group}
-                selected={opts.selection[group.groupName]}
+                selection={opts.selection}
                 onToggle={opts.toggleExtra}
+                onSetQty={opts.setExtraQty}
                 btnBg={btnBg}
               />
             ))}
@@ -732,12 +755,13 @@ function VariationGroup({ group, selected, onSelect, btnBg, textCol }) {
 }
 
 
-/* ── Extras (tick as many as you like) ──
-   Checkboxes rather than pills: a customer must be able to see at a glance that
-   several can be taken at once, and what each one adds to the bill. */
-function ExtrasGroup({ group, selected, onToggle, btnBg }) {
+/* ── Extras (take as many as you like, and as many of each) ──
+   Tapping the row adds one. Once it is in, a stepper appears so a customer
+   wanting two portions of chicken says so here rather than ordering the soup
+   twice. The plus stops at the stock the vendor set, and at a flat ceiling when
+   they are not counting. */
+function ExtrasGroup({ group, selection, onToggle, onSetQty, btnBg }) {
   const { groupName, options } = group
-  const picked = Array.isArray(selected) ? selected : []
 
   return (
     <div>
@@ -747,39 +771,73 @@ function ExtrasGroup({ group, selected, onToggle, btnBg }) {
       </div>
       <div className="space-y-1.5">
         {options.map(opt => {
-          const isPicked = picked.includes(opt.label)
+          const qty = qtyOf(selection, groupName, opt.label)
+          const isPicked = qty > 0
           const soldOut = isSoldOut(opt)
+          const ceiling = maxQtyFor(opt)
+          const atCeiling = qty >= ceiling
           const low = !soldOut && opt.stock !== null && opt.stock <= 5
+
           return (
-            <button
+            <div
               key={opt.label}
-              type="button"
-              onClick={() => !soldOut && onToggle(groupName, opt.label)}
-              disabled={soldOut}
-              aria-pressed={isPicked}
-              className={`w-full flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all ${
-                isPicked ? 'border-current shadow-sm' : 'border-black/10 hover:border-black/25'
-              } ${soldOut ? 'opacity-45 cursor-not-allowed' : ''}`}
+              className={`w-full flex items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-all ${
+                isPicked ? 'shadow-sm' : 'border-black/10'
+              } ${soldOut ? 'opacity-45' : ''}`}
               style={isPicked ? { borderColor: btnBg, backgroundColor: `${btnBg}0f` } : undefined}
             >
-              <span
-                className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border"
-                style={isPicked ? { backgroundColor: btnBg, borderColor: btnBg } : { borderColor: 'rgba(0,0,0,0.25)' }}
+              {/* The label side toggles; the stepper on the right adjusts. */}
+              <button
+                type="button"
+                onClick={() => !soldOut && onToggle(groupName, opt.label, opt)}
+                disabled={soldOut}
+                aria-pressed={isPicked}
+                className={`flex min-w-0 flex-1 items-center gap-2.5 text-left ${soldOut ? 'cursor-not-allowed' : ''}`}
               >
-                {isPicked && <Check size={11} className="text-white" strokeWidth={3} />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className={`block truncate text-xs font-bold ${soldOut ? 'line-through' : ''}`}>{opt.label}</span>
-                {soldOut ? (
-                  <span className="text-[10px] font-semibold text-red-500">Sold out</span>
-                ) : low ? (
-                  <span className="text-[10px] font-semibold text-amber-600">Only {opt.stock} left</span>
-                ) : null}
-              </span>
+                <span
+                  className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border"
+                  style={isPicked ? { backgroundColor: btnBg, borderColor: btnBg } : { borderColor: 'rgba(0,0,0,0.25)' }}
+                >
+                  {isPicked && <Check size={11} className="text-white" strokeWidth={3} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-xs font-bold ${soldOut ? 'line-through' : ''}`}>{opt.label}</span>
+                  {soldOut ? (
+                    <span className="text-[10px] font-semibold text-red-500">Sold out</span>
+                  ) : low ? (
+                    <span className="text-[10px] font-semibold text-amber-600">Only {opt.stock} left</span>
+                  ) : null}
+                </span>
+              </button>
+
               <span className="flex-shrink-0 text-xs font-extrabold" style={{ color: btnBg }}>
                 {Number(opt.price) > 0 ? `+₦${Number(opt.price).toLocaleString()}` : 'Free'}
               </span>
-            </button>
+
+              {isPicked && !soldOut && (
+                <span className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-black/10 bg-white/70">
+                  <button
+                    type="button"
+                    onClick={() => onSetQty(groupName, opt.label, qty - 1)}
+                    aria-label={`One less ${opt.label}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-black/5"
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <span className="w-5 text-center text-xs font-bold tabular-nums" aria-live="polite">{qty}</span>
+                  <button
+                    type="button"
+                    onClick={() => onSetQty(groupName, opt.label, qty + 1)}
+                    disabled={atCeiling}
+                    aria-label={`One more ${opt.label}`}
+                    title={atCeiling && opt.stock !== null ? `Only ${opt.stock} left` : undefined}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </span>
+              )}
+            </div>
           )
         })}
       </div>

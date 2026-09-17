@@ -201,78 +201,10 @@ const faqs = [
   },
 ]
 
-const plans = [
-  {
-    id: 'free',
-    name: 'Starter',
-    price: '₦0',
-    period: 'Forever free',
-    description: 'Everything you need to start getting customers online today.',
-    cta: 'Create Free Account',
-    ctaStyle: 'outline',
-    available: true,
-    features: [
-      { text: 'Clean business page', available: true },
-      { text: 'Direct order path on every product or service', available: true },
-      { text: 'Up to 15 listings', available: true },
-      { text: 'Lead capture enquiry form', available: true },
-      { text: 'Unique shareable link', available: true },
-      { text: 'Store customisation', available: false },
-      { text: 'Analytics & tracking', available: false },
-      { text: 'Priority support', available: false },
-    ],
-  },
-  {
-    id: 'growth',
-    name: 'Growth',
-    price: '₦5,000',
-    period: 'per month',
-    description: 'For businesses that are growing and want more control over their page.',
-    cta: 'Upgrade to Growth',
-    ctaStyle: 'solid',
-    available: true,
-    features: [
-      { text: 'Everything in Starter', available: true },
-      { text: 'Up to 50 listings', available: true },
-      { text: 'Customise your page colours & logo', available: true },
-      { text: 'See how many people visited your page', available: true },
-      { text: 'Track which listings get the most clicks', available: true },
-      { text: 'Manage store settings easily', available: true },
-      { text: 'Responsive support', available: true },
-      { text: 'Product on/off toggle', available: true },
-      { text: 'AI product descriptions - 20 per day', available: true },
-      { text: 'Structured cart - multi-item orders in one flow', available: true },
-      { text: 'Stock count management & out-of-stock sorting', available: true },
-      { text: 'Product categories for easy browsing', available: true },
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '₦12,000',
-    period: 'per month',
-    description: 'For serious businesses that want the full package and maximum results.',
-    cta: 'Upgrade to Pro',
-    ctaStyle: 'dark',
-    available: true,
-    features: [
-      { text: 'Everything in Growth', available: true },
-      { text: 'Unlimited listings', available: true },
-      { text: 'Hot leads list', available: true },
-      { text: 'Full analytics dashboard', available: true },
-      { text: 'Store badge (Pro tag)', available: true },
-      { text: '20 Premium Store Themes - full visual customisation', available: true },
-      { text: 'AI product descriptions - 50 per day', available: true },
-      { text: 'Priority same-day support', available: true },
-      { text: 'Early access to new features', available: true },
-    ],
-  },
-]
-// Note: this `plans` array is currently unused (no .map() over it anywhere in
-// this file) - Home links out to /pricing for full plan details rather than
-// rendering cards inline. Left at 3 tiers matching that inactive state;
-// Premium-tier capabilities are instead surfaced in `platformFeatures` below,
-// which IS rendered.
+// A `plans` array used to sit here, unrendered. Home links out to /pricing for
+// plan details, and src/utils/billingPlans.js is the one place prices live, so
+// a second hardcoded copy here could only ever drift out of date. Removed
+// rather than kept as a comment that says "unused".
 
 const trustBadges = [
   { icon: Zap, label: 'No Coding Required', sub: 'Set up in minutes' },
