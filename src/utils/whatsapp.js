@@ -19,14 +19,20 @@ export function buildEnquiryURL(phoneNumber, storeName) {
   return generateWhatsAppLink(phoneNumber, message)
 }
 
-export function buildOrderURL(phoneNumber, productName, price, productId, storeUrl, type = 'physical') {
+export function buildOrderURL(phoneNumber, productName, price, productId, storeUrl, type = 'physical', optionsLabel = '') {
   const isService = type === 'service'
   const lines = [
     isService ? `Hi! I'd like to book this service:` : `Hi! I'd like to order the following:`,
     '',
     `${isService ? 'Service' : 'Product'}: ${productName}`,
-    `Price: ₦${Number(price).toLocaleString()}`,
   ]
+
+  // The chosen options and extras, so the vendor reads the same order the
+  // customer built rather than just the base item.
+  if (optionsLabel) lines.push(`Options: ${optionsLabel}`)
+
+  // `price` already includes any extras the customer ticked.
+  lines.push(`Price: ₦${Number(price).toLocaleString()}`)
 
   if (storeUrl && productId) {
     lines.push(`Link: ${storeUrl}?product=${productId}`)
@@ -46,8 +52,9 @@ export function buildCartOrderURL(phoneNumber, storeName, cartItems, customerDet
   const itemLines = cartItems.map(item => {
     const lineTotal = Number(item.price) * Number(item.quantity)
     const label = item.type === 'service' ? 'service' : 'item'
-    const variationStr = item.variationLabel ? `\n  ${item.variationLabel}` : ''
-    return `- ${item.quantity}x ${item.name} (${label}) - ₦${lineTotal.toLocaleString()}${variationStr}`
+    const options = item.optionsLabel || item.variationLabel
+    const optionsStr = options ? `\n  ${options}` : ''
+    return `- ${item.quantity}x ${item.name} (${label}) - ₦${lineTotal.toLocaleString()}${optionsStr}`
   })
 
   const orderTotal = cartItems.reduce(

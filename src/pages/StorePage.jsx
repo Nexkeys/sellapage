@@ -28,6 +28,13 @@ import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
 import CartDrawer from "../components/CartDrawer";
 import ProductDetailOverlay from "../components/ProductDetailOverlay";
+import {
+  normaliseGroups,
+  priceSelection,
+  selectionLabel,
+  cartLineId,
+  hasOptionGroups,
+} from "../utils/productOptions";
 import NotFound from "./NotFound";
 import { resolveStoreThemeTokens } from "../utils/resolveStoreTheme";
 import SEO from '../components/SEO';
@@ -194,9 +201,12 @@ function CartSummary({ cart, subtotal, collapsible = false }) {
   const content = (
     <div className="space-y-2">
       {cart.map((item) => (
-        <div key={item.id} className="flex justify-between text-sm gap-2">
-          <span className="text-gray-600 truncate">
-            {item.name} × {item.quantity}
+        <div key={item.lineId || item.id} className="flex justify-between text-sm gap-2">
+          <span className="min-w-0 text-gray-600">
+            <span className="block truncate">{item.name} × {item.quantity}</span>
+            {item.optionsLabel ? (
+              <span className="block truncate text-[11px] text-gray-400">{item.optionsLabel}</span>
+            ) : null}
           </span>
           <span className="font-semibold text-gray-900 flex-shrink-0">
             ₦{(Number(item.price) * item.quantity).toLocaleString()}
@@ -1127,7 +1137,11 @@ export default function StorePage() {
       const saved = localStorage.getItem(`sellapage_cart_${store.id}`);
       if (!saved) return;
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) setCart(parsed);
+      // A cart saved before line ids existed still has to be editable, so every
+      // restored line gets one.
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setCart(parsed.map((it) => ({ ...it, lineId: it.lineId || it.id })));
+      }
     } catch {
       // Private mode, blocked storage, or corrupted JSON. An empty cart is the
       // correct fallback and never worth surfacing to a shopper.
@@ -1471,36 +1485,56 @@ export default function StorePage() {
         price: Number(product.price) || 0,
       }],
     });
-    const productVariations = product.selectedVariations || {};
-    const variationLabel = product.variationLabel || '';
+    // Options and extras, priced with the same module the server re-prices with
+    // at checkout. `unitPrice` arrives from the detail overlay; a quick add from
+    // a card has no selection, so it is recomputed here and comes to the base
+    // price on its own.
+    const selection = product.selectedOptions || {};
+    const { chosen, extrasTotal } = priceSelection(normaliseGroups(product), selection);
+    const unitPrice = Number(product.unitPrice ?? (Number(product.price) || 0) + extrasTotal);
+    const optionsLabel = product.optionsLabel || selectionLabel(chosen);
+    const addQty = Math.max(1, Number(product.quantity) || 1);
+    // The same product with different extras is a different line. Keying on the
+    // product id alone made egusi+chicken and egusi+goat share one row, so
+    // changing or removing either changed both.
+    const lineId = cartLineId(product.id, selection);
+
     setCart((prev) => {
-      const existing = prev.find(
-        (item) =>
-          item.id === product.id &&
-          JSON.stringify(item.selectedVariations || {}) === JSON.stringify(productVariations),
-      );
+      const existing = prev.find((item) => (item.lineId || item.id) === lineId);
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id &&
-          JSON.stringify(item.selectedVariations || {}) === JSON.stringify(productVariations)
-            ? { ...item, quantity: item.quantity + 1 }
+          (item.lineId || item.id) === lineId
+            ? { ...item, quantity: item.quantity + addQty }
             : item,
         );
       }
       return [
         ...prev,
         {
+          lineId,
           id: product.id,
           name: product.name,
-          price: Number(product.price),
+          // Unit price INCLUDING extras, so every existing subtotal, pixel and
+          // checkout total keeps working without knowing extras exist.
+          price: unitPrice,
+          basePrice: Number(product.price) || 0,
           type: product.type || "physical",
-          quantity: 1,
-          selectedVariations:
-            Object.keys(productVariations).length > 0 ? productVariations : undefined,
-          variationLabel: variationLabel || undefined,
+          quantity: addQty,
+          selectedOptions: chosen.length ? selection : undefined,
+          optionsLabel: optionsLabel || undefined,
         },
       ];
     });
+  };
+
+  // A product with options must be opened, not silently added without them.
+  const handleQuickAdd = (p) => {
+    if (!p) return;
+    if (hasOptionGroups(p)) {
+      handleViewProduct(p);
+      return;
+    }
+    handleAddToCart(p);
   };
 
   // Opening a product. Fires ViewContent to both pixels, then opens the overlay.
@@ -1541,20 +1575,22 @@ export default function StorePage() {
     setSelectedProduct(p);
   };
 
-  const handleUpdateQuantity = (productId, newQuantity) => {
+  // Keyed on the CART LINE, not the product: one product can be in the cart
+  // several times with different extras.
+  const handleUpdateQuantity = (lineId, newQuantity) => {
     if (newQuantity < 1) {
-      handleRemoveItem(productId);
+      handleRemoveItem(lineId);
       return;
     }
     setCart((prev) =>
       prev.map((item) =>
-        item.id === productId ? { ...item, quantity: newQuantity } : item,
+        (item.lineId || item.id) === lineId ? { ...item, quantity: newQuantity } : item,
       ),
     );
   };
 
-  const handleRemoveItem = (productId) => {
-    setCart((prev) => prev.filter((item) => item.id !== productId));
+  const handleRemoveItem = (lineId) => {
+    setCart((prev) => prev.filter((item) => (item.lineId || item.id) !== lineId));
   };
 
   const filteredProducts = (
@@ -1957,7 +1993,7 @@ export default function StorePage() {
             // both layouts record the same customer action.
             onAddToCart={(p) => {
               if (p?.id) handleProductClick(p.id);
-              handleAddToCart(p);
+              handleQuickAdd(p);
             }}
             onOrder={handleViewProduct}
             onBook={() => navigate(`/${store.storeName}/services`)}
@@ -2204,7 +2240,7 @@ export default function StorePage() {
                           isHighlighted={highlightedProduct === product.id}
                           onOrder={handleProductClick}
                           listView={storeLayout === "list"}
-                          onAddToCart={isCartEnabled ? handleAddToCart : null}
+                          onAddToCart={isCartEnabled ? handleQuickAdd : null}
                           isProOrPremium={isProOrPremium}
                           themeCardStyle={{
                             backgroundColor: themeCard,

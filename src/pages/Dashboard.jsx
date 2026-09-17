@@ -44,6 +44,7 @@ import {
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
 import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
 import { countSales } from "../utils/sales";
+import { normaliseGroups } from "../utils/productOptions";
 import OtpVerifyModal from "../components/OtpVerifyModal";
 import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
 import { SkeletonDashboard } from "../components/Skeleton";
@@ -1063,7 +1064,11 @@ export default function Dashboard() {
                 ? Number(form.stock)
                 : null,
             imageUrls: form.imageUrls,
-            variations: form.variations || [],
+            // Cleaned on the way in: prices and stock stored as numbers rather
+            // than form strings, and half-filled groups dropped. Everything that
+            // reads a product later (feed, AI context, checkout) then sees one
+            // shape instead of whatever the form happened to hold.
+            variations: normaliseGroups({ variations: form.variations }),
           },
           form.imageFiles,
         );
@@ -1093,7 +1098,11 @@ export default function Dashboard() {
               form.stock !== undefined
                 ? Number(form.stock)
                 : null,
-            variations: form.variations || [],
+            // Cleaned on the way in: prices and stock stored as numbers rather
+            // than form strings, and half-filled groups dropped. Everything that
+            // reads a product later (feed, AI context, checkout) then sees one
+            // shape instead of whatever the form happened to hold.
+            variations: normaliseGroups({ variations: form.variations }),
           },
           form.imageFiles,
         );

@@ -152,7 +152,12 @@ function ReceiptDocument({ order, store }) {
 
         {items.map((item, idx) => (
           <View key={item.id || idx} style={styles.tableRow}>
-            <Text style={styles.colName}>{item.name}</Text>
+            <Text style={styles.colName}>
+              {item.name}
+              {item.optionsLabel || item.variationLabel
+                ? `\n${item.optionsLabel || item.variationLabel}`
+                : ''}
+            </Text>
             <Text style={styles.colQty}>{item.quantity}</Text>
             <Text style={styles.colPrice}>
               {formatNaira(Number(item.price) * Number(item.quantity))}

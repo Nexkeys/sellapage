@@ -206,10 +206,24 @@ export default function OrderDetail({ record, kind = 'order', store, onBack }) {
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold text-gray-900">{it.name || 'Item'}</p>
+                    {/* What the customer actually chose. Without this the
+                        vendor prepares the base item and misses the extras
+                        they were paid for. */}
+                    {(it.optionsLabel || it.variationLabel) ? (
+                      <p className="mt-0.5 text-[11px] font-medium text-gray-600">
+                        {it.optionsLabel || it.variationLabel}
+                      </p>
+                    ) : null}
                     <p className="mt-0.5 text-[11px] text-gray-500">
                       {naira(it.price)} x {Number(it.quantity || 1)}
+                      {Number(it.basePrice) > 0 && Number(it.price) > Number(it.basePrice)
+                        ? ` (${naira(it.basePrice)} + ${naira(Number(it.price) - Number(it.basePrice))} extras)`
+                        : ''}
                     </p>
-                    {it.selectedVariations && typeof it.selectedVariations === 'object' ? (
+                    {/* Older orders stored the raw map and no label. Skipped when
+                        a label was shown above, or the same choices print twice. */}
+                    {!it.optionsLabel && !it.variationLabel
+                      && it.selectedVariations && typeof it.selectedVariations === 'object' ? (
                       <p className="mt-0.5 truncate text-[10px] text-gray-400">
                         {Object.entries(it.selectedVariations)
                           .map(([k, v]) => `${k}: ${v}`)

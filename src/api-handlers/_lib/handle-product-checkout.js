@@ -81,8 +81,10 @@ export async function handleProductCheckout(db, data, res) {
     .doc(storeId)
     .collection("orders")
     .doc();
+  // Extras belong in the summary line too: a kitchen reading "Egusi x1" with no
+  // mention of chicken cooks the wrong order.
   const itemsString = parsedCartItems
-    .map((item) => `${item.name} x${item.quantity}`)
+    .map((item) => `${item.name} x${item.quantity}${item.optionsLabel ? ` (${item.optionsLabel})` : ""}`)
     .join(", ");
 
   await orderRef.set({
@@ -384,7 +386,7 @@ export async function handleProductCheckout(db, data, res) {
                     .map(
                       (item) => `
                     <tr>
-                      <td style="padding: 8px 0; color: #374151; font-size: 14px;">${item.name}</td>
+                      <td style="padding: 8px 0; color: #374151; font-size: 14px;">${escapeHtml(item.name)}${item.optionsLabel ? `<br><span style="color:#6b7280;font-size:12px;">${escapeHtml(item.optionsLabel)}</span>` : ""}</td>
                       <td style="padding: 8px 0; color: #16a34a; font-weight: bold; font-size: 14px; text-align: right;">₦${(item.price * item.quantity).toLocaleString("en-NG")}</td>
                     </tr>
                   `,
@@ -463,7 +465,7 @@ export async function handleProductCheckout(db, data, res) {
                         .map(
                           (item) => `
                         <tr>
-                          <td style="padding: 8px 0; color: #374151; font-size: 14px;">${item.name}</td>
+                          <td style="padding: 8px 0; color: #374151; font-size: 14px;">${escapeHtml(item.name)}${item.optionsLabel ? `<br><span style="color:#6b7280;font-size:12px;">${escapeHtml(item.optionsLabel)}</span>` : ""}</td>
                           <td style="padding: 8px 0; color: #16a34a; font-weight: bold; font-size: 14px; text-align: right;">₦${(item.price * item.quantity).toLocaleString("en-NG")}</td>
                         </tr>
                       `,

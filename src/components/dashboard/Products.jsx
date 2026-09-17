@@ -5,6 +5,9 @@ import {
   ChevronDown, GripVertical, Search, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { NIGERIAN_MARKET_CATEGORIES, VARIATION_DISPLAY_TYPES } from '../../utils/categories'
+import {
+  GROUP_SINGLE, GROUP_MULTI, MAX_GROUPS, MAX_OPTIONS_PER_GROUP, LIMITS,
+} from '../../utils/productOptions'
 import { SkeletonCardGrid } from '../Skeleton'
 
 const LISTINGS_PER_PAGE = 10
@@ -81,8 +84,13 @@ export default function ProductsTab({
     }
   }
 
-  const handleAddVariationGroup = () => {
-    const newGroup = { groupName: '', displayType: 'pill', options: [] }
+  // Options are typed and added one at a time now. The old field took a single
+  // comma-separated string, which vendors read as one long answer rather than a
+  // list, and which had nowhere to put a price.
+  const [optionDrafts, setOptionDrafts] = useState({})
+
+  const handleAddVariationGroup = (type = GROUP_SINGLE) => {
+    const newGroup = { groupName: '', displayType: 'pill', type, options: [] }
     setForm(p => ({ ...p, variations: [...(p.variations || []), newGroup] }))
   }
 
@@ -102,14 +110,35 @@ export default function ProductsTab({
     }))
   }
 
-  const handleVariationOptionsChange = (index, rawInput) => {
-    const options = rawInput.split(',').map(s => s.trim()).filter(Boolean).map(label => ({ label, value: label }))
+  const setGroupOptions = (index, updater) => {
     setForm(p => ({
       ...p,
       variations: p.variations.map((g, i) =>
-        i === index ? { ...g, options } : g
+        i === index ? { ...g, options: updater(Array.isArray(g.options) ? g.options : []) } : g
       ),
     }))
+  }
+
+  const handleAddOption = (index) => {
+    const label = String(optionDrafts[index] || '').trim().slice(0, LIMITS.optionLabel)
+    if (!label) return
+    setGroupOptions(index, (opts) => {
+      if (opts.length >= MAX_OPTIONS_PER_GROUP) return opts
+      // Typing the same option twice is a slip, not an intention.
+      if (opts.some(o => (o.label || '').toLowerCase() === label.toLowerCase())) return opts
+      return [...opts, { label, value: label, price: '', stock: '' }]
+    })
+    setOptionDrafts(d => ({ ...d, [index]: '' }))
+  }
+
+  const handleRemoveOption = (index, optIdx) => {
+    setGroupOptions(index, (opts) => opts.filter((_, i) => i !== optIdx))
+  }
+
+  const handleOptionField = (index, optIdx, field, value) => {
+    setGroupOptions(index, (opts) =>
+      opts.map((o, i) => (i === optIdx ? { ...o, [field]: value } : o))
+    )
   }
 
   const renderFormFields = () => (
@@ -242,7 +271,7 @@ export default function ProductsTab({
         >
           <span className="flex items-center gap-2">
             <GripVertical size={14} className="text-gray-400" />
-            Variations / Specification Options
+            Options & Extras
             {(form.variations?.length > 0) && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-600">
                 {form.variations.length}
@@ -254,55 +283,168 @@ export default function ProductsTab({
         {variationsOpen && (
           <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
             {(form.variations || []).length === 0 && (
-              <p className="text-xs text-gray-400 text-center py-2">
-                No variations yet. Add options like Size, Color, or RAM.
-              </p>
-            )}
-            {(form.variations || []).map((group, idx) => (
-              <div key={idx} className="bg-gray-50 rounded-xl p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    value={group.groupName}
-                    onChange={e => handleVariationGroupChange(idx, 'groupName', e.target.value)}
-                    placeholder="Option group name (e.g. Shoe Size)"
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white focus:border-green-400"
-                  />
-                  <select
-                    value={group.displayType}
-                    onChange={e => handleVariationGroupChange(idx, 'displayType', e.target.value)}
-                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white focus:border-green-400"
-                  >
-                    {VARIATION_DISPLAY_TYPES.map(dt => (
-                      <option key={dt.id} value={dt.id}>{dt.label}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveVariationGroup(idx)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                <input
-                  value={group.options.map(o => o.label).join(', ')}
-                  onChange={e => handleVariationOptionsChange(idx, e.target.value)}
-                  placeholder="Options (comma-separated: 40, 42, 44)"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white focus:border-green-400"
-                />
-                <p className="text-[10px] text-gray-400">
-                  Display: <span className="font-semibold capitalize">{group.displayType.replace('-', ' ')}</span>
-                  {group.options.length > 0 && <> · {group.options.length} options</>}
+              <div className="text-center py-2 space-y-1">
+                <p className="text-xs text-gray-400">
+                  Nothing added yet.
+                </p>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  Use <span className="font-semibold">Choose one</span> for a pick like Size or Colour, and{' '}
+                  <span className="font-semibold">Extras</span> for paid add-ons like Chicken, Goat meat or Shaki.
                 </p>
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={handleAddVariationGroup}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-green-600 bg-green-50 hover:bg-green-100 rounded-xl transition-colors border border-dashed border-green-300"
-            >
-              <Plus size={14} /> Add Variation Group
-            </button>
+            )}
+
+            {(form.variations || []).map((group, idx) => {
+              const isExtras = group.type === GROUP_MULTI
+              const options = Array.isArray(group.options) ? group.options : []
+              const isTextField = !isExtras && group.displayType === 'text-field'
+              return (
+                <div key={idx} className={`rounded-xl p-3 space-y-2.5 border ${isExtras ? 'bg-amber-50/40 border-amber-100' : 'bg-gray-50 border-gray-100'}`}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={group.groupName}
+                      maxLength={LIMITS.groupName}
+                      onChange={e => handleVariationGroupChange(idx, 'groupName', e.target.value)}
+                      placeholder={isExtras ? 'Extras heading (e.g. Add protein)' : 'Group name (e.g. Size)'}
+                      className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white focus:border-green-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVariationGroup(idx)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                      aria-label="Remove group"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={isExtras ? GROUP_MULTI : GROUP_SINGLE}
+                      onChange={e => handleVariationGroupChange(idx, 'type', e.target.value)}
+                      className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold outline-none bg-white focus:border-green-400"
+                    >
+                      <option value={GROUP_SINGLE}>Choose one</option>
+                      <option value={GROUP_MULTI}>Extras (pick any)</option>
+                    </select>
+                    {!isExtras && (
+                      <select
+                        value={group.displayType}
+                        onChange={e => handleVariationGroupChange(idx, 'displayType', e.target.value)}
+                        className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs outline-none bg-white focus:border-green-400"
+                      >
+                        {VARIATION_DISPLAY_TYPES.map(dt => (
+                          <option key={dt.id} value={dt.id}>{dt.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {isTextField ? (
+                    <p className="text-[11px] text-gray-400">
+                      The customer types their own answer here, so there is nothing to price.
+                    </p>
+                  ) : (
+                    <>
+                      {options.length > 0 && (
+                        <div className="space-y-1.5">
+                          {options.map((opt, optIdx) => (
+                            <div key={optIdx} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
+                              <span className="flex-1 min-w-0 truncate text-xs font-semibold text-gray-800">{opt.label}</span>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-[11px] text-gray-400">₦</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  inputMode="numeric"
+                                  value={opt.price ?? ''}
+                                  onChange={e => handleOptionField(idx, optIdx, 'price', e.target.value)}
+                                  placeholder="0"
+                                  aria-label={`Extra price for ${opt.label}`}
+                                  className="w-20 px-2 py-1 border border-gray-200 rounded-md text-xs outline-none focus:border-green-400"
+                                />
+                              </div>
+                              <input
+                                type="number"
+                                min="0"
+                                inputMode="numeric"
+                                value={opt.stock ?? ''}
+                                onChange={e => handleOptionField(idx, optIdx, 'stock', e.target.value)}
+                                placeholder="Qty"
+                                aria-label={`Stock left for ${opt.label}`}
+                                className="w-16 flex-shrink-0 px-2 py-1 border border-gray-200 rounded-md text-xs outline-none focus:border-green-400"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveOption(idx, optIdx)}
+                                className="p-1 text-gray-300 hover:text-red-500 rounded flex-shrink-0"
+                                aria-label={`Remove ${opt.label}`}
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {options.length < MAX_OPTIONS_PER_GROUP && (
+                        <div className="flex gap-1.5">
+                          <input
+                            value={optionDrafts[idx] || ''}
+                            maxLength={LIMITS.optionLabel}
+                            onChange={e => setOptionDrafts(d => ({ ...d, [idx]: e.target.value }))}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                // Enter must not submit the product form half-filled.
+                                e.preventDefault()
+                                handleAddOption(idx)
+                              }
+                            }}
+                            placeholder={isExtras ? 'e.g. Chicken 15pcs' : 'e.g. 5 litres'}
+                            className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white focus:border-green-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddOption(idx)}
+                            disabled={!String(optionDrafts[idx] || '').trim()}
+                            aria-label={`Add option to ${group.groupName || 'this group'}`}
+                            className="px-3.5 py-2 rounded-lg text-xs font-bold bg-gray-900 text-white disabled:opacity-40 flex-shrink-0"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-gray-400 leading-relaxed">
+                        {isExtras
+                          ? 'Price is added on top when a customer ticks it. Leave the price blank for a free extra.'
+                          : 'Leave the price blank unless that choice costs more than the main price.'}
+                        {' '}Qty is how many you have left; leave it blank if you are not counting. Set it to 0 to show it as sold out.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+
+            {(form.variations || []).length < MAX_GROUPS && (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAddVariationGroup(GROUP_SINGLE)}
+                  className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-green-600 bg-green-50 hover:bg-green-100 rounded-xl transition-colors border border-dashed border-green-300"
+                >
+                  <Plus size={13} /> Choose one
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddVariationGroup(GROUP_MULTI)}
+                  className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-dashed border-amber-300"
+                >
+                  <Plus size={13} /> Add extras
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

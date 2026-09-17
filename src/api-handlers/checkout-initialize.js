@@ -4,6 +4,12 @@ import { getFirestore } from "firebase-admin/firestore";
 import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 import { resolveRedemption } from './_lib/loyalty.js'
 import { recordCheckoutAttempt } from './_lib/abandoned-checkout.js'
+import {
+  normaliseGroups,
+  priceSelection,
+  selectionLabel,
+  missingRequired,
+} from '../utils/productOptions.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -199,11 +205,40 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: "Invalid quantity" });
         }
 
-        const unitPrice = Number(product.price);
-        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+        const basePrice = Number(product.price);
+        if (!Number.isFinite(basePrice) || basePrice < 0) {
           return res.status(500).json({ error: "A product in your cart has invalid pricing" });
         }
 
+        // Options and extras are priced HERE, from the product document, with
+        // the same module the storefront used to show the running total. The
+        // browser sends only WHICH options were chosen, never what they cost,
+        // so ₦15,000 of chicken cannot arrive claiming to be free.
+        const groups = normaliseGroups(product);
+        const selection = cartItems[i]?.selectedOptions || {};
+        const { chosen, extrasTotal, errors } = priceSelection(groups, selection);
+
+        if (errors.length) {
+          const soldOut = errors.find((e) => e.code === "sold_out");
+          return res.status(400).json({
+            error: soldOut ? "option_sold_out" : "invalid_option",
+            message: soldOut
+              ? `${soldOut.label} has just sold out. Please remove it and try again.`
+              : "One of the choices in your cart is no longer available. Please refresh and try again.",
+          });
+        }
+
+        // A product whose vendor added a "choose one" group after this cart was
+        // filled must not check out half-specified.
+        const missing = missingRequired(groups, selection);
+        if (missing.length) {
+          return res.status(400).json({
+            error: "option_required",
+            message: `Please choose ${missing.join(" and ")} for ${product.name || "an item"} before paying.`,
+          });
+        }
+
+        const unitPrice = basePrice + extrasTotal;
         subtotal += unitPrice * quantity;
 
         // Rebuild the line item from server data so the order record and the
@@ -213,7 +248,15 @@ export default async function handler(req, res) {
           id: snap.id,
           name: product.name || cartItems[i]?.name || "",
           price: unitPrice,
+          basePrice,
           quantity,
+          ...(chosen.length
+            ? {
+                selectedOptions: selection,
+                options: chosen,
+                optionsLabel: selectionLabel(chosen),
+              }
+            : {}),
         });
       }
     } else {

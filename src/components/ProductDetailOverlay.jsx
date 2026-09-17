@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import {
   X, ChevronLeft, ChevronRight, Plus, Minus,
-  MessageCircle, Package, Star, ShoppingCart,
+  MessageCircle, Package, Star, ShoppingCart, Check,
 } from 'lucide-react'
 import { buildOrderURL } from '../utils/whatsapp'
+import {
+  normaliseGroups, splitGroups, priceSelection, selectionLabel, missingRequired, isSoldOut,
+} from '../utils/productOptions'
 
 export default function ProductDetailOverlay({
   product,
@@ -22,14 +25,15 @@ export default function ProductDetailOverlay({
   storeUrl,
 }) {
   const [activeImg, setActiveImg] = useState(0)
-  const [selectedVariations, setSelectedVariations] = useState({})
+  // { [groupName]: string } for a single pick, { [groupName]: string[] } for extras.
+  const [selection, setSelection] = useState({})
   const [quantity, setQuantity] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
 
   useEffect(() => {
     if (!product) return
     setActiveImg(0)
-    setSelectedVariations({})
+    setSelection({})
     setQuantity(1)
     setAddedFeedback(false)
     document.body.style.overflow = 'hidden'
@@ -40,8 +44,9 @@ export default function ProductDetailOverlay({
 
   const images = product.imageUrls?.length ? product.imageUrls : []
   const hasMultiple = images.length > 1
-  const variations = product.variations || []
-  const hasVariations = variations.length > 0
+  const groups = normaliseGroups(product)
+  const { single: singleGroups, extras: extrasGroups } = splitGroups(groups)
+  const hasVariations = groups.length > 0
 
   const isOutOfStock = typeof product.stock === 'number' && product.stock === 0
   const isLowStock = typeof product.stock === 'number' && product.stock > 0 && product.stock <= 5
@@ -54,35 +59,59 @@ export default function ProductDetailOverlay({
   const fontFam = activeThemeObj?.typography?.bodyFontFamily || bodyFont
   const headerFam = activeThemeObj?.typography?.headerFontFamily || headerFont
 
-  const variationLabel = hasVariations
-    ? variations
-        .filter(g => selectedVariations[g.groupName])
-        .map(g => `${g.groupName}: ${selectedVariations[g.groupName]}`)
-        .join(' | ')
-    : ''
+  // Priced with the same function the server uses at checkout, so the running
+  // total here can never disagree with what is actually charged.
+  const { chosen, extrasTotal } = priceSelection(groups, selection)
+  const basePrice = Number(product.price) || 0
+  const unitPrice = basePrice + extrasTotal
+  const optionsLabel = selectionLabel(chosen)
+  const stillNeeded = missingRequired(groups, selection)
+  const canAddToCart = stillNeeded.length === 0
 
-  const handleVariationSelect = (groupName, value) => {
-    setSelectedVariations(prev => ({
-      ...prev,
-      [groupName]: prev[groupName] === value ? undefined : value,
-    }))
+  const selectSingle = (groupName, value) => {
+    setSelection(prev => {
+      const next = { ...prev }
+      if (!value || next[groupName] === value) delete next[groupName]
+      else next[groupName] = value
+      return next
+    })
   }
 
-  const allVariationsSelected = hasVariations
-    ? variations.every(g => g.displayType === 'text-field' || selectedVariations[g.groupName])
-    : true
+  const toggleExtra = (groupName, label) => {
+    setSelection(prev => {
+      const current = Array.isArray(prev[groupName]) ? prev[groupName] : []
+      const next = current.includes(label)
+        ? current.filter(l => l !== label)
+        : [...current, label]
+      const out = { ...prev }
+      if (next.length) out[groupName] = next
+      else delete out[groupName]
+      return out
+    })
+  }
+
+  const opts = {
+    singleGroups,
+    extrasGroups,
+    selection,
+    selectSingle,
+    toggleExtra,
+    unitPrice,
+    basePrice,
+    extrasTotal,
+    stillNeeded,
+    quantity,
+  }
 
   const handleAddToCart = () => {
-    if (!allVariationsSelected) return
-    const cartItem = {
+    if (!canAddToCart) return
+    onAddToCart({
       ...product,
       quantity,
-      selectedVariations: hasVariations ? selectedVariations : undefined,
-      variationLabel: variationLabel || undefined,
-    }
-    for (let i = 0; i < quantity; i++) {
-      onAddToCart(cartItem)
-    }
+      unitPrice,
+      selectedOptions: chosen.length ? selection : undefined,
+      optionsLabel: optionsLabel || undefined,
+    })
     setAddedFeedback(true)
     setTimeout(() => setAddedFeedback(false), 1500)
   }
@@ -91,10 +120,11 @@ export default function ProductDetailOverlay({
     const url = buildOrderURL(
       whatsappNumber,
       product.name,
-      product.price,
+      unitPrice,
       product.id,
       storeUrl,
       product.type || 'physical',
+      optionsLabel,
     )
     window.open(url, '_blank', 'noopener,noreferrer')
     if (onOrder) onOrder(product.id)
@@ -136,10 +166,8 @@ export default function ProductDetailOverlay({
             hasMultiple={hasMultiple}
             activeImg={activeImg}
             setActiveImg={setActiveImg}
-            variations={variations}
+            opts={opts}
             hasVariations={hasVariations}
-            selectedVariations={selectedVariations}
-            handleVariationSelect={handleVariationSelect}
             quantity={quantity}
             setQuantity={setQuantity}
             isOutOfStock={isOutOfStock}
@@ -151,7 +179,7 @@ export default function ProductDetailOverlay({
             cardBg={cardBg}
             isCartEnabled={isCartEnabled}
             isProOrPremium={isProOrPremium}
-            allVariationsSelected={allVariationsSelected}
+            canAddToCart={canAddToCart}
             handleAddToCart={handleAddToCart}
             handleOrder={handleOrder}
             addedFeedback={addedFeedback}
@@ -227,10 +255,8 @@ export default function ProductDetailOverlay({
         <div className="w-1/2 h-full overflow-y-auto flex flex-col p-6 pt-14">
           <DesktopDetails
             product={product}
-            variations={variations}
+            opts={opts}
             hasVariations={hasVariations}
-            selectedVariations={selectedVariations}
-            handleVariationSelect={handleVariationSelect}
             quantity={quantity}
             setQuantity={setQuantity}
             isOutOfStock={isOutOfStock}
@@ -241,7 +267,7 @@ export default function ProductDetailOverlay({
             btnClasses={btnClasses}
             isCartEnabled={isCartEnabled}
             isProOrPremium={isProOrPremium}
-            allVariationsSelected={allVariationsSelected}
+            canAddToCart={canAddToCart}
             handleAddToCart={handleAddToCart}
             handleOrder={handleOrder}
             addedFeedback={addedFeedback}
@@ -256,10 +282,10 @@ export default function ProductDetailOverlay({
 /* ── Mobile Content ── */
 function MobileContent({
   product, images, hasMultiple, activeImg, setActiveImg,
-  variations, hasVariations, selectedVariations, handleVariationSelect,
+  opts, hasVariations,
   quantity, setQuantity, isOutOfStock, isLowStock,
   textCol, headerFam, btnBg, btnClasses, cardBg,
-  isCartEnabled, isProOrPremium, allVariationsSelected,
+  isCartEnabled, isProOrPremium, canAddToCart,
   handleAddToCart, handleOrder, addedFeedback,
 }) {
   return (
@@ -334,19 +360,43 @@ function MobileContent({
           </span>
         )}
 
-        {/* Variation Selectors */}
+        {/* Options and extras */}
         {hasVariations && (
-          <div className="space-y-3">
-            {variations.map(group => (
+          <div className="space-y-4">
+            {opts.singleGroups.map(group => (
               <VariationGroup
                 key={group.groupName}
                 group={group}
-                selected={selectedVariations[group.groupName]}
-                onSelect={handleVariationSelect}
+                selected={opts.selection[group.groupName]}
+                onSelect={opts.selectSingle}
                 btnBg={btnBg}
                 textCol={textCol}
               />
             ))}
+            {opts.extrasGroups.map(group => (
+              <ExtrasGroup
+                key={group.groupName}
+                group={group}
+                selected={opts.selection[group.groupName]}
+                onToggle={opts.toggleExtra}
+                btnBg={btnBg}
+              />
+            ))}
+            {opts.extrasTotal > 0 && (
+              <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ backgroundColor: `${btnBg}0f` }}>
+                <span className="text-xs font-semibold opacity-70">
+                  ₦{opts.basePrice.toLocaleString()} + ₦{opts.extrasTotal.toLocaleString()} extras
+                </span>
+                <span className="text-sm font-extrabold" style={{ color: btnBg }}>
+                  ₦{opts.unitPrice.toLocaleString()} each
+                </span>
+              </div>
+            )}
+            {opts.stillNeeded.length > 0 && (
+              <p className="text-[11px] font-semibold text-amber-600">
+                Please choose {opts.stillNeeded.join(' and ')} first.
+              </p>
+            )}
           </div>
         )}
 
@@ -388,14 +438,14 @@ function MobileContent({
           <>
             <button
               onClick={handleAddToCart}
-              disabled={!allVariationsSelected}
+              disabled={!canAddToCart}
               className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all border border-current disabled:opacity-40 disabled:cursor-not-allowed rounded-xl`}
               style={{ color: btnBg, borderColor: btnBg, backgroundColor: `${btnBg}10` }}
             >
               {addedFeedback ? (
                 <>✓ Added</>
               ) : (
-                <><ShoppingCart size={15} /> Add to Cart</>
+                <><ShoppingCart size={15} /> Add · ₦{(opts.unitPrice * quantity).toLocaleString()}</>
               )}
             </button>
             {!isProOrPremium && (
@@ -425,10 +475,10 @@ function MobileContent({
 
 /* ── Desktop Details ── */
 function DesktopDetails({
-  product, variations, hasVariations, selectedVariations, handleVariationSelect,
+  product, opts, hasVariations,
   quantity, setQuantity, isOutOfStock, isLowStock,
   textCol, headerFam, btnBg, btnClasses,
-  isCartEnabled, isProOrPremium, allVariationsSelected,
+  isCartEnabled, isProOrPremium, canAddToCart,
   handleAddToCart, handleOrder, addedFeedback,
 }) {
   return (
@@ -463,19 +513,43 @@ function DesktopDetails({
           </span>
         )}
 
-        {/* Variation Selectors */}
+        {/* Options and extras */}
         {hasVariations && (
-          <div className="space-y-3">
-            {variations.map(group => (
+          <div className="space-y-4">
+            {opts.singleGroups.map(group => (
               <VariationGroup
                 key={group.groupName}
                 group={group}
-                selected={selectedVariations[group.groupName]}
-                onSelect={handleVariationSelect}
+                selected={opts.selection[group.groupName]}
+                onSelect={opts.selectSingle}
                 btnBg={btnBg}
                 textCol={textCol}
               />
             ))}
+            {opts.extrasGroups.map(group => (
+              <ExtrasGroup
+                key={group.groupName}
+                group={group}
+                selected={opts.selection[group.groupName]}
+                onToggle={opts.toggleExtra}
+                btnBg={btnBg}
+              />
+            ))}
+            {opts.extrasTotal > 0 && (
+              <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ backgroundColor: `${btnBg}0f` }}>
+                <span className="text-xs font-semibold opacity-70">
+                  ₦{opts.basePrice.toLocaleString()} + ₦{opts.extrasTotal.toLocaleString()} extras
+                </span>
+                <span className="text-sm font-extrabold" style={{ color: btnBg }}>
+                  ₦{opts.unitPrice.toLocaleString()} each
+                </span>
+              </div>
+            )}
+            {opts.stillNeeded.length > 0 && (
+              <p className="text-[11px] font-semibold text-amber-600">
+                Please choose {opts.stillNeeded.join(' and ')} first.
+              </p>
+            )}
           </div>
         )}
 
@@ -517,14 +591,14 @@ function DesktopDetails({
           <>
             <button
               onClick={handleAddToCart}
-              disabled={!allVariationsSelected}
+              disabled={!canAddToCart}
               className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-all border border-current disabled:opacity-40 disabled:cursor-not-allowed rounded-xl`}
               style={{ color: btnBg, borderColor: btnBg, backgroundColor: `${btnBg}10` }}
             >
               {addedFeedback ? (
                 <>✓ Added</>
               ) : (
-                <><ShoppingCart size={15} /> Add to Cart</>
+                <><ShoppingCart size={15} /> Add · ₦{(opts.unitPrice * quantity).toLocaleString()}</>
               )}
             </button>
             {!isProOrPremium && (
@@ -552,7 +626,10 @@ function DesktopDetails({
 }
 
 
-/* ── Variation Group Selector ── */
+/** "+₦15,000" next to an option that costs more. Nothing for a free one. */
+const priceSuffix = (opt) => (Number(opt?.price) > 0 ? ` +₦${Number(opt.price).toLocaleString()}` : '')
+
+/* ── Variation Group Selector (choose one) ── */
 function VariationGroup({ group, selected, onSelect, btnBg, textCol }) {
   const { groupName, displayType, options } = group
 
@@ -563,18 +640,20 @@ function VariationGroup({ group, selected, onSelect, btnBg, textCol }) {
         <div className="flex flex-wrap gap-2">
           {options.map(opt => {
             const isSelected = selected === opt.label
+            const soldOut = isSoldOut(opt)
             return (
               <button
                 key={opt.label}
-                onClick={() => onSelect(groupName, opt.label)}
+                onClick={() => !soldOut && onSelect(groupName, opt.label)}
+                disabled={soldOut}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
                   isSelected
                     ? 'text-white shadow-md'
                     : 'border-black/15 hover:border-black/30'
-                }`}
+                } ${soldOut ? 'opacity-40 line-through cursor-not-allowed' : ''}`}
                 style={isSelected ? { backgroundColor: btnBg, borderColor: btnBg } : { color: textCol }}
               >
-                {opt.label}
+                {opt.label}{priceSuffix(opt)}
               </button>
             )
           })}
@@ -624,7 +703,9 @@ function VariationGroup({ group, selected, onSelect, btnBg, textCol }) {
         >
           <option value="">Select {groupName}...</option>
           {options.map(opt => (
-            <option key={opt.label} value={opt.label}>{opt.label}</option>
+            <option key={opt.label} value={opt.label} disabled={isSoldOut(opt)}>
+              {opt.label}{priceSuffix(opt)}{isSoldOut(opt) ? ' (sold out)' : ''}
+            </option>
           ))}
         </select>
       </div>
@@ -648,4 +729,60 @@ function VariationGroup({ group, selected, onSelect, btnBg, textCol }) {
   }
 
   return null
+}
+
+
+/* ── Extras (tick as many as you like) ──
+   Checkboxes rather than pills: a customer must be able to see at a glance that
+   several can be taken at once, and what each one adds to the bill. */
+function ExtrasGroup({ group, selected, onToggle, btnBg }) {
+  const { groupName, options } = group
+  const picked = Array.isArray(selected) ? selected : []
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 mb-1.5">
+        <p className="text-xs font-semibold opacity-70">{groupName}</p>
+        <span className="text-[10px] font-semibold opacity-40">Optional</span>
+      </div>
+      <div className="space-y-1.5">
+        {options.map(opt => {
+          const isPicked = picked.includes(opt.label)
+          const soldOut = isSoldOut(opt)
+          const low = !soldOut && opt.stock !== null && opt.stock <= 5
+          return (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => !soldOut && onToggle(groupName, opt.label)}
+              disabled={soldOut}
+              aria-pressed={isPicked}
+              className={`w-full flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all ${
+                isPicked ? 'border-current shadow-sm' : 'border-black/10 hover:border-black/25'
+              } ${soldOut ? 'opacity-45 cursor-not-allowed' : ''}`}
+              style={isPicked ? { borderColor: btnBg, backgroundColor: `${btnBg}0f` } : undefined}
+            >
+              <span
+                className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border"
+                style={isPicked ? { backgroundColor: btnBg, borderColor: btnBg } : { borderColor: 'rgba(0,0,0,0.25)' }}
+              >
+                {isPicked && <Check size={11} className="text-white" strokeWidth={3} />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={`block truncate text-xs font-bold ${soldOut ? 'line-through' : ''}`}>{opt.label}</span>
+                {soldOut ? (
+                  <span className="text-[10px] font-semibold text-red-500">Sold out</span>
+                ) : low ? (
+                  <span className="text-[10px] font-semibold text-amber-600">Only {opt.stock} left</span>
+                ) : null}
+              </span>
+              <span className="flex-shrink-0 text-xs font-extrabold" style={{ color: btnBg }}>
+                {Number(opt.price) > 0 ? `+₦${Number(opt.price).toLocaleString()}` : 'Free'}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }

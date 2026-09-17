@@ -114,7 +114,7 @@ export default function CartDrawer({
               const lineTotal = Number(item.price) * item.quantity
               return (
                 <div
-                  key={item.id}
+                  key={item.lineId || item.id}
                   className={`p-3 flex items-start gap-3 ${activeThemeObj?.internalTabShellStyle?.cardClasses || 'bg-white rounded-2xl border border-stone-100 shadow-sm'}`}
                   style={activeThemeObj?.internalTabShellStyle?.cardClasses ? {} : { backgroundColor: cardBg }}
                 >
@@ -123,9 +123,9 @@ export default function CartDrawer({
                     <p className="font-semibold text-sm leading-snug line-clamp-2">
                       {item.name}
                     </p>
-                    {item.variationLabel && (
+                    {(item.optionsLabel || item.variationLabel) && (
                       <p className="text-[11px] mt-0.5 opacity-50 font-medium">
-                        {item.variationLabel}
+                        {item.optionsLabel || item.variationLabel}
                       </p>
                     )}
                     <p className="text-xs mt-0.5 opacity-60">
@@ -135,10 +135,11 @@ export default function CartDrawer({
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => {
+                          const lineId = item.lineId || item.id
                           if (item.quantity - 1 < 1) {
-                            onRemoveItem(item.id)
+                            onRemoveItem(lineId)
                           } else {
-                            onUpdateQuantity(item.id, item.quantity - 1)
+                            onUpdateQuantity(lineId, item.quantity - 1)
                           }
                         }}
                         className="w-7 h-7 rounded-lg border flex items-center justify-center opacity-60 hover:opacity-100 transition-all"
@@ -151,7 +152,7 @@ export default function CartDrawer({
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => onUpdateQuantity(item.lineId || item.id, item.quantity + 1)}
                         className="w-7 h-7 rounded-lg border flex items-center justify-center opacity-60 hover:opacity-100 transition-all"
                         style={{ borderColor: 'rgba(0,0,0,0.1)' }}
                         aria-label="Increase quantity"
@@ -167,7 +168,7 @@ export default function CartDrawer({
                       ₦{lineTotal.toLocaleString()}
                     </span>
                     <button
-                      onClick={() => onRemoveItem(item.id)}
+                      onClick={() => onRemoveItem(item.lineId || item.id)}
                       className="p-1.5 opacity-40 hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-all"
                       aria-label="Remove item"
                     >
