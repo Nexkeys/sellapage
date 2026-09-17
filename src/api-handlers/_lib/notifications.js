@@ -41,6 +41,9 @@ export const NOTIFICATION_TYPES = [
   'domain_verified',
   'cac_status',
   'team_joined',
+  'team_activity',
+  'ledger_entry',
+  'sella_reply',
   'subscription',
   'plan_expiring',
   'plan_downgraded',
@@ -84,6 +87,12 @@ const TYPE_MIN_PLAN = {
   abandoned_checkout: 'premium',
   loyalty_earned: 'premium',
   team_joined: 'premium',
+  // Both can only happen on a Premium store anyway (Team is Premium-only, so
+  // there is no staff member to report on below it, and Sella returns nothing
+  // below it either). Listed so the gate is stated rather than inferred from
+  // another feature's gate, which is exactly the coupling that rots.
+  team_activity: 'premium',
+  sella_reply: 'premium',
 }
 
 /**

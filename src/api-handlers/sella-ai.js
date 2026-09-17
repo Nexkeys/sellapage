@@ -20,6 +20,7 @@ import { webSearch, executeWriteAction, describeAction } from './_lib/sella-ai-t
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { validateReminder, formatWat, nowInWat } from './_lib/reminders.js'
 import { callModel, streamModel } from './_lib/openrouter.js'
+import { sendPushToStore } from './_lib/push-devices.js'
 
 // Model selection now lives in _lib/openrouter.js, which fails over across
 // several providers instead of depending on one. Previously a single NVIDIA NIM
@@ -809,6 +810,34 @@ export default async function handler(req, res) {
       title, messages: newMessages, updatedAt: nowIso,
       createdAt: chatSnap.exists ? (chatSnap.data().createdAt || nowIso) : nowIso,
     }, { merge: true })
+
+    // PUSH THE PERSON WHO ASKED, and nobody else.
+    //
+    // A turn can take a while (tool loops, a slow provider), and a vendor who
+    // switched apps while waiting had no way to know the answer had arrived
+    // short of going back to look. The app suppresses this while the Sella
+    // screen is open, so it only ever surfaces when they are elsewhere.
+    //
+    // onlyUids targets the asker's own devices. The owner must not be pushed a
+    // staff member's conversation, and another staff handset has no context for
+    // it. PUSH ONLY, no bell record, for the same reason: the reply already
+    // lives in the transcript written just above, and a store-wide record would
+    // put one person's chat in someone else's bell.
+    //
+    // Premium is enforced at the top of this handler, so there is no plan check
+    // here and none is needed.
+    if (reply) {
+      try {
+        await sendPushToStore(storeId, {
+          title: assistantName,
+          body: reply.slice(0, 140),
+          data: { type: 'sella_reply', sessionId },
+        }, { onlyUids: [decoded.uid] })
+      } catch (pushErr) {
+        // Never let a notification break an answer that already streamed.
+        console.error('[sella-ai] reply push failed:', pushErr?.message || pushErr)
+      }
+    }
 
     if (sources.length) sse('sources', { sources })
     // The human-readable confirm text is built HERE, once, from describeAction.

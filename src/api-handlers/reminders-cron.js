@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       .limit(BATCH)
       .get()
 
-    let pushed = 0, emailed = 0, skipped = 0, stale = 0
+    let pushed = 0, emailed = 0, skipped = 0, stale = 0, muted = 0
 
     let ranOut = false
 
@@ -119,6 +119,11 @@ export default async function handler(req, res) {
         },
       }, store, { allowUids: createdByUid ? [createdByUid] : [] })
       if (push.sent > 0) { delivered = 'push'; pushed++ }
+      // A muted Sella channel is a decision, not a delivery failure. Without
+      // this the fallbacks below would route around the vendor's own switch and
+      // put the reminder in their inbox instead, which is worse than the push
+      // they turned off.
+      else if (push.skipped === 'prefs') { delivered = 'muted'; muted++ }
 
       // FALLBACK 1: the legacy token, for vendors who registered before the
       // devices registry existed and have not opened the app since.
@@ -150,7 +155,7 @@ export default async function handler(req, res) {
       await markFired(db, doc.ref, r, delivered)
     }
 
-    const summary = { scanned: due.size, pushed, emailed, skipped, stale, ranOut, ms: Date.now() - startedAt }
+    const summary = { scanned: due.size, pushed, emailed, skipped, stale, muted, ranOut, ms: Date.now() - startedAt }
     console.log('[reminders-cron]', JSON.stringify(summary))
     return res.status(200).json({ ok: true, ...summary })
   } catch (err) {

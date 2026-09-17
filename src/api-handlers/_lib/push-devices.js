@@ -29,6 +29,13 @@ import { getMessaging } from 'firebase-admin/messaging'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getFirebaseAdminApp } from './firebase-admin.js'
 import { filterDevicesForType } from './notification-access.js'
+import {
+  DEFAULT_CHANNEL,
+  channelAllowed,
+  channelFor,
+  loadNotificationPrefs,
+  supportsNamedChannels,
+} from './notification-channels.js'
 
 export const DEVICES = 'devices'
 
@@ -202,48 +209,68 @@ export async function sendPushToDevices(devices, { title, body, data = {}, image
   let sent = 0
   let failed = 0
 
-  for (let i = 0; i < live.length; i += MULTICAST_CHUNK) {
-    const chunk = live.slice(i, i + MULTICAST_CHUNK)
+  // SPLIT BY WHAT THE INSTALL ACTUALLY HAS. A channelId naming a channel the
+  // installed app never created is undefined behaviour on Android and the push
+  // can be dropped with no error anywhere, so only installs from the release
+  // that creates the categories are sent one. Everything older keeps 'default',
+  // which every build since 1.0.1 creates.
+  //
+  // 'default' is still sent explicitly on the older bucket, for the reason in
+  // the note below: an absent channelId costs the heads-up banner.
+  const typeChannel = channelFor(data?.type)
+  const buckets = typeChannel === DEFAULT_CHANNEL
+    ? [{ devices: live, channelId: DEFAULT_CHANNEL }]
+    : [
+        { devices: live.filter((d) => supportsNamedChannels(d.appVersion)), channelId: typeChannel },
+        { devices: live.filter((d) => !supportsNamedChannels(d.appVersion)), channelId: DEFAULT_CHANNEL },
+      ]
 
-    let result
-    try {
-      result = await getMessaging().sendEachForMulticast({
-        tokens: chunk.map((d) => d.token),
-        notification: {
-          title,
-          body,
-          ...(imageUrl ? { imageUrl } : {}),
-        },
-        android: {
-          priority: 'high',
+  for (const bucket of buckets) {
+    if (!bucket.devices.length) continue
+
+    for (let i = 0; i < bucket.devices.length; i += MULTICAST_CHUNK) {
+      const chunk = bucket.devices.slice(i, i + MULTICAST_CHUNK)
+
+      let result
+      try {
+        result = await getMessaging().sendEachForMulticast({
+          tokens: chunk.map((d) => d.token),
           notification: {
-            sound: 'default',
-            // Must match a channel the app creates at HIGH importance. Without a
-            // channelId FCM drops the push onto its fallback channel, which gets
-            // default importance: no heads-up banner, easy to miss.
-            channelId: 'default',
+            title,
+            body,
             ...(imageUrl ? { imageUrl } : {}),
           },
-        },
-        data: payloadData,
+          android: {
+            priority: 'high',
+            notification: {
+              sound: 'default',
+              // Must match a channel the app creates at HIGH importance. Without a
+              // channelId FCM drops the push onto its fallback channel, which gets
+              // default importance: no heads-up banner, easy to miss.
+              channelId: bucket.channelId,
+              ...(imageUrl ? { imageUrl } : {}),
+            },
+          },
+          data: payloadData,
+        })
+      } catch (err) {
+        // Whole-chunk transport failure. Not evidence about any single token, so
+        // nothing is pruned; the devices stay live and the next send retries.
+        console.error('[push-devices] multicast chunk failed:', err?.message || err)
+        failed += chunk.length
+        continue
+      }
+
+      sent += result.successCount
+      failed += result.failureCount
+
+      result.responses.forEach((resp, idx) => {
+        if (resp.success) return
+        const code = resp.error?.code
+        if (DEAD_TOKEN_ERRORS.has(code)) dead.push(chunk[idx].id)
+        else console.error(`[push-devices] send failed (${code}) for device ${chunk[idx].id}`)
       })
-    } catch (err) {
-      // Whole-chunk transport failure. Not evidence about any single token, so
-      // nothing is pruned; the devices stay live and the next send retries.
-      console.error('[push-devices] multicast chunk failed:', err?.message || err)
-      failed += chunk.length
-      continue
     }
-
-    sent += result.successCount
-    failed += result.failureCount
-
-    result.responses.forEach((resp, idx) => {
-      if (resp.success) return
-      const code = resp.error?.code
-      if (DEAD_TOKEN_ERRORS.has(code)) dead.push(chunk[idx].id)
-      else console.error(`[push-devices] send failed (${code}) for device ${chunk[idx].id}`)
-    })
   }
 
   const pruned = await disableDevices(dead)
@@ -276,16 +303,46 @@ async function disableDevices(deviceIds) {
  * try/catch, and a notification must never be the reason a paid order fails to
  * finish recording.
  */
-export async function sendPushToStore(storeId, { title, body, data = {}, imageUrl = null }, { allowUids = [] } = {}) {
+export async function sendPushToStore(storeId, { title, body, data = {}, imageUrl = null }, { allowUids = [], onlyUids = [] } = {}) {
   try {
-    const linked = await listStoreDevices(storeId)
+    const [linked, prefs] = await Promise.all([
+      listStoreDevices(storeId),
+      loadNotificationPrefs(getAdminDb(), storeId),
+    ])
+
+    // The vendor's own switch, checked before anything is sent. Only the push
+    // is suppressed: the caller still writes the bell record, so a muted
+    // category is quiet rather than lost. `skipped` is surfaced so a caller with
+    // an email fallback does not route around the switch.
+    if (!channelAllowed(prefs, channelFor(data?.type))) {
+      return { sent: 0, failed: 0, pruned: 0, devices: 0, skipped: 'prefs' }
+    }
+
     if (!linked.length) return { sent: 0, failed: 0, pruned: 0, devices: 0 }
+
+    // `onlyUids` narrows to specific PEOPLE before the role filter, for events
+    // that belong to one person rather than to the store. A Sella reply is the
+    // case: it goes to whoever was chatting and to nobody else, so the owner is
+    // not pushed a staff member's conversation, and a second staff handset is
+    // not pushed a reply it has no context for.
+    //
+    // Being targeted also admits that person past the tab filter, since the
+    // caller has already decided this notification is theirs.
+    const targeted = onlyUids.length
+      ? linked.filter((d) => onlyUids.includes(d.linkedUid))
+      : linked
+    if (!targeted.length) return { sent: 0, failed: 0, pruned: 0, devices: 0 }
 
     // Not every linked device may see every notification. Staff handsets only
     // receive types their role's tabs cover, and deactivated staff receive
     // nothing. See _lib/notification-access.js for the rule and its evidence.
-    const devices = await filterDevicesForType(storeId, linked, data?.type, allowUids)
-    const withheld = linked.length - devices.length
+    const devices = await filterDevicesForType(
+      storeId,
+      targeted,
+      data?.type,
+      onlyUids.length ? [...allowUids, ...onlyUids] : allowUids,
+    )
+    const withheld = targeted.length - devices.length
     if (!devices.length) return { sent: 0, failed: 0, pruned: 0, devices: 0, withheld }
 
     const result = await sendPushToDevices(devices, { title, body, data, imageUrl })
