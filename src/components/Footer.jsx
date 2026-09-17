@@ -189,7 +189,7 @@ export default function Footer() {
                 promises one beyond "coming soon". */}
             <div className="mb-5">
               <PlayStoreBadge tone="light" />
-              <p className="text-gray-600 text-[10px] mt-2">iPhone app coming soon</p>
+              <p className="text-gray-600 text-[10px] mt-2">iOS app coming soon</p>
             </div>
 
             <div className="flex items-center gap-2.5">

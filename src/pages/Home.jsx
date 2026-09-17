@@ -806,7 +806,7 @@ export default function Home() {
               <div className="flex flex-wrap items-center gap-3">
                 <PlayStoreBadge />
                 <span className="inline-flex items-center rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-400">
-                  iPhone coming soon
+                  iOS coming soon
                 </span>
               </div>
             </Reveal>

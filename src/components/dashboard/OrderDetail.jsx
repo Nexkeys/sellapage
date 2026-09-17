@@ -15,8 +15,8 @@
 // rendered raw, exactly as the orders table does. Dividing by 100 here would
 // under-report every order by a factor of a hundred.
 import {
-  ArrowLeft, Package, User, Phone, Mail, MapPin, CreditCard, Truck,
-  Clock, FileText, ExternalLink, CalendarClock, Copy, Check,
+  ArrowLeft, Package, User, MapPin, CreditCard, Truck,
+  Clock, FileText, CalendarClock, Copy, Check,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -114,7 +114,7 @@ function CopyButton({ text }) {
   )
 }
 
-export default function OrderDetail({ record, kind = 'order', store, onBack }) {
+export default function OrderDetail({ record, kind = 'order', onBack }) {
   if (!record) return null
 
   const isBooking = kind === 'booking'
