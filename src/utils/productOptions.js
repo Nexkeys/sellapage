@@ -25,9 +25,12 @@
 // ever disagreed, a customer would see one price and be charged another. One
 // pure module, imported by both, is what stops that.
 //
-// STOCK IS NOT DECREMENTED. Product stock on this platform is a vendor-managed
-// number that hides the buy button at 0; nothing counts it down automatically.
-// Extra stock behaves identically, so the two cannot drift into different rules.
+// STOCK COUNTS DOWN ON PAID ORDERS (since 2026-09-18). Product stock and option
+// or extra stock are both decremented when Paystack confirms payment, by
+// src/api-handlers/_lib/stock.js, never at checkout start, so an abandoned
+// payment never eats stock. Blank stock still means "not tracked" and is never
+// touched. Extra stock follows the same rule as product stock, so the two
+// cannot drift into different rules.
 
 export const GROUP_SINGLE = 'single'
 export const GROUP_MULTI = 'multi'

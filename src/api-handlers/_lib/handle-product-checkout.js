@@ -7,6 +7,7 @@ import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
 import { markRecovered } from "./abandoned-checkout.js";
 import { sendTikTokPurchase } from "./tiktok-events.js";
 import { getTikTokEventsToken } from "./store-secrets.js";
+import { applyStockForOrder, stockAlertMessage } from "./stock.js";
 
 // Product-order branch of the paystack-webhook "checkout" dispatcher.
 // Moved verbatim out of paystack-webhook.js's former single checkout branch - logic
@@ -117,6 +118,24 @@ export async function handleProductCheckout(db, data, res) {
       changedByLabel: "Order Placed",
     }],
   });
+
+  // The order is paid and recorded: count its stock down. Once per order even
+  // if Paystack delivers this webhook twice at the same moment (see _lib/stock.js).
+  // Never throws. A crossing into low stock or sold out tells the vendor, and
+  // reaches Products staff, since restocking is their job.
+  const stockAlerts = await applyStockForOrder(db, storeId, orderRef, parsedCartItems);
+  for (const alert of stockAlerts) {
+    await notifyStore(db, storeId, {
+      type: "stock_low",
+      ...stockAlertMessage(alert),
+      data: {
+        productId: alert.productId,
+        name: alert.name,
+        stock: alert.stock,
+        ...(alert.option ? { option: alert.option } : {}),
+      },
+    });
+  }
 
   if (typeof promoCode === "string" && promoCode.trim()) {
     try {

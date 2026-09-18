@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { memoryRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 import { resolveRedemption } from './_lib/loyalty.js'
 import { recordCheckoutAttempt } from './_lib/abandoned-checkout.js'
+import { readStock } from './_lib/stock.js'
 import {
   normaliseGroups,
   priceSelection,
@@ -175,6 +176,9 @@ export default async function handler(req, res) {
     // ------------------------------------------------------------------
     let subtotal = 0;
     const verifiedCartItems = [];
+    // Units of each product across the whole cart. The same product can sit on
+    // two lines with different options, and stock is for the product.
+    const unitsByProduct = new Map();
 
     if (kind === "product") {
       const itemRefs = cartItems.map((item) =>
@@ -205,6 +209,29 @@ export default async function handler(req, res) {
         const quantity = Number(cartItems[i]?.quantity);
         if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 1000) {
           return res.status(400).json({ error: "Invalid quantity" });
+        }
+
+        // Product-level stock, when the vendor tracks it. Stock now counts down
+        // on every paid order (_lib/stock.js), so selling past it would be a
+        // real oversell rather than a stale display number. Options already get
+        // this check in priceSelection; this is the same rule for the product.
+        const productStock = readStock(product.stock);
+        if (productStock !== null) {
+          const wanted = (unitsByProduct.get(snap.id) || 0) + quantity;
+          unitsByProduct.set(snap.id, wanted);
+          const itemName = product.name || "An item";
+          if (productStock === 0) {
+            return res.status(400).json({
+              error: "item_sold_out",
+              message: `${itemName} has just sold out. Please remove it and try again.`,
+            });
+          }
+          if (wanted > productStock) {
+            return res.status(400).json({
+              error: "item_stock",
+              message: `Only ${productStock} ${itemName} left. Please lower the quantity and try again.`,
+            });
+          }
         }
 
         const basePrice = Number(product.price);
@@ -262,6 +289,29 @@ export default async function handler(req, res) {
             error: "option_required",
             message: `Please choose ${missing.join(" and ")} for ${product.name || "an item"} before paying.`,
           });
+        }
+
+        // Option and extra stock across the WHOLE order. priceSelection checks
+        // one unit of the product, which is right for the price but not for
+        // stock: 2 pots with 3 chickens each takes 6 chickens. That used to be a
+        // recorded nuance, harmless while stock never moved; now that paid
+        // orders count it down, it would be a real oversell.
+        for (const pick of chosen) {
+          if (pick.free) continue;
+          const group = groups.find((g) => g.groupName === pick.groupName);
+          const option = group?.options.find((o) => o.label === pick.label);
+          if (!option || option.stock === null) continue;
+          const key = `${snap.id}|${pick.groupName}|${pick.label}`;
+          const total = (unitsByProduct.get(key) || 0) + pick.qty * quantity;
+          unitsByProduct.set(key, total);
+          if (total > option.stock) {
+            return res.status(400).json({
+              error: "option_stock",
+              message: option.stock > 0
+                ? `Only ${option.stock} ${pick.label} left in total. Please lower the quantity and try again.`
+                : `${pick.label} has just sold out. Please remove it and try again.`,
+            });
+          }
         }
 
         const unitPrice = basePrice + extrasTotal;

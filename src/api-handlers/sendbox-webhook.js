@@ -153,6 +153,35 @@ export default async function handler(req, res) {
 
     const db = getAdminDb()
 
+    // PERMANENT RECORD OF WHAT SENDBOX ACTUALLY SENDS.
+    //
+    // STATUS_MAP above was built from Sendbox's documentation, not from live
+    // payloads, and the only way to confirm it is to see real ones. Vercel
+    // Hobby keeps runtime logs for ONE HOUR, so console output cannot answer
+    // the question: by the time anyone looks, the evidence is gone.
+    //
+    // So every status code received is tallied here, mapped or not, with its
+    // human label and whether we acted on it. After a few real shipments this
+    // document IS the answer. One merge write per webhook, never throws.
+    // webhookAudit/* has no rule, so Firestore's default deny keeps it
+    // server-only.
+    try {
+      const key = String(statusCode || 'none').toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 60)
+      await db.collection('webhookAudit').doc('sendbox').set({
+        codes: {
+          [key]: {
+            count: FieldValue.increment(1),
+            label: String(statusLabel || '').slice(0, 120),
+            mappedTo: STATUS_MAP[statusCode] || null,
+            lastSeenAt: new Date().toISOString(),
+          },
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true })
+    } catch (auditErr) {
+      console.error('[sendbox-webhook] audit write failed:', auditErr?.message || auditErr)
+    }
+
     const ordersQuery = await db
       .collectionGroup('orders')
       .where('sendboxOrderCode', '==', code)

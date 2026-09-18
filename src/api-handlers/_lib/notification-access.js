@@ -67,6 +67,14 @@ export const TYPE_TABS = {
   loyalty_earned: ['loyalty'],
   abandoned_checkout: ['abandoned'],
   reminder: ['reminders'],
+  // Operational nudges go to whoever works that tab: an Orders staff member is
+  // the person who needs to know an order has sat for a day.
+  order_reminder: ['orders'],
+  booking_reminder: ['bookings'],
+  discount_expiring: ['discounts'],
+  stock_low: ['products'],
+  // The digests (morning_greeting, evening_summary and the period summaries)
+  // are deliberately ABSENT, so owner-only: they carry the store's revenue.
 }
 
 /**

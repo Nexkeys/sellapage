@@ -1,0 +1,63 @@
+# Scheduled vendor notifications. Calls /api/digest-cron, which does the work.
+#
+# WHY GITHUB ACTIONS: Vercel Hobby has no usable cron for this, and the
+# existing crons (expiry, reminders, booking reminders) are triggered from
+# cron-job.org, which hangs up at 30 seconds. A digest run over every linked
+# store can take longer than that, so the endpoint works in chunks and this
+# loop keeps calling it until it reports done. There is no 30 second ceiling
+# here.
+#
+# SETUP (once): GitHub repo > Settings > Secrets and variables > Actions >
+# New repository secret, name CRON_SECRET, value identical to CRON_SECRET in
+# Vercel. Without it every call returns 401 and the run fails loudly.
+#
+# TIMING: cron here is UTC and Lagos is UTC+1 with no daylight saving.
+#   07:00 UTC = 08:00 WAT   morning
+#   21:00 UTC = 22:00 WAT   evening
+# GitHub may start a scheduled run late when it is busy. The endpoint allows
+# for that: an evening run that starts after midnight still summarises the day
+# that just ended, and every send is recorded per store per period, so a late
+# or repeated run never sends anything twice.
+
+name: Scheduled notifications
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run now
+        required: true
+        type: choice
+        options:
+          - morning
+          - evening
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Call digest-cron until done
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          JOB: ${{ github.event.inputs.job || (github.event.schedule == '0 7 * * *' && 'morning' || 'evening') }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "CRON_SECRET repository secret is not set"; exit 1
+          fi
+          cursor=0
+          for batch in $(seq 1 60); do
+            resp=$(curl -sS --fail-with-body --max-time 75 \
+              -H "x-cron-secret: ${CRON_SECRET}" \
+              "https://www.sellapage.com.ng/api/digest-cron?job=${JOB}&cursor=${cursor}")
+            echo "batch ${batch}: ${resp}"
+            if [ "$(echo "${resp}" | jq -r '.done')" = "true" ]; then
+              exit 0
+            fi
+            cursor=$(echo "${resp}" | jq -r '.next')
+          done
+          echo "Stopped after 60 batches without finishing"; exit 1

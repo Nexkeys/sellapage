@@ -206,6 +206,14 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/admin-push.js")
         return handler(req, res)
       }
+      case "digest-cron": {
+        const { default: handler } = await import("../src/api-handlers/digest-cron.js")
+        return handler(req, res)
+      }
+      case "lead-submit": {
+        const { default: handler } = await import("../src/api-handlers/lead-submit.js")
+        return handler(req, res)
+      }
       case "notification-prefs": {
         const { default: handler } = await import("../src/api-handlers/notification-prefs.js")
         return handler(req, res)

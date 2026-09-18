@@ -44,6 +44,16 @@ export const NOTIFICATION_TYPES = [
   'team_activity',
   'ledger_entry',
   'sella_reply',
+  'order_reminder',
+  'booking_reminder',
+  'discount_expiring',
+  'stock_low',
+  'morning_greeting',
+  'evening_summary',
+  'daily_summary',
+  'weekly_summary',
+  'monthly_summary',
+  'yearly_summary',
   'subscription',
   'plan_expiring',
   'plan_downgraded',
@@ -93,6 +103,22 @@ const TYPE_MIN_PLAN = {
   // another feature's gate, which is exactly the coupling that rots.
   team_activity: 'premium',
   sella_reply: 'premium',
+
+  // Scheduled and stock notifications, gated by the same tab rule as above.
+  // Orders, bookings, discounts and stock only exist where checkout exists,
+  // Pro and above. The figures digests follow the Analytics tab, Growth and
+  // above; evening_summary is about SALES, which a store without checkout
+  // cannot have, so it follows Orders instead. morning_greeting is deliberately
+  // ungated: it is a greeting, not a feature.
+  order_reminder: 'pro',
+  booking_reminder: 'pro',
+  discount_expiring: 'pro',
+  stock_low: 'pro',
+  evening_summary: 'pro',
+  daily_summary: 'growth',
+  weekly_summary: 'growth',
+  monthly_summary: 'growth',
+  yearly_summary: 'growth',
 }
 
 /**

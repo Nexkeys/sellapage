@@ -12,6 +12,8 @@ function timingSafeMatch(provided, expected) {
 
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { sendEmail } from './_lib/send-email.js'
+import { notifyStore } from './_lib/notifications.js'
+import { bookingStartMs } from './_lib/digests.js'
 
 // Triggered by an external cron-job.org job (same pattern as expiry-cron.js -
 // this project has no Vercel Cron, so scheduling lives outside the codebase).
@@ -89,7 +91,11 @@ export default async function handler(req, res) {
         continue
       }
 
-      const bookingStart = new Date(`${booking.bookingDate}T${booking.bookingTime || '00:00'}`)
+      // Parsed as LAGOS time. This used to be `new Date('YYYY-MM-DDTHH:MM')`,
+      // which parses in the SERVER's zone, and Vercel runs in UTC: a 10:00
+      // booking was read as 11:00 Lagos, so every "within two hours" check ran
+      // an hour late and a reminder could land after the booking had started.
+      const bookingStart = new Date(bookingStartMs(booking.bookingDate, booking.bookingTime))
       if (Number.isNaN(bookingStart.getTime()) || bookingStart.getTime() < now) {
         // Malformed date, or the window already passed - too late to remind.
         batch.update(doc.ref, { reminderSent: true })
@@ -106,6 +112,20 @@ export default async function handler(req, res) {
 
       try {
         const storeData = await getStore(storeId)
+
+        // Push alongside the email, and independent of it: a vendor with no
+        // email on file still has a phone. notifyStore never throws, applies
+        // the Pro gate and the vendor's switches, and routes to Bookings staff.
+        if (storeData) {
+          const push = await notifyStore(db, storeId, {
+            type: 'booking_reminder',
+            title: 'Booking coming up ⏰',
+            body: `${booking.customerName || 'A customer'}: ${booking.serviceName || 'a booking'} at ${booking.bookingTime || 'the booked time'}.`,
+            data: { kind: 'soon', bookingId: doc.id },
+          }, storeData)
+          if (push.sent > 0) summary.pushed = (summary.pushed || 0) + 1
+        }
+
         if (storeData?.email) {
           await sendEmail(
             storeData.email,

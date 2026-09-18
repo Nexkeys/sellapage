@@ -167,6 +167,37 @@ export default async function handler(req, res) {
       payload?.status, payload?.shipmentStatus, payload?.event,
     )
 
+    // PERMANENT RECORD OF WHAT TOPSHIP ACTUALLY SENDS.
+    //
+    // The RAW PAYLOAD log above was meant to become the spec, but Vercel Hobby
+    // keeps runtime logs for ONE HOUR, so a delivery that lands overnight is
+    // gone before anyone reads it. This keeps the evidence: a tally per status
+    // value, plus the latest full payload for each one, trimmed. Bounded by the
+    // number of distinct statuses Topship uses, not by traffic.
+    //
+    // Written BEFORE the early return below on purpose: a payload whose ids we
+    // failed to find is exactly the one whose shape we most need to see.
+    // webhookAudit/* has no rule, so Firestore's default deny keeps it
+    // server-only. Never throws.
+    try {
+      const key = String(rawStatus || 'none').toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 60) || 'none'
+      await getAdminDb().collection('webhookAudit').doc('topship').set({
+        statuses: {
+          [key]: {
+            count: FieldValue.increment(1),
+            raw: String(rawStatus || '').slice(0, 120),
+            mappedTo: classifyTopshipStatus(rawStatus) || null,
+            hadIds: Boolean(trackingId || shipmentId),
+            lastPayload: JSON.stringify(body).slice(0, 4000),
+            lastSeenAt: new Date().toISOString(),
+          },
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true })
+    } catch (auditErr) {
+      console.error('[topship-webhook] audit write failed:', auditErr?.message || auditErr)
+    }
+
     if (!trackingId && !shipmentId) {
       console.log('[topship-webhook] No tracking id or shipment id in payload - ignoring')
       return res.status(200).json({ received: true })

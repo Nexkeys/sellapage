@@ -26,6 +26,13 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
   const [loading, setLoading]   = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError]       = useState('')
+  // Bot traps checked by /api/lead-submit: a hidden field a person never fills,
+  // and how long the form was open. Neither is visible or asks anything of a
+  // real customer.
+  const [hp, setHp]             = useState('')
+  // Lazy initialiser, so the clock is read once when the form mounts rather
+  // than on every render.
+  const [openedAt]              = useState(() => Date.now())
 
   const update = field => e => setForm(p => ({ ...p, [field]: e.target.value }))
 
@@ -38,10 +45,15 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
     setLoading(true)
     setError('')
     try {
-      await saveLead(storeId, storeName, { ...form, leadType })
+      await saveLead(storeId, storeName, {
+        ...form,
+        leadType,
+        hp,
+        elapsedMs: Date.now() - openedAt,
+      })
       setSubmitted(true)
-    } catch {
-      setError('Could not send your message. Please try again.')
+    } catch (err) {
+      setError(err?.message || 'Could not send your message. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -78,6 +90,17 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Honeypot: off-screen, unfocusable, ignored by autofill. Bots fill it. */}
+        <input
+          type="text"
+          name="company"
+          value={hp}
+          onChange={e => setHp(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+        />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label style={muted} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
