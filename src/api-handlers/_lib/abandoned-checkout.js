@@ -221,7 +221,7 @@ export async function sendRecoveryEmail(db, storeId, storeData, reference, sendE
     await sendEmail(
       record.customerEmail,
       `You left something behind at ${storeData.businessName || 'our store'}`,
-      buildRecoveryHtml(storeData, record),
+      buildRecoveryHtml(storeData, record), { sender: 'orders' },
     )
   } catch (err) {
     console.error('[abandoned-checkout] send failed', err)

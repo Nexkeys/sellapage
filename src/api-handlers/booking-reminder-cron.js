@@ -168,7 +168,7 @@ export default async function handler(req, res) {
                 </div>
                 <p style="font-size: 13px; color: #666666; margin-top: 20px;">The Sellapage Team</p>
               </div>
-            `,
+            `, { sender: 'orders' },
           )
           summary.reminded++
         } else {

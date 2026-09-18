@@ -49,6 +49,9 @@ const TAB_ACCESS = {
   partners:       ['super_admin'],
   // A mailing list: marketing's job, and it holds no money or credentials.
   newsletter:     ['super_admin', 'marketing'],
+  // Email broadcasts: reaches every user's inbox and cannot be recalled, the
+  // same weight as push, so the same two roles.
+  email:          ['super_admin', 'marketing'],
 }
 
 /**

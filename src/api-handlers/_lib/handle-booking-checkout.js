@@ -223,7 +223,7 @@ export async function handleBookingCheckout(db, data, res) {
               This booking was made via Sellapage · sellapage.com.ng
             </div>
           </div>
-        `,
+        `, { sender: 'orders' },
       ),
       storeData.fcmToken
         ? sendPush(
@@ -300,7 +300,7 @@ export async function handleBookingCheckout(db, data, res) {
                   This booking was made via Sellapage · sellapage.com.ng
                 </div>
               </div>
-            `,
+            `, { sender: 'orders' },
           )
         : Promise.resolve(),
     ]);

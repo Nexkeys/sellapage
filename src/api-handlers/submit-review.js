@@ -131,7 +131,7 @@ export default async function handler(req, res) {
       const pushBody = `${customerName || 'A customer'} reviewed ${itemName || 'your item'}: ${cleanedReviewText || 'No written review'}`
 
       await Promise.all([
-        emailTo ? sendEmail(emailTo, subject, html) : Promise.resolve(),
+        emailTo ? sendEmail(emailTo, subject, html, { sender: 'orders' }) : Promise.resolve(),
         // `type` was the one push in the system missing it. The app switches on
         // data.type to route a tap, so without it a review notification is the
         // single case that cannot be opened to anywhere.

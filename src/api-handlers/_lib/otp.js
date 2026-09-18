@@ -233,7 +233,7 @@ export async function createEmailChallenge(db, { uid, purpose, email, businessNa
         <strong>If you did not request this, do not share this code.</strong> Someone may have your password - change it immediately.
       </p>
       <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">Sellapage will never ask you for this code by phone, WhatsApp or email.</p>
-    </div>`,
+    </div>`, { sender: 'noreply' },
   )
 
   return {

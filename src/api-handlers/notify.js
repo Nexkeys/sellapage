@@ -190,7 +190,7 @@ export default async function handler(req, res) {
                 </div>
               </body>
               </html>
-            `
+            `, { sender: 'hello' }
           )
         )
       }
@@ -220,7 +220,7 @@ export default async function handler(req, res) {
                   Sellapage · sellapage.com.ng
                 </div>
               </div>
-            `
+            `, { sender: 'noreply' }
           )
         )
       }

@@ -35,6 +35,7 @@ const TAB_ACCESS = {
   reviews: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
   partners: [ADMIN_ROLES.SUPER_ADMIN],
   newsletter: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
+  email: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
 }
 
 export async function getAdminRole(uid) {

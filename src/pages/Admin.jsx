@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
@@ -15,6 +15,7 @@ import WhatsAppConsole from '../components/admin/WhatsAppConsole';
 import PushConsole from '../components/admin/PushConsole';
 import PartnersAdmin from '../components/admin/PartnersAdmin';
 import NewsletterAdmin from '../components/admin/NewsletterAdmin';
+import EmailBroadcast from '../components/admin/EmailBroadcast';
 import { SkeletonRows } from '../components/Skeleton';
 
 const ADMIN_TABS = [
@@ -26,6 +27,7 @@ const ADMIN_TABS = [
   { id: 'domains', label: 'Custom Domains', icon: Link2, short: 'Domains' },
   { id: 'announcements', label: 'Announcements', icon: Megaphone, short: 'Alerts' },
   { id: 'push', label: 'Push Broadcast', icon: Bell, short: 'Push' },
+  { id: 'email', label: 'Email Broadcast', icon: Send, short: 'Email' },
   { id: 'tickets', label: 'Support Tickets', icon: LifeBuoy, short: 'Tickets' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, short: 'Analytics' },
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
@@ -46,7 +48,7 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics', 'partners'] },
-  { label: 'Engagement', ids: ['announcements', 'push', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
+  { label: 'Engagement', ids: ['announcements', 'push', 'email', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
   // the mobile drawer iterates these groups. Any new tab must be added here too.
@@ -1127,6 +1129,7 @@ export default function Admin() {
         {activeTab === 'newsletter' && <NewsletterAdmin authHeaders={H} />}
 
         {activeTab === 'push' && <PushConsole authHeaders={H} />}
+        {activeTab === 'email' && <EmailBroadcast authHeaders={H} />}
 
         {/* TEAM */}
         {activeTab === 'admins' && <div className="space-y-4 animate-in fade-in duration-200">

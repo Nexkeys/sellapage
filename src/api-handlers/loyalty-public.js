@@ -117,7 +117,7 @@ export default async function handler(req, res) {
                 </p>
               </div>
             </div>
-          `,
+          `, { sender: 'orders' },
         ).catch(() => {})
       }
 

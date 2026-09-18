@@ -217,7 +217,7 @@ export default async function handler(req, res) {
             </div>
           </div>
         `
-        await sendEmail(storeData.email, `Shipment Booked - Tracking ${trackingId || ''}`.trim(), html)
+        await sendEmail(storeData.email, `Shipment Booked - Tracking ${trackingId || ''}`.trim(), html, { sender: 'orders' })
       }
     } catch (err) {
       console.error('[topship-create-shipment] vendor email failed (non-fatal):', err)

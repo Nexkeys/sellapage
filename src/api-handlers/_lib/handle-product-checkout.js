@@ -381,7 +381,7 @@ export async function handleProductCheckout(db, data, res) {
             </p>
           </div>
         </div>
-      `,
+      `, { sender: 'orders' },
     ).catch(() => {});
   }
 
@@ -441,7 +441,7 @@ export async function handleProductCheckout(db, data, res) {
               This order was placed via Sellapage · sellapage.com.ng
             </div>
           </div>
-        `,
+        `, { sender: 'orders' },
       ),
       storeData.fcmToken
         ? sendPush(
@@ -533,7 +533,7 @@ export async function handleProductCheckout(db, data, res) {
                   This order was placed via Sellapage · sellapage.com.ng
                 </div>
               </div>
-            `,
+            `, { sender: 'orders' },
           )
         : Promise.resolve(),
     ]);

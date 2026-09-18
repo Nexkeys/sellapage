@@ -153,7 +153,7 @@ export default async function handler(req, res) {
                       Nothing changes on your account unless our team approves this request.
                     </p>
                   </div>
-                </div>`,
+                </div>`, { sender: 'noreply' },
               )
             } catch (err) {
               console.error('[account-recovery] owner notice failed:', err.message)
@@ -293,7 +293,7 @@ export default async function handler(req, res) {
       ]) {
         if (!addr) continue
         try {
-          await sendEmail(addr, 'Sellapage account recovery completed', notice(heading, colour))
+          await sendEmail(addr, 'Sellapage account recovery completed', notice(heading, colour), { sender: 'noreply' })
         } catch (err) {
           console.error('[account-recovery] completion notice failed:', err.message)
         }

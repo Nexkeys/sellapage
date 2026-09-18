@@ -1,17 +1,25 @@
 // ============================================================================
 // SELLAPAGE — FIRESTORE SECURITY RULES
 // ============================================================================
-// Last updated: 2026-09-18 (phone-first signup)
+// Last updated: 2026-09-18 (stores create closed, phone-first signup)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-18  /stores `allow create` CLOSED (`allow create: if false`).
+//               Stores are created only by /api/signup-phone (Admin SDK) after
+//               the SMS code is verified. The website stopped writing the store
+//               from the browser in commit cb4490c. The Play Store app's old
+//               signup (client-side store write) was already not working, so
+//               nothing that works today is broken by this; the app's next
+//               release must use /api/signup-phone (Docs/App-Phone-Signup-Handoff.md).
+//               ORDER: publish AFTER cb4490c is Ready on Vercel. Before that,
+//               the old web bundle still creates stores from the browser.
+//               The old create rule's pinned values (plan starter, no money /
+//               verification / integration / design fields, product caps) are
+//               gone with it: nothing a client sends can create a store now.
 //   2026-09-18  Phone-first signup. Added `match /signupChallenges/{phone}`
 //               and `match /verifiedPhones/{phone}`, both server only. Default
 //               deny already covered both; they are listed so nobody mistakes
 //               "no rule" for an oversight. SAFE TO PUBLISH ANY TIME.
-//               NOT CHANGED YET, deliberately: `allow create` on /stores. The
-//               website no longer uses it, but the Android app's signup does.
-//               See "STEP 2" at that rule: flip it to `if false` only after the
-//               app update that calls /api/signup-phone is live.
 //   2026-09-18  Leads: client `create` CLOSED (`allow create: if false`).
 //               Storefront leads now go through /api/lead-submit on the Admin
 //               SDK, which notifies the vendor, rate-limits per store, and
@@ -32,6 +40,11 @@
 //               stores/{id}/private/notificationPrefs and
 //               stores/{id}/meta/digests + meta/teamActivity sit under the
 //               existing server-only `private` and `meta` blocks.
+//   2026-09-18b Email Broadcast: top-level `emailCampaigns` (with its
+//               `recipients` subcollection), `emailSuppressions` and
+//               `emailQuota`, all server only. Default deny already covers
+//               them; explicit so nobody reads "no rule" as an oversight.
+//               Safe to publish any time: no client reads or writes them.
 //   PUBLISHED   Every entry below, up to and including 2026-09-11, was
 //               published by Nex (confirmed 2026-09-12). The "NOT YET
 //               PUBLISHED" notes below are kept as history.
@@ -289,33 +302,19 @@ service cloud.firestore {
       // NEVER write a secret onto this document.
       allow read: if true;
 
-      // CREATE. Since 2026-09-18 the WEBSITE never creates a store from the
-      // browser: /api/signup-phone creates it on the Admin SDK after the SMS
-      // code is verified. This client path stays open ONLY for the Android
-      // app's own signup, which still writes the store directly.
+      // CREATE — CLOSED to every client (2026-09-18). A store is created ONLY
+      // by /api/signup-phone on the Admin SDK, after the vendor's SMS code has
+      // been verified with Termii. That handler writes the store already
+      // phone-verified and claims the number in verifiedPhones in the same
+      // transaction. Neither the website nor the Android app may create a
+      // store document directly any more: a direct create would skip the
+      // phone code, the one-number-one-store claim and the 3-a-day SMS caps,
+      // which is exactly how a bot signup would get in.
       //
-      // ⚠️ STEP 2, once the app ships its switch to /api/signup-phone: replace
-      // this whole `allow create` rule with
-      //     allow create: if false;
-      // Until then a script can still create a store without a phone code by
-      // calling Firebase directly, exactly as before this change. Doing it
-      // BEFORE the app update breaks every signup made in the app.
-      //
-      // The pinned values below still apply to that remaining client path.
-      // Money, verification and integration fields must be absent entirely.
-      allow create: if request.auth != null
-                    && request.auth.uid == storeId
-                    && !request.resource.data.keys().hasAny(moneyFields())
-                    && !request.resource.data.keys().hasAny(verificationFields())
-                    && !request.resource.data.keys().hasAny(integrationFields())
-                    && !request.resource.data.keys().hasAny(designFields())
-                    && request.resource.data.get('plan', 'starter') == 'starter'
-                    && request.resource.data.get('hasGrowthFeatures', false) == false
-                    && request.resource.data.get('hasProFeatures', false) == false
-                    && request.resource.data.get('hasPremiumFeatures', false) == false
-                    && request.resource.data.get('maxProducts', 15) <= 15
-                    && request.resource.data.get('maxImagesPerProduct', 3) <= 3
-                    && request.resource.data.get('maxJobListings', 5) <= 5;
+      // The Android app's old signup wrote this document from the client SDK;
+      // it must call /api/signup-phone (send, then complete) and sign in with
+      // the custom token it returns. See Docs/App-Phone-Signup-Handoff.md.
+      allow create: if false;
 
       // UPDATE — the owner may edit their own store, but never the locked
       // fields. affectedKeys() inspects only what actually changed, so an
@@ -767,6 +766,25 @@ service cloud.firestore {
     // carry customer names and delivery addresses. Read it in the Firebase
     // console, never from a client.
     match /webhookAudit/{docId} {
+      allow read, write: if false;
+    }
+
+    // Admin > Email Broadcast (2026-09-18). All server only, written through
+    // /api/admin-email, /api/email-broadcast-cron and /api/email-unsubscribe.
+    //   emailCampaigns       drafts, schedules and each campaign's recipient
+    //                        log (the recipients subcollection holds emails)
+    //   emailSuppressions    everyone who unsubscribed from broadcasts
+    //   emailQuota           per-day count of broadcast sends
+    match /emailCampaigns/{campaignId} {
+      allow read, write: if false;
+      match /recipients/{recipientId} {
+        allow read, write: if false;
+      }
+    }
+    match /emailSuppressions/{emailKey} {
+      allow read, write: if false;
+    }
+    match /emailQuota/{day} {
       allow read, write: if false;
     }
 

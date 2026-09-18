@@ -79,6 +79,11 @@ export default async function handler(req, res) {
 
     const db = getAdminDb()
     const ref = db.collection('newsletterSubscribers').doc(idForEmail(email))
+
+    // Signing up again is a fresh, explicit opt-in, so it lifts an earlier
+    // unsubscribe (emailSuppressions uses the same id scheme). Without this a
+    // person who unsubscribed once could never receive the newsletter again.
+    await db.collection('emailSuppressions').doc(idForEmail(email)).delete().catch(() => {})
     const existing = await ref.get()
     const now = new Date()
 

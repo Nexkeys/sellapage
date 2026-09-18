@@ -237,7 +237,7 @@ export async function executeWriteAction(db, storeId, action) {
               <p style="color:#374151">Hi ${order.customerName || 'there'}, your order status is now <strong>${newStatus}</strong>.</p>
               ${newStatus === 'delivered' && reviewToken ? `<p><a href="https://sellapage.com.ng/review?token=${reviewToken}" style="background:#16a34a;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Leave a Review</a></p>` : ''}
               <p style="color:#9ca3af;font-size:12px">Powered by Sellapage</p>
-            </div>`
+            </div>`, { sender: 'orders' }
           )
         } catch (e) {
           console.error('[sella-ai] order status email failed:', e?.message || e)
@@ -300,7 +300,7 @@ export async function executeWriteAction(db, storeId, action) {
               <p style="color:#374151">Hi ${booking.customerName || 'there'}, your booking status is now <strong>${newStatus}</strong>.</p>
               ${newStatus === 'completed' && reviewToken ? `<p><a href="https://sellapage.com.ng/review?token=${reviewToken}" style="background:#16a34a;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Leave a Review</a></p>` : ''}
               <p style="color:#9ca3af;font-size:12px">Powered by Sellapage</p>
-            </div>`
+            </div>`, { sender: 'orders' }
           )
         } catch (e) {
           console.error('[sella-ai] booking status email failed:', e?.message || e)

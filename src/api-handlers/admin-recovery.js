@@ -120,7 +120,7 @@ export default async function handler(req, res) {
             This link expires in 30 minutes and can be used once. All devices will be signed out.
           </p>
           <p style="font-size:12px;color:#9ca3af;margin:12px 0 0;">If you did not request this, ignore this email and contact support.</p>
-        </div>`,
+        </div>`, { sender: 'noreply' },
       )
 
       // Second tripwire on the ORIGINAL address - the real owner gets a chance
@@ -140,7 +140,7 @@ export default async function handler(req, res) {
                   <strong>If this was not you, reply to this email immediately.</strong>
                 </p>
               </div>
-            </div>`,
+            </div>`, { sender: 'noreply' },
           )
         } catch (err) {
           console.error('[admin-recovery] owner alert failed:', err.message)

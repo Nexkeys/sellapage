@@ -90,7 +90,7 @@ export default async function handler(req, res) {
 </div>`
 
     // Send email
-    await sendEmail(email, 'Reset your Sellapage password', html)
+    await sendEmail(email, 'Reset your Sellapage password', html, { sender: 'noreply' })
 
     return res.status(200).json({ success: true })
   } catch (err) {
