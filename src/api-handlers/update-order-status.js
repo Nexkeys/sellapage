@@ -6,6 +6,7 @@ import { sendPush } from './_lib/send-push.js'
 import { notifyStore } from './_lib/notifications.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { reverseOrderLoyalty } from './_lib/loyalty.js'
+import { announceTeamActivity } from './_lib/team-activity.js'
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -112,6 +113,14 @@ export default async function handler(req, res) {
     }
 
     await orderRef.update(updatePayload)
+
+    // A staff member moved an order: tell the owner (throttled, never throws,
+    // silent for the owner's own changes). See _lib/team-activity.js.
+    await announceTeamActivity(db, storeId, access, {
+      tab: 'orders',
+      action: 'status',
+      body: `marked ${orderData.customerName || 'a customer'}'s order as ${newStatus}.`,
+    })
 
     // Cancelling reverses this order's loyalty effect: take back what it earned,
     // give back what it spent. `loyaltyReversed` guards it, because a vendor can

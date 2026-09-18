@@ -4,6 +4,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 import { sendEmail } from './_lib/send-email.js'
 import { sendPush } from './_lib/send-push.js'
+import { notifyStore } from './_lib/notifications.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -233,6 +234,20 @@ export default async function handler(req, res) {
           )
         )
       }
+      // The device registry, so the alert reaches the mobile app and every
+      // device the owner has. Until this, security_alert only ever went to the
+      // single legacy token above, so an app phone never heard about a login.
+      // Owner only (no staff tab maps to it), every plan, never throws.
+      // send-push.js skips any legacy token that is also a registered device,
+      // so a phone on both paths still gets it once.
+      notifications.push(
+        notifyStore(db, decodedToken.uid, {
+          type: 'security_alert',
+          title: 'New Login Detected 🔐',
+          body: 'Your Sellapage workspace was just signed into. If this was not you, reset your password now.',
+          data: {},
+        }, storeData)
+      )
     }
 
     try {

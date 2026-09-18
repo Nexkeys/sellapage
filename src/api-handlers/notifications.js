@@ -15,7 +15,7 @@
 // would return tab_not_granted for every staff member and the bell would be
 // permanently empty for them, silently. Store-level access is the correct test:
 // anyone who can act for the store should see its notifications.
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldPath, FieldValue } from 'firebase-admin/firestore'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveCallerStoreId } from './_lib/verify-store-access.js'
 import { NOTIFICATIONS } from './_lib/notifications.js'
@@ -24,9 +24,18 @@ import { loadRecipient, recipientMayReceive } from './_lib/notification-access.j
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 100
 
-// Read state for shared broadcast documents cannot live on the document, so it
-// lives per store. One document holding an id array, which stays small because
-// only unexpired broadcasts are ever merged in.
+// READ STATE IS PER PERSON (since 2026-09-18). It used to be per store: one
+// `readAt` on each record, so a Manager opening their bell cleared the owner's
+// unread badge for orders the owner had never seen. Now each record carries
+// `readBy.{uid}`, and broadcasts keep a per-uid id list.
+//
+// Marks written BEFORE the change (store-wide `readAt` on a record, the flat
+// `ids` array for broadcasts) still count as read for everyone. Treating them
+// as unread would have resurrected every old notification as new the day this
+// shipped.
+//
+// Read state for shared broadcast documents cannot live on the broadcast, so it
+// lives in this per-store document, keyed by uid.
 const META_DOC = 'broadcastsRead'
 
 function iso(value) {
@@ -60,11 +69,11 @@ export default async function handler(req, res) {
     const recipient = await loadRecipient(storeId, decoded.uid)
 
     if (action === 'list' && req.method === 'GET') {
-      return await listFeed(db, storeId, recipient, req, res)
+      return await listFeed(db, storeId, recipient, decoded.uid, req, res)
     }
 
     if (action === 'read' && req.method === 'POST') {
-      return await markRead(db, storeId, recipient, req, res)
+      return await markRead(db, storeId, recipient, decoded.uid, req, res)
     }
 
     return res.status(400).json({ error: 'Invalid action' })
@@ -74,7 +83,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function listFeed(db, storeId, recipient, req, res) {
+async function listFeed(db, storeId, recipient, viewerUid, req, res) {
   const limit = Math.min(Number(req.query.limit) || DEFAULT_LIMIT, MAX_LIMIT)
   const storeRef = db.collection('stores').doc(storeId)
 
@@ -88,7 +97,9 @@ async function listFeed(db, storeId, recipient, req, res) {
   ])
 
   const store = storeSnap.data() || {}
-  const readBroadcastIds = new Set(readSnap.data()?.ids || [])
+  const readMeta = readSnap.data() || {}
+  // Legacy store-wide ids, plus this person's own.
+  const readBroadcastIds = new Set([...(readMeta.ids || []), ...(readMeta.byUid?.[viewerUid] || [])])
 
   const own = ownSnap.docs
     .map((d) => {
@@ -101,7 +112,9 @@ async function listFeed(db, storeId, recipient, req, res) {
         body: data.body,
         data: data.data || {},
         createdAt: iso(data.createdAt),
-        read: Boolean(data.readAt),
+        // Mine, or a legacy store-wide mark from before read state went per
+        // person.
+        read: Boolean(data.readBy?.[viewerUid] || data.readAt),
       }
     })
     // Same rule as the push: staff see only types their role's tabs cover, and
@@ -158,7 +171,7 @@ function matchesStore(filters, store) {
   return true
 }
 
-async function markRead(db, storeId, recipient, req, res) {
+async function markRead(db, storeId, recipient, viewerUid, req, res) {
   let body
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
@@ -178,14 +191,11 @@ async function markRead(db, storeId, recipient, req, res) {
   const storeRef = db.collection('stores').doc(storeId)
   let updated = 0
 
-  // Only records that EXIST and that this caller is allowed to see. Two reasons:
-  //   1. Read state lives on the record and is shared by everyone on the store,
-  //      so a staff member marking a record read clears the owner's unread
-  //      badge. They must not be able to do that to a record their role cannot
-  //      even see.
-  //   2. The previous set-with-merge created a document for ANY id sent, so a
-  //      made-up id left a ghost record holding only readAt, which then showed
-  //      in the feed as a blank item.
+  // Only records that EXIST and that this caller is allowed to see. Read state
+  // is per person now, so marking cannot touch anyone else's badge, but a
+  // caller still has no business writing to a record their role cannot see.
+  // And update(), not set-with-merge: the old merge created a document for ANY
+  // id sent, so a made-up id left a ghost record that showed as a blank item.
   let markable = []
   if (ids.length) {
     const snaps = await db.getAll(...ids.map((id) => storeRef.collection(NOTIFICATIONS).doc(id)))
@@ -207,21 +217,23 @@ async function markRead(db, storeId, recipient, req, res) {
   for (let i = 0; i < markable.length; i += 400) {
     const batch = db.batch()
     for (const id of markable.slice(i, i + 400)) {
-      batch.set(
+      // FieldPath, not a dotted string, so a uid can never be read as a path.
+      batch.update(
         storeRef.collection(NOTIFICATIONS).doc(id),
-        { readAt: FieldValue.serverTimestamp() },
-        { merge: true },
+        new FieldPath('readBy', viewerUid),
+        FieldValue.serverTimestamp(),
       )
       updated++
     }
     await batch.commit()
   }
 
-  // Broadcast documents are shared, so read state is recorded on the store side.
+  // Broadcast documents are shared, so read state is recorded on the store
+  // side, under this person's uid.
   if (broadcastIds.length) {
     await storeRef.collection('meta').doc(META_DOC).set(
       {
-        ids: FieldValue.arrayUnion(...broadcastIds),
+        byUid: { [viewerUid]: FieldValue.arrayUnion(...broadcastIds) },
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },

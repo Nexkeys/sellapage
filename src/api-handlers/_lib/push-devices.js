@@ -251,6 +251,14 @@ export async function sendPushToDevices(devices, { title, body, data = {}, image
               ...(imageUrl ? { imageUrl } : {}),
             },
           },
+          // Web dashboards are in the registry too (platform 'web'). The same
+          // icons the legacy sender used; FCM ignores this block on phones.
+          webpush: {
+            notification: {
+              icon: '/pwa-192x192.png',
+              badge: '/pwa-192x192.png',
+            },
+          },
           data: payloadData,
         })
       } catch (err) {

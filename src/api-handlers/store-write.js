@@ -10,7 +10,8 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
-import { notifyStore, recordNotification } from './_lib/notifications.js'
+import { notifyStore } from './_lib/notifications.js'
+import { announceTeamActivity } from './_lib/team-activity.js'
 
 const TYPES = {
   products: { collection: 'products', tab: 'products', countsTowardListings: true },
@@ -80,18 +81,11 @@ const TYPE_LABEL = {
 
 const OP_VERB = { create: 'added', update: 'edited', delete: 'deleted' }
 
-// One team_activity PUSH per staff member per window. Somebody editing twenty
-// products in a sitting is one afternoon of work, not twenty interruptions. The
-// bell record is still written every single time, so nothing is lost: the full
-// list is there the moment the owner looks.
-const TEAM_ACTIVITY_PUSH_EVERY_MS = 15 * 60 * 1000
-const ACTIVITY_META_DOC = 'teamActivity'
-
 /**
  * Tells the owner what a staff member just changed. Never throws.
  *
- * The write has already committed by the time this runs, so a notification
- * failure must never turn a saved product into a 500 and a retry.
+ * The throttle and the push live in _lib/team-activity.js, shared with the
+ * order and booking status handlers so every staff change follows one rule.
  */
 async function announceStaffWrite(db, storeId, access, { type, op, docId }) {
   // Owner writes reaching here at all would mean the client called the staff
@@ -99,49 +93,25 @@ async function announceStaffWrite(db, storeId, access, { type, op, docId }) {
   // makes the intent explicit.
   if (access.role === 'owner') return
 
-  try {
+  // A ledger entry gets its own notification rather than being folded into
+  // team_activity: money logged offline is the thing an owner most wants to
+  // see at the moment it happens, and it must not be swallowed by the
+  // activity throttle.
+  if (type === 'ledger' && op === 'create') {
     const staffName = access.staffName || 'A staff member'
-    const tab = TYPES[type]?.tab || type
-
-    // A ledger entry gets its own notification rather than being folded into
-    // team_activity: money logged offline is the thing an owner most wants to
-    // see at the moment it happens, and it must not be swallowed by the
-    // activity throttle below.
-    if (type === 'ledger' && op === 'create') {
-      await notifyStore(db, storeId, {
-        type: 'ledger_entry',
-        title: 'Ledger entry logged',
-        body: `${staffName} logged a ledger entry.`,
-        data: { entryId: docId || '', staffName },
-      })
-    }
-
-    const payload = {
-      type: 'team_activity',
-      title: 'Team activity',
-      body: `${staffName} ${OP_VERB[op] || 'changed'} ${TYPE_LABEL[type] || 'a record'}.`,
-      data: { staffName, tab, action: op },
-    }
-
-    // stores/{id}/meta/* is server-only in firestore.rules, so the throttle
-    // clock cannot be read or reset by anyone's client.
-    const metaRef = db.collection('stores').doc(storeId).collection('meta').doc(ACTIVITY_META_DOC)
-    const snap = await metaRef.get()
-    const lastPushAt = Number(snap.data()?.[access.staffUid]?.lastPushAt || 0)
-
-    if (Date.now() - lastPushAt < TEAM_ACTIVITY_PUSH_EVERY_MS) {
-      // Inside the window: record only, no buzz. recordNotification skips the
-      // plan gate, which is safe here because Team is Premium-only, so a store
-      // with any staff member at all is already Premium.
-      await recordNotification(db, storeId, payload)
-      return
-    }
-
-    await notifyStore(db, storeId, payload)
-    await metaRef.set({ [access.staffUid]: { lastPushAt: Date.now() } }, { merge: true })
-  } catch (err) {
-    console.error('[store-write] notify failed:', err?.message || err)
+    await notifyStore(db, storeId, {
+      type: 'ledger_entry',
+      title: 'Ledger entry logged',
+      body: `${staffName} logged a ledger entry.`,
+      data: { entryId: docId || '', staffName },
+    })
   }
+
+  await announceTeamActivity(db, storeId, access, {
+    tab: TYPES[type]?.tab || type,
+    action: op,
+    body: `${OP_VERB[op] || 'changed'} ${TYPE_LABEL[type] || 'a record'}.`,
+  })
 }
 
 export default async function handler(req, res) {

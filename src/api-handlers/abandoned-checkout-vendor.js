@@ -40,8 +40,12 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired token' })
     }
 
-    // Scoped to the orders tab, since that is where this surfaces. Read only.
-    const access = await resolveStoreAccess(decoded.uid, storeId, 'orders', false)
+    // Gated on the 'abandoned' tab, the tab this data lives in. It used to
+    // check 'orders', which let any Orders staff member pull every abandoned
+    // customer's name, email and phone through the API while the dashboard hid
+    // the tab from them. No staff role can hold 'abandoned', so this is owner
+    // only in practice, matching the dashboard (fixed 2026-09-18).
+    const access = await resolveStoreAccess(decoded.uid, storeId, 'abandoned', false)
     if (!access.allowed) return res.status(403).json({ error: 'Forbidden' })
 
     const storeSnap = await db.collection('stores').doc(storeId).get()

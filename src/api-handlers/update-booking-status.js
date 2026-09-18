@@ -6,6 +6,7 @@ import { sendPush } from './_lib/send-push.js'
 import { notifyStore } from './_lib/notifications.js'
 import { generateWhatsAppLink } from '../utils/whatsapp.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
+import { announceTeamActivity } from './_lib/team-activity.js'
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -145,6 +146,14 @@ export default async function handler(req, res) {
     }
 
     await bookingRef.update(updatePayload)
+
+    // A staff member moved a booking: tell the owner (throttled, never throws,
+    // silent for the owner's own changes). See _lib/team-activity.js.
+    await announceTeamActivity(db, storeId, access, {
+      tab: 'bookings',
+      action: 'status',
+      body: `marked ${bookingData.customerName || 'a customer'}'s booking as ${String(newStatus).replace(/_/g, ' ')}.`,
+    })
 
     const storeSnap = await db.collection('stores').doc(storeId).get()
     const storeData = storeSnap.data() || {}

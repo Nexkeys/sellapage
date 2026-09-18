@@ -180,7 +180,10 @@ export default function DashboardLayout({
     (store?.hasGrowthFeatures ?? (plan === "growth" || plan === "pro")) &&
     !effectiveIsPro;
   const isGrowthOrAbove = plan === 'growth' || plan === 'pro' || plan === 'premium';
-  const isPremiumPlan = plan === 'premium';
+  // Reads the same stored flag the render gates in Dashboard.jsx read. It was
+  // the raw plan name, so a store granted Premium features without the plan
+  // name had those tabs missing from the sidebar but reachable by URL.
+  const isPremiumPlan = store?.hasPremiumFeatures ?? plan === 'premium';
   const isStaffIdentity = !!store?._isStaff;
   const staffTabAccess = (tabId, needsWrite = false) =>
     canStaffAccessTab({ tabs: store?._staffTabs || [] }, tabId, needsWrite);
@@ -217,6 +220,9 @@ export default function DashboardLayout({
         if (item.id === 'abandoned' && !isPremiumPlan) return false;
         if (item.id === 'meta-pixel' && !isPremiumPlan) return false;
         if (item.id === 'tiktok-pixel' && !isPremiumPlan) return false;
+        // Premium only inside, so hidden like every other Premium tab. It was
+        // the one Premium tab left in the sidebar for every plan.
+        if (item.id === 'google-ads' && !isPremiumPlan) return false;
         // Shown to Premium only. A downgraded vendor keeps the saved design
         // (see isDesignLive) but loses the editor until they upgrade again.
         if (item.id === 'store-design' && !isPremiumPlan) return false;
@@ -318,6 +324,7 @@ export default function DashboardLayout({
           if (id === 'store-design' && !isPremiumPlan) return null;
           if (id === 'meta-pixel' && !isPremiumPlan) return null;
           if (id === 'tiktok-pixel' && !isPremiumPlan) return null;
+          if (id === 'google-ads' && !isPremiumPlan) return null;
           if (id === 'team' && isStaffIdentity) return null;
           if (isStaffIdentity && id !== 'team' && !staffTabAccess(id)) return null;
           const active = activeTab === id;

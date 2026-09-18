@@ -57,9 +57,12 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or expired token' })
     }
 
-    // Sending mail to a customer is a write-shaped action, so it needs write
-    // access to the orders tab rather than read.
-    const access = await resolveStoreAccess(decoded.uid, storeId, 'orders', true)
+    // Gated on the 'abandoned' tab, which is the tab this lives in. It used to
+    // check 'orders', so any staff member with Orders access could email
+    // customers from a tab the dashboard hides from them. No staff role can
+    // hold 'abandoned' (the Role Builder never offers it), so this is owner
+    // only in practice, matching the dashboard (fixed 2026-09-18).
+    const access = await resolveStoreAccess(decoded.uid, storeId, 'abandoned', true)
     if (!access.allowed) return res.status(403).json({ error: 'Forbidden' })
 
     const storeSnap = await db.collection('stores').doc(storeId).get()

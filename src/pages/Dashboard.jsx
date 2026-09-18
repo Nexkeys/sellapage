@@ -2050,7 +2050,10 @@ export default function Dashboard() {
           isPremium={isPremium}
         />
       )}
-      {activeTab === "delivery" && isGrowthOrPro && (
+      {/* Pro and above, matching the sidebar gate in DashboardLayout. This was
+          isGrowthOrPro, so a Growth vendor opening ?tab=delivery directly got
+          the full Pro tab the sidebar hides from them. */}
+      {activeTab === "delivery" && isPro && (
         <DeliveryTab
           store={store}
           user={user}

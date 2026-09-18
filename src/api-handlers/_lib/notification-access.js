@@ -36,11 +36,10 @@ import { canStaffAccessTab } from '../../utils/staffRoles.js'
  *   loyalty    loyalty-vendor.js gates on 'loyalty'
  *   reminders  reminders.js gates on 'reminders'; the CREATOR of a reminder is
  *              reached separately through `allowUids`, see reminders-cron.js
- *   abandoned  the Abandoned tab is hidden from staff by the dashboard. NOTE the
- *              abandoned-checkout-vendor.js and -send.js API handlers gate on
- *              'orders' instead, so Orders staff can read that data through the
- *              API despite the hidden tab. Recorded, not changed here; this map
- *              follows the stricter dashboard rule.
+ *   abandoned  the Abandoned tab is hidden from staff by the dashboard, and
+ *              since 2026-09-18 abandoned-checkout-vendor.js and -send.js gate
+ *              on 'abandoned' too (they used to check 'orders', which let
+ *              Orders staff read that data through the API). All three agree.
  *
  * delivery_update lists two tabs because the courier status is visible in both:
  * the Delivery tab's handlers gate on 'delivery', and OrdersTab.jsx renders the

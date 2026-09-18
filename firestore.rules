@@ -1,9 +1,32 @@
 // ============================================================================
 // SELLAPAGE — FIRESTORE SECURITY RULES
 // ============================================================================
-// Last updated: 2026-09-01 (loyalty cards)
+// Last updated: 2026-09-18 (leads server-side, webhook audit)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-18  Leads: client `create` CLOSED (`allow create: if false`).
+//               Storefront leads now go through /api/lead-submit on the Admin
+//               SDK, which notifies the vendor, rate-limits per store, and
+//               reads storeName from the store instead of trusting the
+//               browser. Read rule unchanged.
+//               ORDER-CRITICAL: publish ONLY AFTER the deploy containing
+//               lead-submit.js (commit f64ad00) shows Ready on Vercel. Before
+//               that, storefronts still run the old bundle, which writes leads
+//               from the browser, and this rule would reject every one.
+//               Also added top-level `match /webhookAudit/{docId}`, server
+//               only. Written by sendbox-webhook.js and topship-webhook.js to
+//               keep a permanent record of courier statuses (Vercel Hobby
+//               keeps logs one hour). Default deny already covered it; the
+//               explicit block is so nobody mistakes "no rule" for an
+//               oversight. Holds raw courier payloads, which include customer
+//               addresses, so it must never become readable.
+//               No change needed for the other new server data:
+//               stores/{id}/private/notificationPrefs and
+//               stores/{id}/meta/digests + meta/teamActivity sit under the
+//               existing server-only `private` and `meta` blocks.
+//   PUBLISHED   Every entry below, up to and including 2026-09-11, was
+//               published by Nex (confirmed 2026-09-12). The "NOT YET
+//               PUBLISHED" notes below are kept as history.
 //   2026-09-11  Mobile push. Added top-level `match /devices/{deviceId}` and
 //               `match /broadcasts/{broadcastId}`, both server only, plus
 //               `match /notifications/{notificationId}` (owner read) and
@@ -587,16 +610,12 @@ service cloud.firestore {
     // plus leadType/storeId/storeName/createdAt. `leadData` is a spread, so if
     // the form ever gains a field, add it here or creates will start failing.
     match /leads/{leadId} {
-      allow create: if request.resource.data.keys().hasOnly(
-                         ['storeId', 'storeName', 'name', 'phone', 'interest',
-                          'leadType', 'createdAt'])
-                    && request.resource.data.storeId is string
-                    && request.resource.data.name is string
-                    && request.resource.data.phone is string
-                    && request.resource.data.name.size() <= 200
-                    && request.resource.data.phone.size() <= 40
-                    && request.resource.data.get('interest', '').size() <= 2000
-                    && request.resource.data.get('storeName', '').size() <= 200;
+      // Created ONLY by /api/lead-submit on the Admin SDK (2026-09-18). The
+      // old open create let any browser write a lead for any store, with any
+      // storeName, and no server code ever saw it arrive, so the vendor was
+      // never notified. The field bounds that lived here are now enforced in
+      // lead-submit.js, with the same limits.
+      allow create: if false;
 
       allow read: if request.auth != null
                   && request.auth.uid == resource.data.storeId;
@@ -721,6 +740,15 @@ service cloud.firestore {
     // the filters would be decoration rather than a rule. The app receives an
     // already-filtered, already-merged feed from /api/notifications instead.
     match /broadcasts/{broadcastId} {
+      allow read, write: if false;
+    }
+
+    // Courier webhook evidence (2026-09-18), written by sendbox-webhook.js and
+    // topship-webhook.js. A tally of every status code received plus, for
+    // Topship, the latest raw payload per status. Server only: those payloads
+    // carry customer names and delivery addresses. Read it in the Firebase
+    // console, never from a client.
+    match /webhookAudit/{docId} {
       allow read, write: if false;
     }
   }

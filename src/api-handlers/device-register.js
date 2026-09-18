@@ -13,12 +13,15 @@
 // Firebase id token or it stays null. Accepting it from the client would let
 // anyone subscribe their own handset to another vendor's order notifications,
 // which is the whole security question this endpoint turns on.
+import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveCallerStoreId } from './_lib/verify-store-access.js'
 import { registerDevice } from './_lib/push-devices.js'
 import { durableRateLimit, clientKey, tooManyRequests } from './_lib/rate-limit.js'
 
-const PLATFORMS = new Set(['android', 'ios'])
+// 'web' since 2026-09-18: the web dashboard registers here instead of writing
+// its token onto the public store document.
+const PLATFORMS = new Set(['android', 'ios', 'web'])
 
 // An FCM registration token is ~160 chars. The bounds reject junk without
 // being so tight that a future token format breaks registration.
@@ -73,6 +76,7 @@ export default async function handler(req, res) {
     let linkedUid = null
     let plan = null
     let vendorType = null
+    let legacyToken = null
 
     if (idToken) {
       let decoded
@@ -100,6 +104,7 @@ export default async function handler(req, res) {
           const store = storeSnap.data() || {}
           plan = store.plan || 'starter'
           vendorType = store.vendorType || 'products'
+          legacyToken = store.fcmToken || null
         }
       }
     }
@@ -114,6 +119,21 @@ export default async function handler(req, res) {
       plan,
       vendorType,
     })
+
+    // LAZY CLEANUP of the old public token. stores/{storeId} is world readable,
+    // so a push token sitting on it is readable by anyone. Once the OWNER's
+    // browser is in the registry, or the owner registers the very token that
+    // field holds, the field has no job left and is deleted. Owner only: staff
+    // never wrote that field. Best effort: a failure here must not fail
+    // registration, the next registration simply tries again.
+    const isOwner = storeId && linkedUid === storeId
+    if (isOwner && legacyToken && (platform === 'web' || legacyToken === token)) {
+      try {
+        await getAdminDb().collection('stores').doc(storeId).update({ fcmToken: FieldValue.delete() })
+      } catch (cleanupErr) {
+        console.error('[device-register] legacy token cleanup failed:', cleanupErr?.message || cleanupErr)
+      }
+    }
 
     return res.status(200).json({ ok: true, deviceId, linked: Boolean(storeId) })
   } catch (err) {
