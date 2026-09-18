@@ -359,6 +359,9 @@ const NEVER_SETTABLE = new Set([
   'plan', 'planStatus', 'planEndDate', 'hasPremiumFeatures', 'hasProFeatures',
   'hasGrowthFeatures', 'maxProducts', 'maxJobListings', 'cacVerified',
   'phoneVerified', 'phoneGateExempt', 'referralAvailable', 'referralTotalEarned',
+  // The storefront Phone Verified badge shows when verifiedPhone matches the
+  // WhatsApp number, so a settable verifiedPhone would award it to any number.
+  'verifiedPhone', 'phoneVerifiedMasked', 'phoneVerifiedAt',
   'referralBankAccount', 'referralBankVerified', 'subaccountCode',
   'googleAdsRefreshToken', 'paymentStatus', 'grandTotal', 'amountPaid',
   // TikTok CONNECTION state. Locked in firestore.rules (integrationFields), and

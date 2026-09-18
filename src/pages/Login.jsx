@@ -1,13 +1,24 @@
 //src/pages/Login.jsx/
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowLeft, ShieldAlert } from 'lucide-react'
-import { loginSeller, registerSeller, resetPassword, logoutSeller, auth } from '../firebase/auth'
-import { registerSession, confirmLoginOtp, setOtpPendingHint, clearOtpPendingHint, consumeLoginNotice } from '../utils/sessionTracking'
+import { loginSeller, loginWithCustomToken, resetPassword, logoutSeller, auth } from '../firebase/auth'
+import { registerSession, confirmLoginOtp, setOtpPendingHint, clearOtpPendingHint, consumeLoginNotice, getSessionId } from '../utils/sessionTracking'
 import OtpVerifyModal from '../components/OtpVerifyModal'
 import { getRecaptchaToken } from '../utils/recaptcha'
 import RecaptchaCheckbox from '../components/RecaptchaCheckbox'
 import { isReservedSlug } from '../utils/reservedSlugs'
+import { normaliseNgMobile } from '../utils/phone'
+
+const postJson = async (path, body) => {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json().catch(() => ({}))
+  return { ok: res.ok, data }
+}
 
 const ERROR_MESSAGES = {
   'auth/user-not-found': 'No account found with that email.',
@@ -38,10 +49,16 @@ export default function Login() {
   const [loginOtp, setLoginOtp] = useState(null)
   // Account locked after repeated failed sign-ins - recovery is the way back.
   const [lockedOut, setLockedOut] = useState(false)
-  // Set only when SMS is live: the number to verify before finishing signup.
-  const [signupPhone, setSignupPhone] = useState(null)
-  // Visible reCAPTCHA v2 checkbox state.
+  // Signup: { masked, cooldown } once the SMS code has gone out. Nothing exists
+  // in Firebase until that code is entered.
+  const [signupCode, setSignupCode] = useState(null)
+  const signupTokenRef = useRef('')
+  // Live "is this number free?" result for the signup phone field.
+  const [phoneCheck, setPhoneCheck] = useState(null)
+  // Visible reCAPTCHA v2 checkbox state. Tokens are single use, so the widget
+  // is remounted (captchaKey) after a failed signup that spent one.
   const [captchaToken, setCaptchaToken] = useState(null)
+  const [captchaKey, setCaptchaKey] = useState(0)
   const [captchaSiteKey, setCaptchaSiteKey] = useState(null)
   // True when the widget can't render (v3 key, blocked, offline) - the form
   // then stops requiring it rather than trapping a real vendor.
@@ -133,6 +150,105 @@ export default function Login() {
     }
   }
 
+  // The number is checked the moment it is a complete Nigerian mobile, so a
+  // number already verified on another store is refused while the vendor is
+  // still filling the form, not after they press Create.
+  const signupPhone = mode === 'register' ? normaliseNgMobile(form.whatsappNumber) : null
+  useEffect(() => {
+    if (!signupPhone) return
+    let cancelled = false
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/signup-phone?action=check&phone=${signupPhone}`)
+        const d = await r.json().catch(() => ({}))
+        if (cancelled) return
+        if (!r.ok) { setPhoneCheck({ phone: signupPhone, state: 'unknown' }); return }
+        setPhoneCheck(d.available
+          ? { phone: signupPhone, state: 'free' }
+          : { phone: signupPhone, state: 'taken', message: d.message })
+      } catch {
+        // Unknown is not a block: the server checks again before any SMS.
+        if (!cancelled) setPhoneCheck({ phone: signupPhone, state: 'unknown' })
+      }
+    }, 300)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [signupPhone])
+  // A result only counts for the number it was fetched for.
+  const phoneStatus = !signupPhone ? null : phoneCheck?.phone === signupPhone ? phoneCheck.state : 'checking'
+
+  // Texts the signup code. Creates nothing. Also used by "Resend code".
+  const requestSignupCode = async (recaptchaToken = null) => {
+    const { ok, data } = await postJson('/api/signup-phone?action=send', {
+      phone: form.whatsappNumber.trim(),
+      email: form.email.trim(),
+      storeName: form.storeName.trim(),
+      businessName: form.businessName.trim(),
+      recaptchaToken,
+    })
+    if (ok && data.token) signupTokenRef.current = data.token
+    return { ok: ok && !!data.token, data }
+  }
+
+  // Sends the code with the whole form. The server checks the code with
+  // Termii and only then creates the account and the store, already
+  // phone-verified, and hands back a token to sign in with.
+  const completeSignup = async (code) => {
+    const { ok, data } = await postJson('/api/signup-phone?action=complete', {
+      token: signupTokenRef.current,
+      code,
+      email: form.email.trim(),
+      password: form.password,
+      businessName: form.businessName.trim(),
+      whatsappNumber: form.whatsappNumber.trim(),
+      storeName: form.storeName.trim(),
+      description: form.description.trim(),
+      vendorType: form.vendorType || 'products',
+      referralCode: form.referralCode.trim() || localStorage.getItem('vendor_referral_code') || '',
+      sessionId: getSessionId(),
+    })
+    if (!ok || !data.customToken) return { ok: false, data }
+    try {
+      await loginWithCustomToken(data.customToken)
+    } catch {
+      return {
+        ok: false,
+        data: { message: 'Your store was created but we could not sign you in. Go back and sign in with your email and password.' },
+      }
+    }
+    return { ok: true, data }
+  }
+
+  const finishSignup = async (data) => {
+    const token = await auth.currentUser.getIdToken()
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+
+    // The server pre-trusted this browser's session when the phone was
+    // verified, so this normally returns otpRequired: false and no email code
+    // is asked for at signup.
+    let risk = { otpRequired: false }
+    try { risk = await registerSession(token) } catch (err) { console.error('Failed to register session:', err) }
+
+    await Promise.all([
+      fetch('/api/notify', { method: 'POST', headers, body: JSON.stringify({ type: 'welcome' }) })
+        .catch((err) => console.error('Error sending welcome notification:', err)),
+      data?.referrerId
+        ? fetch('/api/referral-signup', { method: 'POST', headers, body: JSON.stringify({ referrerId: data.referrerId }) })
+          .catch((err) => console.error('Failed to notify referrer:', err))
+        : null,
+    ])
+    localStorage.removeItem('vendor_referral_code')
+    setSignupCode(null)
+
+    // Only if the pre-trust was lost (storage blocked, a different session id).
+    if (risk?.otpRequired) {
+      setOtpPendingHint()
+      setLoginOtp({ reason: risk.otpReason, isSignup: true })
+      return
+    }
+    clearOtpPendingHint()
+    navigate('/dashboard')
+  }
+
   const handleReset = async (e) => {
     e.preventDefault()
     if (!resetEmail.trim()) { setError('Please enter your email address.'); return }
@@ -222,109 +338,35 @@ export default function Login() {
           console.error('Error sending login alert notification:', err)
         }
       } else {
-        // Validate referral code if provided
-        // Human check before creating anything. Invalid token stops the signup;
-        // an unavailable reCAPTCHA does not (see utils/recaptcha.js).
-        try {
-          const rcToken = captchaToken || await getRecaptchaToken('signup')
-          const rc = await fetch('/api/login-attempt?action=verify-human', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: form.email, recaptchaToken: rcToken }),
-          })
-          const rcData = await rc.json().catch(() => ({}))
-          if (!rc.ok && rcData.error === 'captcha_failed') {
-            setError(rcData.message || "We couldn't verify that you're human. Please refresh and try again.")
-            setLoading(false)
-            return
-          }
-        } catch { /* network issue - don't block a real signup */ }
+        // PHONE FIRST. This only texts a code. The account and the store are
+        // created by the server after the code is entered (completeSignup), so
+        // a signup abandoned here leaves nothing behind.
+        if (!signupPhone) {
+          setError('Enter a valid Nigerian mobile number for your business, e.g. 08012345678.')
+          return
+        }
+        if (phoneStatus === 'taken') {
+          setError(phoneCheck.message)
+          return
+        }
 
         const codeToValidate = form.referralCode.trim() || localStorage.getItem('vendor_referral_code') || null
-        let resolvedReferrerId = null
-
         if (codeToValidate) {
           const result = await validateReferralCode(codeToValidate)
-          if (!result.valid) {
-            setLoading(false)
-            return
-          }
-          resolvedReferrerId = result.referrerId
+          if (!result.valid) return
         }
 
-        await registerSeller(form.email, form.password, {
-          businessName: form.businessName.trim(),
-          whatsappNumber: form.whatsappNumber.trim(),
-          storeName: form.storeName.trim(),
-          description: form.description.trim(),
-          vendorType: form.vendorType || 'products',
-          referredBy: resolvedReferrerId,
-        })
-
-        if (resolvedReferrerId) {
-          try {
-            const token = await auth.currentUser.getIdToken()
-            await fetch('/api/referral-signup', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ referrerId: resolvedReferrerId }),
-            })
-          } catch (err) {
-            console.error('Failed to notify referrer:', err)
-          }
-        }
-
-        // Clear tracking cache
-        localStorage.removeItem('vendor_referral_code')
-
-        let signupRisk = { otpRequired: false }
-        try {
-          const token = await auth.currentUser.getIdToken()
-          signupRisk = await registerSession(token)
-        } catch (err) {
-          console.error('Failed to register session:', err)
-        }
-
-        // Phone verification at signup - SELF-ACTIVATING.
-        //
-        // Reads smsAvailable from /api/public-config, which is false while the
-        // Termii sender ID is unapproved. So today this branch never runs and
-        // signup is byte-for-byte unchanged; the moment Termii is live it turns
-        // itself on with no redeploy. Checked AFTER the account exists so the
-        // authenticated OTP endpoints can be reused as-is.
-        let pendingPhone = null
-        try {
-          const cfg = await fetch('/api/public-config').then(r => r.ok ? r.json() : null).catch(() => null)
-          if (cfg?.smsAvailable && form.whatsappNumber.trim()) {
-            pendingPhone = form.whatsappNumber.trim()
-          }
-        } catch { /* never block a signup on this check */ }
-
-        // Ask for the emailed code HERE, before the dashboard.
-        //
-        // A brand new account is always an unrecognised device, so with login
-        // OTP enabled the server marks the fresh session otpPending. This
-        // result used to be discarded and the user was sent to the dashboard
-        // anyway - then DashboardLayout's heartbeat, which fires immediately on
-        // mount rather than after its 45s interval, saw otpPending and signed
-        // them straight back out to /login?verify=1.
-        //
-        // From the vendor's side that looked like the app crashing or their
-        // network dropping seconds after signing up, and only then asking for a
-        // code. Handling it here means they go: create store -> enter code ->
-        // dashboard, and never see a dashboard that gets taken away.
-        if (signupRisk?.otpRequired) {
-          setOtpPendingHint()
-          setLoginOtp({ reason: signupRisk.otpReason, isSignup: true, thenPhone: pendingPhone })
-          setLoading(false)
+        const { ok, data } = await requestSignupCode(captchaToken || await getRecaptchaToken('signup'))
+        if (!ok) {
+          setError(data.message || 'Could not send the code. Please try again.')
+          if (data.error === 'phone_taken') setPhoneCheck({ phone: signupPhone, state: 'taken', message: data.message })
+          // Errors that name a field are raised before the server checks
+          // reCAPTCHA, so the tick is still good. Anything else spent it.
+          if (!data.field) { setCaptchaToken(null); setCaptchaKey((k) => k + 1) }
           return
         }
-
-        if (pendingPhone) {
-          setSignupPhone(pendingPhone)
-          setLoading(false)
-          return
-        }
+        setSignupCode({ masked: data.destinationMasked, cooldown: data.resendAfterSeconds || 60 })
+        return
       }
       // Successful sign-in clears any accumulated failed-attempt counter.
       if (mode === 'login') {
@@ -399,36 +441,21 @@ export default function Login() {
     )
   }
 
-  // Signup phone verification. Only reachable when SMS is live, so it is
-  // unreachable today and cannot affect current signups.
-  if (signupPhone) {
+  // Signup code step. Closing it goes back to the form with nothing created.
+  if (signupCode) {
     return (
       <OtpVerifyModal
         open
-        purpose="phone_verify"
-        phone={signupPhone}
+        purpose="signup"
         title="Verify your phone number"
-        description={`We sent a code by SMS to ${signupPhone}. Enter it to finish setting up your store.`}
-        onClose={() => {
-          // The account exists at this point, so don't strand them - let them
-          // in and let Settings prompt for verification instead of losing the
-          // signup entirely.
-          setSignupPhone(null)
-          navigate('/dashboard')
-        }}
-        onVerified={async () => {
-          try {
-            const token = await auth.currentUser?.getIdToken()
-            if (token) {
-              await fetch('/api/phone-verify?action=complete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              })
-            }
-          } catch { /* verified either way; Settings can retry the write */ }
-          setSignupPhone(null)
-          navigate('/dashboard')
-        }}
+        description={`Enter the code we sent by SMS to finish creating ${form.businessName.trim() || 'your store'}. Your store is created once the code is right.`}
+        initialMasked={signupCode.masked}
+        initialCooldown={signupCode.cooldown}
+        sendRequest={() => requestSignupCode(null)}
+        verifyRequest={completeSignup}
+        verifyLabel="Verify & create my store"
+        onClose={() => setSignupCode(null)}
+        onVerified={finishSignup}
       />
     )
   }
@@ -468,16 +495,8 @@ export default function Login() {
             const token = await user.getIdToken()
             await confirmLoginOtp(token)
           }
-          // A signup that also owes phone verification chains into that step
-          // rather than losing it. Null for every login, and today for every
-          // signup too, since SMS is not live yet.
           clearOtpPendingHint()
-          const nextPhone = loginOtp.thenPhone
           setLoginOtp(null)
-          if (nextPhone) {
-            setSignupPhone(nextPhone)
-            return
-          }
           navigate('/dashboard')
         }}
       />
@@ -622,12 +641,33 @@ export default function Login() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Business Contact Number</label>
                   <input
                     name="whatsappNumber"
+                    type="tel"
+                    inputMode="tel"
                     value={form.whatsappNumber}
                     onChange={update}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all ${
+                      phoneStatus === 'taken'
+                        ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                        : 'border-gray-200 focus:border-green-500 focus:ring-green-100'
+                    }`}
                     placeholder="e.g. 08012345678"
                     required
                   />
+                  {phoneStatus === 'checking' ? (
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Loader2 size={12} className="animate-spin" /> Checking number…
+                    </p>
+                  ) : phoneStatus === 'taken' ? (
+                    <p className="text-xs text-red-500 mt-1">{phoneCheck.message}</p>
+                  ) : phoneStatus === 'free' ? (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <CheckCircle size={12} /> We&apos;ll text a code to this number to create your store.
+                    </p>
+                  ) : form.whatsappNumber.replace(/\D/g, '').length >= 11 && !signupPhone ? (
+                    <p className="text-xs text-red-500 mt-1">Enter a valid Nigerian mobile number, e.g. 08012345678.</p>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-1">We&apos;ll text a code to this number to create your store.</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Store URL Name</label>
@@ -791,6 +831,7 @@ export default function Login() {
                 blocked, and the submit button stops requiring it in that case. */}
             {!captchaUnavailable && captchaSiteKey && (
               <RecaptchaCheckbox
+                key={captchaKey}
                 siteKey={captchaSiteKey}
                 onChange={setCaptchaToken}
                 onUnavailable={() => setCaptchaUnavailable(true)}
@@ -799,7 +840,11 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading || (!captchaUnavailable && captchaSiteKey && !captchaToken)}
+              disabled={
+                loading ||
+                (!captchaUnavailable && captchaSiteKey && !captchaToken) ||
+                (mode === 'register' && phoneStatus === 'taken')
+              }
               className="w-full bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md mt-2"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}

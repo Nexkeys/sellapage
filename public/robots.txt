@@ -77,4 +77,4 @@ Allow: /
 User-agent: meta-externalagent
 Allow: /
 
-Sitemap: https://sellapage.com.ng/sitemap.xml
+Sitemap: https://www.sellapage.com.ng/sitemap.xml

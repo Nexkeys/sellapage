@@ -25,7 +25,7 @@
 
 import { getAdminDb } from './_lib/firebase-admin.js'
 
-const SITE_URL = 'https://sellapage.com.ng'
+const SITE_URL = 'https://www.sellapage.com.ng'
 const PAID_PLANS = new Set(['growth', 'pro', 'premium'])
 const MAX_ITEMS = 1000
 

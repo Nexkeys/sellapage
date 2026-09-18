@@ -9,7 +9,7 @@ const TRUST_BADGES = [
   { icon: Lock,   title: 'Secure Shopping',  sub: 'Your data is safe' },
 ]
 
-export default function StoreFooter({ storeName, customFooterText, guarantee, verified = false }) {
+export default function StoreFooter({ storeName, customFooterText, guarantee, verified = false, phoneVerified = false }) {
   return (
     <footer className="mt-10 mb-20 md:mb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -42,11 +42,18 @@ export default function StoreFooter({ storeName, customFooterText, guarantee, ve
         {/* CAC. Sits below the generic badges and above the Sellapage line
             because, unlike "100% Authentic", this one is checked: the vendor's
             RC number was matched against the Corporate Affairs Commission. */}
-        {verified && (
-          <div className="mt-4 flex justify-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-green-50/70 px-3.5 py-1.5">
-              <VerifiedBadge variant="line" size="md" />
-            </div>
+        {(verified || phoneVerified) && (
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {verified && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-green-50/70 px-3.5 py-1.5">
+                <VerifiedBadge variant="line" size="md" />
+              </div>
+            )}
+            {phoneVerified && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-green-50/70 px-3.5 py-1.5">
+                <VerifiedBadge kind="phone" variant="line" size="md" />
+              </div>
+            )}
           </div>
         )}
 

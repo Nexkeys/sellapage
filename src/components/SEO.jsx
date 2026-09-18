@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 
 const SITE_NAME = 'Sellapage'
-const SITE_URL = 'https://sellapage.com.ng'
+const SITE_URL = 'https://www.sellapage.com.ng'
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`
 const DEFAULT_DESCRIPTION = 'Sellapage is the all-in-one commerce platform for Nigerian businesses. Run products, services, checkout, delivery, customers, analytics, and growth from one dashboard. Free to start.'
 

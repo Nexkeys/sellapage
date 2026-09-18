@@ -1,7 +1,7 @@
 // src/api-handlers/storefront-render.js
 //
 // Server-renders a vendor storefront's HTML head and a crawlable content block,
-// so that pasting https://sellapage.com.ng/chichistore into an AI describes
+// so that pasting https://www.sellapage.com.ng/chichistore into an AI describes
 // CHICHI STORE - what they sell, who they are - instead of describing Sellapage.
 //
 // WHY A FUNCTION AND NOT PRERENDERING
@@ -22,8 +22,9 @@
 
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { isPageLive, CUSTOM_PAGES } from '../utils/storeDesign.js'
+import { isPhoneBadgeEarned } from '../utils/phone.js'
 
-const SITE_URL = 'https://sellapage.com.ng'
+const SITE_URL = 'https://www.sellapage.com.ng'
 // BOTH apex and www stay listed regardless of which one Vercel treats as
 // primary, so switching the primary domain in the dashboard cannot strand
 // either host. Preview deployments count as main hosts too: otherwise `/` on a
@@ -367,6 +368,10 @@ function buildNoscript({ store, seo, listings, canonical, kind = 'products' }) {
       `<p>${esc(name)} is CAC verified: its business registration has been checked ` +
         `against the Corporate Affairs Commission of Nigeria.</p>`,
     )
+  }
+
+  if (isPhoneBadgeEarned(store)) {
+    lines.push(`<p>${esc(name)}'s phone number has been verified by SMS by Sellapage.</p>`)
   }
 
   lines.push(

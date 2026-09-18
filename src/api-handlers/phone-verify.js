@@ -14,6 +14,8 @@ import { applyCors, getBearerToken } from './_lib/http.js'
 import { clientKey } from './_lib/rate-limit.js'
 import { redeemProofWithData, logAudit, otpErrorMessage, OTP_PURPOSES } from './_lib/otp.js'
 import { getSmsConfigStatus, maskPhone } from './_lib/termii.js'
+import { checkPhone } from './_lib/phone-claims.js'
+import { normaliseNgMobile, toLocalNgPhone, isPhoneBadgeEarned } from '../utils/phone.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'GET,POST,OPTIONS' })) return
@@ -49,7 +51,17 @@ export default async function handler(req, res) {
         unavailableReason: sms.available ? null : sms.reason,
         phoneVerified: s.phoneVerified === true,
         phoneVerifiedMasked: s.phoneVerifiedMasked || null,
+        // False once the vendor changes their WhatsApp number: the storefront
+        // badge is hidden until the new number is verified.
+        matchesContact: isPhoneBadgeEarned(s),
       })
+    }
+
+    // ---- check: is this number free? Runs while the vendor types. --------
+    if (action === 'check') {
+      const result = await checkPhone(db, req.query.phone, uid)
+      if (!result.ok) return res.status(200).json({ success: true, available: false, error: result.error, message: result.message })
+      return res.status(200).json({ success: true, available: true, ownedBySelf: result.ownedBySelf })
     }
 
     // ---- complete: burn the verified challenge and attach the number -----
@@ -100,11 +112,15 @@ export default async function handler(req, res) {
             claimedAt: new Date().toISOString(),
           })
 
+          // The verified number becomes the storefront's contact number, so
+          // the badge and the number customers see are always the same one.
+          const current = storeSnap.exists ? storeSnap.data().whatsappNumber : ''
           tx.update(storeRef, {
             verifiedPhone: phone,
             phoneVerifiedMasked: maskPhone(phone),
             phoneVerified: true,
             phoneVerifiedAt: new Date().toISOString(),
+            ...(normaliseNgMobile(current) === phone ? {} : { whatsappNumber: toLocalNgPhone(phone) }),
           })
 
           if (previous && previous !== phone) {

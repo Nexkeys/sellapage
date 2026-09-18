@@ -1,6 +1,6 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 
-const SITE_URL = 'https://sellapage.com.ng'
+const SITE_URL = 'https://www.sellapage.com.ng'
 
 const STATIC_PAGES = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },

@@ -546,6 +546,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/phone-verify.js")
         return handler(req, res)
       }
+      case "signup-phone": {
+        const { default: handler } = await import("../src/api-handlers/signup-phone.js")
+        return handler(req, res)
+      }
       case "login-verify": {
         const { default: handler } = await import("../src/api-handlers/login-verify.js")
         return handler(req, res)

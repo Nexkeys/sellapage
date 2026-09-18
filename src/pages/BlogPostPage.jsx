@@ -114,20 +114,20 @@ export default function BlogPostPage() {
           author: {
             '@type': 'Organization',
             name: post.authorName || 'Sellapage',
-            url: 'https://sellapage.com.ng',
+            url: 'https://www.sellapage.com.ng',
           },
           publisher: {
             '@type': 'Organization',
             name: 'Sellapage',
-            url: 'https://sellapage.com.ng',
+            url: 'https://www.sellapage.com.ng',
             logo: {
               '@type': 'ImageObject',
-              url: 'https://sellapage.com.ng/og-image.png',
+              url: 'https://www.sellapage.com.ng/og-image.png',
             },
           },
           mainEntityOfPage: {
             '@type': 'WebPage',
-            '@id': `https://sellapage.com.ng/blog/${slug}`,
+            '@id': `https://www.sellapage.com.ng/blog/${slug}`,
           },
         } : null}
       />

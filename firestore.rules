@@ -1,9 +1,17 @@
 // ============================================================================
 // SELLAPAGE — FIRESTORE SECURITY RULES
 // ============================================================================
-// Last updated: 2026-09-18 (leads server-side, webhook audit)
+// Last updated: 2026-09-18 (phone-first signup)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-18  Phone-first signup. Added `match /signupChallenges/{phone}`
+//               and `match /verifiedPhones/{phone}`, both server only. Default
+//               deny already covered both; they are listed so nobody mistakes
+//               "no rule" for an oversight. SAFE TO PUBLISH ANY TIME.
+//               NOT CHANGED YET, deliberately: `allow create` on /stores. The
+//               website no longer uses it, but the Android app's signup does.
+//               See "STEP 2" at that rule: flip it to `if false` only after the
+//               app update that calls /api/signup-phone is live.
 //   2026-09-18  Leads: client `create` CLOSED (`allow create: if false`).
 //               Storefront leads now go through /api/lead-submit on the Admin
 //               SDK, which notifies the vendor, rate-limits per store, and
@@ -281,10 +289,20 @@ service cloud.firestore {
       // NEVER write a secret onto this document.
       allow read: if true;
 
-      // CREATE (registerSeller, src/firebase/auth.js:23). The client hardcodes
-      // safe defaults, but a direct SDK call bypasses the UI — so the safe
-      // values are pinned here rather than trusted. Money, verification and
-      // integration fields must be absent at signup entirely.
+      // CREATE. Since 2026-09-18 the WEBSITE never creates a store from the
+      // browser: /api/signup-phone creates it on the Admin SDK after the SMS
+      // code is verified. This client path stays open ONLY for the Android
+      // app's own signup, which still writes the store directly.
+      //
+      // ⚠️ STEP 2, once the app ships its switch to /api/signup-phone: replace
+      // this whole `allow create` rule with
+      //     allow create: if false;
+      // Until then a script can still create a store without a phone code by
+      // calling Firebase directly, exactly as before this change. Doing it
+      // BEFORE the app update breaks every signup made in the app.
+      //
+      // The pinned values below still apply to that remaining client path.
+      // Money, verification and integration fields must be absent entirely.
       allow create: if request.auth != null
                     && request.auth.uid == storeId
                     && !request.resource.data.keys().hasAny(moneyFields())
@@ -749,6 +767,25 @@ service cloud.firestore {
     // carry customer names and delivery addresses. Read it in the Firebase
     // console, never from a client.
     match /webhookAudit/{docId} {
+      allow read, write: if false;
+    }
+
+    // Phone-first signup (2026-09-18), written by /api/signup-phone. One
+    // document per phone number being signed up: the Termii pinId, a hash of
+    // the browser's one-time token, the email the code was sent for and the
+    // attempt counter. Server only: a readable pinId plus the number is half
+    // of a signup, and the email is personal data.
+    match /signupChallenges/{phone} {
+      allow read, write: if false;
+    }
+
+    // One verified number, one store (2026-08-12, now also written at signup).
+    // Document id is the number, value is the store that owns it. Server only:
+    // readable, it is a lookup from a phone number to a store; writable, a
+    // vendor could release another store's number or claim one they never
+    // verified. The instant "already verified" check on the signup form and in
+    // Settings goes through /api/signup-phone and /api/phone-verify instead.
+    match /verifiedPhones/{phone} {
       allow read, write: if false;
     }
   }

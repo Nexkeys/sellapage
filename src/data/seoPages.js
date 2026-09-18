@@ -22,9 +22,9 @@
 export const SITE = {
   name: 'Sellapage',
   legalName: 'Sellapage',
-  url: 'https://sellapage.com.ng',
-  logo: 'https://sellapage.com.ng/pwa-512x512.png',
-  image: 'https://sellapage.com.ng/og-image.png',
+  url: 'https://www.sellapage.com.ng',
+  logo: 'https://www.sellapage.com.ng/pwa-512x512.png',
+  image: 'https://www.sellapage.com.ng/og-image.png',
   email: 'sellapage.ng@gmail.com',
   whatsapp: '+2348120525256',
   country: 'NG',

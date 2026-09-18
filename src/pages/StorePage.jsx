@@ -57,6 +57,8 @@ import {
   designTokens,
   verifiedBadgeAt,
   verifiedTone,
+  phoneBadgeAt,
+  phoneTone,
 } from "../utils/storeDesign";
 
 const EMPTY_CHECKOUT_FORM = {
@@ -1925,7 +1927,7 @@ export default function StorePage() {
           '@type': 'Store',
           name: store.storeName || store.name,
           description: store.description,
-          url: `https://sellapage.com.ng/${store.slug || store.storeName}`,
+          url: `https://www.sellapage.com.ng/${store.slug || store.storeName}`,
           // `logoUrl` is the field the uploader writes; `logo` never existed on
           // a store document, so this block used to publish nothing at all.
           logo: store.logoUrl || store.logo,
@@ -1953,6 +1955,8 @@ export default function StorePage() {
         // store can move this mark to the hero or the footer instead.
         showVerified={verifiedBadgeAt(store, "navbar")}
         verifiedTone={designLive ? verifiedTone(store.storeDesign) : null}
+        showPhoneVerified={phoneBadgeAt(store, "navbar")}
+        phoneTone={designLive ? phoneTone(store.storeDesign) : null}
         onCategories={designLive ? openDesignCatalogue : null}
         onHome={designLive ? closeDesignCatalogue : null}
         categoriesActive={designLive ? designBrowse !== null || !!search.trim() : false}
@@ -2297,6 +2301,7 @@ export default function StorePage() {
             customFooterText={footerText}
             guarantee={store.guarantee}
             verified={verifiedBadgeAt(store, "footer")}
+            phoneVerified={phoneBadgeAt(store, "footer")}
           />
         )}
       </main>

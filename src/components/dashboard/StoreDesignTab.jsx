@@ -25,7 +25,7 @@ import {
   ChevronUp, ChevronDown, ChevronRight, Settings2, Palette, GripVertical, X,
   Smartphone, Tablet, Monitor, Package, CalendarClock, Type, AlertTriangle,
   Undo2, Redo2, Sparkles, BellRing, CalendarRange, RotateCcw, FileText, ExternalLink, Search,
-  ShieldCheck,
+  ShieldCheck, PhoneCall,
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { getProducts } from '../../firebase/products'
@@ -37,7 +37,9 @@ import {
   sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, defaultDesign,
   sectionEmptyReason, popupIssue,
   BADGE_FIELDS, VERIFIED_LABEL, VERIFIED_LINE,
+  PHONE_BADGE_FIELDS, PHONE_VERIFIED_LABEL, PHONE_VERIFIED_LINE,
 } from '../../utils/storeDesign'
+import { isPhoneBadgeEarned } from '../../utils/phone'
 import DesignedStorefront from '../storefront/DesignedStorefront'
 
 const inputCls =
@@ -177,6 +179,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
   const vendorType = String(store?.vendorType || 'products').toLowerCase()
   const hasProducts = vendorHasProducts(vendorType)
   const hasServices = vendorHasServices(vendorType)
+  const phoneEarned = isPhoneBadgeEarned(store)
 
   const [design, setDesign] = useState(() => defaultDesign(vendorType))
   const [meta, setMeta] = useState({ eligible: false, live: false, plan: 'starter', hasSaved: false })
@@ -631,6 +634,54 @@ export default function StoreDesignTab({ store, storeUrl }) {
                 Verify your CAC registration in the CAC Verification tab. Once it goes through,
                 the badge appears here and you can place it on your page. There is nothing to
                 switch on from this screen.
+              </p>
+            </div>
+          )}
+        </Panel>
+
+        <Panel
+          icon={PhoneCall}
+          title="Phone verified badge"
+          hint={
+            phoneEarned
+              ? 'Your number is verified. Choose where the badge sits on your page.'
+              : 'Shown once your WhatsApp number is verified by SMS.'
+          }
+          open={panel === 'phoneBadge'}
+          onToggle={() => setPanel(panel === 'phoneBadge' ? '' : 'phoneBadge')}
+        >
+          {phoneEarned ? (
+            <>
+              <div className="mb-4 rounded-xl border border-green-100 bg-green-50/60 p-3">
+                <div className="flex items-center gap-1.5">
+                  <PhoneCall size={13} className="flex-shrink-0 text-green-600" />
+                  <span className="text-[11px] font-bold text-green-700">{PHONE_VERIFIED_LABEL}</span>
+                </div>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-green-800/70">
+                  In the footer this reads &ldquo;{PHONE_VERIFIED_LINE}&rdquo;. The wording is fixed
+                  because it is our statement about your number. Where it goes, and what colour it
+                  is, is yours.
+                </p>
+              </div>
+
+              <FieldList
+                fields={PHONE_BADGE_FIELDS}
+                values={design.phoneBadge}
+                onSet={(k, v) => update({ ...design, phoneBadge: { ...design.phoneBadge, [k]: v } })}
+              />
+
+              <p className="mt-3 text-[10px] leading-relaxed text-gray-400">
+                If you change your WhatsApp number, the badge hides itself until the new number is
+                verified in Settings.
+              </p>
+            </>
+          ) : (
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3.5">
+              <p className="text-xs font-bold text-gray-800">Not verified yet</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
+                {store?.phoneVerified
+                  ? 'Your WhatsApp number has changed since it was verified. Verify the new number in Settings and the badge comes back here.'
+                  : 'Verify your WhatsApp number in Settings. Once it goes through, the badge appears here and you can place it on your page.'}
               </p>
             </div>
           )}

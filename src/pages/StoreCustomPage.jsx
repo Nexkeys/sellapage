@@ -145,11 +145,11 @@ export default function StoreCustomPage({ pageKey }) {
           '@type': 'WebPage',
           name: `${meta?.label} - ${name}`,
           description: textFor || undefined,
-          url: `https://sellapage.com.ng${base}/${meta?.path || pageKey}`,
+          url: `https://www.sellapage.com.ng${base}/${meta?.path || pageKey}`,
           isPartOf: {
             '@type': 'WebSite',
             name,
-            url: `https://sellapage.com.ng${base}`,
+            url: `https://www.sellapage.com.ng${base}`,
           },
           publisher: { '@type': 'Organization', name, logo: store.logoUrl || store.logo || undefined },
         }}

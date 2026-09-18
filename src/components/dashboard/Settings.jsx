@@ -173,8 +173,8 @@ export default function SettingsTab({
       </div>
 
 
-      {/* Renders nothing until the status endpoint answers, and shows a
-          "coming soon" state while the Termii sender ID is unapproved. */}
+      {/* Renders nothing until the status endpoint answers. Stores verified at
+          signup see "Verified" here and are never charged a second SMS. */}
       <PhoneVerifyCard store={store} />
 
       {/* ── Store Info ── */}

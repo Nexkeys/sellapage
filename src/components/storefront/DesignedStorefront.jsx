@@ -21,6 +21,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Star, ShoppingCart, MessageCircle, ArrowRight, Clock, MapPin, Check, X } from 'lucide-react'
 import LeadForm from '../LeadForm'
 import VerifiedBadge from '../VerifiedBadge'
+import { isPhoneBadgeEarned } from '../../utils/phone'
 import {
   fontStack,
   fontHref,
@@ -30,6 +31,7 @@ import {
   widthValue,
   isSectionLiveNow,
   verifiedTone,
+  phoneTone,
 } from '../../utils/storeDesign'
 
 const naira = (v) => {
@@ -137,9 +139,12 @@ function Hero({ s, store, stats, t, badge, onCta }) {
       >
         {s.headline}
       </h1>
-      {badge?.hero ? (
-        <div className={`mt-3 flex ${centered || behind ? 'justify-center' : ''}`}>
-          <VerifiedBadge tone={badge.tone} radius={t.radius === '0px' ? '0px' : '999px'} size="md" />
+      {badge?.hero || badge?.phoneHero ? (
+        <div className={`mt-3 flex flex-wrap gap-2 ${centered || behind ? 'justify-center' : ''}`}>
+          {badge.hero ? <VerifiedBadge tone={badge.tone} radius={t.radius === '0px' ? '0px' : '999px'} size="md" /> : null}
+          {badge.phoneHero ? (
+            <VerifiedBadge kind="phone" tone={badge.phoneTone} radius={t.radius === '0px' ? '0px' : '999px'} size="md" />
+          ) : null}
         </div>
       ) : null}
       {s.sub ? (
@@ -921,6 +926,11 @@ function RichFooter({ s, store, categories, helpLinks, t, badge, onCategory }) {
                 <VerifiedBadge variant="line" size="md" tone={{ fg: s.fg }} />
               </div>
             ) : null}
+            {badge?.phoneFooter ? (
+              <div className={badge?.footer ? 'mt-1.5' : 'mt-3'}>
+                <VerifiedBadge kind="phone" variant="line" size="md" tone={{ fg: s.fg }} />
+              </div>
+            ) : null}
           </div>
 
           {cats.length ? (
@@ -1448,12 +1458,19 @@ export default function DesignedStorefront({
   // "not live" and show the vendor nothing while they are configuring it.
   const badgeCfg = design.badge && typeof design.badge === 'object' ? design.badge : null
   const verified = store?.cacVerified === true
+  const phoneCfg = design.phoneBadge && typeof design.phoneBadge === 'object' ? design.phoneBadge : null
+  const phoneEarned = isPhoneBadgeEarned(store)
   const badge = {
     // A design saved before this setting existed keeps the badge in the footer,
     // which is where it would have been by default.
     hero: verified && (badgeCfg ? badgeCfg.hero === true : false),
     footer: verified && (badgeCfg ? badgeCfg.footer === true : true),
     tone: verifiedTone(design),
+    // Same idea for the phone mark: isPhoneBadgeEarned() is the only gate,
+    // the design only places it. No saved setting means footer only.
+    phoneHero: phoneEarned && (phoneCfg ? phoneCfg.hero === true : false),
+    phoneFooter: phoneEarned && (phoneCfg ? phoneCfg.footer === true : true),
+    phoneTone: phoneTone(design),
   }
 
   // The hero's button target is resolved here rather than in the hero, because

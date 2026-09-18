@@ -12,7 +12,16 @@ import { getRecaptchaToken } from '../utils/recaptcha'
 
 // `phone` is only used by SMS purposes (phone_verify) - the server ignores it
 // for email purposes, where the destination is always read from the account.
-export default function OtpVerifyModal({ open, purpose, title, description, phone, onVerified, onClose }) {
+//
+// Signup has no account yet, so it passes its own `sendRequest` / `verifyRequest`
+// (both resolve to { ok, data }) and `initialMasked` when the first code was
+// already sent by the form.
+export default function OtpVerifyModal({
+  open, purpose, title, description, phone, onVerified, onClose,
+  sendRequest = null, verifyRequest = null, initialMasked = '', initialCooldown = 0,
+  verifyLabel = 'Verify & continue',
+}) {
+  const isSms = purpose === 'phone_verify' || purpose === 'signup'
   const [code, setCode] = useState('')
   const [sending, setSending] = useState(false)
   const [verifying, setVerifying] = useState(false)
@@ -39,8 +48,9 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
     setSending(true)
     setError('')
     try {
-      const recaptchaToken = await getRecaptchaToken(`otp_send_${purpose}`)
-      const { ok, data } = await authedFetch('/api/otp-send', { purpose, phone, recaptchaToken })
+      const { ok, data } = sendRequest
+        ? await sendRequest()
+        : await authedFetch('/api/otp-send', { purpose, phone, recaptchaToken: await getRecaptchaToken(`otp_send_${purpose}`) })
       if (!ok) {
         setError(data.message || 'Could not send the code.')
         if (data.retryAfterSeconds) setCooldown(data.retryAfterSeconds)
@@ -53,7 +63,7 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
     } finally {
       setSending(false)
     }
-  }, [authedFetch, purpose, phone])
+  }, [authedFetch, purpose, phone, sendRequest])
 
   // Request one code per opening. requestedRef guards React StrictMode's
   // double-invoke in development, which would otherwise burn the 60s cooldown
@@ -69,8 +79,13 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
     }
     if (requestedRef.current) return
     requestedRef.current = true
+    if (initialMasked) {
+      setMasked(initialMasked)
+      setCooldown(initialCooldown || 60)
+      return
+    }
     sendCode()
-  }, [open, sendCode])
+  }, [open, sendCode, initialMasked, initialCooldown])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -88,7 +103,9 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
     setVerifying(true)
     setError('')
     try {
-      const { ok, data } = await authedFetch('/api/otp-verify', { purpose, code })
+      const { ok, data } = verifyRequest
+        ? await verifyRequest(code)
+        : await authedFetch('/api/otp-verify', { purpose, code })
       if (!ok) {
         setError(
           typeof data.remainingAttempts === 'number' && data.remainingAttempts > 0
@@ -98,7 +115,7 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
         setCode('')
         return
       }
-      onVerified?.()
+      await onVerified?.(data)
     } catch {
       setError('Network error. Please try again.')
     } finally {
@@ -139,8 +156,8 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
             {sending && !masked
               ? 'Sending your code…'
               : masked
-                ? <>We sent a 6-digit code to <span className="font-semibold text-gray-900">{masked}</span>. It expires in 10 minutes.</>
-                : 'Enter the 6-digit code we emailed you.'}
+                ? <>We sent a 6-digit code to <span className="font-semibold text-gray-900">{masked}</span>. It expires in {isSms ? 5 : 10} minutes.</>
+                : isSms ? 'Enter the 6-digit code we sent by SMS.' : 'Enter the 6-digit code we emailed you.'}
           </p>
 
           <input
@@ -168,7 +185,7 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
             disabled={code.length !== 6 || verifying}
             className="w-full mt-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-3 rounded-xl text-sm transition-colors inline-flex items-center justify-center gap-2"
           >
-            {verifying ? <><Loader2 size={15} className="animate-spin" /> Verifying…</> : 'Verify & continue'}
+            {verifying ? <><Loader2 size={15} className="animate-spin" /> Verifying…</> : verifyLabel}
           </button>
 
           <div className="mt-3 text-center">
@@ -185,7 +202,9 @@ export default function OtpVerifyModal({ open, purpose, title, description, phon
               </button>
             )}
             <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
-              Check your spam or promotions folder. Sellapage will never ask for this code by phone or WhatsApp.
+              {isSms
+                ? 'The SMS can take up to a minute to arrive. You can request 3 codes a day. Sellapage will never ask for this code by phone or WhatsApp.'
+                : 'Check your spam or promotions folder. Sellapage will never ask for this code by phone or WhatsApp.'}
             </p>
           </div>
         </form>

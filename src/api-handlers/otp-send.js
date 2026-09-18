@@ -13,6 +13,7 @@ import {
   verifyRecaptcha,
   SMS_PURPOSES,
 } from './_lib/otp.js'
+import { checkPhone, takeSmsQuota } from './_lib/phone-claims.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'POST,OPTIONS' })) return
@@ -85,18 +86,37 @@ export default async function handler(req, res) {
     // completion handler reads it back from there - never from a later
     // request - so a caller cannot verify one number and attach another.
     if (SMS_PURPOSES.has(purpose)) {
-      // SMS costs real money per message, so the cap is much tighter than
-      // email and is enforced per-day as well as per-window.
-      const smsDaily = await durableRateLimit('otp_sms_uid_daily', uid, 10, 24 * 60 * 60 * 1000)
-      if (!smsDaily) {
-        await logAudit(db, { uid, action: 'otp_send', purpose, result: 'sms_daily_cap', ip, userAgent })
-        return tooManyRequests(res, 'Daily verification limit reached. Please try again tomorrow.')
+      // Refused before any money is spent: a number verified by another store
+      // can never be claimed again, and one this store already holds needs no
+      // second SMS.
+      const phoneCheck = await checkPhone(db, body.phone, uid)
+      if (!phoneCheck.ok) {
+        return res.status(phoneCheck.error === 'phone_taken' ? 409 : 400).json({ error: phoneCheck.error, message: phoneCheck.message })
+      }
+      if (phoneCheck.ownedBySelf) {
+        return res.status(409).json({
+          error: 'already_yours',
+          message: 'This number is already verified on your store. Set it as your WhatsApp number in Business Information to show the badge.',
+        })
+      }
+
+      const { getSmsConfigStatus } = await import('./_lib/termii.js')
+      if (!getSmsConfigStatus().available) {
+        return res.status(503).json({ error: 'sms_unavailable', message: 'Phone verification is temporarily unavailable.', smsUnavailable: true })
+      }
+
+      // SMS costs real money, so every vendor and every number gets 3 codes a
+      // day, shared with signup.
+      const quota = await takeSmsQuota({ phone: phoneCheck.phone, uid })
+      if (!quota.ok) {
+        await logAudit(db, { uid, action: 'otp_send', purpose, result: quota.error, ip, userAgent })
+        return tooManyRequests(res, quota.message)
       }
 
       const smsResult = await createSmsChallenge(db, {
         uid,
         purpose,
-        phone: body.phone,
+        phone: phoneCheck.phone,
         ip,
         sessionId: body.sessionId || null,
         userAgent,

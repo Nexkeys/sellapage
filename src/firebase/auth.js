@@ -1,64 +1,18 @@
 // src/firebase/auth.js/
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithCustomToken,
   signOut,
   onAuthStateChanged,
   deleteUser,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from './config'
 import { clearSessionId } from '../utils/sessionTracking'
-import { isReservedSlug } from '../utils/reservedSlugs'
 
-export const registerSeller = async (email, password, storeData) => {
-  if (isReservedSlug(storeData.storeName)) {
-    throw new Error('That store name is reserved. Please choose another.')
-  }
-
-  const credential = await createUserWithEmailAndPassword(auth, email, password)
-  const user = credential.user
-
-  await setDoc(doc(db, 'stores', user.uid), {
-    ...storeData,
-    email,
-    ownerId: user.uid,
-    isActive: true,
-    vendorType: storeData.vendorType || 'products',
-    plan: 'starter',
-    planStatus: 'active',
-    planStartDate: null,
-    planEndDate: null,
-    graceUntil: null,
-    productCount: 0,
-    maxProducts: 15,
-    maxImagesPerProduct: 3,
-    maxJobListings: 5,
-    hasGrowthFeatures: false,
-    hasProFeatures: false,
-    hasPremiumFeatures: false,
-    referredBy: storeData.referredBy || null,
-    createdAt: new Date(),
-  })
-
-  // Send welcome notification
-  try {
-    const token = await user.getIdToken()
-    await fetch('/api/notify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ type: 'welcome' }),
-    })
-  } catch (err) {
-    console.error('Error sending welcome notification:', err)
-  }
-
-  return { user, referredBy: storeData.referredBy || null }
-}
+// Vendor signup is no longer done from the browser. The account and store are
+// created by /api/signup-phone after the SMS code is verified, and the page
+// signs in with the custom token it returns (loginWithCustomToken below).
 
 export const loginSeller = async (email, password) => {
   return await signInWithEmailAndPassword(auth, email, password)

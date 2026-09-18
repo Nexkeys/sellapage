@@ -36,6 +36,10 @@ export default function StoreNavbar({
   // knowing about placement loses the badge.
   showVerified = undefined,
   verifiedTone: verifiedToneObj = null,
+  // Only ever true for a live Store Design that placed it in the header; the
+  // page asks phoneBadgeAt(store, 'navbar').
+  showPhoneVerified = false,
+  phoneTone = null,
   // A designed storefront browses inside its own layout, so it hands over its
   // own handlers here. Without them this dock would drop a customer onto the
   // standard-theme Categories tab, which looks like a different website.
@@ -157,6 +161,7 @@ export default function StoreNavbar({
                 verifiedBadgeAt(store, 'navbar'). A designed store can move it
                 to the hero or the footer instead. */}
             {showBadge && <VerifiedBadge tone={verifiedToneObj} />}
+            {showPhoneVerified && <VerifiedBadge kind="phone" tone={phoneTone} compactOnMobile />}
           </div>
 
           {/* Desktop Section Tabs */}

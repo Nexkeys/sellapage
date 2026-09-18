@@ -27,6 +27,8 @@ import {
   designTokens,
   verifiedBadgeAt,
   verifiedTone,
+  phoneBadgeAt,
+  phoneTone,
 } from "../utils/storeDesign";
 import ServiceDetailOverlay from "../components/storefront/ServiceDetailOverlay";
 import SEO from "../components/SEO";
@@ -733,7 +735,7 @@ export default function ServiceStorePage() {
                 '@type': 'LocalBusiness',
                 name: store.businessName || store.storeName,
                 description: store.description,
-                url: `https://sellapage.com.ng/${store.slug || store.storeName}/services`,
+                url: `https://www.sellapage.com.ng/${store.slug || store.storeName}/services`,
                 logo: store.logoUrl || store.logo,
                 image: store.coverImage || store.logoUrl || store.logo,
                 address: store.pickupAddress
@@ -771,6 +773,8 @@ export default function ServiceStorePage() {
         }
         showVerified={verifiedBadgeAt(store, "navbar")}
         verifiedTone={designLive ? verifiedTone(store.storeDesign) : null}
+        showPhoneVerified={phoneBadgeAt(store, "navbar")}
+        phoneTone={designLive ? phoneTone(store.storeDesign) : null}
         onCategories={designLive ? openDesignCatalogue : null}
         onHome={designLive ? closeDesignCatalogue : null}
         categoriesActive={designLive ? designBrowse !== null || !!search.trim() : false}
@@ -1087,6 +1091,7 @@ export default function ServiceStorePage() {
             storeName={store.businessName}
             customFooterText={footerText}
             verified={verifiedBadgeAt(store, "footer")}
+            phoneVerified={phoneBadgeAt(store, "footer")}
           />
         )}
       </main>

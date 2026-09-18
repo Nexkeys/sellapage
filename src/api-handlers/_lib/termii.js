@@ -16,6 +16,8 @@
 // sender ID. Until then every call returns a structured "unavailable" result so
 // the feature stays dormant instead of throwing at vendors.
 
+import { normaliseNgMobile, maskNgPhone } from '../../utils/phone.js'
+
 const OTP_LENGTH = 6
 const OTP_TTL_MINUTES = 5
 const OTP_ATTEMPTS = 3
@@ -42,30 +44,10 @@ export function validateSenderId(value) {
   return { valid: true, value: v }
 }
 
-/**
- * Normalises a Nigerian number to Termii's expected international format:
- * digits only, country code, no '+' or spaces (e.g. 2348012345678).
- */
-export function normalisePhone(input) {
-  let digits = String(input || '').replace(/\D/g, '')
-  if (!digits) return null
-  if (digits.startsWith('234')) {
-    // already international
-  } else if (digits.startsWith('0')) {
-    digits = '234' + digits.slice(1)
-  } else if (digits.length === 10) {
-    digits = '234' + digits
-  }
-  // NG mobile numbers are 13 digits in international form (234 + 10).
-  if (digits.length < 11 || digits.length > 15) return null
-  return digits
-}
-
-export function maskPhone(input) {
-  const d = String(input || '').replace(/\D/g, '')
-  if (d.length < 4) return ''
-  return `••• ••• ${d.slice(-4)}`
-}
+// Termii's international format (2348012345678). Nigerian mobiles only - see
+// utils/phone.js for why international numbers are refused.
+export const normalisePhone = normaliseNgMobile
+export const maskPhone = maskNgPhone
 
 async function termiiPost(path, payload) {
   const key = process.env.TERMII_API_KEY
@@ -135,7 +117,7 @@ export async function sendSmsOtp({ to, purposeLabel }) {
   if (!status.available) return { ok: false, error: status.reason, message: status.message }
 
   const phone = normalisePhone(to)
-  if (!phone) return { ok: false, error: 'invalid_phone', message: 'That phone number is not valid.' }
+  if (!phone) return { ok: false, error: 'invalid_phone', message: 'Enter a valid Nigerian mobile number.' }
 
   const placeholder = '< 123456 >'
   const result = await termiiPost('/api/sms/otp/send', {

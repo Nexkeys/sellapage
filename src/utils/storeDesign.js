@@ -22,6 +22,7 @@
 // NOTHING HERE TOUCHES COMMERCE. Sections describe presentation only. Ordering,
 // booking, checkout, delivery and payments run through exactly the same code
 // whether the design is on or off.
+import { isPhoneBadgeEarned } from './phone.js'
 
 /**
  * Fonts. `google` is the Google Fonts family spec; `preloaded` marks the two
@@ -227,6 +228,30 @@ export const VERIFIED_LABEL = 'CAC Verified'
 export const VERIFIED_LINE = 'This store is CAC verified'
 export const VERIFIED_TITLE =
   'Business registration verified with the Corporate Affairs Commission of Nigeria'
+
+/**
+ * The phone verified badge. Same rule as CAC: the vendor places and styles it,
+ * but it only renders while isPhoneBadgeEarned() holds, which needs server-set
+ * fields locked in firestore.rules AND the storefront's contact number to be
+ * the number that was verified. Off the header by default because the header
+ * already carries the CAC chip and space there is tight on a phone.
+ */
+export const PHONE_BADGE_FIELDS = [
+  { key: 'navbar', label: 'Show in the header (icon only on phones)', type: 'toggle', default: false },
+  { key: 'hero', label: 'Show under the hero headline', type: 'toggle', default: false },
+  { key: 'footer', label: 'Show in the footer', type: 'toggle', default: true },
+  {
+    key: 'tone',
+    label: 'Badge style',
+    type: 'select',
+    options: ['green', 'neutral', 'accent', 'outline'],
+    default: 'green',
+  },
+]
+
+export const PHONE_VERIFIED_LABEL = 'Phone Verified'
+export const PHONE_VERIFIED_LINE = "This vendor's phone number is verified"
+export const PHONE_VERIFIED_TITLE = "Sellapage confirmed by SMS that this vendor owns the phone number on this page"
 
 /**
  * Every section type the builder can place.
@@ -605,6 +630,7 @@ export function defaultDesign(vendorType = 'products') {
     serviceCard: { ...fieldDefaults(SERVICE_CARD_FIELDS) },
     popup: { ...fieldDefaults(POPUP_FIELDS) },
     badge: { ...fieldDefaults(BADGE_FIELDS) },
+    phoneBadge: { ...fieldDefaults(PHONE_BADGE_FIELDS) },
     pages: defaultPages(),
     tracking: defaultTracking(),
     // The service page has its OWN layout. See defaultServiceSections().
@@ -737,6 +763,7 @@ export function sanitizeDesign(input, vendorType = 'products') {
     serviceCard: cleanFields(SERVICE_CARD_FIELDS, raw.serviceCard),
     popup: cleanFields(POPUP_FIELDS, raw.popup),
     badge: cleanFields(BADGE_FIELDS, raw.badge),
+    phoneBadge: cleanFields(PHONE_BADGE_FIELDS, raw.phoneBadge),
     pages: cleanPages(raw.pages),
     tracking: cleanTracking(raw.tracking),
     // Falls back to the seeded service layout rather than an empty page, so a
@@ -1180,13 +1207,35 @@ export function verifiedBadgeAt(store, spot) {
 
 /** Colours for the badge, resolved against the design so it never clashes. */
 export function verifiedTone(design) {
-  const tone = design?.badge?.tone || 'green'
-  const t = designTokens(design)
+  return toneColours(design?.badge?.tone, design)
+}
 
+export function phoneTone(design) {
+  return toneColours(design?.phoneBadge?.tone, design)
+}
+
+function toneColours(tone, design) {
+  const t = designTokens(design)
   if (tone === 'neutral') return { bg: `${t.textColor}12`, fg: t.textColor, border: `${t.textColor}26` }
   if (tone === 'accent') return { bg: t.accent, fg: '#ffffff', border: t.accent }
   if (tone === 'outline') return { bg: 'transparent', fg: t.textColor, border: t.border }
   return { bg: '#ecfdf5', fg: '#047857', border: '#a7f3d0' }
+}
+
+/**
+ * Whether the phone verified badge renders at one spot: 'navbar' | 'hero' |
+ * 'footer'. A store on the standard theme (every plan below Premium, and
+ * Premium without a live design) gets it in the footer only. A live design
+ * uses the vendor's placement, and a design saved before this existed keeps
+ * the same footer default.
+ */
+export function phoneBadgeAt(store, spot) {
+  if (!isPhoneBadgeEarned(store)) return false
+
+  const cfg = isDesignLive(store) ? store?.storeDesign?.phoneBadge : null
+  if (!cfg || typeof cfg !== 'object') return spot === 'footer'
+
+  return cfg[spot] === true
 }
 
 /**
