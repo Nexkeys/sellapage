@@ -1,5 +1,5 @@
 //src/components/dashboard/AnalyticsTab.jsx/
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Eye, MousePointerClick, Users, TrendingUp, Lock, Loader2, BarChart2, RotateCcw,
   Check, Info, Calendar, CalendarClock, ChevronLeft, ChevronRight, AlertCircle, Sparkles,
@@ -24,101 +24,19 @@ const DAYS_PER_PAGE = 10
 const fmt = (n) => Number(n || 0).toLocaleString()
 
 
-const CHART_DAYS = 14
+// The 14-day chart lives in its own file and is lazy loaded, so the charting
+// library is only downloaded when a vendor actually opens Analytics.
+const DailyChart = lazy(() => import('./DailyChart'))
 
-/**
- * Fourteen days of one metric, as bars.
- *
- * Deliberately CSS boxes and not a charting library: this is one series of
- * fourteen values. Pulling in a chart package to draw fourteen rectangles would
- * add more to the bundle every vendor downloads than the whole Analytics tab
- * weighs, and an SVG needs viewBox maths to stay responsive where a flex row
- * simply is.
- *
- * Every bar carries its value in a title, and the summary line underneath
- * carries the total and the best day, so the numbers are readable without
- * hovering on a phone where nothing hovers.
- */
-function DailyChart({ days, options, metric, onMetric }) {
-  // `days` arrives newest first; a chart reads left to right through time.
-  const span = days.slice(0, CHART_DAYS).reverse()
-  const active = options.find((o) => o.key === metric) || options[0]
-  const values = span.map((d) => Number(active.get(d)) || 0)
-  const max = Math.max(...values, 0)
-  const total = values.reduce((a, b) => a + b, 0)
-  const bestIdx = values.indexOf(max)
-
+/** Same footprint as the chart card, so nothing jumps when it arrives. */
+function ChartSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100">
-        <p className="font-semibold text-gray-800 text-xs">Last {span.length} day{span.length === 1 ? '' : 's'}</p>
-        <p className="text-gray-400 text-[11px] mt-0.5">Tap a measure to switch the chart</p>
-        {options.length > 1 && (
-          <div className="mt-2.5 -mx-1 overflow-x-auto px-1 pb-1">
-            <div className="flex w-max gap-1.5">
-              {options.map((o) => (
-                <button
-                  key={o.key}
-                  onClick={() => onMetric(o.key)}
-                  className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
-                    o.key === metric
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                  }`}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3 animate-pulse">
+      <div className="h-3 w-24 rounded bg-gray-100" />
+      <div className="flex gap-1.5">
+        {[0, 1, 2].map((i) => <div key={i} className="h-7 w-24 rounded-lg bg-gray-50" />)}
       </div>
-
-      {!span.length || max === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 px-6 gap-2 text-center">
-          <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center">
-            <BarChart2 size={18} className="text-gray-300" />
-          </div>
-          <p className="text-gray-400 text-xs max-w-xs">
-            No {active.label.toLowerCase()} in the last {CHART_DAYS} days yet.
-          </p>
-        </div>
-      ) : (
-        <div className="px-4 pb-4 pt-5">
-          <div className="flex h-32 items-end gap-1">
-            {span.map((d, i) => {
-              const v = values[i]
-              // A day with real activity must never render as an invisible
-              // sliver, so anything above zero gets a floor of 4%.
-              const h = v === 0 ? 0 : Math.max(4, (v / max) * 100)
-              return (
-                <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
-                  <span className="text-[9px] font-bold text-gray-400">{v > 0 ? v : ''}</span>
-                  <div
-                    title={`${dayLabel(d.date)}: ${v} ${active.label.toLowerCase()}`}
-                    style={{ height: `${h}%` }}
-                    className={`w-full rounded-t transition-all ${
-                      i === bestIdx && v > 0 ? 'bg-green-500' : v > 0 ? 'bg-green-200' : 'bg-gray-100'
-                    }`}
-                  />
-                </div>
-              )
-            })}
-          </div>
-          <div className="mt-2 flex gap-1">
-            {span.map((d) => (
-              <span key={d.date} className="min-w-0 flex-1 text-center text-[9px] text-gray-400">
-                {Number(String(d.date).slice(8, 10))}
-              </span>
-            ))}
-          </div>
-          <p className="mt-3 border-t border-gray-100 pt-3 text-[11px] text-gray-500">
-            <span className="font-bold text-gray-800">{fmt(total)}</span> {active.label.toLowerCase()} over{' '}
-            {span.length} day{span.length === 1 ? '' : 's'}
-            {max > 0 && <> · best day <span className="font-bold text-gray-800">{fmt(max)}</span> on {dayLabel(span[bestIdx].date)}</>}
-          </p>
-        </div>
-      )}
+      <div className="h-56 rounded-xl bg-gray-50" />
     </div>
   )
 }
@@ -492,7 +410,9 @@ export default function AnalyticsTab({ storeId, products, services = [], vendorT
 
       {/* ── Chart ─────────────────────────────────────────────────────── */}
       {!daysLoading && !daysError && (
-        <DailyChart days={days} options={chartOptions} metric={metric} onMetric={setMetric} />
+        <Suspense fallback={<ChartSkeleton />}>
+          <DailyChart days={days} options={chartOptions} metric={metric} onMetric={setMetric} />
+        </Suspense>
       )}
 
       {/* ── Daily breakdown ───────────────────────────────────────────── */}

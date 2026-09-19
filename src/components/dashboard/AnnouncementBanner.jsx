@@ -8,12 +8,20 @@
 //
 // Announcements with no displayMode field are treated as banners, so everything
 // posted before modals existed keeps behaving exactly as it did.
+//
+// Closing one hides it for this visit only. Every reload fetches the live list
+// again and shows everything still active, until an admin switches it off or
+// it expires. Moving between dashboard tabs is not a reload (this component
+// stays mounted in DashboardLayout), so a closed one stays closed while the
+// vendor works.
 import { useEffect, useState, useCallback } from "react";
 import { X, Megaphone, AlertTriangle, Sparkles, ArrowRight } from "lucide-react";
 import AnnouncementModal from "./AnnouncementModal";
-import { safeAnnouncementUrl } from "../../utils/announcementLink";
+import { safeAnnouncementUrl, safeAnnouncementImage } from "../../utils/announcementLink";
 
-const DISMISSED_KEY = "sellapage_dismissed_announcements";
+// Older builds remembered closed announcements here forever. It is no longer
+// read, and is cleared so a vendor's old closes do not keep hiding anything.
+const LEGACY_DISMISSED_KEY = "sellapage_dismissed_announcements";
 
 const TYPE_STYLES = {
   info: {
@@ -36,27 +44,43 @@ const TYPE_STYLES = {
   },
 };
 
-function getDismissed() {
-  try {
-    return JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]");
-  } catch {
-    return [];
+// The uploaded image in place of the icon. A grey shimmer holds the space while
+// it loads, and the icon comes back if it fails.
+function BannerMark({ image, Icon, iconCls }) {
+  const [state, setState] = useState("loading");
+  if (!image || state === "failed") {
+    return <Icon size={16} className={`flex-shrink-0 mt-0.5 ${iconCls}`} />;
   }
+  return (
+    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-black/5">
+      {state === "loading" && <div className="absolute inset-0 animate-pulse bg-black/10" aria-hidden="true" />}
+      <img
+        src={image}
+        alt=""
+        onLoad={() => setState("loaded")}
+        onError={() => setState("failed")}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${state === "loaded" ? "opacity-100" : "opacity-0"}`}
+      />
+    </div>
+  );
 }
 
 export default function AnnouncementBanner() {
   const [announcements, setAnnouncements] = useState([]);
 
   useEffect(() => {
+    try {
+      localStorage.removeItem(LEGACY_DISMISSED_KEY);
+    } catch {
+      // Storage blocked (private mode): nothing to clear.
+    }
+
     let cancelled = false;
     fetch("/api/admin-announcements?action=active")
       .then((r) => (r.ok ? r.json() : { announcements: [] }))
       .then((data) => {
         if (cancelled) return;
-        const dismissed = getDismissed();
-        setAnnouncements(
-          (data.announcements || []).filter((a) => !dismissed.includes(a.id))
-        );
+        setAnnouncements(data.announcements || []);
       })
       .catch(() => {});
     return () => {
@@ -65,10 +89,6 @@ export default function AnnouncementBanner() {
   }, []);
 
   const dismiss = useCallback((id) => {
-    const dismissed = getDismissed();
-    if (!dismissed.includes(id)) {
-      localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissed, id]));
-    }
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
@@ -83,6 +103,7 @@ export default function AnnouncementBanner() {
     <>
       {modal && (
         <AnnouncementModal
+          key={modal.id}
           announcement={modal}
           onDismiss={() => dismiss(modal.id)}
         />
@@ -92,10 +113,10 @@ export default function AnnouncementBanner() {
         <div className="w-full flex flex-col gap-2 px-3 sm:px-4 pt-3 flex-shrink-0">
           {banners.map((a) => {
             const style = TYPE_STYLES[a.type] || TYPE_STYLES.info;
-            const Icon = style.icon;
             // Validated at render as well as on save: this read is public, and
             // documents predating URL validation are still in the collection.
             const href = safeAnnouncementUrl(a.ctaUrl);
+            const image = safeAnnouncementImage(a.imageUrl);
             const label = (a.ctaLabel || "").trim() || "Learn More";
 
             return (
@@ -103,7 +124,7 @@ export default function AnnouncementBanner() {
                 key={a.id}
                 className={`flex items-start gap-2.5 border rounded-xl px-3.5 py-3 ${style.wrap}`}
               >
-                <Icon size={16} className={`flex-shrink-0 mt-0.5 ${style.iconCls}`} />
+                <BannerMark image={image} Icon={style.icon} iconCls={style.iconCls} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold leading-snug">{a.title}</p>
                   <p className="text-xs font-medium mt-0.5 leading-snug opacity-90">

@@ -7,12 +7,15 @@
 // Visual language deliberately follows ReviewPromptModal so the dashboard has
 // one overlay style rather than two.
 //
-// Dismissal is persistent per announcement id, unlike ReviewPromptModal which
-// reappears on every load. An overlay that came back on every single reload
-// forever would be punishing, and the vendor has usually already acted on it.
-import { useEffect } from 'react'
+// Closing it only hides it for this visit. It shows again on the next reload
+// until an admin switches it off or it expires (see AnnouncementBanner).
+//
+// When the admin uploaded an image it takes the place of the icon header. While
+// it loads a shimmer holds its space, and if it fails the icon header returns,
+// so a bad image never leaves a broken box on every vendor's screen.
+import { useEffect, useState } from 'react'
 import { X, Megaphone, AlertTriangle, Sparkles, ArrowRight } from 'lucide-react'
-import { safeAnnouncementUrl } from '../../utils/announcementLink'
+import { safeAnnouncementUrl, safeAnnouncementImage } from '../../utils/announcementLink'
 
 const TYPE_STYLES = {
   info: {
@@ -36,6 +39,11 @@ const TYPE_STYLES = {
 }
 
 export default function AnnouncementModal({ announcement, onDismiss }) {
+  // 'loading' | 'loaded' | 'failed'. The parent keys this component by
+  // announcement id, so a different announcement always starts at 'loading'.
+  const image = safeAnnouncementImage(announcement?.imageUrl)
+  const [imageState, setImageState] = useState('loading')
+
   // Close on Escape, and stop the page behind from scrolling while open.
   useEffect(() => {
     const onKey = (e) => {
@@ -58,6 +66,7 @@ export default function AnnouncementModal({ announcement, onDismiss }) {
   // documents written before URL validation existed are still in the collection.
   const href = safeAnnouncementUrl(announcement.ctaUrl)
   const label = (announcement.ctaLabel || '').trim() || 'Learn More'
+  const showImage = image && imageState !== 'failed'
 
   return (
     <div
@@ -69,29 +78,58 @@ export default function AnnouncementModal({ announcement, onDismiss }) {
     >
       {/* Clicking the panel itself must not close it, only the backdrop. */}
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onDismiss}
-          className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+          className={`absolute right-4 top-4 z-10 rounded-full p-2 text-white transition-colors ${
+            showImage ? 'bg-black/45 hover:bg-black/60' : 'bg-white/10 hover:bg-white/20'
+          }`}
           aria-label="Close announcement"
         >
           <X size={18} />
         </button>
 
-        <div className={`bg-gradient-to-br ${style.header} px-6 pb-9 pt-12 text-center text-white`}>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20">
-            <Icon size={28} />
+        {showImage ? (
+          <>
+            <div className="relative aspect-[2/1] w-full bg-gray-100">
+              {imageState === 'loading' && (
+                <div className="absolute inset-0 animate-pulse bg-gray-200" aria-hidden="true" />
+              )}
+              <img
+                src={image}
+                alt=""
+                onLoad={() => setImageState('loaded')}
+                onError={() => setImageState('failed')}
+                className={`h-full w-full object-cover transition-opacity duration-300 ${
+                  imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            </div>
+            <div className="px-6 pt-6 text-center">
+              <h2 id="announcement-modal-title" className="text-xl font-black leading-snug text-gray-900">
+                {announcement.title}
+              </h2>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-gray-600">
+                {announcement.message}
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className={`bg-gradient-to-br ${style.header} px-6 pb-9 pt-12 text-center text-white`}>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20">
+              <Icon size={28} />
+            </div>
+            <h2 id="announcement-modal-title" className="text-xl font-black leading-snug">
+              {announcement.title}
+            </h2>
+            <p className={`mt-2 whitespace-pre-line text-sm leading-relaxed ${style.sub}`}>
+              {announcement.message}
+            </p>
           </div>
-          <h2 id="announcement-modal-title" className="text-xl font-black leading-snug">
-            {announcement.title}
-          </h2>
-          <p className={`mt-2 text-sm leading-relaxed ${style.sub}`}>
-            {announcement.message}
-          </p>
-        </div>
+        )}
 
         <div className="space-y-2.5 p-6">
           {href && (

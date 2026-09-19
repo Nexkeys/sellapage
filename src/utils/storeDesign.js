@@ -545,6 +545,75 @@ export function makeSection(type) {
 }
 
 /**
+ * The id given to a lead form this module adds on the vendor's behalf.
+ *
+ * FIXED, not random. The storefront runs ensureLeadForm on every render, and
+ * React keys each section by its id. A fresh random id per render would rebuild
+ * the form every time and wipe whatever a customer was halfway through typing.
+ */
+export const AUTO_LEAD_FORM_ID = 'enquiry-auto'
+
+/**
+ * Guarantees a page carries a lead form that is actually on screen.
+ *
+ * WHY THIS EXISTS
+ * The standard storefront always shows the enquiry form, and every message
+ * sent through it becomes a lead in the dashboard. Designs used to be seeded
+ * without one, so a vendor who switched Store Design on silently lost their
+ * lead form, and their Leads tab went quiet for no reason they could see.
+ *
+ * WHAT A VENDOR CAN STILL DO
+ * Move it anywhere, and change its heading, words and colours, like any other
+ * section. What they cannot do is remove it, hide it, hide it on phones, or
+ * schedule it off, because each of those quietly takes their leads away.
+ *
+ * An existing enquiry section stays exactly where the vendor put it; only the
+ * settings that could take it off screen are reset. A missing one is added just
+ * above the footer, or at the end when there is no footer.
+ *
+ * Returns the SAME array when nothing needs changing, so nothing re-renders for
+ * no reason.
+ */
+export function ensureLeadForm(sections) {
+  const list = Array.isArray(sections) ? sections : []
+  const at = list.findIndex((s) => s?.type === 'enquiry')
+
+  if (at >= 0) {
+    const s = list[at]
+    const offScreen = s.visible === false || s.hideOnMobile || s.scheduleStart || s.scheduleEnd
+    if (!offScreen) return list
+    const next = [...list]
+    next[at] = { ...s, visible: true, hideOnMobile: false, scheduleStart: '', scheduleEnd: '' }
+    return next
+  }
+
+  const form = { ...makeSection('enquiry'), id: AUTO_LEAD_FORM_ID }
+  const footerAt = list.findIndex((s) => s?.type === 'richFooter')
+  if (footerAt < 0) return [...list, form]
+  return [...list.slice(0, footerAt), form, ...list.slice(footerAt)]
+}
+
+/**
+ * The same guarantee over a whole design: the shop front, and the service page
+ * when the vendor has one. Custom pages (about, contact, policies) are left
+ * alone: an About page does not need a form, and Contact already carries one.
+ */
+export function ensureLeadForms(design) {
+  if (!design || typeof design !== 'object') return design
+  return {
+    ...design,
+    sections: ensureLeadForm(design.sections),
+    serviceSections:
+      Array.isArray(design.serviceSections) && design.serviceSections.length
+        ? ensureLeadForm(design.serviceSections)
+        : design.serviceSections,
+  }
+}
+
+/** The lead form is the one section that cannot be removed or hidden. */
+export const isLeadFormSection = (section) => section?.type === 'enquiry'
+
+/**
  * Whether a scheduled section should be on screen right now.
  *
  * Dates are compared as local calendar days, not timestamps: a vendor who sets
@@ -605,7 +674,8 @@ export function defaultServiceSections() {
     q2: 'Can I reschedule?',
     a2: 'Yes. Message us as early as you can and we will find another time that works.',
   }
-  return [
+  // The lead form is seeded like every other section, just above the footer.
+  return ensureLeadForm([
     makeSection('announcement'),
     hero,
     row,
@@ -615,7 +685,7 @@ export function defaultServiceSections() {
     faq,
     makeSection('ctaBanner'),
     makeSection('richFooter'),
-  ]
+  ])
 }
 
 export function defaultDesign(vendorType = 'products') {
@@ -635,7 +705,9 @@ export function defaultDesign(vendorType = 'products') {
     tracking: defaultTracking(),
     // The service page has its OWN layout. See defaultServiceSections().
     serviceSections: vendorHasServices(t) ? defaultServiceSections() : [],
-    sections: [
+    // Seeded WITH a lead form. It used to be left out, so switching Store
+    // Design on quietly removed the enquiry form the standard storefront shows.
+    sections: ensureLeadForm([
       makeSection('announcement'),
       makeSection('hero'),
       ...rows,
@@ -645,7 +717,7 @@ export function defaultDesign(vendorType = 'products') {
       makeSection('faq'),
       makeSection('ctaBanner'),
       makeSection('richFooter'),
-    ],
+    ]),
     updatedAt: null,
   }
 }
@@ -770,12 +842,15 @@ export function sanitizeDesign(input, vendorType = 'products') {
     // design saved before service pages existed still renders something.
     serviceSections: (() => {
       const cleanedSvc = cleanSections(raw.serviceSections)
-      if (cleanedSvc.length) return cleanedSvc
+      if (cleanedSvc.length) return ensureLeadForm(cleanedSvc)
       return vendorHasServices(String(vendorType || 'products').toLowerCase())
         ? defaultServiceSections()
         : []
     })(),
-    sections: cleaned.length ? cleaned : base.sections,
+    // Every load and every save passes through here on the server, so a design
+    // saved before lead forms were guaranteed gains one the next time it is
+    // opened, and one can never be saved without it.
+    sections: ensureLeadForm(cleaned.length ? cleaned : base.sections),
     updatedAt: Date.now(),
   }
 }

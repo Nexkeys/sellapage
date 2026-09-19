@@ -35,3 +35,24 @@ export function safeAnnouncementUrl(raw) {
 }
 
 export { ALLOWED_SCHEMES }
+
+/**
+ * The announcement image, only when it is an https Cloudinary URL, otherwise
+ * null. Mirrors normalizeImageUrl in admin-announcements.js for the same
+ * reason as above: the read is public, so a stored value is never trusted.
+ */
+export function safeAnnouncementImage(raw) {
+  const value = String(raw ?? '').trim()
+  if (!value) return null
+
+  let parsed
+  try {
+    parsed = new URL(value)
+  } catch {
+    return null
+  }
+
+  if (parsed.protocol !== 'https:') return null
+  if (parsed.hostname.toLowerCase() !== 'res.cloudinary.com') return null
+  return parsed.toString()
+}

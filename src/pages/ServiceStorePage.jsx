@@ -29,6 +29,7 @@ import {
   verifiedTone,
   phoneBadgeAt,
   phoneTone,
+  ensureLeadForm,
 } from "../utils/storeDesign";
 import ServiceDetailOverlay from "../components/storefront/ServiceDetailOverlay";
 import SEO from "../components/SEO";
@@ -796,11 +797,15 @@ export default function ServiceStorePage() {
             // existed has none, so it falls back to the seeded service layout
             // rather than rendering a product row with no products, which is
             // what produced a service page with nothing on it.
+            // The lead form is guaranteed here too, at render, so a designed
+            // service page saved before that guarantee gets it back at once.
             design={{
               ...store.storeDesign,
-              sections: store.storeDesign?.serviceSections?.length
-                ? store.storeDesign.serviceSections
-                : defaultServiceSections(),
+              sections: ensureLeadForm(
+                store.storeDesign?.serviceSections?.length
+                  ? store.storeDesign.serviceSections
+                  : defaultServiceSections(),
+              ),
             }}
             store={store}
             services={services}

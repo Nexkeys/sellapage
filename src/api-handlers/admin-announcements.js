@@ -12,6 +12,25 @@ const ALLOWED_CTA_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:']
 
 const DISPLAY_MODES = ['banner', 'modal']
 
+// Cloudinary only, the same rule as push broadcast images (admin-push.js). The
+// image loads on every vendor's dashboard and in the app, so an arbitrary host
+// here would have every merchant's browser and phone calling a stranger's server.
+function normalizeImageUrl(raw) {
+  const value = String(raw ?? '').trim()
+  if (!value) return { ok: true, url: null }
+
+  let parsed
+  try {
+    parsed = new URL(value)
+  } catch {
+    return { ok: false }
+  }
+  if (parsed.protocol !== 'https:') return { ok: false }
+  if (parsed.hostname.toLowerCase() !== 'res.cloudinary.com') return { ok: false }
+  return { ok: true, url: parsed.toString() }
+}
+const IMAGE_ERROR = 'Image must be an https res.cloudinary.com URL'
+
 // { ok: false } means the admin typed something we refuse to store.
 // { ok: true, url: null } means they simply left it blank.
 function normalizeCtaUrl(raw) {
@@ -92,8 +111,11 @@ export default async function handler(req, res) {
     if (action === 'create' && req.method === 'POST') {
       let body = {}
       try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch {}
-      const { title, message, type, expiresAt, displayMode, ctaLabel, ctaUrl } = body
+      const { title, message, type, expiresAt, displayMode, ctaLabel, ctaUrl, imageUrl } = body
       if (!title || !message) return res.status(400).json({ error: 'Title and message required' })
+
+      const image = normalizeImageUrl(imageUrl)
+      if (!image.ok) return res.status(400).json({ error: IMAGE_ERROR })
 
       const cta = normalizeCtaUrl(ctaUrl)
       if (!cta.ok) {
@@ -118,6 +140,8 @@ export default async function handler(req, res) {
         docData.ctaLabel = clean(ctaLabel, 32) || 'Learn More'
       }
 
+      if (image.url) docData.imageUrl = image.url
+
       if (expiresAt) docData.expiresAt = new Date(expiresAt)
 
       const ref = await db.collection('announcements').add(docData)
@@ -129,7 +153,7 @@ export default async function handler(req, res) {
       try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch {}
       const {
         announcementId, active, title, message, type, expiresAt,
-        displayMode, ctaLabel, ctaUrl,
+        displayMode, ctaLabel, ctaUrl, imageUrl,
       } = body
       if (!announcementId) return res.status(400).json({ error: 'Missing announcementId' })
 
@@ -142,6 +166,12 @@ export default async function handler(req, res) {
 
       if (displayMode !== undefined) {
         updateData.displayMode = DISPLAY_MODES.includes(displayMode) ? displayMode : 'banner'
+      }
+
+      if (imageUrl !== undefined) {
+        const image = normalizeImageUrl(imageUrl)
+        if (!image.ok) return res.status(400).json({ error: IMAGE_ERROR })
+        updateData.imageUrl = image.url
       }
 
       if (ctaUrl !== undefined) {

@@ -5,8 +5,9 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon
 } from 'lucide-react';
+import { uploadSingleImage } from '../firebase/products';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
 import ReviewsAdmin from '../components/admin/ReviewsAdmin';
@@ -143,8 +144,10 @@ export default function Admin() {
   const [announcements, setAnnouncements] = useState([]);
   const [annLoading, setAnnLoading] = useState(false);
   const [annError, setAnnError] = useState('');
-  const [newAnn, setNewAnn] = useState({ title: '', message: '', type: 'info', displayMode: 'banner', ctaLabel: '', ctaUrl: '' });
+  const [newAnn, setNewAnn] = useState({ title: '', message: '', type: 'info', displayMode: 'banner', ctaLabel: '', ctaUrl: '', imageUrl: '' });
   const [annPostError, setAnnPostError] = useState('');
+  const [annUploading, setAnnUploading] = useState(false);
+  const [annPosting, setAnnPosting] = useState(false);
 
   const [tickets, setTickets] = useState([]);
   const [ticketStats, setTicketStats] = useState(null);
@@ -333,9 +336,33 @@ export default function Admin() {
     } catch { setAnnError('Failed.'); } finally { setAnnLoading(false); }
   }, []);
 
-  const createAnnouncement = useCallback(async () => {
-    if (!newAnn.title.trim() || !newAnn.message.trim()) return;
+  // Same unsigned Cloudinary upload Push Broadcast uses. The server only
+  // accepts https res.cloudinary.com URLs, which is what this returns.
+  const uploadAnnImage = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setAnnPostError('That file is not an image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setAnnPostError('Image must be under 5MB.'); return; }
     setAnnPostError('');
+    setAnnUploading(true);
+    try {
+      const url = await uploadSingleImage(file, 'sellapage/announcements');
+      setNewAnn(prev => ({ ...prev, imageUrl: url }));
+    } catch {
+      setAnnPostError('Image upload failed. Please try again.');
+    } finally {
+      setAnnUploading(false);
+    }
+  }, []);
+
+  const createAnnouncement = useCallback(async () => {
+    if (!newAnn.title.trim() || !newAnn.message.trim()) {
+      setAnnPostError('Title and message are both required.');
+      return;
+    }
+    setAnnPostError('');
+    setAnnPosting(true);
     try {
       const r = await fetch('/api/admin-announcements?action=create', {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...(await H()) },
@@ -348,11 +375,13 @@ export default function Admin() {
         setAnnPostError(data.error || 'Could not post the announcement.');
         return;
       }
-      setNewAnn({ title: '', message: '', type: 'info', displayMode: 'banner', ctaLabel: '', ctaUrl: '' });
+      setNewAnn({ title: '', message: '', type: 'info', displayMode: 'banner', ctaLabel: '', ctaUrl: '', imageUrl: '' });
       fetchAnnouncements();
     } catch (e) {
       console.error(e);
       setAnnPostError('Could not post the announcement.');
+    } finally {
+      setAnnPosting(false);
     }
   }, [newAnn, fetchAnnouncements]);
 
@@ -898,12 +927,32 @@ export default function Admin() {
               <span className="mt-1 block text-[10px] text-gray-400">Vendors never see the raw link, only the button. Leave blank for no button.</span>
             </label>
 
+            {/* Replaces the icon on the popup and the bar, on web and in the app */}
+            <div className="mb-2">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Image (optional)</span>
+              {newAnn.imageUrl ? (
+                <div className="mt-1 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-2">
+                  <img src={newAnn.imageUrl} alt="" className="h-14 w-24 flex-shrink-0 rounded-md border border-gray-200 bg-white object-cover" />
+                  <p className="min-w-0 flex-1 text-[11px] font-medium text-gray-500">Shows instead of the icon.</p>
+                  <button type="button" onClick={() => setNewAnn(prev => ({ ...prev, imageUrl: '' }))} className="flex-shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500" aria-label="Remove image"><X size={15} /></button>
+                </div>
+              ) : (
+                <label className={`mt-1 flex items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 ${annUploading ? 'cursor-wait' : 'cursor-pointer hover:border-green-400'}`}>
+                  {annUploading ? <Loader2 size={14} className="animate-spin text-gray-400" /> : <ImageIcon size={14} className="text-gray-400" />}
+                  <span className="text-xs font-medium text-gray-500">{annUploading ? 'Uploading...' : 'Upload image (JPG, PNG or WebP, under 5MB)'}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={uploadAnnImage} disabled={annUploading} />
+                </label>
+              )}
+              <span className="mt-1 block text-[10px] text-gray-400">Wide images work best on the popup, about 1200 by 600.</span>
+            </div>
+
             {annPostError && <p className="mb-2 text-xs font-semibold text-red-600">{annPostError}</p>}
 
             {/* What the vendor will actually see */}
             {(newAnn.title.trim() || newAnn.message.trim()) && (
               <div className="mb-3 rounded-lg border border-dashed border-gray-200 bg-gray-50/70 p-3">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Preview</p>
+                {newAnn.imageUrl && <img src={newAnn.imageUrl} alt="" className="mb-2 aspect-[2/1] w-full max-w-sm rounded-lg object-cover" />}
                 <p className="text-sm font-bold text-gray-900">{newAnn.title || 'Title'}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{newAnn.message || 'Message'}</p>
                 {newAnn.ctaUrl.trim() && (
@@ -914,9 +963,9 @@ export default function Admin() {
               </div>
             )}
 
-            <button onClick={createAnnouncement} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Post</button>
+            <button onClick={createAnnouncement} disabled={annUploading || annPosting} className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white px-4 py-2 rounded-lg text-xs font-bold">{annPosting && <Loader2 size={12} className="animate-spin" />}{annPosting ? 'Posting...' : 'Post'}</button>
           </div>
-          {annLoading?<SkeletonRows count={5} />:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{announcements.length===0?<div className="p-6 text-center text-gray-400 text-sm">No announcements yet.</div>:announcements.map(a=><div key={a.id} className="px-4 py-3 hover:bg-gray-50/50 flex items-center justify-between gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-bold text-gray-900 truncate">{a.title}</p><span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${a.type==='warning'?'bg-amber-100 text-amber-700':a.type==='promo'?'bg-purple-100 text-purple-700':'bg-blue-100 text-blue-700'}`}>{a.type}</span>{a.displayMode==='modal'&&<span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-gray-900 text-white">Popup</span>}{a.ctaUrl&&<span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{a.ctaLabel||'Link'}</span>}</div><p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{a.message}</p><div className="flex items-center gap-2 mt-0.5"><p className="text-[9px] text-gray-400">{a.createdAt?new Date(a.createdAt).toLocaleDateString('en-NG'):''}</p>{a.ctaUrl&&<a href={a.ctaUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gray-400 hover:text-green-600 truncate max-w-[220px]">{a.ctaUrl}</a>}</div></div><div className="flex items-center gap-2 flex-shrink-0"><button onClick={()=>toggleAnnouncement(a.id,a.active)} className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${a.active?'bg-green-500':'bg-gray-200'}`}><span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${a.active?'translate-x-4':'translate-x-0'}`} /></button><button onClick={()=>deleteAnnouncement(a.id)} className="text-red-400 hover:text-red-600"><X size={14} /></button></div></div>)}</div></div>}
+          {annLoading?<SkeletonRows count={5} />:<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="divide-y divide-gray-50">{announcements.length===0?<div className="p-6 text-center text-gray-400 text-sm">No announcements yet.</div>:announcements.map(a=><div key={a.id} className="px-4 py-3 hover:bg-gray-50/50 flex items-center justify-between gap-3">{a.imageUrl&&<img src={a.imageUrl} alt="" loading="lazy" className="h-10 w-16 flex-shrink-0 rounded-md border border-gray-100 bg-gray-50 object-cover" />}<div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-bold text-gray-900 truncate">{a.title}</p><span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${a.type==='warning'?'bg-amber-100 text-amber-700':a.type==='promo'?'bg-purple-100 text-purple-700':'bg-blue-100 text-blue-700'}`}>{a.type}</span>{a.displayMode==='modal'&&<span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-gray-900 text-white">Popup</span>}{a.ctaUrl&&<span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{a.ctaLabel||'Link'}</span>}</div><p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{a.message}</p><div className="flex items-center gap-2 mt-0.5"><p className="text-[9px] text-gray-400">{a.createdAt?new Date(a.createdAt).toLocaleDateString('en-NG'):''}</p>{a.ctaUrl&&<a href={a.ctaUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gray-400 hover:text-green-600 truncate max-w-[220px]">{a.ctaUrl}</a>}</div></div><div className="flex items-center gap-2 flex-shrink-0"><button onClick={()=>toggleAnnouncement(a.id,a.active)} className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${a.active?'bg-green-500':'bg-gray-200'}`}><span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${a.active?'translate-x-4':'translate-x-0'}`} /></button><button onClick={()=>deleteAnnouncement(a.id)} className="text-red-400 hover:text-red-600"><X size={14} /></button></div></div>)}</div></div>}
         </div>}
 
         {/* TICKETS */}

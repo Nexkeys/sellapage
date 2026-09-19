@@ -214,6 +214,19 @@ export const emptyDay = (date) => ({
 export const DAILY_FETCH_LIMIT = 180
 
 /**
+ * The last `count` calendar days ending on `todayKey` (a storeDay() key), oldest
+ * first. Built with UTC arithmetic on the date parts, so a month or year
+ * boundary never skips or repeats a day.
+ */
+export function lastDays(todayKey, count = 14) {
+  const [y, m, d] = String(todayKey).split('-').map(Number)
+  return Array.from({ length: count }, (_, i) => {
+    const t = new Date(Date.UTC(y, m - 1, d - (count - 1 - i)))
+    return t.toISOString().slice(0, 10)
+  })
+}
+
+/**
  * The most recent days, newest first.
  *
  * Bounded on purpose. A store running for three years would otherwise read a
