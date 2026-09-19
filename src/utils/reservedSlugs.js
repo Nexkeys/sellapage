@@ -31,6 +31,9 @@ export const RESERVED_SLUGS = [
   // Added 2026-09-15 with the Investors & Partners page. Checked in production
   // first: no store owned this slug.
   'partners',
+  // Added 2026-09-19 with the Dropshipping Marketplace page. Checked in
+  // production first: no store owned this slug, current or previous.
+  'dropshipping',
 ]
 
 export function isReservedSlug(slug) {

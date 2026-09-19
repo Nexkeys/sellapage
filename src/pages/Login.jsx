@@ -83,6 +83,7 @@ export default function Login() {
     description: '',
     vendorType: 'products',
     referralCode: '',
+    marketplaceInterest: { supply: false, dropship: false },
   })
   const [referralValidated, setReferralValidated] = useState(false)
   const [referralError, setReferralError] = useState('')
@@ -203,6 +204,7 @@ export default function Login() {
       storeName: form.storeName.trim(),
       description: form.description.trim(),
       vendorType: form.vendorType || 'products',
+      marketplaceInterest: form.marketplaceInterest,
       referralCode: form.referralCode.trim() || localStorage.getItem('vendor_referral_code') || '',
       sessionId: getSessionId(),
     })
@@ -763,6 +765,32 @@ export default function Login() {
                         {opt.sub}
                       </span>
                     </button>
+                  ))}
+                </div>
+
+                {/* Dropshipping interest: optional, coming soon, grants nothing. */}
+                <p className="mt-3 mb-1.5 text-xs font-medium text-gray-600">
+                  Dropshipping <span className="font-normal text-gray-400">(optional, coming soon)</span>
+                </p>
+                <div className="space-y-1.5">
+                  {[
+                    { key: 'supply', label: 'I want to supply products to dropshippers' },
+                    { key: 'dropship', label: "I want to dropship other suppliers' products" },
+                  ].map((opt) => (
+                    <label key={opt.key} className="flex items-center gap-2.5 text-xs text-gray-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.marketplaceInterest[opt.key]}
+                        onChange={(e) =>
+                          setForm(prev => ({
+                            ...prev,
+                            marketplaceInterest: { ...prev.marketplaceInterest, [opt.key]: e.target.checked },
+                          }))
+                        }
+                        className="h-4 w-4 accent-green-600"
+                      />
+                      {opt.label}
+                    </label>
                   ))}
                 </div>
               </div>

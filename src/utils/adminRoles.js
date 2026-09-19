@@ -36,6 +36,7 @@ const TAB_ACCESS = {
   partners: [ADMIN_ROLES.SUPER_ADMIN],
   newsletter: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
   email: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.MARKETING],
+  marketplace: [ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.OPERATIONS],
 }
 
 export async function getAdminRole(uid) {

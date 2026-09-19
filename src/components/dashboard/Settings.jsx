@@ -8,6 +8,7 @@ import { FREE_PLAN_LIMIT } from '../../firebase/products'
 import { PLAN_PRICES, formatPrice } from '../../utils/billingPlans'
 import SessionsPanel from './SessionsPanel'
 import PhoneVerifyCard from './PhoneVerifyCard'
+import { readInterest, vendorTypeForInterest } from '../../utils/marketplace'
 
 
 const getInitials = (name = '') => {
@@ -81,6 +82,7 @@ export default function SettingsTab({
     showWhatsApp: store?.showWhatsApp !== false,
     description: store?.description || '',
     vendorType: store?.vendorType || 'products',
+    marketplaceInterest: readInterest(store),
   })
   const [slugError, setSlugError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -101,8 +103,12 @@ export default function SettingsTab({
       showWhatsApp: store?.showWhatsApp !== false,
       description: store?.description || '',
       vendorType: store?.vendorType || 'products',
+      marketplaceInterest: {
+        supply: store?.marketplaceInterest?.supply === true,
+        dropship: store?.marketplaceInterest?.dropship === true,
+      },
     })
-  }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.showWhatsApp, store?.description, store?.vendorType])
+  }, [store?.businessName, store?.storeName, store?.whatsappNumber, store?.showWhatsApp, store?.description, store?.vendorType, store?.marketplaceInterest?.supply, store?.marketplaceInterest?.dropship])
 
 
   const handleSlugChange = e => {
@@ -233,6 +239,51 @@ export default function SettingsTab({
               </button>
             ))}
           </div>
+        </div>
+
+
+        {/* Dropshipping interest. Records interest only (coming soon); it
+            shows the matching dashboard tab and grants nothing else. */}
+        <div>
+          <label className="block text-xs font-bold text-gray-700 mb-1">
+            Dropshipping <span className="font-normal text-gray-400">(optional, coming soon)</span>
+          </label>
+          <p className="text-gray-400 text-[11px] mb-2">
+            Needs a Pro or Premium plan when it opens.{' '}
+            <a href="/dropshipping" target="_blank" rel="noopener noreferrer" className="font-semibold text-green-600 hover:underline">
+              How it works <ArrowRight size={10} className="inline" />
+            </a>
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              { key: 'supply', label: 'I want to supply products to dropshippers' },
+              { key: 'dropship', label: "I want to dropship other suppliers' products" },
+            ].map((opt) => {
+              const on = form.marketplaceInterest?.[opt.key] === true
+              return (
+                <label
+                  key={opt.key}
+                  className={`flex items-start gap-2.5 rounded-xl border-2 px-3 py-2.5 cursor-pointer transition-all ${
+                    on ? 'border-green-500 bg-green-50/50' : 'border-gray-100 hover:border-gray-200 bg-white'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={(e) => {
+                      const next = { ...form.marketplaceInterest, [opt.key]: e.target.checked }
+                      setForm(p => ({ ...p, marketplaceInterest: next, vendorType: vendorTypeForInterest(p.vendorType, next) }))
+                    }}
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-green-600"
+                  />
+                  <span className={`text-xs font-semibold ${on ? 'text-green-700' : 'text-gray-600'}`}>{opt.label}</span>
+                </label>
+              )
+            })}
+          </div>
+          {form.marketplaceInterest?.dropship && form.vendorType === 'both' && store?.vendorType === 'services' && (
+            <p className="mt-1.5 text-[11px] text-gray-500">Dropshippers sell products, so your store will offer products and services.</p>
+          )}
         </div>
 
 

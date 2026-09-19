@@ -101,6 +101,8 @@ import ReviewsTab from "../components/dashboard/ReviewsTab";
 import AnalyticsTab from "../components/dashboard/AnalyticsTab";
 import MarketingTab from "../components/dashboard/MarketingTab";
 import StoreDesignTab from "../components/dashboard/StoreDesignTab";
+import MarketplaceTab from "../components/dashboard/MarketplaceTab";
+import { readInterest, vendorTypeForInterest } from "../utils/marketplace";
 import DiscountsTab from "../components/dashboard/DiscountsTab";
 import OnlineStoreTab from "../components/dashboard/OnlineStoreTab";
 import MobileAppTab from "../components/dashboard/MobileAppTab";
@@ -1298,7 +1300,11 @@ export default function Dashboard() {
         showWhatsApp: formData.showWhatsApp,
         description: formData.description.trim(),
         themeColor: formData.themeColor || "",
-        vendorType: formData.vendorType,
+        vendorType: vendorTypeForInterest(formData.vendorType, formData.marketplaceInterest),
+        marketplaceInterest: {
+          supply: formData.marketplaceInterest?.supply === true,
+          dropship: formData.marketplaceInterest?.dropship === true,
+        },
       });
       setStore((prev) => ({
         ...prev,
@@ -1313,6 +1319,15 @@ export default function Dashboard() {
     } finally {
       setSettingsSaving(false);
     }
+  };
+
+  // "Notify me" on the Supplier Hub / Dropship Marketplace coming-soon tabs.
+  // Interest only: it grants nothing, which is why the owner may write it.
+  const handleMarketplaceJoin = async (role) => {
+    const marketplaceInterest = { ...readInterest(store), [role]: true };
+    const vendorType = vendorTypeForInterest(store.vendorType, marketplaceInterest);
+    await updateStore(store.id, { marketplaceInterest, vendorType });
+    setStore((prev) => ({ ...prev, marketplaceInterest, vendorType }));
   };
 
   const handleWhatsAppToggle = async (value) => {
@@ -1982,6 +1997,17 @@ export default function Dashboard() {
 
       {activeTab === "store-design" && (
         <StoreDesignTab store={store} storeUrl={storeUrl} />
+      )}
+
+      {/* Dropshipping marketplace, coming soon. Owner only. */}
+      {(activeTab === "supplier-hub" || activeTab === "dropship") && !store?._isStaff && (
+        <MarketplaceTab
+          key={activeTab}
+          role={activeTab === "supplier-hub" ? "supply" : "dropship"}
+          store={store}
+          navigateTo={setActiveTab}
+          onJoin={handleMarketplaceJoin}
+        />
       )}
 
       {activeTab === "support" && (

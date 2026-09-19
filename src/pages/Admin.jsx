@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes
 } from 'lucide-react';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
@@ -16,6 +16,7 @@ import PushConsole from '../components/admin/PushConsole';
 import PartnersAdmin from '../components/admin/PartnersAdmin';
 import NewsletterAdmin from '../components/admin/NewsletterAdmin';
 import EmailBroadcast from '../components/admin/EmailBroadcast';
+import MarketplaceAdmin from '../components/admin/MarketplaceAdmin';
 import { SkeletonRows } from '../components/Skeleton';
 
 const ADMIN_TABS = [
@@ -25,6 +26,7 @@ const ADMIN_TABS = [
   { id: 'withdrawals', label: 'Payouts', icon: Clock, short: 'Payouts' },
   { id: 'cac', label: 'CAC', icon: FileCheck, short: 'CAC' },
   { id: 'domains', label: 'Custom Domains', icon: Link2, short: 'Domains' },
+  { id: 'marketplace', label: 'Dropshipping', icon: Boxes, short: 'Dropship' },
   { id: 'announcements', label: 'Announcements', icon: Megaphone, short: 'Alerts' },
   { id: 'push', label: 'Push Broadcast', icon: Bell, short: 'Push' },
   { id: 'email', label: 'Email Broadcast', icon: Send, short: 'Email' },
@@ -47,7 +49,7 @@ const ADMIN_TABS = [
 const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
-  { label: 'Trust & Growth', ids: ['cac', 'domains', 'analytics', 'partners'] },
+  { label: 'Trust & Growth', ids: ['cac', 'domains', 'marketplace', 'analytics', 'partners'] },
   { label: 'Engagement', ids: ['announcements', 'push', 'email', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
@@ -1127,6 +1129,9 @@ export default function Admin() {
 
         {/* NEWSLETTER */}
         {activeTab === 'newsletter' && <NewsletterAdmin authHeaders={H} />}
+
+        {/* DROPSHIPPING MARKETPLACE (waitlist now, supplier approvals from Phase 1) */}
+        {activeTab === 'marketplace' && <MarketplaceAdmin authHeaders={H} />}
 
         {activeTab === 'push' && <PushConsole authHeaders={H} />}
         {activeTab === 'email' && <EmailBroadcast authHeaders={H} />}

@@ -4,6 +4,15 @@
 // Last updated: 2026-09-18 (stores create closed, phone-first signup)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-19  Dropshipping Marketplace, Phase 0 (coming soon + waitlist).
+//               Added top-level `match /marketplaceWaitlist/{entryId}`, server
+//               only. SAFE TO PUBLISH ANY TIME: no client reads or writes it.
+//               `stores/{id}.marketplaceInterest` ({ supply, dropship }) is
+//               deliberately NOT locked: it records interest only and grants
+//               nothing, and Settings writes it from the browser. The fields
+//               that WILL grant access (supplierStatus and the marketplace
+//               product fields) are locked in Phase 1 and 2, before any code
+//               trusts them.
 //   2026-09-18  /stores `allow create` CLOSED (`allow create: if false`).
 //               Stores are created only by /api/signup-phone (Admin SDK) after
 //               the SMS code is verified. The website stopped writing the store
@@ -804,6 +813,15 @@ service cloud.firestore {
     // verified. The instant "already verified" check on the signup form and in
     // Settings goes through /api/signup-phone and /api/phone-verify instead.
     match /verifiedPhones/{phone} {
+      allow read, write: if false;
+    }
+
+    // Dropshipping Marketplace waitlist (2026-09-19, Phase 0), written by
+    // /api/marketplace-waitlist and read by /api/admin-marketplace. Holds
+    // names, emails and phone numbers of people who are not Sellapage
+    // vendors yet, and the document id is the email address, so a readable
+    // collection would be a harvestable contact list. Server only.
+    match /marketplaceWaitlist/{entryId} {
       allow read, write: if false;
     }
   }

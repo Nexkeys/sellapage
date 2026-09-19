@@ -52,6 +52,10 @@ const TAB_ACCESS = {
   // Email broadcasts: reaches every user's inbox and cannot be recalled, the
   // same weight as push, so the same two roles.
   email:          ['super_admin', 'marketing'],
+  // Dropshipping marketplace: the waitlist now, supplier approvals and
+  // suspensions from Phase 1. Same pair as CAC and custom domains, because
+  // approving a supplier is a trust decision about a business.
+  marketplace:    ['super_admin', 'operations'],
 }
 
 /**

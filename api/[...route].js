@@ -562,6 +562,14 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/signup-phone.js")
         return handler(req, res)
       }
+      case "marketplace-waitlist": {
+        const { default: handler } = await import("../src/api-handlers/marketplace-waitlist.js")
+        return handler(req, res)
+      }
+      case "admin-marketplace": {
+        const { default: handler } = await import("../src/api-handlers/admin-marketplace.js")
+        return handler(req, res)
+      }
       case "login-verify": {
         const { default: handler } = await import("../src/api-handlers/login-verify.js")
         return handler(req, res)

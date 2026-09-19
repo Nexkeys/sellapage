@@ -55,6 +55,7 @@ const BlogPage           = lazy(() => import('./pages/BlogPage'))
 const BlogPostPage       = lazy(() => import('./pages/BlogPostPage'))
 const SuccessStoriesPage = lazy(() => import('./pages/SuccessStoriesPage'))
 const PartnersPage       = lazy(() => import('./pages/PartnersPage'))
+const DropshippingPage   = lazy(() => import('./pages/DropshippingPage'))
 const NotFound           = lazy(() => import('./pages/NotFound'))
 
 export default function App() {
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/success-stories" element={<SuccessStoriesPage />} />
             <Route path="/partners" element={<PartnersPage />} />
+            <Route path="/dropshipping" element={<DropshippingPage />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/billing/callback" element={<BillingCallback />} />
             <Route path="/review" element={<ReviewPage />} />

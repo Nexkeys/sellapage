@@ -8,7 +8,8 @@
 //                              -> { token, destinationMasked, resendAfterSeconds }
 //   POST     ?action=complete  { token, code, email, password, businessName,
 //                                whatsappNumber, storeName, description,
-//                                vendorType, referralCode, sessionId }
+//                                vendorType, referralCode, sessionId,
+//                                marketplaceInterest? { supply, dropship } }
 //                              -> { customToken, storeId, referrerId }
 //
 // NOTHING IS CREATED UNTIL THE CODE IS RIGHT. `send` only texts a code; the
@@ -36,6 +37,7 @@ import { getSmsConfigStatus, sendSmsOtp, verifySmsOtp } from './_lib/termii.js'
 import { checkPhone, takeSmsQuota, PHONE_TAKEN_MESSAGE } from './_lib/phone-claims.js'
 import { maskNgPhone } from '../utils/phone.js'
 import { isReservedSlug } from '../utils/reservedSlugs.js'
+import { cleanInterest, vendorTypeForInterest } from '../utils/marketplace.js'
 
 const CHALLENGES = 'signupChallenges'
 const RESEND_COOLDOWN_MS = 60 * 1000
@@ -236,7 +238,13 @@ export default async function handler(req, res) {
       if (password.length < 6 || password.length > 128) {
         return fail(res, 400, 'weak_password', 'Password must be at least 6 characters.', { field: 'password' })
       }
-      const vendorType = VENDOR_TYPES.includes(body.vendorType) ? body.vendorType : 'products'
+      // Dropshipping interest (optional, coming soon). Interest only, grants
+      // nothing; a dropshipper sells products, so "services" becomes "both".
+      const marketplaceInterest = cleanInterest(body.marketplaceInterest)
+      const vendorType = vendorTypeForInterest(
+        VENDOR_TYPES.includes(body.vendorType) ? body.vendorType : 'products',
+        marketplaceInterest,
+      )
       const description = clean(body.description, 1000)
       const whatsappNumber = clean(body.whatsappNumber, 40)
 
@@ -340,6 +348,7 @@ export default async function handler(req, res) {
             storeName: id.storeName,
             description,
             vendorType,
+            ...(marketplaceInterest.supply || marketplaceInterest.dropship ? { marketplaceInterest } : {}),
             referredBy,
             email: id.email,
             ownerId: uid,

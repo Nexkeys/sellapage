@@ -38,6 +38,8 @@ import {
   Palette,
   Music2,
   Bell,
+  Warehouse,
+  PackageSearch,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -46,12 +48,17 @@ import CalculatorFAB from "./CalculatorFAB";
 import ReviewPromptModal from "./ReviewPromptModal";
 import { sendHeartbeat } from "../../utils/sessionTracking";
 import { canStaffAccessTab } from "../../utils/staffRoles";
+import { readInterest } from "../../utils/marketplace";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard },
   { type: "group", label: "Commerce" },
   { id: "products", label: "Products", icon: Package },
   { id: "services", label: "Services", icon: Sparkles },
+  // Dropshipping marketplace (coming soon). Shown only to owners who ticked
+  // supply / dropship, never to staff. See Docs/Dropshipping-Marketplace-Plan.md.
+  { id: "supplier-hub", label: "Supplier Hub", icon: Warehouse, soon: true },
+  { id: "dropship", label: "Dropship Marketplace", icon: PackageSearch, soon: true },
   { id: "categories", label: "Categories", icon: Tag },
   { id: "ledger", label: "Ledger", icon: BookOpen },
   { id: "receipts", label: "Receipts", icon: Receipt },
@@ -187,6 +194,12 @@ export default function DashboardLayout({
   const isStaffIdentity = !!store?._isStaff;
   const staffTabAccess = (tabId, needsWrite = false) =>
     canStaffAccessTab({ tabs: store?._staffTabs || [] }, tabId, needsWrite);
+  const marketplaceInterest = readInterest(store);
+  // One rule for both nav lists below. Owner only: these tabs will set prices
+  // and move money, so no staff role can hold them.
+  const hideMarketplaceTab = (tabId) =>
+    (tabId === "supplier-hub" && (isStaffIdentity || !marketplaceInterest.supply)) ||
+    (tabId === "dropship" && (isStaffIdentity || !marketplaceInterest.dropship));
 
   const planEndDate = store?.planEndDate?.toDate?.();
   const daysUntilExpiry = planEndDate
@@ -226,11 +239,13 @@ export default function DashboardLayout({
         // Shown to Premium only. A downgraded vendor keeps the saved design
         // (see isDesignLive) but loses the editor until they upgrade again.
         if (item.id === 'store-design' && !isPremiumPlan) return false;
+        if (hideMarketplaceTab(item.id)) return false;
         if (item.id === 'team' && isStaffIdentity) return false;
         if (isStaffIdentity && item.id !== 'team' && !staffTabAccess(item.id)) return false;
         return true;
       }),
-    [isGrowthOrAbove, vendorType, effectiveIsPro, isPremiumPlan, isStaffIdentity, store?._staffTabs],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isGrowthOrAbove, vendorType, effectiveIsPro, isPremiumPlan, isStaffIdentity, store?._staffTabs, marketplaceInterest.supply, marketplaceInterest.dropship],
   );
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -325,6 +340,7 @@ export default function DashboardLayout({
           if (id === 'meta-pixel' && !isPremiumPlan) return null;
           if (id === 'tiktok-pixel' && !isPremiumPlan) return null;
           if (id === 'google-ads' && !isPremiumPlan) return null;
+          if (hideMarketplaceTab(id)) return null;
           if (id === 'team' && isStaffIdentity) return null;
           if (isStaffIdentity && id !== 'team' && !staffTabAccess(id)) return null;
           const active = activeTab === id;
@@ -340,6 +356,11 @@ export default function DashboardLayout({
             >
               <Icon size={16} strokeWidth={1.8} />
               {label}
+              {item.soon && (
+                <span className="ml-auto rounded-full bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+                  Soon
+                </span>
+              )}
             </button>
           );
         })}

@@ -270,6 +270,7 @@ export default function Footer() {
             <ul className="space-y-2">
               {[
                 { label: 'About Us', to: '/about' },
+                { label: 'Dropshipping (soon)', to: '/dropshipping' },
                 { label: 'Investors & Partners', to: '/partners' },
                 { label: 'Privacy Policy', to: '/privacy-policy' },
                 { label: 'Terms of Service', to: '/terms' },

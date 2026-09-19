@@ -223,6 +223,22 @@ export const PAGE_SEO = {
     ],
   },
 
+  '/dropshipping': {
+    title: 'Dropshipping Marketplace (coming soon)',
+    description:
+      'The Sellapage Dropshipping Marketplace is coming soon. Suppliers list products once, sellers across Nigeria add them to their stores, and every order is paid and split automatically. Join the waitlist.',
+    keywords:
+      'dropshipping nigeria, dropshipping marketplace nigeria, nigerian suppliers for dropshipping, sell without stock nigeria, wholesale suppliers nigeria, become a supplier nigeria, reseller nigeria, sellapage dropshipping',
+    jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'Dropshipping', path: '/dropshipping' }])],
+    prose: [
+      'The Sellapage Dropshipping Marketplace is coming soon. This page explains how it will work and collects a waitlist.',
+      'Suppliers list their products once at a wholesale price. Dropshippers add those products to their own Sellapage stores at their own price and sell them, without buying or holding stock.',
+      'Marketplace products are sold with paid checkout only. When a customer pays, Paystack splits the payment between the supplier, the dropshipper and Sellapage, and the supplier ships from their own location to the customer.',
+      'Suppliers and dropshippers both need a Pro or Premium plan. Every supplier must be CAC verified, phone verified and reviewed by the Sellapage team before listing products.',
+      'A store can keep selling its own products and services while supplying, dropshipping, or both.',
+    ],
+  },
+
   '/pricing': {
     title: 'Pricing',
     description:
