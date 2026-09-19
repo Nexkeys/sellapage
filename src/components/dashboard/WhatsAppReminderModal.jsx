@@ -3,8 +3,9 @@
 // WhatsApp via a wa.me link.
 //
 // WHY A DEEP LINK AND NOT AN API
-// The WhatsApp Business API needs Meta approval, which Sellapage does not
-// currently have. A wa.me link needs nothing: no API, no approval, no cost, no
+// Sending through the WhatsApp Business API would need a Meta business account
+// in good standing, which Sellapage's is not (restricted by Meta, final, see
+// Changelog 2026-09-19). A wa.me link needs nothing: no API, no approval, no cost, no
 // per-message billing. The message is sent by the vendor, from their own number,
 // which is also what a customer expects to receive.
 //

@@ -167,7 +167,7 @@ const COMPARISON_ROWS = [
     { label: 'Meta Pixel ad tracking', starter: false, growth: false, pro: false, premium: true },
     { label: 'Receipt generator (templates, logo, QR)', starter: false, growth: true, pro: true, premium: true },
     { label: 'Free Google Shopping product feed', starter: false, growth: false, pro: true, premium: true },
-    { label: 'Meta & Google Ads integration', starter: false, growth: false, pro: false, premium: true },
+    { label: 'Google Ads integration', starter: false, growth: false, pro: false, premium: true },
     { label: 'Multi-staff account access', starter: false, growth: false, pro: false, premium: true },
   ]},
 ]
