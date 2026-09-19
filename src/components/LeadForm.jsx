@@ -11,7 +11,9 @@ import { saveLead } from '../firebase/leads'
  * page as a white box. No logic changes either way: the same saveLead call, the
  * same fields, the same validation.
  */
-export default function LeadForm({ storeId, storeName, whatsappNumber, leadType = 'product', theme = null }) {
+// `submitLabel` is also optional: a Store Design form can word its button its
+// own way. Blank or absent keeps the original wording.
+export default function LeadForm({ storeId, storeName, whatsappNumber, leadType = 'product', theme = null, submitLabel = '' }) {
   const card = theme ? { background: theme.card, borderColor: theme.border, borderRadius: theme.radius } : undefined
   const head = theme ? { background: 'transparent', borderColor: theme.border } : undefined
   const strong = theme ? { color: theme.text } : undefined
@@ -159,7 +161,7 @@ export default function LeadForm({ storeId, storeName, whatsappNumber, leadType 
         >
           {loading
             ? <><Loader2 size={16} className="animate-spin" />Sending...</>
-            : <><MessageCircle size={16} />Send Enquiry</>
+            : <><MessageCircle size={16} />{String(submitLabel || '').trim() || 'Send Enquiry'}</>
           }
         </button>
       </form>

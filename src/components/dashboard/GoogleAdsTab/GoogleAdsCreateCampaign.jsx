@@ -157,26 +157,11 @@ export default function GoogleAdsCreateCampaign({ store, onBack, onCreated, onEr
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 transition-colors"
               />
             </div>
+            {/* Daily only. Google spends up to this amount every day the
+                campaign runs; a "lifetime" option here used to create a daily
+                budget of the full amount. */}
             <div>
-              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Budget Type</label>
-              <div className="flex gap-2">
-                {['daily', 'lifetime'].map((bt) => (
-                  <button
-                    key={bt}
-                    onClick={() => update('budgetType', bt)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors border ${
-                      form.budgetType === bt
-                        ? 'bg-gray-900 text-white border-gray-900'
-                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {bt === 'daily' ? 'Daily Budget' : 'Lifetime Budget'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Budget Amount ({currencySymbol})</label>
+              <label className="text-[11px] text-gray-500 font-medium mb-1 block">Daily Budget ({currencySymbol} per day)</label>
               <input
                 type="number"
                 value={form.budgetAmount}

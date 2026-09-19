@@ -68,7 +68,7 @@ export async function listAccessibleCustomers(accessToken) {
 }
 
 export async function getCustomer(accessToken, customerId, loginCustomerId) {
-  const query = `SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone FROM customer_client WHERE customer_client.id = ${customerId.replace(/-/g, '')}`
+  const query = `SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone, customer_client.manager FROM customer_client WHERE customer_client.id = ${customerId.replace(/-/g, '')}`
   const results = await searchGoogleAds(accessToken, customerId, query, loginCustomerId)
   return results?.[0]?.customerClient || null
 }
@@ -201,13 +201,60 @@ export async function updateCampaignStatus(accessToken, customerId, campaignReso
 }
 
 export async function listCampaigns(accessToken, customerId, loginCustomerId) {
-  const query = `SELECT campaign.id, campaign.name, campaign.status, campaign.campaign_budget, campaign.advertising_channel_type, campaign_budget.amount_micros, campaign_budget.explicitly_shared FROM campaign ORDER BY campaign.id DESC`
+  const query = `SELECT campaign.id, campaign.name, campaign.status, campaign.campaign_budget, campaign.advertising_channel_type, campaign_budget.amount_micros, campaign_budget.period, campaign_budget.total_amount_micros, campaign_budget.explicitly_shared FROM campaign ORDER BY campaign.id DESC`
   return searchGoogleAds(accessToken, customerId, query, loginCustomerId)
 }
 
-export async function getCampaignReport(accessToken, customerId, dateRange = 'LAST_30_DAYS', loginCustomerId) {
-  const query = `SELECT campaign.id, campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign WHERE segments.date DURING ${dateRange} ORDER BY metrics.cost_micros DESC`
+// `dateFilter` is a complete GAQL condition on segments.date, built by
+// reportDateFilter() below. Pass null for all-time totals: with segments.date
+// neither selected nor filtered, Google returns each campaign's lifetime metrics.
+export async function getCampaignReport(accessToken, customerId, dateFilter = 'segments.date DURING LAST_30_DAYS', loginCustomerId) {
+  const where = dateFilter ? ` WHERE ${dateFilter}` : ''
+  const query = `SELECT campaign.id, campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.ctr, metrics.average_cpc, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign${where} ORDER BY metrics.cost_micros DESC`
   return searchGoogleAds(accessToken, customerId, query, loginCustomerId)
+}
+
+// segments.date is in the Google Ads account's own time zone, so custom ranges
+// must be worked out in that zone, not the server's.
+export async function getAccountTimeZone(accessToken, customerId, loginCustomerId) {
+  const results = await searchGoogleAds(accessToken, customerId, 'SELECT customer.time_zone FROM customer LIMIT 1', loginCustomerId)
+  return results?.[0]?.customer?.timeZone || null
+}
+
+// The only literals DURING accepts are TODAY, YESTERDAY, LAST_7_DAYS,
+// LAST_BUSINESS_WEEK, THIS_MONTH, LAST_MONTH, LAST_14_DAYS, LAST_30_DAYS and the
+// four week variants (developers.google.com/google-ads/api/docs/query/date-ranges).
+// There is no LAST_90_DAYS, and sending it fails the whole query with
+// INVALID_VALUE_WITH_DURING_OPERATOR. Longer ranges use BETWEEN with explicit
+// dates. The LAST_N_DAYS literals exclude today, so the custom ranges end
+// yesterday too, keeping every button on the same rule.
+const DURING_RANGES = { '7d': 'LAST_7_DAYS', '14d': 'LAST_14_DAYS', '30d': 'LAST_30_DAYS' }
+const CUSTOM_RANGE_DAYS = { '90d': 90 }
+export const REPORT_RANGES = [...Object.keys(DURING_RANGES), ...Object.keys(CUSTOM_RANGE_DAYS), 'all']
+
+export function needsTimeZone(rangeKey) {
+  return Boolean(CUSTOM_RANGE_DAYS[rangeKey])
+}
+
+function todayIn(timeZone) {
+  try {
+    // en-CA formats as YYYY-MM-DD.
+    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  } catch {
+    return null // unknown zone name
+  }
+}
+
+export function reportDateFilter(rangeKey, timeZone) {
+  if (rangeKey === 'all') return null
+  if (DURING_RANGES[rangeKey]) return `segments.date DURING ${DURING_RANGES[rangeKey]}`
+  const days = CUSTOM_RANGE_DAYS[rangeKey]
+  if (!days) return `segments.date DURING ${DURING_RANGES['30d']}`
+
+  const today = todayIn(timeZone || 'Africa/Lagos') || todayIn('Africa/Lagos')
+  const [y, m, d] = today.split('-').map(Number)
+  const iso = (offset) => new Date(Date.UTC(y, m - 1, d - offset)).toISOString().slice(0, 10)
+  return `segments.date BETWEEN '${iso(days)}' AND '${iso(1)}'`
 }
 
 export async function createAdGroup(accessToken, customerId, { campaignResourceName, name, type }, loginCustomerId) {

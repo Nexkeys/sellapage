@@ -59,7 +59,6 @@ import {
   verifiedTone,
   phoneBadgeAt,
   phoneTone,
-  ensureLeadForm,
 } from "../utils/storeDesign";
 
 const EMPTY_CHECKOUT_FORM = {
@@ -1983,11 +1982,7 @@ export default function StorePage() {
             previous page byte for byte. */}
         {activeTab === "home" && designLive && (
           <DesignedStorefront
-            // A designed store always carries the lead form the standard
-            // storefront shows, so the Leads tab keeps working when a vendor
-            // turns Store Design on. Applied here, at render, so stores saved
-            // before this guarantee get their form back without re-saving.
-            design={{ ...store.storeDesign, sections: ensureLeadForm(store.storeDesign?.sections) }}
+            design={store.storeDesign}
             store={store}
             products={products}
             services={designServices}

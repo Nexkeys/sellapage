@@ -436,13 +436,30 @@ export const SECTION_TYPES = {
   },
   enquiry: {
     label: 'Enquiry form',
-    hint: 'A contact form on the page. Every message becomes a lead in your dashboard.',
+    hint: 'A contact form on the page. Every message becomes a lead in your Leads tab. Optional: hide or remove it any time.',
     appliesTo: 'any',
+    // Every field added after launch defaults to exactly how the form already
+    // looked, so no live store changes until its vendor changes something.
     fields: [
       { key: 'title', label: 'Heading', type: 'text', max: 60, default: 'Send us a message' },
       { key: 'sub', label: 'Supporting line', type: 'textarea', max: 200, default: 'Tell us what you need and we will get back to you.' },
+      {
+        key: 'layout', label: 'Layout', type: 'select', options: ['stacked', 'split'], default: 'stacked',
+        optionLabels: { stacked: 'Heading above the form', split: 'Heading beside the form' },
+        help: 'Beside the form shows on computers. Phones always stack.',
+      },
+      {
+        key: 'width', label: 'Form width', type: 'select', options: ['narrow', 'normal', 'wide'], default: 'normal',
+        optionLabels: { narrow: 'Narrow', normal: 'Normal', wide: 'Wide' },
+      },
+      { key: 'buttonLabel', label: 'Button text', type: 'text', max: 30, default: 'Send Enquiry' },
       { key: 'bg', label: 'Background', type: 'color', default: '#f8fafc' },
       { key: 'fg', label: 'Text colour', type: 'color', default: '#0f172a' },
+      // Off keeps the form on the store theme, which is how it always looked.
+      { key: 'customColours', label: 'Use my own form colours (the three below)', type: 'toggle', default: false },
+      { key: 'cardBg', label: 'Form card colour', type: 'color', default: '#ffffff' },
+      { key: 'buttonBg', label: 'Button colour', type: 'color', default: '#0f172a' },
+      { key: 'buttonFg', label: 'Button text colour', type: 'color', default: '#ffffff' },
     ],
   },
   ctaBanner: {
@@ -545,75 +562,6 @@ export function makeSection(type) {
 }
 
 /**
- * The id given to a lead form this module adds on the vendor's behalf.
- *
- * FIXED, not random. The storefront runs ensureLeadForm on every render, and
- * React keys each section by its id. A fresh random id per render would rebuild
- * the form every time and wipe whatever a customer was halfway through typing.
- */
-export const AUTO_LEAD_FORM_ID = 'enquiry-auto'
-
-/**
- * Guarantees a page carries a lead form that is actually on screen.
- *
- * WHY THIS EXISTS
- * The standard storefront always shows the enquiry form, and every message
- * sent through it becomes a lead in the dashboard. Designs used to be seeded
- * without one, so a vendor who switched Store Design on silently lost their
- * lead form, and their Leads tab went quiet for no reason they could see.
- *
- * WHAT A VENDOR CAN STILL DO
- * Move it anywhere, and change its heading, words and colours, like any other
- * section. What they cannot do is remove it, hide it, hide it on phones, or
- * schedule it off, because each of those quietly takes their leads away.
- *
- * An existing enquiry section stays exactly where the vendor put it; only the
- * settings that could take it off screen are reset. A missing one is added just
- * above the footer, or at the end when there is no footer.
- *
- * Returns the SAME array when nothing needs changing, so nothing re-renders for
- * no reason.
- */
-export function ensureLeadForm(sections) {
-  const list = Array.isArray(sections) ? sections : []
-  const at = list.findIndex((s) => s?.type === 'enquiry')
-
-  if (at >= 0) {
-    const s = list[at]
-    const offScreen = s.visible === false || s.hideOnMobile || s.scheduleStart || s.scheduleEnd
-    if (!offScreen) return list
-    const next = [...list]
-    next[at] = { ...s, visible: true, hideOnMobile: false, scheduleStart: '', scheduleEnd: '' }
-    return next
-  }
-
-  const form = { ...makeSection('enquiry'), id: AUTO_LEAD_FORM_ID }
-  const footerAt = list.findIndex((s) => s?.type === 'richFooter')
-  if (footerAt < 0) return [...list, form]
-  return [...list.slice(0, footerAt), form, ...list.slice(footerAt)]
-}
-
-/**
- * The same guarantee over a whole design: the shop front, and the service page
- * when the vendor has one. Custom pages (about, contact, policies) are left
- * alone: an About page does not need a form, and Contact already carries one.
- */
-export function ensureLeadForms(design) {
-  if (!design || typeof design !== 'object') return design
-  return {
-    ...design,
-    sections: ensureLeadForm(design.sections),
-    serviceSections:
-      Array.isArray(design.serviceSections) && design.serviceSections.length
-        ? ensureLeadForm(design.serviceSections)
-        : design.serviceSections,
-  }
-}
-
-/** The lead form is the one section that cannot be removed or hidden. */
-export const isLeadFormSection = (section) => section?.type === 'enquiry'
-
-/**
  * Whether a scheduled section should be on screen right now.
  *
  * Dates are compared as local calendar days, not timestamps: a vendor who sets
@@ -674,8 +622,7 @@ export function defaultServiceSections() {
     q2: 'Can I reschedule?',
     a2: 'Yes. Message us as early as you can and we will find another time that works.',
   }
-  // The lead form is seeded like every other section, just above the footer.
-  return ensureLeadForm([
+  return [
     makeSection('announcement'),
     hero,
     row,
@@ -684,8 +631,12 @@ export function defaultServiceSections() {
     makeSection('reviews'),
     faq,
     makeSection('ctaBanner'),
+    // Seeded so a new design keeps collecting leads the way the standard
+    // storefront does. It is the vendor's section like any other: they can
+    // move it, restyle it, hide it or delete it, and it is never forced back.
+    makeSection('enquiry'),
     makeSection('richFooter'),
-  ])
+  ]
 }
 
 export function defaultDesign(vendorType = 'products') {
@@ -705,9 +656,7 @@ export function defaultDesign(vendorType = 'products') {
     tracking: defaultTracking(),
     // The service page has its OWN layout. See defaultServiceSections().
     serviceSections: vendorHasServices(t) ? defaultServiceSections() : [],
-    // Seeded WITH a lead form. It used to be left out, so switching Store
-    // Design on quietly removed the enquiry form the standard storefront shows.
-    sections: ensureLeadForm([
+    sections: [
       makeSection('announcement'),
       makeSection('hero'),
       ...rows,
@@ -716,8 +665,10 @@ export function defaultDesign(vendorType = 'products') {
       makeSection('reviews'),
       makeSection('faq'),
       makeSection('ctaBanner'),
+      // See defaultServiceSections: seeded, never forced.
+      makeSection('enquiry'),
       makeSection('richFooter'),
-    ]),
+    ],
     updatedAt: null,
   }
 }
@@ -766,7 +717,10 @@ function safeHandle(v, max = 40) {
 function safeDate(v) {
   const s = String(v || '').trim()
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return ''
-  const d = new Date(`${s}T00:00:00`)
+  // Parsed as UTC because it is compared with toISOString(), which is UTC.
+  // Parsed as local time, any zone east of UTC (Lagos is UTC+1) read local
+  // midnight as the previous day and threw away every valid date.
+  const d = new Date(`${s}T00:00:00Z`)
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : ''
 }
 
@@ -842,15 +796,12 @@ export function sanitizeDesign(input, vendorType = 'products') {
     // design saved before service pages existed still renders something.
     serviceSections: (() => {
       const cleanedSvc = cleanSections(raw.serviceSections)
-      if (cleanedSvc.length) return ensureLeadForm(cleanedSvc)
+      if (cleanedSvc.length) return cleanedSvc
       return vendorHasServices(String(vendorType || 'products').toLowerCase())
         ? defaultServiceSections()
         : []
     })(),
-    // Every load and every save passes through here on the server, so a design
-    // saved before lead forms were guaranteed gains one the next time it is
-    // opened, and one can never be saved without it.
-    sections: ensureLeadForm(cleaned.length ? cleaned : base.sections),
+    sections: cleaned.length ? cleaned : base.sections,
     updatedAt: Date.now(),
   }
 }

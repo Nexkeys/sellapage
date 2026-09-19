@@ -10,6 +10,7 @@ import {
   createCampaign,
   updateCampaignStatus,
   listCampaigns,
+  getCampaignReport,
   resolveCustomerId,
   createAdGroup,
   createResponsiveSearchAd,
@@ -84,14 +85,19 @@ export default async function handler(req, res) {
           const c = r.campaign || {}
           const budget = r.campaignBudget || {}
           const cleanId = String(c.id || '')
+          // DAILY budgets carry amountMicros. CUSTOM_PERIOD (a total budget)
+          // carries totalAmountMicros instead.
+          const isTotal = budget.period === 'CUSTOM_PERIOD'
+          const micros = Number(isTotal ? budget.totalAmountMicros : budget.amountMicros) || 0
           return {
             id: cleanId,
             providerCampaignId: cleanId,
             name: c.name || 'Untitled',
             status: c.status || 'UNKNOWN',
             type: c.advertisingChannelType || 'SEARCH',
-            budgetMicros: Number(budget.amountMicros) || 0,
-            budgetAmount: (Number(budget.amountMicros) || 0) / 1000000,
+            budgetMicros: micros,
+            budgetAmount: micros / 1000000,
+            budgetType: isTotal ? 'total' : 'daily',
             resourceCampaignId: c.resourceName || `customers/${customerId}/campaigns/${cleanId}`,
             source: 'google',
           }
@@ -99,6 +105,26 @@ export default async function handler(req, res) {
       } catch (apiErr) {
         apiListError = apiErr.message
         console.warn('[google-ads-campaigns] Google Ads API list failed, falling back to Firestore:', apiErr.message)
+      }
+
+      // Lifetime numbers straight from Google. The metrics fields saved in
+      // googleAdsCampaigns are written as 0 at creation and nothing ever syncs
+      // them, so reading them made every campaign, including ones that really
+      // ran, show 0 impressions, 0 clicks and 0 spend. A failure here keeps the
+      // list and marks the numbers unavailable rather than showing false zeros.
+      const lifetimeById = {}
+      let metricsAvailable = !apiListError
+      if (!apiListError) {
+        try {
+          const rows = await getCampaignReport(accessToken, customerId, null)
+          for (const r of rows) {
+            const cid = String(r.campaign?.id || '')
+            if (cid) lifetimeById[cid] = r.metrics || {}
+          }
+        } catch (metricsErr) {
+          metricsAvailable = false
+          console.warn('[google-ads-campaigns] lifetime metrics failed:', metricsErr.message)
+        }
       }
 
       const firestoreSnap = await db
@@ -115,27 +141,59 @@ export default async function handler(req, res) {
         }
       })
 
+      const currency = storeDoc.data().googleAdsCurrency || 'USD'
+      // Google is the source of truth for anything that can change there (name,
+      // status, type, budget). Our record only adds what Google does not know:
+      // the doc id pause/resume uses, the budget type picked here, the ad copy
+      // and when it was created through Sellapage.
       const campaigns = apiCampaigns.map((api) => {
         const firestore = firestoreMap[api.providerCampaignId] || {}
+        const m = lifetimeById[api.providerCampaignId] || {}
+        const impressions = Number(m.impressions) || 0
+        const clicks = Number(m.clicks) || 0
         return {
           ...api,
-          ...firestore,
           id: firestore.id || api.id,
-          budgetAmount: firestore.budgetAmount || api.budgetAmount,
-          spendToDate: firestore.spendToDate || 0,
-          currency: firestore.currency || storeDoc.data().googleAdsCurrency || 'USD',
-          impressions: firestore.impressions || 0,
-          clicks: firestore.clicks || 0,
-          ctr: firestore.ctr || 0,
-          conversions: firestore.conversions || 0,
+          // Google's own budget and period. The "lifetime" choice this form used
+          // to offer was always created in Google as a DAILY budget, so the
+          // saved budgetType is not trusted for display.
+          budgetAmount: api.budgetAmount,
+          budgetType: api.budgetType,
+          currency,
+          metricsAvailable,
+          impressions,
+          clicks,
+          ctr: impressions > 0 ? Number(((clicks / impressions) * 100).toFixed(2)) : 0,
+          conversions: Number(m.conversions) || 0,
+          spendToDate: (Number(m.costMicros) || 0) / 1000000,
           targeting: firestore.targeting || {},
           createdAt: firestore.createdAt || null,
+          createdInSellapage: Boolean(firestore.id),
         }
       })
 
-      const firestoreOnly = firestoreSnap.docs
+      // Records we saved that this Google Ads account does not have. Usually
+      // made under a different Ads account (the id is in the resource name) or
+      // a create that never reached Google. They cannot be paused or resumed
+      // from here, so they are flagged instead of looking like live campaigns.
+      const connectedId = String(customerId).replace(/-/g, '')
+      // If Google could not be reached at all, show what we saved, without
+      // claiming anything about whether Google still has it.
+      const firestoreOnly = apiListError
+        ? firestoreSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), metricsAvailable: false }))
+        : firestoreSnap.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
         .filter((f) => !apiCampaigns.some((a) => a.providerCampaignId === f.providerCampaignId))
+        .map((f) => {
+          const ownerId = String(f.campaignResourceName || '').match(/^customers\/(\d+)\//)?.[1] || null
+          return {
+            ...f,
+            currency: f.currency || currency,
+            notInGoogle: true,
+            otherAccountId: ownerId && ownerId !== connectedId ? ownerId : null,
+            metricsAvailable: false,
+          }
+        })
 
       const merged = [...campaigns, ...firestoreOnly]
 
@@ -155,6 +213,13 @@ export default async function handler(req, res) {
       const { name, type, budgetType, budgetAmount, targeting } = campaignData || {}
       if (!name || !budgetAmount) {
         return res.status(400).json({ error: 'Missing campaign name or budget' })
+      }
+
+      // Budgets are created as DAILY in Google (createBudget sets no period), so
+      // only daily is accepted. A "lifetime" pick used to be saved as a daily
+      // budget of the full amount, which Google would spend every day.
+      if (budgetType && budgetType !== 'daily') {
+        return res.status(400).json({ error: 'Only daily budgets are supported. Enter the amount to spend per day.' })
       }
 
       const channelType = (type || 'SEARCH').toUpperCase()
@@ -223,7 +288,7 @@ export default async function handler(req, res) {
         name,
         type: channelType,
         status: 'PAUSED',
-        budgetType: budgetType || 'daily',
+        budgetType: 'daily',
         budgetAmount: Number(budgetAmount),
         spendToDate: 0,
         currency: storeDoc.data().googleAdsCurrency || 'USD',

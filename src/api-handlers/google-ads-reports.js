@@ -2,7 +2,10 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
-import { getAccessToken, getCampaignReport, listCampaigns, resolveCustomerId } from './_lib/google-ads-client.js'
+import {
+  getAccessToken, getCampaignReport, listCampaigns, resolveCustomerId,
+  getAccountTimeZone, reportDateFilter, needsTimeZone, REPORT_RANGES,
+} from './_lib/google-ads-client.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { getGoogleAdsRefreshToken } from './_lib/store-secrets.js'
 
@@ -13,13 +16,6 @@ if (!getApps().length) {
 }
 const db = getFirestore()
 const auth = getAuth()
-
-const DATE_RANGES = {
-  '7d': 'LAST_7_DAYS',
-  '14d': 'LAST_14_DAYS',
-  '30d': 'LAST_30_DAYS',
-  '90d': 'LAST_90_DAYS',
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -71,7 +67,19 @@ export default async function handler(req, res) {
     }
 
     const accessToken = await getAccessToken(refreshToken)
-    const gaDateRange = DATE_RANGES[dateRange] || 'LAST_30_DAYS'
+    const rangeKey = REPORT_RANGES.includes(dateRange) ? dateRange : '30d'
+
+    // Only the custom ranges need the account's time zone. If that lookup
+    // fails, reportDateFilter falls back to Lagos rather than failing the report.
+    let timeZone = storeDoc.data().googleAdsTimezone || null
+    if (needsTimeZone(rangeKey) && !timeZone) {
+      try {
+        timeZone = await getAccountTimeZone(accessToken, customerId)
+      } catch (tzErr) {
+        console.warn('[google-ads-reports] time zone lookup failed, using Africa/Lagos:', tzErr.message)
+      }
+    }
+    const dateFilter = reportDateFilter(rangeKey, timeZone)
 
     // Source the campaign list separately (proven to work in the Campaigns tab), then attach
     // metrics from the report query. A metrics query omits zero-impression campaigns, so relying
@@ -80,7 +88,7 @@ export default async function handler(req, res) {
     let campaignList = []
     let selfManagedError = null
     try {
-      results = await getCampaignReport(accessToken, customerId, gaDateRange)
+      results = await getCampaignReport(accessToken, customerId, dateFilter)
     } catch (apiErr) {
       selfManagedError = apiErr.message
       console.warn('[google-ads-reports] Self-managed report fetch failed:', apiErr.message)
@@ -93,7 +101,8 @@ export default async function handler(req, res) {
 
     console.log('[google-ads-reports] self-managed:', {
       customerId,
-      dateRange: gaDateRange,
+      dateRange: rangeKey,
+      dateFilter: dateFilter || 'all time',
       reportRows: results.length,
       campaignListRows: campaignList.length,
       firstReportRow: results[0] ? JSON.stringify(results[0]) : null,
@@ -184,6 +193,7 @@ export default async function handler(req, res) {
         conversionValue: totalConversionValue,
       },
       campaigns: campaignMetrics,
+      dateRange: rangeKey,
       ...(selfManagedError ? { warning: selfManagedError } : {}),
     })
   } catch (err) {

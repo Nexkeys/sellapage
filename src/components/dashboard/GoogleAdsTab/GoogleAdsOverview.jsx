@@ -1,4 +1,5 @@
 import { Eye, MousePointerClick, DollarSign, Target, TrendingUp, Loader2, RefreshCw } from 'lucide-react'
+import GoogleAdsAccountPicker from './GoogleAdsAccountPicker'
 
 function formatCurrency(amount, currencyCode) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode || 'USD', minimumFractionDigits: 0 }).format(amount || 0)
@@ -30,6 +31,7 @@ export default function GoogleAdsOverview({ store, campaigns, reports, loading, 
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-900">Account</h3>
           <button
+            aria-label="Refresh"
             onClick={onRefresh}
             disabled={loading}
             className="text-gray-400 hover:text-gray-600 transition-colors p-1"
@@ -51,8 +53,10 @@ export default function GoogleAdsOverview({ store, campaigns, reports, loading, 
             <p className="text-[11px] text-gray-400">ID: {store?.googleAdsCustomerId || '-'} · {currencyCode}</p>
           </div>
         </div>
+        <GoogleAdsAccountPicker store={store} />
       </div>
 
+      <p className="-mb-1 text-[11px] font-medium text-gray-400">Last 30 days, not counting today. See Reports for other ranges.</p>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Impressions', value: formatNumber(summary.impressions), icon: Eye, color: 'blue' },

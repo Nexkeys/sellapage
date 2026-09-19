@@ -12,7 +12,14 @@ import {
   DollarSign,
   ChevronDown,
   ChevronUp,
+  AlertCircle,
 } from 'lucide-react'
+
+// Numbers come from Google (all time) when metricsAvailable is true. When they
+// could not be loaded, a dash is shown instead of a zero that would look real.
+function metric(campaign, value) {
+  return campaign.metricsAvailable === false ? '-' : value
+}
 
 function formatCurrency(amount, currencyCode) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode || 'USD', minimumFractionDigits: 0 }).format(amount || 0)
@@ -115,6 +122,9 @@ export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onE
         const typeInfo = TYPE_CONFIG[campaign.type] || TYPE_CONFIG.SEARCH
         const isExpanded = expandedId === campaign.id
         const isActive = campaign.status === 'ACTIVE' || campaign.status === 'ENABLED'
+        // Removed campaigns cannot be resumed, and records Google does not have
+        // in this account cannot be switched on or off from here.
+        const canToggle = !campaign.notInGoogle && campaign.status !== 'REMOVED'
 
         return (
           <div key={campaign.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -131,12 +141,20 @@ export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onE
                     <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${typeInfo.bg} ${typeInfo.text} ${typeInfo.border} border`}>
                       {typeInfo.label}
                     </span>
-                    <span>Budget: {formatCurrency(campaign.budgetAmount, currencyCode)}/{campaign.budgetType === 'daily' ? 'day' : 'total'}</span>
+                    <span>Budget: {formatCurrency(campaign.budgetAmount, currencyCode)}/{campaign.budgetType === 'total' ? 'total' : 'day'}</span>
                   </div>
+                  {campaign.notInGoogle && (
+                    <p className="mt-1.5 flex items-start gap-1 text-[11px] text-gray-500">
+                      <AlertCircle size={11} className="mt-0.5 shrink-0 text-amber-500" />
+                      {campaign.otherAccountId
+                        ? `Made in another Google Ads account (ID ${campaign.otherAccountId}). Switch to that account to manage it.`
+                        : 'Saved on Sellapage but not found in this Google Ads account.'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button
+                  {canToggle && <button
                     onClick={() => handlePauseResume(campaign.id, campaign.status)}
                     disabled={actionLoading === campaign.id}
                     className={`p-1.5 rounded-lg transition-colors ${
@@ -153,7 +171,7 @@ export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onE
                     ) : (
                       <Play size={13} />
                     )}
-                  </button>
+                  </button>}
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : campaign.id)}
                     className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors border border-gray-100"
@@ -163,19 +181,22 @@ export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onE
                 </div>
               </div>
 
-              <div className="flex gap-4 mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-1.5" title="Impressions">
                   <Eye size={11} className="text-gray-400" />
-                  <span className="text-[11px] text-gray-500">{campaign.impressions || 0}</span>
+                  <span className="text-[11px] text-gray-500">{metric(campaign, (campaign.impressions || 0).toLocaleString())}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5" title="Clicks">
                   <MousePointerClick size={11} className="text-gray-400" />
-                  <span className="text-[11px] text-gray-500">{campaign.clicks || 0}</span>
+                  <span className="text-[11px] text-gray-500">{metric(campaign, (campaign.clicks || 0).toLocaleString())}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5" title="Spend">
                   <DollarSign size={11} className="text-gray-400" />
-                  <span className="text-[11px] text-gray-500">{formatCurrency(campaign.spendToDate, currencyCode)}</span>
+                  <span className="text-[11px] text-gray-500">{metric(campaign, formatCurrency(campaign.spendToDate, currencyCode))}</span>
                 </div>
+                <span className="ml-auto text-[10px] text-gray-400">
+                  {campaign.metricsAvailable === false ? (campaign.notInGoogle ? 'No stats' : 'Stats unavailable') : 'All time'}
+                </span>
               </div>
             </div>
 
@@ -184,19 +205,19 @@ export default function GoogleAdsCampaigns({ store, campaigns, setCampaigns, onE
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <p className="text-gray-400 mb-0.5">Impressions</p>
-                    <p className="font-semibold text-gray-900">{campaign.impressions || 0}</p>
+                    <p className="font-semibold text-gray-900">{metric(campaign, (campaign.impressions || 0).toLocaleString())}</p>
                   </div>
                   <div>
                     <p className="text-gray-400 mb-0.5">Clicks</p>
-                    <p className="font-semibold text-gray-900">{campaign.clicks || 0}</p>
+                    <p className="font-semibold text-gray-900">{metric(campaign, (campaign.clicks || 0).toLocaleString())}</p>
                   </div>
                   <div>
                     <p className="text-gray-400 mb-0.5">CTR</p>
-                    <p className="font-semibold text-gray-900">{campaign.ctr || 0}%</p>
+                    <p className="font-semibold text-gray-900">{metric(campaign, `${campaign.ctr || 0}%`)}</p>
                   </div>
                   <div>
                     <p className="text-gray-400 mb-0.5">Conversions</p>
-                    <p className="font-semibold text-gray-900">{campaign.conversions || 0}</p>
+                    <p className="font-semibold text-gray-900">{metric(campaign, campaign.conversions || 0)}</p>
                   </div>
                 </div>
               </div>

@@ -631,36 +631,61 @@ function Reviews({ s, reviews, t }) {
   )
 }
 
+// Form widths. 'normal' is the width the form always had.
+const ENQUIRY_WIDTH = { narrow: 'max-w-md', normal: 'max-w-xl', wide: 'max-w-3xl' }
+
 /**
  * The enquiry section mounts the REAL LeadForm, so a message sent from a
  * designed storefront lands in the vendor's Leads tab exactly like one sent
  * from the standard storefront. No second submission path.
  */
 function Enquiry({ s, store, t }) {
+  // Own colours only when the vendor switched them on. Otherwise the form
+  // follows the store theme exactly as before these options existed.
+  const own = s.customColours === true
+  const form = (
+    // The real form, themed to the vendor's colours. A white card on a dark
+    // storefront reads as broken, but the submission path is untouched: same
+    // component, same saveLead call.
+    <LeadForm
+      storeId={store?.id || store?.uid}
+      storeName={store?.businessName || store?.storeName}
+      whatsappNumber={store?.whatsappNumber}
+      leadType="general"
+      submitLabel={s.buttonLabel}
+      theme={{
+        card: own ? s.cardBg : t.pageBg,
+        field: s.bg,
+        border: t.border,
+        text: s.fg,
+        primary: own ? s.buttonBg : t.primary,
+        onPrimary: own ? s.buttonFg : t.onPrimary,
+        radius: t.radius,
+      }}
+    />
+  )
+  const width = ENQUIRY_WIDTH[s.width] || ENQUIRY_WIDTH.normal
+
+  if (s.layout === 'split') {
+    // Side by side from tablet width up. On phones it stacks, heading first,
+    // because two columns at 390px would squeeze the fields unusably.
+    return (
+      <section id="sp-enquiry" style={{ background: s.bg, color: s.fg }} className="px-4 py-12">
+        <Wrap t={t}>
+          <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+            <Heading t={t} color={s.fg} sub={s.sub} align="left">{s.title}</Heading>
+            <div className={`w-full ${width} md:justify-self-end`}>{form}</div>
+          </div>
+        </Wrap>
+      </section>
+    )
+  }
+
   return (
     <section id="sp-enquiry" style={{ background: s.bg, color: s.fg }} className="px-4 py-12">
       <Wrap t={t}>
         <Heading t={t} color={s.fg} sub={s.sub}>{s.title}</Heading>
-        <div className="mx-auto mt-8 max-w-xl">
-          {/* The real form, themed to the vendor's colours. A white card on a
-              dark storefront reads as broken, but the submission path is
-              untouched: same component, same saveLead call. */}
-          <LeadForm
-            storeId={store?.id || store?.uid}
-            storeName={store?.businessName || store?.storeName}
-            whatsappNumber={store?.whatsappNumber}
-            leadType="general"
-            theme={{
-              card: t.pageBg,
-              field: s.bg,
-              border: t.border,
-              text: s.fg,
-              primary: t.primary,
-              onPrimary: t.onPrimary,
-              radius: t.radius,
-            }}
-          />
-        </div>
+        <div className={`mx-auto ${s.title ? 'mt-8' : ''} ${width}`}>{form}</div>
       </Wrap>
     </section>
   )

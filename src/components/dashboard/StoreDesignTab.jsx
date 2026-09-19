@@ -35,7 +35,7 @@ import {
   SECTION_TYPES, FONT_OPTIONS, THEME_FIELDS, PRODUCT_CARD_FIELDS, SERVICE_CARD_FIELDS,
   POPUP_FIELDS, PRESETS, applyPreset, CUSTOM_PAGES, TRACKING_FIELDS, TRACKING_STATUSES,
   sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, defaultDesign,
-  sectionEmptyReason, popupIssue, ensureLeadForms, isLeadFormSection,
+  sectionEmptyReason, popupIssue,
   BADGE_FIELDS, VERIFIED_LABEL, VERIFIED_LINE,
   PHONE_BADGE_FIELDS, PHONE_VERIFIED_LABEL, PHONE_VERIFIED_LINE,
 } from '../../utils/storeDesign'
@@ -432,13 +432,6 @@ export default function StoreDesignTab({ store, storeUrl }) {
     return sectionsForVendor(vendorType)
   }, [vendorType, editing, hasProducts])
 
-  // The lead form on the shop front and the service page can be moved and
-  // edited, but never removed, hidden or scheduled off: every message it sends
-  // is a lead in the dashboard, and losing it silently empties the Leads tab.
-  // Custom pages (Contact and the rest) are left fully editable.
-  const leadFormLocked = (section) =>
-    (editing === 'home' || editing === 'service') && isLeadFormSection(section)
-
   if (loading) {
     return (
       <div className="mx-auto max-w-3xl space-y-3 p-4 sm:p-6">
@@ -488,8 +481,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
           <div className="flex flex-shrink-0 gap-2">
             <button
               type="button"
-              // A draft saved before lead forms were guaranteed has none.
-              onClick={() => { update(ensureLeadForms(draft)); setDraft(null) }}
+              onClick={() => { update(draft); setDraft(null) }}
               className="rounded-xl bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white"
             >
               Restore
@@ -862,11 +854,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
 
           {adding && (
             <div className="mb-3 grid grid-cols-1 gap-1.5 rounded-xl bg-gray-50 p-2 sm:grid-cols-2">
-              {/* One lead form per page: a second would repeat the same
-                  form and break the popup's "jump to the enquiry form". */}
-              {allowedTypes
-                .filter((type) => !(type === 'enquiry' && currentSections.some(isLeadFormSection)))
-                .map((type) => (
+              {allowedTypes.map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -908,11 +896,6 @@ export default function StoreDesignTab({ store, storeUrl }) {
                     <p className={`truncate text-xs font-bold ${section.visible === false ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                       {SECTION_TYPES[section.type]?.label || section.type}
                     </p>
-                    {leadFormLocked(section) ? (
-                      <p className="mt-0.5 text-[10px] font-semibold text-green-700">
-                        Always on · messages go to your Leads tab
-                      </p>
-                    ) : null}
                     {emptyReason(section) ? (
                       <p className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-amber-600">
                         <AlertTriangle size={11} className="mt-px flex-shrink-0" />
@@ -936,16 +919,14 @@ export default function StoreDesignTab({ store, storeUrl }) {
                   <button type="button" onClick={() => move(i, 1)} disabled={i === currentSections.length - 1} className="rounded p-1 text-gray-400 disabled:opacity-30" aria-label="Move down">
                     <ChevronDown size={14} />
                   </button>
-                  {!leadFormLocked(section) && (
-                    <button
-                      type="button"
-                      onClick={() => patchSection(section.id, { visible: section.visible === false })}
-                      className="rounded p-1 text-gray-400"
-                      aria-label="Show or hide"
-                    >
-                      {section.visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => patchSection(section.id, { visible: section.visible === false })}
+                    className="rounded p-1 text-gray-400"
+                    aria-label="Show or hide"
+                  >
+                    {section.visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
                   <button
                     type="button"
                     onClick={() => setOpenId(openId === section.id ? null : section.id)}
@@ -954,24 +935,14 @@ export default function StoreDesignTab({ store, storeUrl }) {
                   >
                     <Settings2 size={14} />
                   </button>
-                  {leadFormLocked(section) ? (
-                    <span
-                      className="rounded p-1 text-gray-300"
-                      title="Your lead form always stays on the page. Move it or change its words and colours."
-                      aria-label="Lead form is always on"
-                    >
-                      <Lock size={14} />
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setSections(currentSections.filter((x) => x.id !== section.id))}
-                      className="rounded p-1 text-gray-300 hover:text-red-500"
-                      aria-label="Remove section"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSections(currentSections.filter((x) => x.id !== section.id))}
+                    className="rounded p-1 text-gray-300 hover:text-red-500"
+                    aria-label="Remove section"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
 
                 {openId === section.id && (
@@ -982,13 +953,6 @@ export default function StoreDesignTab({ store, storeUrl }) {
                       categories={categories}
                       onSet={(k, v) => patchSection(section.id, { settings: { ...section.settings, [k]: v } })}
                     />
-                    {leadFormLocked(section) ? (
-                      <p className="border-t border-gray-100 pt-3 text-[10px] leading-relaxed text-gray-500">
-                        This form is always on, on phones and computers, with no end date. Every message
-                        a customer sends through it lands in your Leads tab, so it cannot be hidden or
-                        removed. You can move it anywhere and change its words and colours.
-                      </p>
-                    ) : (
                     <div className="space-y-3 border-t border-gray-100 pt-3">
                       <Toggle
                         label="Hide this section on phones"
@@ -1022,7 +986,6 @@ export default function StoreDesignTab({ store, storeUrl }) {
                         Leave both empty to always show it. Dates run to the end of the day.
                       </p>
                     </div>
-                    )}
                   </div>
                 )}
               </div>

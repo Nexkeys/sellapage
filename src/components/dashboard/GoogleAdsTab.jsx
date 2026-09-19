@@ -100,6 +100,8 @@ export default function GoogleAdsTab({ store, isPremium }) {
   const fetchReports = useCallback(async (dateRange = '30d') => {
     if (!store?.id) return
     setLoading(true)
+    // A failed range must not leave its error on screen after a good one loads.
+    setError('')
     try {
       const token = await auth.currentUser?.getIdToken()
       const res = await fetch('/api/google-ads-reports', {
