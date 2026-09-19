@@ -435,7 +435,7 @@ export const SECTION_TYPES = {
     ],
   },
   enquiry: {
-    label: 'Enquiry form',
+    label: 'Lead form (enquiries)',
     hint: 'A contact form on the page. Every message becomes a lead in your Leads tab. Optional: hide or remove it any time.',
     appliesTo: 'any',
     // Every field added after launch defaults to exactly how the form already
@@ -541,6 +541,19 @@ export function sectionsForVendor(vendorType) {
     if (a === 'products') return vendorHasProducts(t)
     return vendorHasServices(t)
   })
+}
+
+/**
+ * Adds a section to a page. When the page ends with its footer, the new
+ * section goes just above it instead of underneath, where nobody would
+ * scroll to it. Otherwise it goes at the end, as before.
+ */
+export function insertSection(list, section) {
+  const sections = Array.isArray(list) ? list : []
+  if (!section) return sections
+  const last = sections[sections.length - 1]
+  if (last?.type !== 'richFooter') return [...sections, section]
+  return [...sections.slice(0, -1), section, last]
 }
 
 /** A section with every field at its declared default. */

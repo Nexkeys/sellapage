@@ -34,7 +34,7 @@ import { fetchStoreReviews } from '../../firebase/reviews'
 import {
   SECTION_TYPES, FONT_OPTIONS, THEME_FIELDS, PRODUCT_CARD_FIELDS, SERVICE_CARD_FIELDS,
   POPUP_FIELDS, PRESETS, applyPreset, CUSTOM_PAGES, TRACKING_FIELDS, TRACKING_STATUSES,
-  sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, defaultDesign,
+  sectionsForVendor, vendorHasProducts, vendorHasServices, makeSection, insertSection, defaultDesign,
   sectionEmptyReason, popupIssue,
   BADGE_FIELDS, VERIFIED_LABEL, VERIFIED_LINE,
   PHONE_BADGE_FIELDS, PHONE_VERIFIED_LABEL, PHONE_VERIFIED_LINE,
@@ -859,7 +859,7 @@ export default function StoreDesignTab({ store, storeUrl }) {
                   key={type}
                   type="button"
                   onClick={() => {
-                    setSections([...currentSections, makeSection(type)])
+                    setSections(insertSection(currentSections, makeSection(type)))
                     setAdding(false)
                   }}
                   className="rounded-lg bg-white p-2.5 text-left transition-colors hover:bg-green-50"
@@ -868,6 +868,32 @@ export default function StoreDesignTab({ store, storeUrl }) {
                   <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">{SECTION_TYPES[type].hint}</p>
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* The lead form is optional, but a vendor whose saved design predates
+              it had no way to tell it was missing. This only informs: it adds
+              nothing on its own and goes away once a form is on the page. */}
+          {!adding && currentSections.length > 0 && (editing === 'home' || editing === 'service') &&
+            allowedTypes.includes('enquiry') && !currentSections.some((s) => s.type === 'enquiry') && (
+            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-green-100 bg-green-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-green-900">No lead form on this page</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-green-800">
+                  Customers can't send you enquiries from your designed store, so nothing reaches your Leads tab. Add one if you want leads. You can move, restyle, hide or remove it any time.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const form = makeSection('enquiry')
+                  setSections(insertSection(currentSections, form))
+                  setOpenId(form.id)
+                }}
+                className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl bg-green-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-green-700"
+              >
+                <Plus size={12} /> Add lead form
+              </button>
             </div>
           )}
 
