@@ -61,7 +61,7 @@ const PLANS = [
       'Post up to 25 job listings, with AI-assisted descriptions',
     ],
     cta: 'Upgrade to Growth',
-    popular: true,
+    popular: false,
   },
   {
     id: 'pro',
@@ -90,7 +90,7 @@ const PLANS = [
       'Post up to 50 job listings',
     ],
     cta: 'Get Pro',
-    popular: false,
+    popular: true,
   },
   {
     id: 'premium',
