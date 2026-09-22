@@ -20,11 +20,12 @@ import {
   countSms, estimateCost, DEFAULT_PAGE_RATE, selectRecipients, sendWindow,
   buildMessage, previewMessage, campaignCode, LINK_PLACEHOLDER, publicBase,
 } from './_lib/sms-campaign.js'
-import { normaliseNgMobile } from '../utils/phone.js'
+import { normaliseNgMobile, maskNgPhone } from '../utils/phone.js'
 
 const CAMPAIGNS = 'smsCampaigns'
 const CLICKS = 'smsClicks'
 const MESSAGES = 'smsMessages'
+const MAX_MESSAGES = 2000
 const MAX_BODY = 480
 const MAX_RECIPIENTS = 5000
 
@@ -401,6 +402,74 @@ export default async function handler(req, res) {
         cost: quote.cost,
         balance: lastBalance,
         errors,
+      })
+    }
+
+    // Every individual message, with whatever Termii has reported about it.
+    //
+    // The campaign list answers "what did we send". This answers "what happened
+    // to each one": delivered, blocked by DND, failed, or still waiting on a
+    // report. Ordered newest first in the QUERY, so paging past the window
+    // cannot start showing an arbitrary slice.
+    if (action === 'messages') {
+      const rawLimit = parseInt(req.query.limit)
+      const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 50
+      const page = Math.max(parseInt(req.query.page) || 1, 1)
+      const outcome = String(req.query.outcome || '').trim()
+      const campaignId = String(req.query.campaignId || '').trim()
+      const search = String(req.query.search || '').trim().toLowerCase()
+
+      const snap = await db.collection(MESSAGES)
+        .orderBy('sentAtMs', 'desc')
+        .limit(MAX_MESSAGES)
+        .get()
+
+      let rows = snap.docs.map((doc) => {
+        const d = doc.data()
+        return {
+          messageId: doc.id,
+          campaignId: d.campaignId || '',
+          storeId: d.storeId || '',
+          storeName: d.storeName || '',
+          phone: maskNgPhone(d.phone || ''),
+          status: d.status || '',
+          outcome: d.outcome || 'pending',
+          pages: Number(d.pages) || null,
+          cost: d.cost ?? null,
+          channel: d.channel || '',
+          sentAt: iso(d.sentAt) || null,
+          sentAtMs: Number(d.sentAtMs) || 0,
+          deliveredAt: d.deliveredAt || null,
+          reportedAt: iso(d.reportedAt) || null,
+        }
+      })
+
+      if (outcome) rows = rows.filter((r) => r.outcome === outcome)
+      if (campaignId) rows = rows.filter((r) => r.campaignId === campaignId)
+      if (search) {
+        rows = rows.filter((r) =>
+          r.storeName.toLowerCase().includes(search) ||
+          r.phone.includes(search) ||
+          r.messageId.includes(search))
+      }
+
+      const counts = { delivered: 0, dnd: 0, failed: 0, pending: 0 }
+      snap.docs.forEach((doc) => {
+        const o = doc.data().outcome || 'pending'
+        if (counts[o] !== undefined) counts[o] += 1
+      })
+
+      const total = rows.length
+      const offset = (page - 1) * limit
+      return res.status(200).json({
+        success: true,
+        messages: rows.slice(offset, offset + limit),
+        counts,
+        page,
+        limit,
+        total,
+        totalPages: Math.max(Math.ceil(total / limit), 1),
+        truncated: snap.size >= MAX_MESSAGES,
       })
     }
 

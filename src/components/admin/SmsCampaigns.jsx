@@ -7,7 +7,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MessageSquare, Send, Save, Trash2, Loader2, RefreshCw, AlertCircle, CheckCircle2,
-  Link2, Users, Wallet, MousePointerClick, Copy, X, Clock, Ban,
+  Link2, Users, Wallet, MousePointerClick, Copy, X, Clock, Ban, Search,
 } from 'lucide-react'
 
 const SmsChart = lazy(() => import('./SmsChart'))
@@ -23,6 +23,20 @@ const STATUS_STYLE = {
 
 const EMPTY = { id: '', name: '', body: '', linkUrl: '', includeLink: false, filters: {} }
 
+const OUTCOME_STYLE = {
+  delivered: 'bg-green-50 text-green-700 border-green-200',
+  dnd: 'bg-amber-50 text-amber-700 border-amber-200',
+  failed: 'bg-red-50 text-red-600 border-red-200',
+  pending: 'bg-gray-100 text-gray-500 border-gray-200',
+}
+const OUTCOME_LABEL = { delivered: 'Delivered', dnd: 'DND', failed: 'Not delivered', pending: 'Waiting' }
+
+const when = (iso, ms) => {
+  const d = iso ? new Date(iso) : ms ? new Date(ms) : null
+  if (!d || isNaN(d.getTime())) return '-'
+  return d.toLocaleString('en-NG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
 export default function SmsCampaigns({ authHeaders }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -34,6 +48,13 @@ export default function SmsCampaigns({ authHeaders }) {
   const [busy, setBusy] = useState('')
   const [testPhone, setTestPhone] = useState('')
   const bodyRef = useRef(null)
+  // The message log: every individual text, with what Termii reported back.
+  const [log, setLog] = useState(null)
+  const [logOutcome, setLogOutcome] = useState('')
+  const [logCampaign, setLogCampaign] = useState('')
+  const [logSearch, setLogSearch] = useState('')
+  const [logPage, setLogPage] = useState(1)
+  const [logLoading, setLogLoading] = useState(false)
 
   const load = useCallback(async () => {
     const headers = await authHeaders()
@@ -52,6 +73,26 @@ export default function SmsCampaigns({ authHeaders }) {
   }, [authHeaders])
 
   useEffect(() => { load() }, [load])
+
+  const loadLog = useCallback(async () => {
+    const headers = await authHeaders()
+    setLogLoading(true)
+    try {
+      const params = new URLSearchParams({ action: 'messages', limit: '25', page: String(logPage) })
+      if (logOutcome) params.set('outcome', logOutcome)
+      if (logCampaign) params.set('campaignId', logCampaign)
+      if (logSearch.trim()) params.set('search', logSearch.trim())
+      const r = await fetch(`/api/admin-sms?${params}`, { headers })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) setLog(d)
+    } catch {
+      // The rest of the tab still works without the log.
+    } finally {
+      setLogLoading(false)
+    }
+  }, [authHeaders, logPage, logOutcome, logCampaign, logSearch])
+
+  useEffect(() => { loadLog() }, [loadLog])
 
   // Audience and costing follow what is typed, a moment behind it.
   useEffect(() => {
@@ -489,6 +530,111 @@ export default function SmsCampaigns({ authHeaders }) {
         )}
       </div>
 
+      {/* Message log: one row per text, with Termii's own verdict on it. */}
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2.5">
+          <div>
+            <h3 className="text-xs font-bold text-gray-800">Message log</h3>
+            <p className="text-[10px] text-gray-400">Every text and what Termii reported back about it.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
+              <Search size={11} className="text-gray-400" />
+              <input
+                value={logSearch}
+                onChange={(e) => { setLogSearch(e.target.value); setLogPage(1) }}
+                placeholder="Store or number"
+                className="w-28 bg-transparent text-[11px] font-medium outline-none placeholder-gray-400 sm:w-36"
+              />
+            </div>
+            <select value={logOutcome} onChange={(e) => { setLogOutcome(e.target.value); setLogPage(1) }} className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] font-medium outline-none">
+              <option value="">All outcomes</option>
+              <option value="delivered">Delivered</option>
+              <option value="dnd">Blocked by DND</option>
+              <option value="failed">Not delivered</option>
+              <option value="pending">Awaiting report</option>
+            </select>
+            {history.length > 0 && (
+              <select value={logCampaign} onChange={(e) => { setLogCampaign(e.target.value); setLogPage(1) }} className="max-w-[9rem] rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] font-medium outline-none">
+                <option value="">All campaigns</option>
+                {history.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+
+        {log?.counts && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-gray-50 bg-gray-50/60 px-4 py-2 text-[10px] font-semibold">
+            <span className="text-green-700">{Number(log.counts.delivered).toLocaleString()} delivered</span>
+            <span className="text-amber-700">{Number(log.counts.dnd).toLocaleString()} blocked by DND</span>
+            <span className="text-red-600">{Number(log.counts.failed).toLocaleString()} not delivered</span>
+            <span className="text-gray-500">{Number(log.counts.pending).toLocaleString()} awaiting report</span>
+          </div>
+        )}
+
+        {logLoading && <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-gray-300" /></div>}
+
+        {!logLoading && !(log?.messages || []).length && (
+          <div className="px-4 py-8 text-center">
+            <MessageSquare size={18} className="mx-auto mb-2 text-gray-300" />
+            <p className="text-xs font-bold text-gray-900">No messages yet</p>
+            <p className="mt-0.5 text-[10px] text-gray-400">Every text you send, including test sends, appears here with its delivery status.</p>
+          </div>
+        )}
+
+        {!logLoading && (log?.messages || []).length > 0 && (
+          <>
+            <div className="divide-y divide-gray-50 lg:hidden">
+              {log.messages.map((m) => (
+                <div key={m.messageId} className="px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 flex-1 truncate text-xs font-bold text-gray-900">{m.storeName || m.storeId || 'Unknown'}</p>
+                    <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-black uppercase ${OUTCOME_STYLE[m.outcome] || OUTCOME_STYLE.pending}`}>{OUTCOME_LABEL[m.outcome] || m.outcome}</span>
+                  </div>
+                  <p className="mt-0.5 text-[10px] text-gray-400">{m.phone} · {m.pages ? `${m.pages} page${m.pages === 1 ? '' : 's'} · ` : ''}{when(m.sentAt, m.sentAtMs)}</p>
+                  {m.status ? <p className="mt-0.5 truncate text-[10px] text-gray-400">{m.status}</p> : null}
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-gray-50 bg-gray-50/80 text-[9px] font-black uppercase tracking-wider text-gray-400">
+                    <th className="px-4 py-2">Vendor</th>
+                    <th className="px-4 py-2">Number</th>
+                    <th className="px-4 py-2">Outcome</th>
+                    <th className="px-4 py-2">Termii status</th>
+                    <th className="px-4 py-2 text-right">Pages</th>
+                    <th className="px-4 py-2 text-right">Sent</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {log.messages.map((m) => (
+                    <tr key={m.messageId} className="hover:bg-gray-50/60">
+                      <td className="px-4 py-2"><p className="max-w-[160px] truncate font-bold text-gray-900">{m.storeName || m.storeId || '-'}</p></td>
+                      <td className="px-4 py-2 font-mono text-[10px] text-gray-500">{m.phone}</td>
+                      <td className="px-4 py-2"><span className={`rounded-full border px-1.5 py-0.5 text-[8px] font-black uppercase ${OUTCOME_STYLE[m.outcome] || OUTCOME_STYLE.pending}`}>{OUTCOME_LABEL[m.outcome] || m.outcome}</span></td>
+                      <td className="px-4 py-2"><p className="max-w-[240px] truncate text-[10px] text-gray-500">{m.status || 'No report yet'}</p></td>
+                      <td className="px-4 py-2 text-right text-gray-600">{m.pages ?? '-'}</td>
+                      <td className="px-4 py-2 text-right text-[10px] text-gray-400">{when(m.sentAt, m.sentAtMs)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 border-t border-gray-100 bg-gray-50/80 px-3 py-2">
+              <button onClick={() => setLogPage((n) => Math.max(1, n - 1))} disabled={log.page <= 1} className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-600 disabled:opacity-50">Prev</button>
+              <span className="text-center text-[10px] font-semibold text-gray-500">
+                {log.page}/{log.totalPages} · {Number(log.total).toLocaleString()} messages
+                {log.truncated ? <span className="block font-normal text-gray-400">newest 2,000 only</span> : null}
+              </span>
+              <button onClick={() => setLogPage((n) => n + 1)} disabled={log.page >= log.totalPages} className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-600 disabled:opacity-50">Next</button>
+            </div>
+          </>
+        )}
+      </div>
       <p className="text-[10px] leading-snug text-gray-400">
         Promotional messages go out on the {config?.senderId ? `"${config.senderId}"` : 'promotional'} sender ID and Termii's generic route,
         which is separate from sign-in codes. Numbers registered on DND may not receive them, and MTN does not deliver
