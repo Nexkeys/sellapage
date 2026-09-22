@@ -242,7 +242,14 @@ function CountrySelect({ value, onChange, countries }) {
 // empty array for a city it doesn't know - no error, nothing to show. "Apapa" quoted
 // Dellyman at ₦4,145; the identical route with "Olodi-Apapa" quoted nothing, because
 // Olodi-Apapa is a suburb of Apapa. Typing a city free-hand was the bug.
-function CitySelect({ value, onChange, cities }) {
+// `allowCustom` exists because the two providers fail differently, and the control has to
+// respect that rather than average it out:
+//   Topship  - an unrecognised city returns 200 with zero rates and no error, so the value
+//              MUST come from the list. allowCustom={false}.
+//   Sendbox  - resolves on state and treats city loosely, which is why it kept quoting
+//              throughout this whole saga. It must never LOSE the ability to send an
+//              arbitrary city, so the typed value stays selectable. allowCustom={true}.
+function CitySelect({ value, onChange, cities, allowCustom = false }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
@@ -277,7 +284,16 @@ function CitySelect({ value, onChange, cities }) {
               />
             </div>
             <div className="max-h-48 overflow-y-auto py-1">
-              {filtered.length === 0 && (
+              {allowCustom && q && !matches.some(c => c.name.toLowerCase() === q) && (
+                <button
+                  type="button"
+                  onClick={() => { onChange(query.trim()); setOpen(false); setQuery('') }}
+                  className="block w-full border-b border-gray-100 px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-green-50"
+                >
+                  Use “<span className="font-semibold">{query.trim()}</span>”
+                </button>
+              )}
+              {filtered.length === 0 && !allowCustom && (
                 <p className="px-3 py-2 text-xs text-gray-400">No city or area matches that.</p>
               )}
               {filtered.map(c => {
@@ -342,6 +358,13 @@ export default function OrdersTab({
   // TEMPORARY (2026-09-16) - mirrors topshipBookingDirect for the Sendbox no-payment
   // test path. See bookSendboxDirect below.
   const [sendboxBookingDirect, setSendboxBookingDirect] = useState(false)
+  // Kwik (2026-09-22). vehicleSize: 0 bike, 1 small, 2 medium, 3 large - Kwik quotes vehicle
+  // classes rather than carriers, because Kwik is itself the carrier.
+  const [kwikBookingDirect, setKwikBookingDirect] = useState(false)
+  const [kwikVehicleSize, setKwikVehicleSize] = useState(0)
+  // How precisely Mapbox matched each address. Coordinates deliberately never reach the
+  // browser - they're Temporary geocoding results and may not be stored.
+  const [kwikAddressMatch, setKwikAddressMatch] = useState(null)
   const [SendboxRates, setSendboxRates] = useState([])
   const [loadingRates, setLoadingRates] = useState(false)
   const [hasSearchedRates, setHasSearchedRates] = useState(false)
@@ -633,13 +656,18 @@ export default function OrdersTab({
     setReceiverCountryCode('NG')
     setSenderPostalCode('')
     setReceiverPostalCode('')
+    setKwikVehicleSize(0)
+    setKwikAddressMatch(null)
     if (provider === 'topship' && topshipCountries.length === 0) {
       fetch('/api/topship-countries')
         .then(res => res.json())
         .then(data => setTopshipCountries(Array.isArray(data.countries) ? data.countries : []))
         .catch(() => setTopshipCountries([]))
     }
-    if (provider === 'topship' && topshipCities.length === 0) {
+    // Fetched for BOTH providers (2026-09-22): the list is Nigerian geography that happens to
+    // be served by Topship, and the Sendbox modal uses the same picker so vendors get one
+    // consistent control instead of two that look alike and behave differently.
+    if (topshipCities.length === 0) {
       fetch('/api/topship-cities?countryCode=NG')
         .then(res => res.json())
         .then(data => setTopshipCities(Array.isArray(data.cities) ? data.cities : []))
@@ -705,9 +733,23 @@ export default function OrdersTab({
     const rState = detailsObj.receiverState ?? receiverState
 
     const isTopship = provider === 'topship'
+    // Kwik prices by DISTANCE, so the server geocodes both addresses before it can quote at
+    // all. A city on its own geocodes to the middle of that city and misprices the run, so
+    // street + city + state are all required at both ends - a stricter bar than either of
+    // the other two providers.
+    const isKwik = provider === 'kwik'
 
     if (!store?.id) return
-    if (isTopship) {
+    if (isKwik) {
+      if (!sStreet || !sCity || !sState) {
+        setBookingError('Pickup street, city and state are all needed — Kwik prices by distance.')
+        return
+      }
+      if (!rStreet || !rCity || !rState) {
+        setBookingError('Delivery street, city and state are all needed — Kwik prices by distance.')
+        return
+      }
+    } else if (isTopship) {
       if (!sCity || !rCity) {
         setBookingError('Sender and receiver city are required to calculate rates.')
         return
@@ -727,8 +769,35 @@ export default function OrdersTab({
     setBookingError('')
     setSendboxRates([])
     try {
-      const endpoint = isTopship ? '/api/topship-rates' : '/api/sendbox-rates'
-      const body = isTopship
+      const endpoint = isKwik
+        ? '/api/kwik-rates'
+        : isTopship
+          ? '/api/topship-rates'
+          : '/api/sendbox-rates'
+      const body = isKwik
+        ? {
+            storeId: store.id,
+            senderDetails: {
+              name: senderName || store?.businessName || '',
+              phone: senderPhone || store?.whatsappNumber || '',
+              email: senderEmail || store?.email || '',
+              address: sStreet,
+              city: sCity,
+              state: sState,
+            },
+            receiverDetails: {
+              name: receiverName || '',
+              phone: receiverPhone || '',
+              email: receiverEmail || '',
+              address: rStreet,
+              city: rCity,
+              state: rState,
+            },
+            vehicleSize: Number(kwikVehicleSize) || 0,
+            pickupDate,
+            packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 0),
+          }
+        : isTopship
         ? {
             storeId: store.id,
             senderDetails: { city: sCity, countryCode: senderCountryCode || 'NG' },
@@ -758,20 +827,30 @@ export default function OrdersTab({
             packageType: packageType,
           }
 
+      // Unlike the Sendbox and Topship rate endpoints, kwik-rates requires a signed-in
+      // vendor: it spends Mapbox geocoding lookups, so it must not be callable anonymously.
+      const headers = { 'Content-Type': 'application/json' }
+      if (isKwik) headers.Authorization = `Bearer ${await user?.getIdToken()}`
+
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok && Array.isArray(data.rates)) {
         setSendboxRates(data.rates)
+        // Warns when Mapbox matched a street or area rather than a building - common for
+        // informal Nigerian addresses, and exactly when the landmark in the order notes is
+        // what will actually find the door.
+        setKwikAddressMatch(isKwik ? data.addressMatch || null : null)
         if (data.rates.length > 0) {
           setSelectedCourierId(data.rates[0].courier_id || '')
           setSelectedServiceCode(data.rates[0].service_code || '')
         }
       } else {
-        setBookingError(data.error || `Failed to fetch rates from ${isTopship ? 'Topship' : 'Sendbox'}.`)
+        const label = isKwik ? 'Kwik' : isTopship ? 'Topship' : 'Sendbox'
+        setBookingError(data.error || `Failed to fetch rates from ${label}.`)
       }
     } catch (err) {
       console.error(err)
@@ -962,6 +1041,81 @@ export default function OrdersTab({
     }
   }
 
+  // Kwik (2026-09-22). Payment-first is off here for the same reason it is off for the other
+  // two - see the Sendbox and Topship notes above. Kwik is on STAGING, so nothing here has
+  // touched real money yet.
+  const bookKwikDirect = async () => {
+    if (!bookingShipmentOrder || !store?.id) return
+    const selectedRate = SendboxRates.find(r => r.courier_id === selectedCourierId)
+    if (!selectedRate) {
+      setBookingError('Selected rate not found. Please recalculate rates.')
+      return
+    }
+    setKwikBookingDirect(true)
+    setBookingError('')
+    try {
+      const token = await user?.getIdToken()
+      const res = await fetch('/api/kwik-create-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          storeId: store.id,
+          orderId: bookingShipmentOrder.id,
+          // Kwik's "courier" is a vehicle class, so courier_id carries the vehicle_id.
+          vehicleId: Number(selectedCourierId),
+          senderDetails: {
+            name: senderName || store?.businessName || '',
+            phone: senderPhone || store?.whatsappNumber || '',
+            email: senderEmail || store?.email || '',
+            address: senderStreet,
+            city: senderCity,
+            state: senderState,
+          },
+          receiverDetails: {
+            name: receiverName || '',
+            phone: receiverPhone || '',
+            email: receiverEmail || '',
+            address: receiverStreet,
+            city: receiverCity,
+            state: receiverState,
+          },
+          pickupDate,
+          packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 0),
+          deliveryInstruction: bookingShipmentOrder?.notes || '',
+        }),
+      })
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        if (res.status === 504) {
+          setBookingError('The booking took too long to complete - Kwik\'s server may be slow right now. Please try again.')
+        } else {
+          setBookingError('Could not connect to book the delivery. Please check your connection.')
+        }
+        return
+      }
+      if (res.ok && data.success) {
+        await onUpdateOrder?.(bookingShipmentOrder.id, {
+          kwikUniqueOrderId: data.uniqueOrderId || '',
+          kwikTrackingUrl: data.trackingUrl || '',
+          kwikJobId: data.jobId || null,
+          provider: 'kwik',
+          status: 'dispatched',
+        })
+        setBookingShipmentOrder(null)
+        setShipmentPaymentResult({ success: true, trackingId: data.uniqueOrderId || '' })
+      } else {
+        setBookingError(data.error || 'Failed to book Kwik delivery.')
+      }
+    } catch (err) {
+      console.error(err)
+      setBookingError('Could not connect to book the delivery. Please check your connection.')
+    } finally {
+      setKwikBookingDirect(false)
+    }
+  }
+
   const initializeShipmentPayment = async () => {
     if (!bookingShipmentOrder || !store?.id) return
     if (!selectedCourierId) {
@@ -978,6 +1132,10 @@ export default function OrdersTab({
       // Nex can validate the live booking flow before wiring real payment collection -
       // see bookTopshipDirect above and topship-create-shipment.js header.
       await bookTopshipDirect()
+      return
+    }
+    if (selectedProvider === 'kwik') {
+      await bookKwikDirect()
       return
     }
     // TEMPORARY (2026-09-16, Nex's explicit instruction): payment-first is now OFF for
@@ -1433,6 +1591,16 @@ export default function OrdersTab({
                               </span>
                             </div>
                           )}
+                          {order.kwikUniqueOrderId && (
+                            <div className="mt-1.5 flex flex-col gap-0.5">
+                              <span className="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 border border-amber-100 w-fit">
+                                Kwik: {order.kwikUniqueOrderId}
+                              </span>
+                              <span className="text-[9px] text-amber-500 italic">
+                                Status: {order.kwikStatus || 'Upcoming'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="border-r border-gray-100 px-3 py-3.5 align-top">
@@ -1490,7 +1658,7 @@ export default function OrdersTab({
                               {markingDelivered === order.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
                             </button>
                           )}
-                          {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId || order.topshipTrackingId) && (
+                          {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId || order.topshipTrackingId || order.kwikUniqueOrderId) && (
                             <button
                               type="button"
                               onClick={() => openProviderModal(order)}
@@ -1563,6 +1731,16 @@ export default function OrdersTab({
                         </span>
                         <span className="text-[10px] text-indigo-500 italic">
                           Status: {order.SendboxStatus || order.sendboxStatus || 'created'}
+                        </span>
+                      </div>
+                    )}
+                    {order.kwikUniqueOrderId && (
+                      <div className="mt-1.5 flex flex-col gap-0.5">
+                        <span className="inline-flex items-center rounded bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-100 w-fit">
+                          Kwik: {order.kwikUniqueOrderId}
+                        </span>
+                        <span className="text-[10px] text-amber-500 italic">
+                          Status: {order.kwikStatus || 'Upcoming'}
                         </span>
                       </div>
                     )}
@@ -1646,7 +1824,7 @@ export default function OrdersTab({
                       Delivered
                     </button>
                   )}
-                  {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId || order.topshipTrackingId) && (
+                  {order.orderType === 'checkout' && !(order.SendboxTrackingId || order.sendboxTrackingId || order.topshipTrackingId || order.kwikUniqueOrderId) && (
                     <button
                       type="button"
                       onClick={() => openProviderModal(order)}
@@ -1929,6 +2107,21 @@ export default function OrdersTab({
                   <p className="text-xs text-gray-400 mt-0.5">Local + international shipping, 150+ countries.</p>
                 </div>
               </button>
+              <button
+                type="button"
+                onClick={() => selectProvider('kwik')}
+                className="w-full text-left rounded-2xl border-2 border-gray-100 hover:border-amber-400 hover:bg-amber-50/40 transition-all p-4 flex items-start gap-3"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <Truck size={18} className="text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">
+                    Kwik <span className="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 align-middle">Staging</span>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">Same-day dispatch riders. Priced by distance.</p>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -1946,7 +2139,7 @@ export default function OrdersTab({
                   Book Shipment
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Prepare shipment details and calculate rates with {selectedProvider === 'topship' ? 'Topship' : 'Sendbox'}
+                  Prepare shipment details and calculate rates with {selectedProvider === 'topship' ? 'Topship' : selectedProvider === 'kwik' ? 'Kwik' : 'Sendbox'}
                 </p>
               </div>
               <button
@@ -2028,8 +2221,13 @@ export default function OrdersTab({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">City</label>
-                    {selectedProvider === 'topship' && topshipCities.length > 0 ? (
-                      <CitySelect value={senderCity} onChange={setSenderCity} cities={topshipCities} />
+                    {topshipCities.length > 0 ? (
+                      <CitySelect
+                        value={senderCity}
+                        onChange={setSenderCity}
+                        cities={topshipCities}
+                        allowCustom={selectedProvider !== 'topship'}
+                      />
                     ) : (
                       <input
                         type="text"
@@ -2110,11 +2308,12 @@ export default function OrdersTab({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">City / LGA</label>
-                    {selectedProvider === 'topship' && topshipCities.length > 0 ? (
+                    {topshipCities.length > 0 ? (
                       <CitySelect
                         value={receiverCity}
                         onChange={(name) => { setReceiverCity(name); setReceiverLga(name) }}
                         cities={topshipCities}
+                        allowCustom={selectedProvider !== 'topship'}
                       />
                     ) : (
                       <input
@@ -2236,6 +2435,24 @@ export default function OrdersTab({
                       )}
                     </div>
                   )}
+                  {selectedProvider === 'kwik' && (
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Vehicle</label>
+                      <select
+                        value={kwikVehicleSize}
+                        onChange={(e) => {
+                          setKwikVehicleSize(Number(e.target.value))
+                          if (packageWeight > 0) triggerFetchRates(packageWeight)
+                        }}
+                        className={INPUT_CLASS}
+                      >
+                        <option value={0}>Bike</option>
+                        <option value={1}>Small</option>
+                        <option value={2}>Medium</option>
+                        <option value={3}>Large</option>
+                      </select>
+                    </div>
+                  )}
                   <div className="flex-1">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Package Weight (kg)</label>
                     <input
@@ -2268,6 +2485,23 @@ export default function OrdersTab({
                 <div className="space-y-2 mt-3">
                   <label className="block text-xs font-semibold text-gray-600">Select Courier Rate</label>
                   
+                  {/* Only shown for Kwik, and only when Mapbox matched a street or area
+                      rather than a building. The booking still works - the rider just gets a
+                      nearby pin - so this is a warning, never a blocker. */}
+                  {selectedProvider === 'kwik' && kwikAddressMatch && (kwikAddressMatch.pickup?.approximate || kwikAddressMatch.delivery?.approximate) && (
+                    <div className="mb-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
+                      <p className="text-[11px] font-bold text-amber-700">
+                        {kwikAddressMatch.pickup?.approximate && kwikAddressMatch.delivery?.approximate
+                          ? 'Both addresses matched only approximately.'
+                          : kwikAddressMatch.pickup?.approximate
+                            ? 'The pickup address matched only approximately.'
+                            : 'The delivery address matched only approximately.'}
+                      </p>
+                      <p className="text-[11px] text-amber-600 mt-0.5">
+                        The rider will get a nearby pin. Make sure the customer&apos;s landmark or bus stop is in the order notes.
+                      </p>
+                    </div>
+                  )}
                   {loadingRates ? (
                     <div className="flex flex-col items-center justify-center py-8 border border-gray-150 rounded-xl bg-gray-50/50">
                       <Loader2 size={24} className="animate-spin text-green-600" />
@@ -2337,10 +2571,10 @@ export default function OrdersTab({
               <button
                 type="button"
                 onClick={initializeShipmentPayment}
-                disabled={bookingSubmitting || topshipBookingDirect || sendboxBookingDirect || !selectedCourierId || loadingRates}
+                disabled={bookingSubmitting || topshipBookingDirect || sendboxBookingDirect || kwikBookingDirect || !selectedCourierId || loadingRates}
                 className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-green-700 disabled:bg-green-400 active:scale-95"
               >
-                {bookingSubmitting || topshipBookingDirect || sendboxBookingDirect ? (
+                {bookingSubmitting || topshipBookingDirect || sendboxBookingDirect || kwikBookingDirect ? (
                   <>
                     <Loader2 size={13} className="animate-spin" />
                     Booking Shipment...

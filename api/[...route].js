@@ -102,6 +102,19 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/topship-webhook.js")
         return handler(req, res)
       }
+      // Kwik - delivery provider #3. Staging as of 2026-09-22.
+      case "kwik-rates": {
+        const { default: handler } = await import("../src/api-handlers/kwik-rates.js")
+        return handler(req, res)
+      }
+      case "kwik-create-task": {
+        const { default: handler } = await import("../src/api-handlers/kwik-create-task.js")
+        return handler(req, res)
+      }
+      case "kwik-tracking": {
+        const { default: handler } = await import("../src/api-handlers/kwik-tracking.js")
+        return handler(req, res)
+      }
       case "ai-describe": {
         const { default: handlerFunc } = await import("../src/api-handlers/ai-describe.js");
         return await handlerFunc(req, res);

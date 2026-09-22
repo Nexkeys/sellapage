@@ -6,6 +6,7 @@
 // being worked out in the UI where only the admin's browser would know.
 import crypto from 'node:crypto'
 import { normaliseNgMobile } from '../../utils/phone.js'
+import { sendWindow } from '../../utils/smsWindow.js'
 
 // GSM-03.38, the alphabet a normal SMS is encoded in. Anything outside it (the
 // naira sign, curly quotes, emoji) forces the whole message into UCS-2, where a
@@ -200,25 +201,10 @@ export function selectRecipients(stores, filters = {}) {
 
 // ---------------------------------------------------------------- send window
 
-export const LAGOS = 'Africa/Lagos'
-
-/**
- * MTN drops promotional traffic between 8pm and 8am WAT
- * (Docs/TERMII_API_DOCS.md, "time restrictions in Nigeria for just MTN
- * numbers"), so a night send quietly loses every MTN recipient, which is most
- * of them. Sending is refused rather than half delivered.
- */
-export function sendWindow(now = new Date()) {
-  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: LAGOS, hour: '2-digit', hour12: false }).format(now))
-  const open = hour >= 8 && hour < 20
-  return {
-    open,
-    hour,
-    opensAt: '8:00am',
-    closesAt: '8:00pm',
-    reason: open ? '' : 'MTN does not deliver promotional SMS between 8pm and 8am Lagos time. Send after 8am so your vendors actually receive it.',
-  }
-}
+// The rule lives in utils/smsWindow.js so the admin tab can show exactly what
+// the server enforces, rather than a second copy that drifts.
+export { sendWindow }
+export { LAGOS } from '../../utils/smsWindow.js'
 
 /** Termii takes at most 100 numbers per bulk request. */
 export const BATCH_SIZE = 100

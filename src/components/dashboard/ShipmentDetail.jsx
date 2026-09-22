@@ -67,14 +67,21 @@ function Fact({ label, value, mono }) {
 }
 
 export default function ShipmentDetail({ order, store, tracking, loading, error, onRefresh, onBack }) {
+  // Three providers now. Kwik is checked first because it identifies a task by
+  // unique_order_id rather than a tracking id, so its field can't collide with the others.
+  // Mirrors shipmentProvider() in DeliveryTab.jsx, deliberately.
+  const isKwik = !!order.kwikUniqueOrderId
   const isTopship =
+    !isKwik &&
     !!order.topshipTrackingId &&
     !(order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)
 
-  const carrier = isTopship ? 'Topship' : 'Sendbox'
-  const trackingCode = isTopship
-    ? order.topshipTrackingId
-    : order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode
+  const carrier = isKwik ? 'Kwik' : isTopship ? 'Topship' : 'Sendbox'
+  const trackingCode = isKwik
+    ? order.kwikUniqueOrderId
+    : isTopship
+      ? order.topshipTrackingId
+      : order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode
 
   // Same resolution as ShipmentAddressBlock in DeliveryTab, deliberately.
   // Sendbox bookings do NOT persist addresses on the order (only tracking ids
@@ -82,15 +89,20 @@ export default function ShipmentDetail({ order, store, tracking, loading, error,
   // address and the order's own checkout address. An earlier version of this
   // file invented `sendboxSenderAddress`, which does not exist, and would have
   // shown "Not provided" on every Sendbox shipment.
-  const pickup = isTopship && order.topshipSenderAddress
-    ? order.topshipSenderAddress
+  // Kwik persists the same pair (addresses only - no coordinates, which are Temporary
+  // Mapbox results and may not be stored), so it resolves exactly like Topship.
+  const bookedSender = isKwik ? order.kwikSenderAddress : isTopship ? order.topshipSenderAddress : null
+  const bookedReceiver = isKwik ? order.kwikReceiverAddress : isTopship ? order.topshipReceiverAddress : null
+
+  const pickup = bookedSender
+    ? bookedSender
     : {
         address: store?.pickupAddress?.streetAddress || '',
         city: store?.pickupAddress?.city || '',
         state: store?.pickupAddress?.state || '',
       }
-  const dropoff = isTopship && order.topshipReceiverAddress
-    ? order.topshipReceiverAddress
+  const dropoff = bookedReceiver
+    ? bookedReceiver
     : {
         address: order.deliveryAddress?.address || order.deliveryAddress?.streetAddress || '',
         city: order.deliveryAddress?.city || order.deliveryAddress?.lga || '',
@@ -105,8 +117,8 @@ export default function ShipmentDetail({ order, store, tracking, loading, error,
     : []
 
   const currentLocation = tracking?.itemLocation || ''
-  const status = tracking?.statusName || tracking?.status || order.topshipStatus || ''
-  const carrierUrl = isTopship ? order.topshipTrackingUrl : tracking?.trackingUrl
+  const status = tracking?.statusName || tracking?.status || (isKwik ? order.kwikStatus : order.topshipStatus) || ''
+  const carrierUrl = isKwik ? order.kwikTrackingUrl : isTopship ? order.topshipTrackingUrl : tracking?.trackingUrl
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">

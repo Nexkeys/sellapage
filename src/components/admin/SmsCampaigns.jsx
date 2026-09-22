@@ -5,6 +5,7 @@
 // Termii wallet. The preview is the exact text one vendor receives, opt-out
 // link included, so the character count is never a guess.
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { sendWindow } from '../../utils/smsWindow'
 import {
   MessageSquare, Send, Save, Trash2, Loader2, RefreshCw, AlertCircle, CheckCircle2,
   Link2, Users, Wallet, MousePointerClick, Copy, X, Clock, Ban, Search,
@@ -55,6 +56,14 @@ export default function SmsCampaigns({ authHeaders }) {
   const [logSearch, setLogSearch] = useState('')
   const [logPage, setLogPage] = useState(1)
   const [logLoading, setLogLoading] = useState(false)
+  // Worked out in the browser and refreshed every minute, so the state is right
+  // even when the tab has been open since before 8pm. The server still decides:
+  // this only shows what it will say.
+  const [clock, setClock] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setClock(Date.now()), 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   const load = useCallback(async () => {
     const headers = await authHeaders()
@@ -125,7 +134,9 @@ export default function SmsCampaigns({ authHeaders }) {
 
   const config = data?.config
   const quote = audience?.quote
-  const windowState = data?.window
+  const liveWindow = sendWindow(new Date(clock))
+  // Closed wins either way: if the server says closed, it is closed.
+  const windowState = data?.window?.open === false ? data.window : liveWindow
   const canSend = Boolean(config?.ready) && Boolean(draft.id) && (audience?.count || 0) > 0 && windowState?.open
 
   const post = async (action, payload) => {
@@ -241,6 +252,15 @@ export default function SmsCampaigns({ authHeaders }) {
               You can still write, save and preview campaigns. Add <span className="font-mono">TERMII_PROMO_SENDER_ID</span> in Vercel and .env once Termii approves it.
             </p>
           </div>
+        </div>
+      )}
+
+      {windowState?.open && (
+        <div className="flex items-center gap-2 rounded-xl border border-green-100 bg-green-50 px-3 py-2">
+          <Clock size={13} className="shrink-0 text-green-600" />
+          <p className="text-[11px] font-semibold text-green-800">
+            Sending is open until {windowState.closesAt}. Promotional texts cannot be delivered between {windowState.closesAt} and {windowState.opensAt}.
+          </p>
         </div>
       )}
 

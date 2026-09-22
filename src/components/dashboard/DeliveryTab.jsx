@@ -91,21 +91,45 @@ function ShipmentTimelineCard({ rawStatus, courierName, estimatedDelivery, timel
 // (the order and store objects), never a new fetch, so it can't itself error. Prefers the
 // exact addresses Topship actually booked with (persisted at booking time) over the
 // order's original checkout address, since the vendor may have edited them in the modal.
-function ShipmentAddressBlock({ order, store, isTopship }) {
-  const pickup = isTopship && order.topshipSenderAddress
-    ? order.topshipSenderAddress
-    : {
-        address: store?.pickupAddress?.streetAddress || '',
-        city: store?.pickupAddress?.city || '',
-        state: store?.pickupAddress?.state || '',
-      }
-  const delivery = isTopship && order.topshipReceiverAddress
-    ? order.topshipReceiverAddress
-    : {
-        address: order.deliveryAddress?.address || order.deliveryAddress?.streetAddress || '',
-        city: order.deliveryAddress?.city || order.deliveryAddress?.lga || '',
-        state: order.deliveryAddress?.state || '',
-      }
+// Which provider booked a shipment. Deliberately not a boolean any more - Kwik is a third
+// provider, and it has no tracking ID of its own: it identifies a task by unique_order_id.
+// Kwik is checked first because its field can't collide with the other two.
+function shipmentProvider(order) {
+  if (order.kwikUniqueOrderId) return 'kwik'
+  if (order.topshipTrackingId && !(order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)) {
+    return 'topship'
+  }
+  return 'sendbox'
+}
+
+function shipmentTrackingCode(order, provider) {
+  if (provider === 'kwik') return order.kwikUniqueOrderId || ''
+  if (provider === 'topship') return order.topshipTrackingId || ''
+  return order.sendboxTrackingId || order.sendboxOrderCode || order.SendboxTrackingId || ''
+}
+
+function ShipmentAddressBlock({ order, store, provider }) {
+  // The exact addresses the provider was booked with, persisted at booking time. Higher
+  // fidelity than the order's original checkout address, since the vendor may have edited
+  // them in the modal. Kwik's pair carries no coordinates - those are Temporary Mapbox
+  // results and may not be stored.
+  const booked =
+    provider === 'kwik'
+      ? { sender: order.kwikSenderAddress, receiver: order.kwikReceiverAddress }
+      : provider === 'topship'
+        ? { sender: order.topshipSenderAddress, receiver: order.topshipReceiverAddress }
+        : { sender: null, receiver: null }
+
+  const pickup = booked.sender || {
+    address: store?.pickupAddress?.streetAddress || '',
+    city: store?.pickupAddress?.city || '',
+    state: store?.pickupAddress?.state || '',
+  }
+  const delivery = booked.receiver || {
+    address: order.deliveryAddress?.address || order.deliveryAddress?.streetAddress || '',
+    city: order.deliveryAddress?.city || order.deliveryAddress?.lga || '',
+    state: order.deliveryAddress?.state || '',
+  }
 
   const pickupLine = [pickup.address, pickup.city, pickup.state].filter(Boolean).join(', ')
   const deliveryLine = [delivery.address, delivery.city, delivery.state].filter(Boolean).join(', ')
@@ -238,16 +262,22 @@ export default function DeliveryTab({
   }
 
   const refreshTracking = async (order) => {
-    const isTopship = !!order.topshipTrackingId && !(order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)
-    const trackingCode = isTopship
-      ? order.topshipTrackingId
-      : (order.sendboxTrackingId || order.sendboxOrderCode || order.SendboxTrackingId)
+    const provider = shipmentProvider(order)
+    const trackingCode = shipmentTrackingCode(order, provider)
     if (!trackingCode) return
+    // Kwik has NO webhooks, so for a Kwik shipment this button is the only thing that ever
+    // moves its status - unlike Sendbox and Topship, which also push updates to us.
+    const endpoint =
+      provider === 'kwik'
+        ? '/api/kwik-tracking'
+        : provider === 'topship'
+          ? '/api/topship-tracking'
+          : '/api/sendbox-tracking'
     setTrackingLoading((prev) => ({ ...prev, [order.id]: true }))
     setTrackingError((prev) => ({ ...prev, [order.id]: '' }))
     try {
       const token = await user?.getIdToken()
-      const res = await fetch(isTopship ? '/api/topship-tracking' : '/api/sendbox-tracking', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -280,7 +310,7 @@ export default function DeliveryTab({
   const hasPickupAddress =
     store?.pickupAddress?.streetAddress && store?.pickupAddress?.state
 
-  const activeShipments = (orders || []).filter((o) => o.sendboxTrackingId || o.sendboxOrderCode || o.SendboxTrackingId || o.SendboxOrderId || o.topshipTrackingId)
+  const activeShipments = (orders || []).filter((o) => o.sendboxTrackingId || o.sendboxOrderCode || o.SendboxTrackingId || o.SendboxOrderId || o.topshipTrackingId || o.kwikUniqueOrderId)
   const zonesTotalPages = Math.max(1, Math.ceil((zones || []).length / DELIVERY_ZONES_PER_PAGE))
   const safeZonesPage = Math.min(zonesPage, zonesTotalPages)
   const paginatedZones = (zones || []).slice(
@@ -625,7 +655,10 @@ export default function DeliveryTab({
               const tracking = trackingData[order.id]
               const isLoading = trackingLoading[order.id]
               const error = trackingError[order.id]
-              const isTopship = !!order.topshipTrackingId && !(order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)
+              const provider = shipmentProvider(order)
+              const isTopship = provider === 'topship'
+              const isKwik = provider === 'kwik'
+              const isSendbox = provider === 'sendbox'
               return (
                 <div
                   key={order.id}
@@ -642,15 +675,15 @@ export default function DeliveryTab({
                         <p className="font-bold text-gray-900 text-sm truncate group-hover:text-green-700 transition-colors">
                           {order.customerName || 'Customer'}
                         </p>
-                        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border flex-shrink-0 ${isTopship ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                          {isTopship ? 'Topship' : 'Sendbox'}
+                        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border flex-shrink-0 ${isTopship ? 'bg-blue-50 text-blue-700 border-blue-200' : isKwik ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                          {isTopship ? 'Topship' : isKwik ? 'Kwik' : 'Sendbox'}
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-500 mt-0.5 truncate">
                         {order.items || 'Order'}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        Tracking: {isTopship ? order.topshipTrackingId : (order.sendboxTrackingId || order.SendboxTrackingId || order.sendboxOrderCode)}
+                        Tracking: {shipmentTrackingCode(order, provider)}
                       </p>
                       <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-green-700">
                         View full tracking <ChevronRight size={11} />
@@ -681,7 +714,17 @@ export default function DeliveryTab({
                           Track
                         </a>
                       )}
-                      {!isTopship && (order.sendboxTrackingUrl || order.SendboxTrackingUrl) && (
+                      {isKwik && /^https?:\/\//i.test(order.kwikTrackingUrl || '') && (
+                        <a
+                          href={order.kwikTrackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-bold text-amber-700 transition-all hover:bg-amber-100"
+                        >
+                          Track <ExternalLink size={11} />
+                        </a>
+                      )}
+                      {isSendbox && (order.sendboxTrackingUrl || order.SendboxTrackingUrl) && (
                         <a
                           href={order.sendboxTrackingUrl || order.SendboxTrackingUrl}
                           target="_blank"
@@ -692,7 +735,7 @@ export default function DeliveryTab({
                           Track
                         </a>
                       )}
-                      {!isTopship && (order.sendboxWaybillUrl || order.SendboxWaybillUrl) && (
+                      {isSendbox && (order.sendboxWaybillUrl || order.SendboxWaybillUrl) && (
                         <a
                           href={order.sendboxWaybillUrl || order.SendboxWaybillUrl}
                           target="_blank"
@@ -712,7 +755,7 @@ export default function DeliveryTab({
                     </p>
                   )}
 
-                  <ShipmentAddressBlock order={order} store={store} isTopship={isTopship} />
+                  <ShipmentAddressBlock order={order} store={store} provider={provider} />
 
                   {tracking && (
                     <div className="mt-3">
@@ -728,7 +771,7 @@ export default function DeliveryTab({
                   {!tracking && !error && (
                     <div className="mt-3 space-y-1.5">
                       <ShipmentTimelineCard
-                        rawStatus={isTopship ? (order.topshipStatus || 'Confirmed') : (order.SendboxStatus || 'created')}
+                        rawStatus={isTopship ? (order.topshipStatus || 'Confirmed') : isKwik ? (order.kwikStatus || 'Upcoming') : (order.SendboxStatus || 'created')}
                       />
                       <p className="text-[11px] text-gray-400">Click Refresh for live update</p>
                     </div>
