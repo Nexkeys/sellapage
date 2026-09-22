@@ -87,7 +87,11 @@ export async function geocodeAddress(rawAddress) {
   const query = sanitiseQuery(rawAddress)
   if (!query) return { success: false, error: 'No address supplied to look up.' }
 
-  const token = process.env.MAPBOX_API_DEFAULT_KEY
+  // Trimmed defensively: a token pasted into a dashboard env field very often carries a
+  // trailing newline or space, which Mapbox rejects as an invalid token rather than
+  // ignoring. Quotes get stripped for the same reason - .env files don't need them and a
+  // literal quote character would be sent as part of the token.
+  const token = String(process.env.MAPBOX_API_DEFAULT_KEY || '').trim().replace(/^["']|["']$/g, '')
   if (!token) {
     return {
       success: false,
@@ -127,8 +131,20 @@ export async function geocodeAddress(rawAddress) {
   }
 
   if (httpStatus === 401 || httpStatus === 403) {
-    // Most often a token with a URL restriction on it - see this file's header.
-    console.error('[geocode] Mapbox rejected the token:', httpStatus, payload?.message || '')
+    // Logs the token's SHAPE, never the token. The three causes of a 401 here are all
+    // distinguishable from these fields, and guessing between them cost a debugging round
+    // on 2026-09-22:
+    //   1. A rotated token - Mapbox's account setup offers "Rotate token", which invalidates
+    //      the previous value. A token saved before that click stays well-formed but dead.
+    //      Confirm by comparing `tail` against the console's current token.
+    //   2. A URL restriction on the token - server-to-server calls send no Origin/Referer,
+    //      so a restricted token rejects every request from us.
+    //   3. Vercel not redeployed after the variable changed.
+    console.error('[geocode] Mapbox rejected the token:', httpStatus, payload?.message || '', {
+      prefix: token.slice(0, 3),
+      length: token.length,
+      tail: token.slice(-6),
+    })
     return { success: false, error: 'Address lookup is temporarily unavailable. Please try again shortly.' }
   }
   if (httpStatus === 429) {
