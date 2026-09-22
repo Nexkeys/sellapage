@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import {
   Lock, Loader2, RefreshCw, Database, Cloud, Globe,
@@ -18,6 +18,8 @@ import NewsletterAdmin from '../components/admin/NewsletterAdmin';
 import EmailBroadcast from '../components/admin/EmailBroadcast';
 import MarketplaceAdmin from '../components/admin/MarketplaceAdmin';
 import { SkeletonRows } from '../components/Skeleton';
+// Lazy: keeps Recharts in its own chunk, loaded only with the Analytics tab.
+const SignupsChart = lazy(() => import('../components/admin/SignupsChart'));
 
 const ADMIN_TABS = [
   { id: 'health', label: 'System Health', icon: Database, short: 'Health' },
@@ -158,7 +160,7 @@ export default function Admin() {
 
   const [analyticsData, setAnalyticsData] = useState(null);
   const [topStores, setTopStores] = useState([]);
-  const [signupSeries, setSignupSeries] = useState([]);
+  const [signupData, setSignupData] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState('');
 
@@ -454,11 +456,11 @@ export default function Admin() {
       const [ov, ts, su] = await Promise.all([
         load('overview', '/api/admin-analytics?action=overview'),
         load('top-stores', '/api/admin-analytics?action=top-stores&limit=10'),
-        load('signups', '/api/admin-analytics?action=signups&days=30'),
+        load('signups', '/api/admin-analytics?action=signups&days=90&months=12'),
       ]);
       setAnalyticsData(ov.analytics);
       setTopStores(ts.stores || []);
-      setSignupSeries(su.series || []);
+      setSignupData({ days: su.days || su.series || [], months: su.months || [], totals: su.totals || null });
     } catch (err) {
       console.error('[Admin Analytics] fetch failed:', err);
       setAnalyticsError(err.message || 'Failed to load analytics.');
@@ -805,7 +807,7 @@ export default function Admin() {
               <td className="px-4 py-3 align-top"><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span>{s.isPlanExpired&&<span className="text-[8px] font-bold text-red-600 ml-1">Expired</span>}</td>
               <td className="px-4 py-3 align-top"><p className="font-bold text-gray-900">{s.listings?.total ?? 0} total</p><p className="text-[10px] text-gray-500 mt-0.5">{s.listings?.products ?? 0} product{(s.listings?.products ?? 0)===1?'':'s'}</p><p className="text-[10px] text-gray-500">{s.listings?.services ?? 0} service{(s.listings?.services ?? 0)===1?'':'s'}</p></td>
               <td className="px-4 py-3 align-top">{!s.referredBy?<span className="text-[10px] text-gray-400 italic">Not Referred</span>:<span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">{s.referredByReferralCode||s.referredByStoreName?`${s.referredByReferralCode||'-'} · ${s.referredByStoreName||'Unknown'}`:s.referredBy}</span>}</td>
-              <td className="px-4 py-3 align-top text-[10px] text-gray-500"><p>Start: {s.planStartDate?new Date(s.planStartDate).toLocaleDateString('en-NG'):'-'}</p><p className={s.isPlanExpired?'text-red-500 font-bold':''}>End: {s.planEndDate?new Date(s.planEndDate).toLocaleDateString('en-NG'):'Lifetime'}</p></td>
+              <td className="px-4 py-3 align-top text-[10px] text-gray-500"><p className="font-bold text-gray-700">Joined: {s.createdAt?new Date(s.createdAt).toLocaleDateString('en-NG',{day:'2-digit',month:'short',year:'numeric'}):'Not recorded'}</p><p>Start: {s.planStartDate?new Date(s.planStartDate).toLocaleDateString('en-NG'):'-'}</p><p className={s.isPlanExpired?'text-red-500 font-bold':''}>End: {s.planEndDate?new Date(s.planEndDate).toLocaleDateString('en-NG'):'Lifetime'}</p></td>
               </tr>)}
               {!dirLoading&&(dirData?.stores||[]).length===0&&<tr><td colSpan="5" className="p-8 text-center text-gray-400 text-sm">No merchants found.</td></tr>}
             </tbody></table></div>
@@ -1004,9 +1006,9 @@ export default function Admin() {
               {l:'Paid Stores',v:analyticsData.paidStores,c:'text-green-600'},
               {l:'Total Products',v:analyticsData.totalProducts,c:'text-blue-600'},
               {l:'Open Tickets',v:analyticsData.openTickets,c:'text-red-600'},
-            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{s.value?.toLocaleString?.()??s.value??'-'}</p></div>)}</div>
+            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{typeof s.v === 'number' ? s.v.toLocaleString() : (s.v ?? '-')}</p></div>)}</div>
             {topStores.length>0&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Most Viewed Stores (Top {topStores.length})</h3></div><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Views</th><th className="px-4 py-2 text-right">Clicks</th><th className="px-4 py-2 text-right">Engagement</th></tr></thead><tbody className="divide-y divide-gray-50">{topStores.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[140px]">{s.storeName||'Unnamed'}</p><p className="text-[9px] text-gray-400 font-mono">@{s.handle}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[120px]">{s.email||'-'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline flex items-center gap-0.5"><ExternalLink size={7} /> WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalViews.toLocaleString()}</td><td className="px-4 py-2 text-right text-gray-600">{s.totalClicks.toLocaleString()}</td><td className="px-4 py-2 text-right"><span className={`font-bold ${s.engagementRate>=50?'text-green-600':s.engagementRate>=20?'text-amber-600':'text-gray-500'}`}>{s.engagementRate}%</span></td></tr>)}</tbody></table></div></div>}
-            {signupSeries.length>0&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><h3 className="text-[10px] font-bold text-gray-900 uppercase tracking-wider mb-3">Signups (Last 30 Days)</h3><div className="flex items-end gap-0.5 h-24">{signupSeries.map((d,i)=>{const mx=Math.max(...signupSeries.map(s=>s.count),1);return <div key={i} className="flex-1 flex flex-col items-center" title={`${d.date}: ${d.count}`}><div className="w-full bg-green-500 rounded-t" style={{height:`${(d.count/mx)*100}%`,minHeight:2}} /></div>;})}</div><div className="flex justify-between mt-1"><span className="text-[8px] text-gray-400">{signupSeries[0]?.date?.slice(5)}</span><span className="text-[8px] text-gray-400">{signupSeries[signupSeries.length-1]?.date?.slice(5)}</span></div></div>}
+            {signupData && <Suspense fallback={<div className="h-72 animate-pulse rounded-xl bg-gray-100/70" />}><SignupsChart days={signupData.days} months={signupData.months} totals={signupData.totals} /></Suspense>}
           </>}
         </div>}
 

@@ -133,10 +133,22 @@ function ReceiptDocument({ order, store }) {
           <Text style={styles.label}>Email</Text>
           <Text>{order.customerEmail}</Text>
         </View>
+        {/* The order id is the ONLY value the tracking page accepts
+            (api/order-track looks up orders/{id}), so it is what belongs under
+            this label. It used to print the Paystack reference first, which
+            meant every customer receipt carried a code that tracking rejects.
+            The reference is still shown, on its own line, because it is what
+            the bank and Paystack recognise in a payment dispute. */}
         <View style={styles.row}>
           <Text style={styles.label}>Order ID</Text>
-          <Text>{order.reference || order.id || '-'}</Text>
+          <Text>{order.id || '-'}</Text>
         </View>
+        {order.reference ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Payment ref</Text>
+            <Text>{order.reference}</Text>
+          </View>
+        ) : null}
         <View style={styles.row}>
           <Text style={styles.label}>Date</Text>
           <Text>{formatDate(order.createdAt)}</Text>
@@ -201,10 +213,18 @@ function BookingReceiptDocument({ booking, store }) {
           <Text style={styles.label}>Email</Text>
           <Text>{booking.customerEmail}</Text>
         </View>
+        {/* Same rule as the order receipt above: the doc id is what tracking
+            accepts, the Paystack reference is for payment disputes. */}
         <View style={styles.row}>
           <Text style={styles.label}>Booking ID</Text>
-          <Text>{booking.paystackReference || booking.reference || booking.id || '-'}</Text>
+          <Text>{booking.id || '-'}</Text>
         </View>
+        {booking.paystackReference || booking.reference ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Payment ref</Text>
+            <Text>{booking.paystackReference || booking.reference}</Text>
+          </View>
+        ) : null}
         <View style={styles.row}>
           <Text style={styles.label}>Date</Text>
           <Text>{formatDate(booking.createdAt)}</Text>

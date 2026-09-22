@@ -67,16 +67,30 @@ export default async function handler(req, res) {
         const limit = parseInt(queryParams.limit || '10', 10);
         const search = (queryParams.search || '').toLowerCase();
 
-        // Fetch all stores to perform memory search & pagination
-        const storesSnap = await adminDb
-          .collection('stores')
-          .orderBy('createdAt', 'desc')
-          .get();
+        // Fetch all stores to perform memory search & pagination.
+        // Deliberately NOT ordered by createdAt in the query: Firestore drops
+        // every document missing the field it orders by, so merchants signed up
+        // before createdAt was written were absent from this list entirely.
+        // Sorting in memory below keeps them, newest first, undated last.
+        const storesSnap = await adminDb.collection('stores').get();
 
         // In-memory filter
         let filteredStores = storesSnap.docs.map((doc) => {
           const data = doc.data();
           return { id: doc.id, ...data };
+        });
+
+        const joinedMs = (s) => {
+          const d = s.createdAt?.toDate?.() || (s.createdAt ? new Date(s.createdAt) : null);
+          return d && !isNaN(d.getTime()) ? d.getTime() : null;
+        };
+        filteredStores.sort((a, b) => {
+          const x = joinedMs(a);
+          const y = joinedMs(b);
+          if (x === null && y === null) return 0;
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return y - x;
         });
 
         if (search) {
@@ -152,6 +166,11 @@ export default async function handler(req, res) {
             const hasWebhookFields =
               !!store.paystackSubscriptionId || !!store.subscriptionCode;
             
+            // The raw value is a Firestore Timestamp, which is useless to the
+            // browser once serialised, so send the joined date as ISO.
+            const createdAtDate = store.createdAt?.toDate?.() || (store.createdAt ? new Date(store.createdAt) : null);
+            const createdAtISO = createdAtDate && !isNaN(createdAtDate.getTime()) ? createdAtDate.toISOString() : null;
+
             const planStartDateISO = store.planStartDate?.toDate?.()?.toISOString() || store.planStartDate || null;
             const planEndDateISO = store.planEndDate?.toDate?.()?.toISOString() || store.planEndDate || null;
 
@@ -175,6 +194,7 @@ export default async function handler(req, res) {
               ownerEmail: store.email || store.ownerEmail || '',
               whatsappNumber: store.whatsappNumber || '',
               plan: store.plan || 'starter',
+              createdAt: createdAtISO,
               planStartDate: planStartDateISO,
               planEndDate: planEndDateISO,
               isManualOverride,

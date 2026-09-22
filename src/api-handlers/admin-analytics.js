@@ -2,6 +2,27 @@ import { getAdminDb } from './_lib/firebase-admin.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
+// Signup dates are grouped by Lagos calendar day: a store created at 00:30 in
+// Lagos belongs to that day, not to the UTC day before it.
+const LAGOS = 'Africa/Lagos'
+function lagosDayKey(date) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: LAGOS, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+}
+
+function lastDayKeys(todayKey, count) {
+  const [y, m, d] = todayKey.split('-').map(Number)
+  return Array.from({ length: count }, (_, i) =>
+    new Date(Date.UTC(y, m - 1, d - (count - 1 - i))).toISOString().slice(0, 10))
+}
+
+function lastMonthKeys(thisMonthKey, count) {
+  const [y, m] = thisMonthKey.split('-').map(Number)
+  return Array.from({ length: count }, (_, i) => {
+    const date = new Date(Date.UTC(y, m - 1 - (count - 1 - i), 1))
+    return date.toISOString().slice(0, 7)
+  })
+}
+
 export default async function handler(req, res) {
   applyCorsOrigin(req, res)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
@@ -91,30 +112,51 @@ export default async function handler(req, res) {
     }
 
     if (action === 'signups') {
-      const days = parseInt(req.query.days) || 30
-      const cutoff = new Date()
-      cutoff.setDate(cutoff.getDate() - days)
+      const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 366)
+      const months = Math.min(Math.max(parseInt(req.query.months) || 12, 1), 60)
 
-      const snap = await db.collection('stores')
-        .where('createdAt', '>=', cutoff)
-        .limit(1000)
-        .get()
+      // Every store, not a date-filtered query. A Firestore range filter (or an
+      // orderBy) silently drops documents that have no createdAt at all, so the
+      // old query under-counted signups with no way to see it. Reading the field
+      // alone keeps this cheap, and stores with no usable date are reported
+      // separately as "undated" rather than quietly vanishing.
+      const snap = await db.collection('stores').select('createdAt').get()
 
       const byDay = {}
-      snap.docs.forEach(doc => {
-        const d = doc.data()
-        const date = d.createdAt?.toDate?.() || new Date(d.createdAt)
-        if (!isNaN(date.getTime())) {
-          const key = date.toISOString().split('T')[0]
-          byDay[key] = (byDay[key] || 0) + 1
+      const byMonth = {}
+      let undated = 0
+      snap.docs.forEach((doc) => {
+        const raw = doc.data().createdAt
+        const date = raw?.toDate?.() || (raw ? new Date(raw) : null)
+        if (!date || isNaN(date.getTime())) {
+          undated += 1
+          return
         }
+        const key = lagosDayKey(date)
+        byDay[key] = (byDay[key] || 0) + 1
+        const month = key.slice(0, 7)
+        byMonth[month] = (byMonth[month] || 0) + 1
       })
 
-      const series = Object.entries(byDay)
-        .map(([date, count]) => ({ date, count }))
-        .sort((a, b) => a.date.localeCompare(b.date))
+      // Zero-filled, so a quiet day is a gap in the chart instead of being
+      // skipped and making the range look busier than it was.
+      const todayKey = lagosDayKey(new Date())
+      const dayRange = lastDayKeys(todayKey, days).map((date) => ({ date, count: byDay[date] || 0 }))
+      const monthRange = lastMonthKeys(todayKey.slice(0, 7), months).map((month) => ({ month, count: byMonth[month] || 0 }))
 
-      return res.status(200).json({ success: true, series, total: snap.size })
+      return res.status(200).json({
+        success: true,
+        // "series" stays for anything still reading the old shape.
+        series: dayRange,
+        days: dayRange,
+        months: monthRange,
+        totals: {
+          range: dayRange.reduce((n, d) => n + d.count, 0),
+          months: monthRange.reduce((n, m) => n + m.count, 0),
+          allTime: snap.size - undated,
+          undated,
+        },
+      })
     }
 
     return res.status(400).json({ error: 'Invalid action' })

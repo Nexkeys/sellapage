@@ -16,6 +16,7 @@ import {
   CreditCard,
   AlertCircle,
   Gift,
+  Copy,
 } from "lucide-react";
 import { getStoreBySlug, getProducts } from "../firebase/products";
 import { getServices } from "../firebase/services";
@@ -299,6 +300,7 @@ function StoreCheckoutModal({
     ? 0
     : Math.min(loyaltyCard?.value || 0, subtotal);
   const [showLoyaltyInput, setShowLoyaltyInput] = useState(false);
+  const [orderIdCopied, setOrderIdCopied] = useState(false);
   // What this order would earn. Read straight off the public store document, so
   // it costs nothing, and mirrors earnPointsForOrder's floor division exactly.
   const loyaltyEarnPreview = Math.floor(
@@ -1013,6 +1015,51 @@ function StoreCheckoutModal({
                 </p>
               </div>
 
+              {/* Order id, which is what /:store/track looks up. Like the points
+                  card it arrives from the webhook, so on the snapshot path it
+                  appears a second or two after this screen does. When it has
+                  not arrived the block is simply absent rather than showing a
+                  placeholder, because a half-rendered id invites a customer to
+                  copy something that will not track. The email carries it too. */}
+              {completedOrder.id && (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-left">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                    Your order ID
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="font-mono text-sm font-bold text-gray-900 break-all">
+                      {completedOrder.id}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard
+                          ?.writeText(completedOrder.id)
+                          .then(() => {
+                            setOrderIdCopied(true);
+                            setTimeout(() => setOrderIdCopied(false), 2000);
+                          })
+                          .catch(() => {});
+                      }}
+                      className="shrink-0 flex items-center gap-1 text-xs font-bold text-green-600 hover:text-green-700"
+                    >
+                      <Copy size={13} />
+                      {orderIdCopied ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Save this. You can check where your order has reached at{" "}
+                    <a
+                      href={`/${store.storeName}/track`}
+                      className="font-bold text-green-600 underline"
+                    >
+                      {store.storeName}/track
+                    </a>
+                    . We have emailed it to you as well.
+                  </p>
+                </div>
+              )}
+
               {/* Points card. Only present once the webhook has run; the redirect
                   often beats it, in which case this simply does not render and
                   the emailed copy is how the customer gets their code. */}
@@ -1659,37 +1706,49 @@ export default function StorePage() {
     }
 
     if (usedSnapshot) {
-      // The snapshot is written before the Paystack redirect, so it cannot carry
-      // the loyalty card: that is created by the webhook after payment confirms.
-      // Without this the code would never appear on screen for the majority of
-      // customers (whose sessionStorage survives the round trip) and only the
-      // emailed copy would reach them.
+      // The snapshot is written before the Paystack redirect, so it carries
+      // neither the order id nor the loyalty card: both are created by the
+      // webhook after payment confirms. Without this poll the customer never
+      // sees the id they need to track the order, and a loyalty code would
+      // reach only the emailed copy.
       //
-      // Gated on the store actually running loyalty, so no other vendor's
-      // customers spend a read on this. Purely additive and fully optional: if
-      // the webhook is slow and this never resolves, the email still arrives.
-      if (store?.loyaltyEnabled === true) {
-        let tries = 0;
-        const pollLoyalty = async () => {
-          tries += 1;
-          try {
-            const res = await fetch(
-              `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(ref)}`,
-            );
-            const data = await res.json();
-            if (res.ok && data.type === "order" && data.order?.loyalty) {
+      // This now runs for every store, not just loyalty ones, because the id
+      // is what the tracking page asks for and most customers arrive down this
+      // path (their sessionStorage survives the round trip). Purely additive:
+      // if the webhook is slow and this never resolves, the email still
+      // carries both.
+      let tries = 0;
+      const pollOrder = async () => {
+        tries += 1;
+        try {
+          const res = await fetch(
+            `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(ref)}`,
+          );
+          const data = await res.json();
+          if (res.ok && data.type === "order" && data.order) {
+            const { id, loyalty } = data.order;
+            if (id || loyalty) {
               setCompletedOrder((prev) =>
-                prev ? { ...prev, loyalty: data.order.loyalty } : prev,
+                prev
+                  ? {
+                      ...prev,
+                      ...(id ? { id } : {}),
+                      ...(loyalty ? { loyalty } : {}),
+                    }
+                  : prev,
               );
-              return;
             }
-          } catch {
-            // Never surfaced. The emailed code is the reliable path.
+            // Stop once everything this store can show has arrived. A loyalty
+            // store keeps polling until the card exists, since that is written
+            // slightly after the order itself.
+            if (id && (loyalty || store?.loyaltyEnabled !== true)) return;
           }
-          if (tries < 3) setTimeout(pollLoyalty, 2500);
-        };
-        setTimeout(pollLoyalty, 1500);
-      }
+        } catch {
+          // Never surfaced. The emailed copy is the reliable path.
+        }
+        if (tries < 3) setTimeout(pollOrder, 2500);
+      };
+      setTimeout(pollOrder, 1500);
       return;
     }
 
@@ -1846,11 +1905,31 @@ export default function StorePage() {
     if (!completedOrder || !store) return;
     setReceiptDownloading(true);
     try {
+      // The receipt prints the order id, which is what the tracking page takes.
+      // A customer who taps this the instant the screen appears can beat the
+      // poll above, so fetch it once here rather than hand them a receipt with
+      // a dash where the id belongs. One read, only when it is still missing.
+      let order = completedOrder;
+      if (!order.id && order.reference) {
+        try {
+          const res = await fetch(
+            `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(order.reference)}`,
+          );
+          const data = await res.json();
+          if (res.ok && data.type === "order" && data.order?.id) {
+            order = { ...order, id: data.order.id };
+            setCompletedOrder(order);
+          }
+        } catch {
+          // Receipt still downloads, just without the id. Never block it.
+        }
+      }
+
       // @react-pdf is ~476 kB gzipped. Pulled in only when a receipt is actually
       // requested, so storefront visitors do not pay for it up front. The existing
       // receiptDownloading spinner covers the fetch and the catch below covers failure.
       const { generateOrderReceipt } = await import("../utils/generateReceipt");
-      const blobUrl = await generateOrderReceipt(completedOrder, store);
+      const blobUrl = await generateOrderReceipt(order, store);
       if (receiptLinkRef.current) {
         receiptLinkRef.current.href = blobUrl;
         receiptLinkRef.current.click();
