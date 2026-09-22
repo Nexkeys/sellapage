@@ -23,6 +23,7 @@ import { planSplitLine } from '../utils/planSummary';
 const SignupsChart = lazy(() => import('../components/admin/SignupsChart'));
 
 import { PlatformRevenue, StoreRevenue } from '../components/admin/RevenuePanels';
+import AiDescribeConsole from '../components/admin/AiDescribeConsole';
 
 const ADMIN_TABS = [
   { id: 'health', label: 'System Health', icon: Database, short: 'Health' },
@@ -39,6 +40,7 @@ const ADMIN_TABS = [
   { id: 'analytics', label: 'Analytics', icon: BarChart3, short: 'Analytics' },
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
   { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
+  { id: 'ai-describe', label: 'AI Description Engine', icon: Sparkles, short: 'AI Desc' },
   { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
   { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },
   { id: 'blog', label: 'Blog', icon: BookOpen, short: 'Blog' },
@@ -55,7 +57,7 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'marketplace', 'analytics', 'partners'] },
-  { label: 'Engagement', ids: ['announcements', 'push', 'email', 'tickets', 'sella-ai', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
+  { label: 'Engagement', ids: ['announcements', 'push', 'email', 'tickets', 'sella-ai', 'ai-describe', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
   // the mobile drawer iterates these groups. Any new tab must be added here too.
@@ -559,6 +561,8 @@ export default function Admin() {
       tickets: () => fetchTickets(),
       analytics: () => fetchAnalytics(),
       revenue: () => fetchRevenue(),
+      // The console fetches its own data, so nothing to preload here.
+      'ai-describe': () => {},
       'sella-ai': () => fetchSella(),
       reports: () => fetchReports(reportsPage, reportsStatusFilter, reportsOffenseFilter),
       jobs: () => fetchJobs(jobsStatusFilter),
@@ -768,10 +772,10 @@ export default function Admin() {
             {[{ id: 'firestore', n: 'Firebase', d: 'Core database', data: healthData?.platform, i: <Database size={16} className="text-blue-600" /> },
               { id: 'cloudinary', n: 'Cloudinary', d: 'Images', data: healthData?.cloudinary, i: <Cloud size={16} className="text-blue-600" /> },
               { id: 'vercel', n: 'Vercel', d: 'Deployment', data: healthData?.vercel, i: <Globe size={16} className="text-blue-600" /> },
-              { id: 'ai', n: 'AI Engine', d: 'Descriptions', data: healthData?.ai, i: <Sparkles size={16} className="text-blue-600" /> }
-            ].map(s => <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3 flex flex-col justify-between min-h-[100px]">
+              { id: 'ai', n: 'AI Description Engine', d: 'Vendor descriptions', data: healthData?.ai, i: <Sparkles size={16} className="text-blue-600" />, tab: 'ai-describe' }
+            ].map(s => <div key={s.id} onClick={s.tab ? () => setActiveTab(s.tab) : undefined} role={s.tab ? 'button' : undefined} tabIndex={s.tab ? 0 : undefined} onKeyDown={s.tab ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveTab(s.tab); } } : undefined} aria-label={s.tab ? `${s.n}, open console` : undefined} className={`bg-white rounded-xl border border-gray-100 shadow-xs p-3 flex flex-col justify-between min-h-[100px] ${s.tab ? 'cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-blue-500/30' : ''}`}>
               <div className="flex items-center justify-between mb-2"><div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">{s.i}</div><span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${s.data ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-500 border-red-200'}`}>{s.data ? 'Online' : 'Error'}</span></div>
-              <div><p className="font-bold text-gray-900 text-xs">{s.n}</p><p className="text-gray-400 text-[10px]">{s.d}</p>{s.id === 'ai' && healthData?.ai && <p className="text-[9px] text-green-600 font-bold mt-1 font-mono">T:{healthData.ai.totalAiGenerations||0} W:{healthData.ai.thisWeek||0} M:{healthData.ai.thisMonth||0}</p>}</div>
+              <div><p className="font-bold text-gray-900 text-xs leading-snug">{s.n}</p><p className="text-gray-400 text-[10px] leading-snug">{s.d}</p>{s.id === 'ai' && healthData?.ai && <p className="text-[9px] text-green-600 font-bold mt-1 leading-snug">{(healthData.ai.totalAiGenerations||0).toLocaleString()} total · {(healthData.ai.today||0).toLocaleString()} today<br /><span className="text-gray-400">{(healthData.ai.storesUsed||0).toLocaleString()} vendors · tap for log</span></p>}</div>
             </div>)}
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1027,6 +1031,7 @@ export default function Admin() {
         </div>}
 
         {/* SELLA AI USAGE */}
+        {activeTab === 'ai-describe' && <AiDescribeConsole authHeaders={H} />}
         {activeTab === 'sella-ai' && <div className="space-y-4 animate-in fade-in duration-200">
           {sellaError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{sellaError}</div>}
           <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Sella AI - Business Partner Usage</h2><button onClick={fetchSella} disabled={sellaLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{sellaLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>

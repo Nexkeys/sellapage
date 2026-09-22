@@ -293,32 +293,57 @@ export default async function handler(req, res) {
         (async () => {
           try {
             const now = new Date();
-            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const weekStart = new Date(now);
             weekStart.setDate(now.getDate() - now.getDay());
             weekStart.setHours(0, 0, 0, 0);
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-            const [totalSnap, todaySnap, weekSnap, monthSnap] = await Promise.all([
-              adminDb.collectionGroup('products').where('aiGenerated', '==', true).count().get(),
-              adminDb.collectionGroup('products').where('aiGenerated', '==', true).where('createdAt', '>=', todayStart).count().get(),
-              adminDb.collectionGroup('products').where('aiGenerated', '==', true).where('createdAt', '>=', weekStart).count().get(),
-              adminDb.collectionGroup('products').where('aiGenerated', '==', true).where('createdAt', '>=', monthStart).count().get(),
-            ]);
+            // Lagos day keys, because that is how ai-describe.js names the
+            // daily counter documents it writes.
+            const dayKey = (date) => new Intl.DateTimeFormat('en-CA', {
+              timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit',
+            }).format(date);
+            const todayKey = dayKey(now);
+            const weekKey = dayKey(weekStart);
+            const monthKey = dayKey(monthStart).slice(0, 7);
+
+            const usageSnap = await adminDb.collectionGroup('aiUsage')
+              .select('count', 'date')
+              .limit(20000)
+              .get();
+
+            let totalAiGenerations = 0;
+            let today = 0;
+            let thisWeek = 0;
+            let thisMonth = 0;
+            const stores = new Set();
+
+            usageSnap.docs.forEach((doc) => {
+              const d = doc.data();
+              const count = Number(d.count) || 0;
+              if (count <= 0) return;
+              const key = d.date || doc.id;
+              totalAiGenerations += count;
+              stores.add(doc.ref.path.split('/')[1]);
+              if (key === todayKey) today += count;
+              if (key >= weekKey) thisWeek += count;
+              if (String(key).slice(0, 7) === monthKey) thisMonth += count;
+            });
 
             return {
-              totalAiGenerations: totalSnap.data().count,
-              today: todaySnap.data().count,
-              thisWeek: weekSnap.data().count,
-              thisMonth: monthSnap.data().count,
+              totalAiGenerations,
+              today,
+              thisWeek,
+              thisMonth,
+              storesUsed: stores.size,
             };
           } catch (err) {
             console.error("AI engine query error:", err.message);
             try {
               const fallback = await adminDb.collectionGroup('products').where('aiGenerated', '==', true).count().get();
-              return { totalAiGenerations: fallback.data().count, today: 0, thisWeek: 0, thisMonth: 0 };
+              return { totalAiGenerations: fallback.data().count, today: 0, thisWeek: 0, thisMonth: 0, storesUsed: 0 };
             } catch {
-              return { totalAiGenerations: 0, today: 0, thisWeek: 0, thisMonth: 0 };
+              return { totalAiGenerations: 0, today: 0, thisWeek: 0, thisMonth: 0, storesUsed: 0 };
             }
           }
         })(),

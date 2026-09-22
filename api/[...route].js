@@ -395,6 +395,11 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "admin-ai-describe": {
+        const { default: handler } = await import("../src/api-handlers/admin-ai-describe.js")
+        return handler(req, res)
+      }
+
       case "submit-report": {
         const { default: handler } = await import("../src/api-handlers/submit-report.js")
         return handler(req, res)

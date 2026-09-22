@@ -40,6 +40,8 @@ const TAB_ACCESS = {
   analytics:      ['super_admin', 'marketing'],
   revenue:        ['super_admin', 'finance'],
   'sella-ai':     ['super_admin'],
+  // The AI Description Engine console (NVIDIA), separate from Sella AI.
+  'ai-describe':  ['super_admin'],
   reports:        ['super_admin', 'support'],
   jobs:           ['super_admin', 'operations'],
   blog:           ['super_admin', 'marketing'],

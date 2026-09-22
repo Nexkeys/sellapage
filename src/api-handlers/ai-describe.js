@@ -2,6 +2,8 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore'
+import { getDescribeKeys } from './_lib/ai-describe-keys.js'
+import { logAiDescribe } from './_lib/ai-describe-log.js'
 
 // Bumped from {growth:20, pro:50, premium:50}: job description generations now
 // share this same daily counter and cost far more tokens per call (~350 vs ~40),
@@ -249,7 +251,10 @@ export default async function handler(req, res) {
     let usageReserved = false
 
     try {
-      if (!process.env.NVIDIA_API_KEY) {
+      // One or more keys (see _lib/ai-describe-keys.js). A second key is an
+      // environment variable, no code change, and the engine fails over to it.
+      const apiKeys = getDescribeKeys()
+      if (!apiKeys.length) {
         throw new Error('Missing NVIDIA_API_KEY')
       }
 
@@ -295,15 +300,27 @@ export default async function handler(req, res) {
         const currentCount = usageData.count || 0
         const lastGeneratedAt = usageData.lastGeneratedAt?.toMillis?.() || 0
         const msSinceLastGeneration = now - lastGeneratedAt
-        const globalBlockedUntil = globalQuotaData.blockedUntil?.toMillis?.() || 0
         const globalLastRequestAt = globalQuotaData.lastRequestAt?.toMillis?.() || 0
         const msSinceGlobalRequest = now - globalLastRequestAt
 
-        if (globalBlockedUntil && now < globalBlockedUntil) {
+        // Per key cooling-off. The old single blockedUntil stopped every key at
+        // once, so a second key could never help. blockedUntil is still read so
+        // a block written by the previous version still applies to the primary.
+        const blockedKeys = globalQuotaData.blockedKeys || {}
+        const legacyBlockedUntil = globalQuotaData.blockedUntil?.toMillis?.() || 0
+        const blockedUntilFor = (label) => {
+          const raw = blockedKeys[label]
+          const ms = raw?.toMillis?.() || Number(raw) || 0
+          return label === apiKeys[0]?.label ? Math.max(ms, legacyBlockedUntil) : ms
+        }
+        const availableKeys = apiKeys.filter((k) => blockedUntilFor(k.label) <= now)
+
+        if (!availableKeys.length) {
+          const soonest = Math.min(...apiKeys.map((k) => blockedUntilFor(k.label)))
           return {
             allowed: false,
             reason: 'global-quota',
-            retryAfter: Math.ceil((globalBlockedUntil - now) / 1000),
+            retryAfter: Math.max(Math.ceil((soonest - now) / 1000), 1),
             used: currentCount,
             limit,
           }
@@ -356,6 +373,7 @@ export default async function handler(req, res) {
           allowed: true,
           used: currentCount + 1,
           limit,
+          keyLabels: availableKeys.map((k) => k.label),
         }
       })
 
@@ -396,10 +414,28 @@ export default async function handler(req, res) {
         ? buildJobPrompt({ jobTitle, notes })
         : buildDescriptionPrompt({ productName, category })
 
+      // Written to aiDescribeLogs on the way out, whatever happens.
+      const logBase = {
+        storeId,
+        storeName: store.storeName || store.businessName || '',
+        plan,
+        mode: isJobMode ? 'job' : 'description',
+        subject: isJobMode ? jobTitle : productName,
+      }
+
       let aiResponse = null
       let answeredBy = null
+      let answeredByKey = null
+      // Every model/key pair tried, in order, for the admin log.
+      const attempts = []
+      // Keys that answered 429 during this request, blocked afterwards so the
+      // next vendor's request skips them instead of waiting on them again.
+      const keysToBlock = new Map()
+      const usableKeys = apiKeys.filter((k) => !usage.keyLabels || usage.keyLabels.includes(k.label))
       const chainStartedAt = Date.now()
 
+      chain:
+      for (const apiKey of usableKeys) {
       for (const model of NVIDIA_MODELS) {
         // Spend whichever is smaller: this attempt's ceiling, or whatever is
         // left of the whole chain's budget. A model reached with almost no time
@@ -407,15 +443,16 @@ export default async function handler(req, res) {
         const remaining = NVIDIA_TOTAL_BUDGET_MS - (Date.now() - chainStartedAt)
         if (remaining < 2000) {
           console.error(`[ai-describe] budget exhausted before ${model}`)
-          break
+          break chain
         }
 
+        const attemptStartedAt = Date.now()
         try {
           aiResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.NVIDIA_API_KEY}`,
+              Authorization: `Bearer ${apiKey.key}`,
             },
             body: JSON.stringify({
               model,
@@ -443,21 +480,34 @@ export default async function handler(req, res) {
           // Timeout or transport failure. Not fatal on its own - the next model
           // may well answer, and only an empty aiResponse after the whole loop
           // is a real outage.
-          console.error(`[ai-describe] ${model} unreachable:`, fetchErr?.name || fetchErr?.message)
+          console.error(`[ai-describe] ${model} (${apiKey.label}) unreachable:`, fetchErr?.name || fetchErr?.message)
+          attempts.push({ model, keyLabel: apiKey.label, status: 0, outcome: fetchErr?.name === 'TimeoutError' ? 'timeout' : 'unreachable', ms: Date.now() - attemptStartedAt })
           aiResponse = null
           continue
         }
 
+        attempts.push({ model, keyLabel: apiKey.label, status: aiResponse.status, outcome: aiResponse.ok ? 'answered' : 'refused', ms: Date.now() - attemptStartedAt })
+
         if (aiResponse.ok) {
           answeredBy = model
-          break
+          answeredByKey = apiKey
+          break chain
         }
 
-        if (!NVIDIA_RETRYABLE.has(aiResponse.status)) break
+        // A key problem, not a model problem: move to the next KEY, since every
+        // model behind this key will answer the same way.
+        if (aiResponse.status === 429 || aiResponse.status === 401 || aiResponse.status === 403) {
+          if (aiResponse.status === 429) keysToBlock.set(apiKey.label, true)
+          console.error(`[ai-describe] key "${apiKey.label}" -> ${aiResponse.status}, trying next key`)
+          continue chain
+        }
+
+        if (!NVIDIA_RETRYABLE.has(aiResponse.status)) break chain
 
         // The body is deliberately NOT read here - the handler below needs it
         // intact to build the error response for the final failure.
         console.error(`[ai-describe] ${model} -> ${aiResponse.status}, trying next model`)
+      }
       }
 
       if (!aiResponse) {
@@ -488,14 +538,29 @@ export default async function handler(req, res) {
                 count: FieldValue.increment(-1),
                 updatedAt: FieldValue.serverTimestamp(),
               }, { merge: true })
+              const until = Timestamp.fromMillis(Date.now() + retryAfter * 1000)
+              const blocked = {}
+              for (const label of keysToBlock.keys()) blocked[label] = until
               await globalQuotaRef.set({
-                blockedUntil: Timestamp.fromMillis(Date.now() + retryAfter * 1000),
+                // Per key, so a second key keeps working while this one rests.
+                blockedKeys: blocked,
                 updatedAt: FieldValue.serverTimestamp(),
               }, { merge: true })
             } catch (refundErr) {
               console.error('Failed to refund AI usage count', refundErr)
             }
           }
+
+          logAiDescribe(db, {
+            ...logBase,
+            status: 'rate_limited',
+            model: attempts.at(-1)?.model || '',
+            keyLabel: attempts.at(-1)?.keyLabel || '',
+            durationMs: Date.now() - chainStartedAt,
+            attempts,
+            errorCode: '429',
+            errorMessage: `Every key rate limited, retry in ${retryAfter}s`,
+          })
 
           return res.status(429).json({
             error: `AI is a little busy. Please wait ${retryAfter} seconds and try again.`,
@@ -532,6 +597,17 @@ export default async function handler(req, res) {
         // is broken rather than the feature being briefly unavailable.
         console.error(`[ai-describe] all models failed (${aiResponse.status}): ${errorDetail}`)
 
+        logAiDescribe(db, {
+          ...logBase,
+          status: 'failed',
+          model: attempts.at(-1)?.model || '',
+          keyLabel: attempts.at(-1)?.keyLabel || '',
+          durationMs: Date.now() - chainStartedAt,
+          attempts,
+          errorCode: String(aiResponse.status),
+          errorMessage: errorDetail,
+        })
+
         return res.status(aiResponse.status).json({
           error: 'AI is unavailable right now. Please try again in a moment, or write the description yourself.',
           isProviderError: true
@@ -552,7 +628,31 @@ export default async function handler(req, res) {
         throw new Error(`NVIDIA API returned no description (model: ${answeredBy})`)
       }
 
-      console.log(`[ai-describe] ${answeredBy} answered in ${Date.now() - chainStartedAt}ms`)
+      console.log(`[ai-describe] ${answeredBy} (key: ${answeredByKey?.label}) answered in ${Date.now() - chainStartedAt}ms`)
+
+      // A key that answered 429 on the way here is rested even though another
+      // key saved this request, so the next vendor does not pay for the same
+      // refusal again. Fire and forget: never delays the description.
+      if (keysToBlock.size) {
+        const until = Timestamp.fromMillis(Date.now() + 30000)
+        const blocked = {}
+        for (const label of keysToBlock.keys()) blocked[label] = until
+        globalQuotaRef.set({ blockedKeys: blocked, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+          .catch((err) => console.error('[ai-describe] could not rest key:', err?.message))
+      }
+
+      logAiDescribe(db, {
+        ...logBase,
+        status: 'success',
+        model: answeredBy,
+        keyLabel: answeredByKey?.label || '',
+        keyHint: answeredByKey?.hint || '',
+        durationMs: Date.now() - chainStartedAt,
+        promptTokens: aiData.usage?.prompt_tokens,
+        completionTokens: aiData.usage?.completion_tokens,
+        totalTokens: aiData.usage?.total_tokens,
+        attempts,
+      })
 
       return res.status(200).json({
         description,
