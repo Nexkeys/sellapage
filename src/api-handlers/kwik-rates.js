@@ -45,6 +45,9 @@ export default async function handler(req, res) {
     vehicleSize = 0, // 0 bike, 1 small, 2 medium, 3 large
     pickupDate,
     packageAmount = 0,
+    // Forwarded to /send_payment_for_task, which requires it. Anything it doesn't accept
+    // (notably EOMB) is priced as card inside calculateKwikPricing.
+    paymentMethod,
   } = req.body || {}
 
   if (!storeId || !senderDetails || !receiverDetails) {
@@ -137,6 +140,7 @@ export default async function handler(req, res) {
           vehicleId: vehicle.vehicle_id,
           pickupTime,
           parcelAmount: Number(packageAmount) || 0,
+          paymentMethod,
         })
         if (!pricing.success) return { vehicle, error: pricing.error }
 

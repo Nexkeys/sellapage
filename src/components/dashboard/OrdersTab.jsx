@@ -797,6 +797,7 @@ export default function OrdersTab({
               state: rState,
             },
             vehicleSize: Number(kwikVehicleSize) || 0,
+            paymentMethod: kwikPaymentMethod,
             pickupDate,
             packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 0),
           }

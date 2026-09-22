@@ -115,8 +115,22 @@ export function friendlyKwikError(data, fallback = 'Could not reach Kwik. Please
   const raw = String(data?.message || data?.error || '').trim()
   if (!raw) return fallback
   const lower = raw.toLowerCase()
-  if (lower.includes('insufficient') || lower.includes('wallet') || lower.includes('credit')) {
+  // MUST stay narrower than a bare "insufficient" test. On 2026-09-22 this matched Kwik's
+  // "Insufficient information was supplied. Please check and try again." - a MISSING
+  // PARAMETER error - and reported it to the vendor as an empty wallet, which sent the
+  // whole investigation after a funding problem that did not exist. Match the balance
+  // wording specifically, and let anything else fall through to the pass-through below.
+  if (
+    lower.includes('insufficient wallet') ||
+    lower.includes('insufficient balance') ||
+    lower.includes('insufficient fund') ||
+    lower.includes('wallet balance') ||
+    lower.includes('low balance')
+  ) {
     return 'The Kwik wallet does not have enough balance to cover this delivery.'
+  }
+  if (lower.includes('insufficient information')) {
+    return 'Kwik rejected the request because some delivery details are missing. Please check the addresses and try again.'
   }
   if (lower.includes('invalid') && lower.includes('key')) {
     return 'Kwik rejected our credentials. Please contact support.'
@@ -262,7 +276,14 @@ async function kwikRequest(path, { method = 'POST', body = {}, query } = {}) {
   }
 
   if (Number(data?.status) !== 200) {
+    // The request is logged alongside the failure, access_token redacted. Kwik's rejections
+    // name no field ("Insufficient information was supplied"), so without seeing the exact
+    // payload a missing parameter can only be found by re-reading the docs and guessing -
+    // which cost a round on 2026-09-22 when payment_method turned out to be absent.
+    const sent = method === 'GET' ? { query } : { ...(withAuth(session).body || {}) }
+    if (sent.access_token) sent.access_token = '[redacted]'
     console.error(`[kwik-booking] ${path} failed:`, JSON.stringify(data?.message || data))
+    console.error(`[kwik-booking] ${path} request was:`, JSON.stringify(sent))
     return { success: false, error: friendlyKwikError(data), data }
   }
   return { success: true, data: data.data, session }
@@ -305,7 +326,28 @@ function buildLeg({ address, name, latitude, longitude, time, phone, email }) {
  * Step 1 - POST /send_payment_for_task. Computes the distance/time cost for the route.
  * Returns per_task_cost, total_service_charge, insurance_amount, total_no_of_tasks, etc.
  */
-export async function calculateKwikPricing({ pickup, delivery, vehicleId, pickupTime, isCodJob = 0, parcelAmount = 0 }) {
+/**
+ * /send_payment_for_task documents only FOUR payment methods - 8 cash-on-pickup, 32 card,
+ * 262144 cash-on-delivery, 131072 Paga. EOMB (524288) appears only on /create_task, so it
+ * is a booking-time method with no pricing-time equivalent. Sending it here risks the same
+ * "Insufficient information was supplied" rejection, so anything outside the four is priced
+ * as card, which does not change the distance/time cost.
+ */
+const PRICING_PAYMENT_METHODS = new Set([8, 32, 262144, 131072])
+function pricingPaymentMethod(method) {
+  const n = Number(method)
+  return PRICING_PAYMENT_METHODS.has(n) ? n : KWIK_PAYMENT_METHODS.CARD
+}
+
+export async function calculateKwikPricing({
+  pickup,
+  delivery,
+  vehicleId,
+  pickupTime,
+  isCodJob = 0,
+  parcelAmount = 0,
+  paymentMethod,
+}) {
   const badPickup = assertNigerianCoords('Pickup', pickup?.latitude, pickup?.longitude)
   if (badPickup) return { success: false, error: badPickup }
   const badDelivery = assertNigerianCoords('Delivery', delivery?.latitude, delivery?.longitude)
@@ -332,10 +374,15 @@ export async function calculateKwikPricing({ pickup, delivery, vehicleId, pickup
       pickups: [buildLeg({ ...pickup, time: pickupTime })],
       deliveries: [{ ...buildLeg(delivery), has_return_task: false, is_package_insured: 0 }],
       vehicle_id: vehicleId,
+      // OMITTED IN THE FIRST BUILD, and the cause of "Insufficient information was supplied"
+      // on 2026-09-22. payment_method is in this endpoint's parameter table AND its request
+      // example; it was only being sent at booking time.
+      payment_method: pricingPaymentMethod(paymentMethod),
       is_loader_required: 0,
       loaders_amount: 0,
       loaders_count: 0,
       delivery_instruction: delivery?.instruction || '',
+      delivery_images: '',
       is_cod_job: isCodJob,
       parcel_amount: parcelAmount,
     },

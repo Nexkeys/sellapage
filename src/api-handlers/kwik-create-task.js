@@ -136,6 +136,7 @@ export default async function handler(req, res) {
       vehicleId,
       pickupTime,
       parcelAmount: Number(packageAmount) || 0,
+      paymentMethod,
     })
     if (!pricing.success) return res.status(502).json({ error: pricing.error })
 
