@@ -400,6 +400,17 @@ export default async function handler(req, res) {
         return handler(req, res)
       }
 
+      case "admin-sms": {
+        const { default: handler } = await import("../src/api-handlers/admin-sms.js")
+        return handler(req, res)
+      }
+
+      // Public links printed inside a promotional SMS: /r/<code> and /x/<token>.
+      case "sms-link": {
+        const { default: handler } = await import("../src/api-handlers/sms-link.js")
+        return handler(req, res)
+      }
+
       case "submit-report": {
         const { default: handler } = await import("../src/api-handlers/submit-report.js")
         return handler(req, res)

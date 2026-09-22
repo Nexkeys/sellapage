@@ -46,6 +46,14 @@
       "destination": "/api/sitemap?route=sitemap"
     },
     {
+      "source": "/r/:code",
+      "destination": "/api/[...route]?route=sms-link&mode=click&code=:code"
+    },
+    {
+      "source": "/x/:token",
+      "destination": "/api/[...route]?route=sms-link&mode=optout&token=:token"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/[...route]"
     },

@@ -42,6 +42,10 @@ const TAB_ACCESS = {
   'sella-ai':     ['super_admin'],
   // The AI Description Engine console (NVIDIA), separate from Sella AI.
   'ai-describe':  ['super_admin'],
+  // Promotional SMS campaigns. Spends real money and reaches every vendor's
+  // phone, so it is deliberately narrower than email: super admin and
+  // marketing, nobody else.
+  sms:            ['super_admin', 'marketing'],
   reports:        ['super_admin', 'support'],
   jobs:           ['super_admin', 'operations'],
   blog:           ['super_admin', 'marketing'],

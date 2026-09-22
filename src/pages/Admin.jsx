@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon, MessageSquare
 } from 'lucide-react';
 import { uploadSingleImage } from '../firebase/products';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
@@ -21,6 +21,8 @@ import { SkeletonRows } from '../components/Skeleton';
 import { planSplitLine } from '../utils/planSummary';
 // Lazy: keeps Recharts in its own chunk, loaded only with the Analytics tab.
 const SignupsChart = lazy(() => import('../components/admin/SignupsChart'));
+// Lazy for the same reason: it pulls in the chart library.
+const SmsCampaigns = lazy(() => import('../components/admin/SmsCampaigns'));
 
 import { PlatformRevenue, StoreRevenue } from '../components/admin/RevenuePanels';
 import AiDescribeConsole from '../components/admin/AiDescribeConsole';
@@ -35,6 +37,7 @@ const ADMIN_TABS = [
   { id: 'marketplace', label: 'Dropshipping', icon: Boxes, short: 'Dropship' },
   { id: 'announcements', label: 'Announcements', icon: Megaphone, short: 'Alerts' },
   { id: 'push', label: 'Push Broadcast', icon: Bell, short: 'Push' },
+  { id: 'sms', label: 'SMS Campaigns', icon: MessageSquare, short: 'SMS' },
   { id: 'email', label: 'Email Broadcast', icon: Send, short: 'Email' },
   { id: 'tickets', label: 'Support Tickets', icon: LifeBuoy, short: 'Tickets' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, short: 'Analytics' },
@@ -57,7 +60,7 @@ const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
   { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'marketplace', 'analytics', 'partners'] },
-  { label: 'Engagement', ids: ['announcements', 'push', 'email', 'tickets', 'sella-ai', 'ai-describe', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
+  { label: 'Engagement', ids: ['announcements', 'push', 'sms', 'email', 'tickets', 'sella-ai', 'ai-describe', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
   // the mobile drawer iterates these groups. Any new tab must be added here too.
@@ -561,8 +564,9 @@ export default function Admin() {
       tickets: () => fetchTickets(),
       analytics: () => fetchAnalytics(),
       revenue: () => fetchRevenue(),
-      // The console fetches its own data, so nothing to preload here.
+      // These fetch their own data, so nothing to preload here.
       'ai-describe': () => {},
+      sms: () => {},
       'sella-ai': () => fetchSella(),
       reports: () => fetchReports(reportsPage, reportsStatusFilter, reportsOffenseFilter),
       jobs: () => fetchJobs(jobsStatusFilter),
@@ -1032,6 +1036,7 @@ export default function Admin() {
 
         {/* SELLA AI USAGE */}
         {activeTab === 'ai-describe' && <AiDescribeConsole authHeaders={H} />}
+        {activeTab === 'sms' && <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-gray-100/70" />}><SmsCampaigns authHeaders={H} /></Suspense>}
         {activeTab === 'sella-ai' && <div className="space-y-4 animate-in fade-in duration-200">
           {sellaError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{sellaError}</div>}
           <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Sella AI - Business Partner Usage</h2><button onClick={fetchSella} disabled={sellaLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{sellaLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>

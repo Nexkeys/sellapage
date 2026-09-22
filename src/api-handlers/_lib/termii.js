@@ -167,3 +167,93 @@ export async function verifySmsOtp({ pinId, pin }) {
   const verified = String(result.data?.verified ?? '').toLowerCase() === 'true'
   return verified ? { ok: true } : { ok: false, error: 'invalid_code' }
 }
+
+/**
+ * The PROMOTIONAL sender ID and route, which is a different thing from the
+ * transactional one above.
+ *
+ * Termii's rules (Docs/TERMII_API_DOCS.md): the `generic` route is for
+ * promotional traffic and must not carry OTPs, and the `dnd` route is for
+ * transactional traffic. Sending marketing on the transactional sender ID is
+ * how a sender ID gets blocked, which would take phone signup down with it, so
+ * the two are kept apart by configuration as well as by code.
+ */
+export function getPromoConfigStatus() {
+  if (!process.env.TERMII_API_KEY) {
+    return { available: false, reason: 'not_configured', message: 'SMS is not configured. Add TERMII_API_KEY.' }
+  }
+  const raw = process.env.TERMII_PROMO_SENDER_ID
+  if (!raw) {
+    return {
+      available: false,
+      reason: 'promo_sender_missing',
+      message: 'No promotional sender ID yet. Add TERMII_PROMO_SENDER_ID once Termii approves it. The transactional sender ID must not be used for marketing.',
+    }
+  }
+  const sender = validateSenderId(raw)
+  if (!sender.valid) {
+    return {
+      available: false,
+      reason: `promo_sender_${sender.reason}`,
+      message: 'The promotional sender ID is not valid. It must be 3 to 11 characters.',
+    }
+  }
+  return { available: true, senderId: sender.value }
+}
+
+/**
+ * Sends one promotional message to up to 100 numbers (Termii's per request
+ * limit). Returns the wallet balance Termii reports, so a campaign can stop
+ * itself when the money runs out instead of failing batch after batch.
+ */
+export async function sendPromotionalSms({ to, sms }) {
+  const status = getPromoConfigStatus()
+  if (!status.available) return { ok: false, error: status.reason, message: status.message }
+
+  const numbers = (Array.isArray(to) ? to : [to]).map((n) => normalisePhone(n)).filter(Boolean)
+  if (!numbers.length) return { ok: false, error: 'no_recipients', message: 'No valid Nigerian numbers in this batch.' }
+  if (numbers.length > 100) return { ok: false, error: 'batch_too_large', message: 'Termii accepts at most 100 numbers per request.' }
+
+  const single = numbers.length === 1
+  const result = await termiiPost(single ? '/api/sms/send' : '/api/sms/send/bulk', {
+    to: single ? numbers[0] : numbers,
+    from: status.senderId,
+    sms: String(sms || ''),
+    type: 'plain',
+    channel: 'generic',
+  })
+
+  if (!result.ok) {
+    const msg = String(result.message || '').toLowerCase()
+    if (msg.includes('balance') || msg.includes('insufficient')) {
+      return { ok: false, error: 'insufficient_balance', message: 'Termii wallet is out of funds. Top up and try again.' }
+    }
+    if (msg.includes('sender')) {
+      return { ok: false, error: 'sender_id_unapproved', message: 'Termii has not approved this promotional sender ID yet.' }
+    }
+    return { ok: false, error: result.error || 'termii_error', message: result.message || 'Termii refused the send.' }
+  }
+
+  return {
+    ok: true,
+    messageId: result.data?.message_id || result.data?.message_id_str || '',
+    balance: Number(result.data?.balance),
+    sent: numbers.length,
+  }
+}
+
+/** Wallet balance, so a campaign can be costed before it is sent. */
+export async function getWalletBalance() {
+  const key = process.env.TERMII_API_KEY
+  if (!key) return { ok: false, error: 'not_configured' }
+  try {
+    const res = await fetch(`${base()}/api/get-balance?api_key=${encodeURIComponent(key)}`, {
+      signal: AbortSignal.timeout(10000),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) return { ok: false, error: 'termii_error', status: res.status }
+    return { ok: true, balance: Number(data?.balance) || 0, currency: data?.currency || 'NGN' }
+  } catch (err) {
+    return { ok: false, error: 'unreachable', message: err.message }
+  }
+}
