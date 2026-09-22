@@ -362,6 +362,9 @@ export default function OrdersTab({
   // classes rather than carriers, because Kwik is itself the carrier.
   const [kwikBookingDirect, setKwikBookingDirect] = useState(false)
   const [kwikVehicleSize, setKwikVehicleSize] = useState(0)
+  // 524288 EOMB · 8 cash on pickup · 262144 cash on delivery · 32 card. EOMB should be the
+  // one that needs no funded wallet; the cash options definitely don't.
+  const [kwikPaymentMethod, setKwikPaymentMethod] = useState(524288)
   // How precisely Mapbox matched each address. Coordinates deliberately never reach the
   // browser - they're Temporary geocoding results and may not be stored.
   const [kwikAddressMatch, setKwikAddressMatch] = useState(null)
@@ -1082,6 +1085,7 @@ export default function OrdersTab({
           pickupDate,
           packageAmount: Number(bookingShipmentOrder?.grandTotal || bookingShipmentOrder?.total || 0),
           deliveryInstruction: bookingShipmentOrder?.notes || '',
+          paymentMethod: kwikPaymentMethod,
         }),
       })
       let data
@@ -2433,6 +2437,21 @@ export default function OrdersTab({
                       {packageType === 'food' && (
                         <p className="text-xs text-amber-600 mt-1">Food items can only be dropped off - pickup is not available.</p>
                       )}
+                    </div>
+                  )}
+                  {selectedProvider === 'kwik' && (
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Pay by</label>
+                      <select
+                        value={kwikPaymentMethod}
+                        onChange={(e) => setKwikPaymentMethod(Number(e.target.value))}
+                        className={INPUT_CLASS}
+                      >
+                        <option value={524288}>End-of-month billing</option>
+                        <option value={8}>Cash on pickup</option>
+                        <option value={262144}>Cash on delivery</option>
+                        <option value={32}>Card</option>
+                      </select>
                     </div>
                   )}
                   {selectedProvider === 'kwik' && (

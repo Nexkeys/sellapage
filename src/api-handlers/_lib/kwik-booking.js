@@ -203,12 +203,30 @@ export async function kwikLogin(force = false) {
     credits: Number(v.credits) || 0,
     pendingAmount: Number(v.pending_amount) || 0,
     pricingTemplate: DEFAULT_PRICING_TEMPLATE,
+    // Whether end-of-month billing is actually enabled for this account. EOMB is the one
+    // payment method that should not need a funded wallet, so when a booking fails with
+    // "Insufficient wallet Balance" despite payment_method 524288, this flag is the thing
+    // to check first - it is Kwik's own answer to "is EOMB switched on for us?".
+    isMonthlyInvoice: Number(v.is_monthly_invoice) || 0,
     defaultPickup: {
       address: v.default_pickup_address || '',
       latitude: v.default_pickup_latitude || '',
       longitude: v.default_pickup_longitude || '',
     },
   }
+  // The account's billing posture, logged on every cold start. These four fields decide
+  // whether a booking can be paid for at all, and reading them off a real login beats
+  // guessing from the dashboard.
+  console.log('[kwik-booking] account billing:', JSON.stringify({
+    vendorId: SESSION.vendorId,
+    customerId: SESSION.customerId,
+    corporateId: SESSION.corporateId,
+    credits: SESSION.credits,
+    pendingAmount: SESSION.pendingAmount,
+    isMonthlyInvoice: SESSION.isMonthlyInvoice,
+    hasCard: !!SESSION.cardId,
+  }))
+
   return { success: true, data: SESSION }
 }
 

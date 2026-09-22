@@ -22,7 +22,12 @@ import {
   getKwikBillBreakdown,
   createKwikTask,
   kwikJobStatusLabel,
+  KWIK_PAYMENT_METHODS,
 } from './_lib/kwik-booking.js'
+
+// Only Kwik's documented payment methods are accepted, so a client can't post an arbitrary
+// number into the booking payload.
+const ALLOWED_PAYMENT_METHODS = new Set(Object.values(KWIK_PAYMENT_METHODS))
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -44,6 +49,11 @@ export default async function handler(req, res) {
     pickupDate,
     packageAmount = 0,
     deliveryInstruction = '',
+    // Defaults to EOMB, which should be the one method that does not need a funded wallet.
+    // Selectable because on 2026-09-22 a staging booking failed with "Insufficient wallet
+    // Balance" even under EOMB - the cash methods (8 pickup / 262144 delivery) need no
+    // wallet at all, and cash on delivery is a mainstream expectation in Nigeria anyway.
+    paymentMethod = KWIK_PAYMENT_METHODS.END_OF_MONTH_BILLING,
   } = req.body || {}
 
   if (!storeId || !orderId || !vehicleId || !senderDetails || !receiverDetails) {
@@ -146,6 +156,9 @@ export default async function handler(req, res) {
       pickupTime,
       deliveryTime: pickupTime,
       parcelAmount: Number(packageAmount) || 0,
+      paymentMethod: ALLOWED_PAYMENT_METHODS.has(Number(paymentMethod))
+        ? Number(paymentMethod)
+        : KWIK_PAYMENT_METHODS.END_OF_MONTH_BILLING,
     })
     if (!result.success) return res.status(502).json({ error: result.error })
 
