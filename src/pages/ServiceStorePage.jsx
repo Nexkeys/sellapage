@@ -322,7 +322,35 @@ export default function ServiceStorePage() {
       }
     }
 
-    if (usedSnapshot) return;
+    if (usedSnapshot) {
+      // The snapshot is written before the Paystack redirect, so it has no
+      // booking id: that document is created by the webhook after payment
+      // confirms. Without this the customer's receipt and success screen would
+      // show no id at all, and the id is what /:store/track accepts. Purely
+      // additive: if the webhook lags past these tries, the confirmation email
+      // still carries it.
+      let tries = 0;
+      const pollBooking = async () => {
+        tries += 1;
+        try {
+          const res = await fetch(
+            `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(ref)}`,
+          );
+          const data = await res.json();
+          if (res.ok && data.type === "booking" && data.booking?.id) {
+            setCompletedBooking((prev) =>
+              prev ? { ...prev, id: data.booking.id } : prev,
+            );
+            return;
+          }
+        } catch {
+          // Never surfaced. The emailed copy is the reliable path.
+        }
+        if (tries < 3) setTimeout(pollBooking, 2500);
+      };
+      setTimeout(pollBooking, 1500);
+      return;
+    }
 
     // sessionStorage snapshot is gone - happens whenever the Paystack redirect
     // lands in a different browsing context than the one that left (common in
@@ -586,14 +614,38 @@ export default function ServiceStorePage() {
     if (!completedBooking || !store) return;
     setReceiptDownloading(true);
     try {
+      // The receipt prints the booking id, which is what the tracking page
+      // takes. A customer who taps this the instant the screen appears can beat
+      // the poll above, so fetch it once here rather than hand them a receipt
+      // that has to tell them to go and check their email.
+      let fetchedId = null;
+      const payRef = completedBooking.reference || completedBooking.paystackReference;
+      if (!completedBooking.id && payRef) {
+        try {
+          const res = await fetch(
+            `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(payRef)}`,
+          );
+          const data = await res.json();
+          if (res.ok && data.type === "booking" && data.booking?.id) {
+            fetchedId = data.booking.id;
+            setCompletedBooking((prev) => (prev ? { ...prev, id: fetchedId } : prev));
+          }
+        } catch {
+          // Receipt still downloads. Never block it on this.
+        }
+      }
+      // A fresh object rather than a reference to the state value, so the
+      // receipt is built from what we know right now without touching state.
+      const booking = { ...completedBooking, ...(fetchedId ? { id: fetchedId } : {}) };
+
       // @react-pdf is ~476 kB gzipped. Pulled in only when a receipt is actually
       // requested, so storefront visitors do not pay for it up front. The existing
       // receiptDownloading spinner covers the fetch and the catch below covers failure.
       const { generateBookingReceipt } = await import("../utils/generateReceipt");
-      const blobUrl = await generateBookingReceipt(completedBooking, store);
+      const blobUrl = await generateBookingReceipt(booking, store);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `receipt_${completedBooking.reference || completedBooking.id || "booking"}.pdf`;
+      link.download = `receipt_${booking.id || booking.reference || "booking"}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1376,7 +1428,33 @@ export default function ServiceStorePage() {
                       ₦{Number(completedBooking.grandTotal || 0).toLocaleString()}
                     </span>
                   </div>
+                  {/* The booking id is created by the webhook, so it lands a
+                      moment after this screen. Either way the customer is told
+                      what is happening: never a blank, never a dash. */}
+                  <div>
+                    <span className="text-stone-400 font-medium">Booking ID:</span>{" "}
+                    {completedBooking.id ? (
+                      <span className="font-mono text-stone-900 font-semibold break-all">
+                        {completedBooking.id}
+                      </span>
+                    ) : (
+                      <span className="text-stone-500">
+                        being generated, we are emailing it to you
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                <p className="text-xs text-gray-500">
+                  Keep your booking ID. You can use it to check your booking at{" "}
+                  <a
+                    href={`/${store?.storeName}/track`}
+                    className="font-bold text-green-600 underline"
+                  >
+                    {store?.storeName}/track
+                  </a>
+                  .
+                </p>
 
                 <button
                   type="button"

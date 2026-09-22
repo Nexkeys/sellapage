@@ -139,9 +139,14 @@ function ReceiptDocument({ order, store }) {
             meant every customer receipt carried a code that tracking rejects.
             The reference is still shown, on its own line, because it is what
             the bank and Paystack recognise in a payment dispute. */}
+        {/* Never a bare dash. The id is written by the webhook, so a receipt
+            downloaded in the first seconds after payment can be built before it
+            exists. "Sent to your email" is true (the confirmation email carries
+            it) and tells the customer where to look, where "-" just reads as a
+            broken receipt from a careless shop. */}
         <View style={styles.row}>
           <Text style={styles.label}>Order ID</Text>
-          <Text>{order.id || '-'}</Text>
+          <Text>{order.id || 'Sent to your email'}</Text>
         </View>
         {order.reference ? (
           <View style={styles.row}>
@@ -217,7 +222,7 @@ function BookingReceiptDocument({ booking, store }) {
             accepts, the Paystack reference is for payment disputes. */}
         <View style={styles.row}>
           <Text style={styles.label}>Booking ID</Text>
-          <Text>{booking.id || '-'}</Text>
+          <Text>{booking.id || 'Sent to your email'}</Text>
         </View>
         {booking.paystackReference || booking.reference ? (
           <View style={styles.row}>

@@ -1021,6 +1021,15 @@ function StoreCheckoutModal({
                   not arrived the block is simply absent rather than showing a
                   placeholder, because a half-rendered id invites a customer to
                   copy something that will not track. The email carries it too. */}
+              {!completedOrder.id && (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-left">
+                  <p className="text-sm text-gray-600">
+                    Your order ID is being generated. We are sending it to your
+                    email, and you can use it to track this order.
+                  </p>
+                </div>
+              )}
+
               {completedOrder.id && (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-left">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
@@ -1909,21 +1918,24 @@ export default function StorePage() {
       // A customer who taps this the instant the screen appears can beat the
       // poll above, so fetch it once here rather than hand them a receipt with
       // a dash where the id belongs. One read, only when it is still missing.
-      let order = completedOrder;
-      if (!order.id && order.reference) {
+      let fetchedId = null;
+      if (!completedOrder.id && completedOrder.reference) {
         try {
           const res = await fetch(
-            `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(order.reference)}`,
+            `/api/verify-transaction?storeId=${store.id}&reference=${encodeURIComponent(completedOrder.reference)}`,
           );
           const data = await res.json();
           if (res.ok && data.type === "order" && data.order?.id) {
-            order = { ...order, id: data.order.id };
-            setCompletedOrder(order);
+            fetchedId = data.order.id;
+            setCompletedOrder((prev) => (prev ? { ...prev, id: fetchedId } : prev));
           }
         } catch {
           // Receipt still downloads, just without the id. Never block it.
         }
       }
+      // A fresh object rather than a reference to the state value, so the
+      // receipt is built from what we know right now without touching state.
+      const order = { ...completedOrder, ...(fetchedId ? { id: fetchedId } : {}) };
 
       // @react-pdf is ~476 kB gzipped. Pulled in only when a receipt is actually
       // requested, so storefront visitors do not pay for it up front. The existing

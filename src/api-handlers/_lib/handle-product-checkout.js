@@ -94,10 +94,12 @@ export async function handleProductCheckout(db, data, res) {
     customerEmail,
     items: itemsString,
     cartItems: parsedCartItems,
-    total: grandTotal,
-    deliveryFee,
-    processingFee,
-    grandTotal,
+    // Numbers, not the text Paystack hands back in metadata: stored raw, the
+    // admin revenue totals concatenated instead of adding.
+    total: Number(grandTotal) || 0,
+    deliveryFee: Number(deliveryFee) || 0,
+    processingFee: Number(processingFee) || 0,
+    grandTotal: Number(grandTotal) || 0,
     deliveryAddress: parsedDeliveryAddress,
     notes,
     promoCode: promoCode || "",

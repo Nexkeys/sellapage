@@ -182,6 +182,8 @@ export default async function handler(req, res) {
         .doc(orderId)
         .update({
           status: "confirmed",
+          // Sellapage's service charge on this booking (admin revenue reads it).
+          platformServiceCharge: Number(data.metadata?.serviceCharge) || 0,
           courierName: courierName || "Sendbox",
           courierTrackingCode: shipmentData.code || "",
           courierTrackingUrl: trackingUrl,
@@ -283,6 +285,8 @@ export default async function handler(req, res) {
       const now = new Date()
 
       await orderRef.update({
+        // Sellapage's service charge on this booking (admin revenue reads it).
+        platformServiceCharge: Number(data.metadata?.serviceCharge) || 0,
         topshipTrackingId: shipData?.trackingId || shipData?.thirdPartyTrackingId || "",
         topshipShipmentId: shipData?.id || "",
         topshipTrackingUrl: shipData?.trackingUrl || "",

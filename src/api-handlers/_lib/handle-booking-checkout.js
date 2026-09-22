@@ -64,8 +64,9 @@ export async function handleBookingCheckout(db, data, res) {
     bookingDate: bookingDate || "",
     bookingTime: bookingTime || "",
     customerNotes: customerNotes || "",
-    processingFee,
-    grandTotal,
+    // See handle-product-checkout: metadata values come back as text.
+    processingFee: Number(processingFee) || 0,
+    grandTotal: Number(grandTotal) || 0,
     promoCode: promoCode || "",
     discountAmount: Number(discountAmount) || 0,
     paystackReference: data.reference,
@@ -171,6 +172,13 @@ export async function handleBookingCheckout(db, data, res) {
   const storeData = storeSnap.data() || {};
   const scheduleLine = [bookingDate, bookingTime].filter(Boolean).join(" at ");
 
+  // The booking id is what api/order-track accepts, and this email is the only
+  // copy guaranteed to reach the customer: the success screen can be closed, and
+  // the id is written here, after they have already been redirected.
+  const trackUrl = storeData.storeName
+    ? `${process.env.APP_URL || "https://www.sellapage.com.ng"}/${storeData.storeName}/track`
+    : "";
+
   try {
     await Promise.all([
       sendEmail(
@@ -184,6 +192,18 @@ export async function handleBookingCheckout(db, data, res) {
             <div style="padding: 32px;">
               <h2 style="color: #111827; font-size: 20px; margin: 0 0 16px 0;">Booking Confirmed!</h2>
               <p style="color: #6b7280; font-size: 14px; margin: 0 0 24px 0;">Hi ${escapeHtml(customerName)}, your booking has been received and is awaiting confirmation from the vendor.</p>
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin: 0 0 24px 0;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; color: #16a34a; font-weight: bold; letter-spacing: 1px;">YOUR BOOKING ID</p>
+                <p style="margin: 0; font-size: 18px; font-weight: bold; color: #111827; font-family: monospace; word-break: break-all;">${escapeHtml(bookingRef.id)}</p>
+                ${
+                  trackUrl
+                    ? `<p style="margin: 10px 0 0 0; font-size: 13px; color: #6b7280;">
+                    Save this. Check your booking any time at
+                    <a href="${trackUrl}" style="color: #16a34a; font-weight: bold;">${escapeHtml(trackUrl.replace(/^https?:\/\//, ""))}</a>
+                  </p>`
+                    : ""
+                }
+              </div>
               <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px; margin: 24px 0;">
                 <h3 style="color: #374151; font-size: 13px; font-weight: bold; margin: 0 0 16px 0;">Booking Details</h3>
                 <table style="width: 100%; border-collapse: collapse;">

@@ -18,8 +18,11 @@ import NewsletterAdmin from '../components/admin/NewsletterAdmin';
 import EmailBroadcast from '../components/admin/EmailBroadcast';
 import MarketplaceAdmin from '../components/admin/MarketplaceAdmin';
 import { SkeletonRows } from '../components/Skeleton';
+import { planSplitLine } from '../utils/planSummary';
 // Lazy: keeps Recharts in its own chunk, loaded only with the Analytics tab.
 const SignupsChart = lazy(() => import('../components/admin/SignupsChart'));
+
+import { PlatformRevenue, StoreRevenue } from '../components/admin/RevenuePanels';
 
 const ADMIN_TABS = [
   { id: 'health', label: 'System Health', icon: Database, short: 'Health' },
@@ -166,7 +169,7 @@ export default function Admin() {
 
   const [revenueData, setRevenueData] = useState(null);
   const [revenueTxns, setRevenueTxns] = useState([]);
-  const [storeRevenues, setStoreRevenues] = useState([]);
+  const [storeRevenueData, setStoreRevenueData] = useState(null);
   const [revenueLoading, setRevenueLoading] = useState(false);
   const [revenueError, setRevenueError] = useState('');
   const [revenueTab, setRevenueTab] = useState('platform');
@@ -478,7 +481,7 @@ export default function Admin() {
       ]);
       if (!p.ok) throw new Error('Failed');
       setRevenueData((await p.json()).platform);
-      setStoreRevenues((await sr.json()).stores || []);
+      setStoreRevenueData(await sr.json());
     } catch { setRevenueError('Failed.'); } finally { setRevenueLoading(false); }
   }, []);
 
@@ -1003,10 +1006,10 @@ export default function Admin() {
           {analyticsLoading?<SkeletonRows count={5} />:analyticsData&&<>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[
               {l:'Total Stores',v:analyticsData.totalStores,c:'text-gray-900'},
-              {l:'Paid Stores',v:analyticsData.paidStores,c:'text-green-600'},
+              {l:'Paid Stores',v:analyticsData.paidStores,c:'text-green-600',sub:planSplitLine(analyticsData)},
               {l:'Total Products',v:analyticsData.totalProducts,c:'text-blue-600'},
               {l:'Open Tickets',v:analyticsData.openTickets,c:'text-red-600'},
-            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{typeof s.v === 'number' ? s.v.toLocaleString() : (s.v ?? '-')}</p></div>)}</div>
+            ].map(s=><div key={s.l} className="bg-white rounded-xl border border-gray-100 shadow-xs p-3"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{s.l}</p><p className={`text-2xl font-black mt-0.5 ${s.c}`}>{typeof s.v === 'number' ? s.v.toLocaleString() : (s.v ?? '-')}</p>{s.sub?<p className="mt-1 text-[9px] font-semibold text-gray-400 leading-snug">{s.sub}</p>:null}</div>)}</div>
             {topStores.length>0&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden"><div className="px-4 py-2.5 border-b border-gray-100"><h3 className="font-bold text-xs text-gray-800">Most Viewed Stores (Top {topStores.length})</h3></div><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Views</th><th className="px-4 py-2 text-right">Clicks</th><th className="px-4 py-2 text-right">Engagement</th></tr></thead><tbody className="divide-y divide-gray-50">{topStores.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[140px]">{s.storeName||'Unnamed'}</p><p className="text-[9px] text-gray-400 font-mono">@{s.handle}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[120px]">{s.email||'-'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline flex items-center gap-0.5"><ExternalLink size={7} /> WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalViews.toLocaleString()}</td><td className="px-4 py-2 text-right text-gray-600">{s.totalClicks.toLocaleString()}</td><td className="px-4 py-2 text-right"><span className={`font-bold ${s.engagementRate>=50?'text-green-600':s.engagementRate>=20?'text-amber-600':'text-gray-500'}`}>{s.engagementRate}%</span></td></tr>)}</tbody></table></div></div>}
             {signupData && <Suspense fallback={<div className="h-72 animate-pulse rounded-xl bg-gray-100/70" />}><SignupsChart days={signupData.days} months={signupData.months} totals={signupData.totals} /></Suspense>}
           </>}
@@ -1018,18 +1021,8 @@ export default function Admin() {
           <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Revenue</h2><button onClick={fetchRevenue} disabled={revenueLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{revenueLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />} Refresh</button></div>
           <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl"><button onClick={()=>setRevenueTab('platform')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${revenueTab==='platform'?'bg-white text-gray-900 shadow-sm':'text-gray-500'}`}>Platform Revenue</button><button onClick={()=>setRevenueTab('stores')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${revenueTab==='stores'?'bg-white text-gray-900 shadow-sm':'text-gray-500'}`}>Store Revenue</button></div>
           {revenueLoading?<SkeletonRows count={5} />:<>
-            {revenueTab==='platform'&&revenueData&&<div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Paystack Balance</p><p className="text-2xl font-black text-green-600 mt-1">{revenueData.hasApiKey?revenueData.balanceFormatted:'No API key'}</p></div>
-                <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Total Volume</p><p className="text-2xl font-black text-gray-900 mt-1">{revenueData.hasApiKey?revenueData.totalVolumeFormatted:'-'}</p></div>
-              </div>
-              {revenueData.hasApiKey&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4"><p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Total Transactions</p><p className="text-xl font-black text-gray-900 mt-1">{revenueData.totalTransactions.toLocaleString()}</p></div>}
-            </div>}
-            {revenueTab==='stores'&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
-              {storeRevenues.length===0?<div className="p-6 text-center text-gray-400 text-sm">No store revenue data yet.</div>:<>
-                <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[9px] font-black uppercase text-gray-400 tracking-wider border-b border-gray-50 bg-gray-50/80"><th className="px-4 py-2">#</th><th className="px-4 py-2">Store</th><th className="px-4 py-2">Contact</th><th className="px-4 py-2">Plan</th><th className="px-4 py-2 text-right">Orders</th><th className="px-4 py-2 text-right">Revenue</th></tr></thead><tbody className="divide-y divide-gray-50">{storeRevenues.map((s,i)=><tr key={s.id} className="hover:bg-gray-50/60"><td className="px-4 py-2 font-bold text-gray-400">{i+1}</td><td className="px-4 py-2"><p className="font-bold text-gray-900 truncate max-w-[120px]">{s.storeName||'Unnamed'}</p></td><td className="px-4 py-2"><p className="text-[10px] text-gray-500 truncate max-w-[100px]">{s.email||'-'}</p>{s.whatsappNumber&&<a href={`https://wa.me/${s.whatsappNumber.replace(/[^0-9]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-600 hover:underline">WA</a>}</td><td className="px-4 py-2"><span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border ${PLAN_C[s.plan]||PLAN_C.starter}`}>{s.plan}</span></td><td className="px-4 py-2 text-right font-bold text-gray-900">{s.totalOrders}</td><td className="px-4 py-2 text-right font-bold text-green-600">{s.totalRevenueFormatted}</td></tr>)}</tbody></table></div>
-              </>}
-            </div>}
+            {revenueTab==='platform'&&revenueData&&<PlatformRevenue data={revenueData} />}
+            {revenueTab==='stores'&&<StoreRevenue data={storeRevenueData} planClasses={PLAN_C} />}
           </>}
         </div>}
 

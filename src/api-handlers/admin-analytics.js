@@ -23,6 +23,38 @@ function lastMonthKeys(thisMonthKey, count) {
   })
 }
 
+// The only plans anyone pays for. Everything else (starter, free, and any
+// older name still on a document) is a free store.
+const PAID_PLANS = new Set(['growth', 'pro', 'premium'])
+const GRACE_MS = 2 * 24 * 60 * 60 * 1000
+
+/**
+ * Whether a store is on a paid plan RIGHT NOW.
+ *
+ * The old count was `where('plan', '!=', 'starter')`, which counted every
+ * free store too, because stores created before the plan was renamed carry
+ * plan 'free'. That is how 92 paid stores appeared out of 149 total.
+ *
+ * expiry-cron.js resets an expired store to starter, and marks the two-day
+ * grace window as 'grace'. A store still inside grace is counted: it is paid
+ * for. A store whose end date passed but which the cron has not reset yet is
+ * not counted, so the figure never flatters itself when a cron run is late.
+ */
+function paidState(store, nowMs) {
+  const plan = String(store.plan || '').toLowerCase()
+  if (!PAID_PLANS.has(plan)) return { paid: false, plan }
+  if (store.planStatus === 'expired') return { paid: false, plan, lapsed: true }
+
+  const end = store.planEndDate?.toDate?.() || (store.planEndDate ? new Date(store.planEndDate) : null)
+  if (!end || isNaN(end.getTime())) {
+    // No end date: a lifetime or manually granted plan.
+    return { paid: true, plan, lifetime: true }
+  }
+  const graceEnd = store.graceUntil?.toDate?.()?.getTime?.() || end.getTime() + GRACE_MS
+  if (nowMs > graceEnd) return { paid: false, plan, lapsed: true }
+  return { paid: true, plan, inGrace: nowMs > end.getTime() }
+}
+
 export default async function handler(req, res) {
   applyCorsOrigin(req, res)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
@@ -41,19 +73,46 @@ export default async function handler(req, res) {
     const action = req.query.action || 'overview'
 
     if (action === 'overview') {
-      const [totalStoresSnap, premiumStoresSnap, leadsSnap, supportSnap, productsSnap] = await Promise.all([
-        db.collection('stores').count().get(),
-        db.collection('stores').where('plan', '!=', 'starter').count().get(),
+      // Plans are worked out from the documents rather than a query, because
+      // a Firestore inequality cannot express "one of these three, and not
+      // expired", and silently skips documents with no plan field at all.
+      const [storesSnap, leadsSnap, supportSnap, productsSnap] = await Promise.all([
+        db.collection('stores').select('plan', 'planStatus', 'planEndDate', 'graceUntil').get(),
         db.collection('leads').count().get(),
         db.collection('supportMessages').where('status', 'in', ['open', 'in_progress']).count().get(),
         db.collectionGroup('products').count().get(),
       ])
 
+      const nowMs = Date.now()
+      const byPlan = { growth: 0, pro: 0, premium: 0 }
+      let paidStores = 0
+      let inGrace = 0
+      let lapsed = 0
+      let freeStores = 0
+
+      storesSnap.docs.forEach((doc) => {
+        const state = paidState(doc.data(), nowMs)
+        if (state.paid) {
+          paidStores += 1
+          byPlan[state.plan] = (byPlan[state.plan] || 0) + 1
+          if (state.inGrace) inGrace += 1
+        } else if (state.lapsed) {
+          lapsed += 1
+          freeStores += 1
+        } else {
+          freeStores += 1
+        }
+      })
+
       return res.status(200).json({
         success: true,
         analytics: {
-          totalStores: totalStoresSnap.data().count,
-          paidStores: premiumStoresSnap.data().count,
+          totalStores: storesSnap.size,
+          paidStores,
+          freeStores,
+          planBreakdown: byPlan,
+          inGrace,
+          lapsed,
           totalLeads: leadsSnap.data().count,
           totalProducts: productsSnap.data().count,
           openTickets: supportSnap.data().count,
