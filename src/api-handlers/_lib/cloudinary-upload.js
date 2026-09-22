@@ -44,6 +44,40 @@ export async function mirrorRemoteImage(remoteUrl, publicId, { timeoutMs = 15000
   if (!isCloudinaryConfigured()) return ''
   if (!remoteUrl || !/^https:\/\//i.test(remoteUrl)) return ''
 
+  // Fetch the bytes OURSELVES rather than handing Cloudinary the url.
+  //
+  // Handing over the url means Cloudinary's servers make a second request to
+  // TikTok's CDN, from a different network, with no referrer, possibly from a
+  // different region, and seconds-to-minutes later. TikTok refuses some of
+  // those, which is why an earlier version of this mirrored most covers but
+  // silently left a few pointing at the expiring url. We already hold a url
+  // that is valid right now, so the reliable move is to read it here and post
+  // the bytes.
+  let dataUri
+  try {
+    const img = await fetch(remoteUrl, { signal: AbortSignal.timeout(timeoutMs) })
+    if (!img.ok) {
+      console.warn(`[cloudinary] source fetch ${img.status} for ${publicId}`)
+      return ''
+    }
+    const type = (img.headers.get('content-type') || 'image/jpeg').split(';')[0]
+    if (!/^image\//.test(type)) {
+      console.warn(`[cloudinary] source for ${publicId} was ${type}, not an image`)
+      return ''
+    }
+    const buf = Buffer.from(await img.arrayBuffer())
+    // Covers are tens of kilobytes. Anything this large is not a cover, and
+    // base64 inflates it by a third before it goes back out.
+    if (!buf.length || buf.length > 10 * 1024 * 1024) {
+      console.warn(`[cloudinary] source for ${publicId} was ${buf.length} bytes, skipping`)
+      return ''
+    }
+    dataUri = `data:${type};base64,${buf.toString('base64')}`
+  } catch (err) {
+    console.warn(`[cloudinary] source fetch failed for ${publicId}: ${err.message}`)
+    return ''
+  }
+
   const timestamp = Math.floor(Date.now() / 1000)
   const signedParams = {
     invalidate: 'true',
@@ -54,7 +88,7 @@ export async function mirrorRemoteImage(remoteUrl, publicId, { timeoutMs = 15000
 
   const body = new URLSearchParams({
     ...signedParams,
-    file: remoteUrl,
+    file: dataUri,
     api_key: API_KEY,
     signature: sign(signedParams),
   })
@@ -68,13 +102,18 @@ export async function mirrorRemoteImage(remoteUrl, publicId, { timeoutMs = 15000
         signal: AbortSignal.timeout(timeoutMs),
       }
     )
-    if (!resp.ok) return ''
+    if (!resp.ok) {
+      // Never log the body: it would put the signature in the logs.
+      console.warn(`[cloudinary] upload ${resp.status} for ${publicId}`)
+      return ''
+    }
     const json = await resp.json()
     const url = String(json?.secure_url || '')
     // Belt and braces: only ever hand back a Cloudinary url, so a surprising
     // response body can never inject an arbitrary image host into a storefront.
     return /^https:\/\/res\.cloudinary\.com\//.test(url) ? url : ''
-  } catch {
+  } catch (err) {
+    console.warn(`[cloudinary] upload failed for ${publicId}: ${err.message}`)
     return ''
   }
 }

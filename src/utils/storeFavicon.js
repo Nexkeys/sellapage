@@ -43,10 +43,12 @@ export function faviconUrl(rawUrl, size = 64) {
   return url
 }
 
-// A tab icon is drawn at 16 to 64 pixels. An iOS home screen icon is 180, and
-// upscaling a 64px one there looks blurry on exactly the screens vendors show
-// people. Two sizes, one source image.
-export const TAB_ICON_SIZE = 64
+// 96, not 64, because Google only shows a favicon beside a search result when
+// it is square and 48px or a multiple of it. A tab needs 16 to 32, so 96 is
+// generous for the browser and is the size that keeps the search listing
+// eligible. 180 is Apple's size for an iOS home screen icon, where upscaling a
+// small one looks blurry on exactly the screen a vendor shows people.
+export const TAB_ICON_SIZE = 96
 export const TOUCH_ICON_SIZE = 180
 
 function setLink(rel, href) {

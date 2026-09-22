@@ -1149,6 +1149,9 @@ function TikTokFeed({ s, t, store }) {
               href={v.url}
               target="_blank"
               rel="noopener noreferrer"
+              // The accessible name lives on the link, not the img, so a
+              // screen reader announces the video once rather than twice.
+              aria-label={v.title ? `Watch on TikTok: ${v.title}` : 'Watch on TikTok'}
               style={{ borderRadius: t.radius, border: `1px solid ${t.border}` }}
               className={`group relative block overflow-hidden transition-transform hover:scale-[1.02] ${
                 slider ? `${slideCls} shrink-0 snap-start` : ''
@@ -1158,10 +1161,15 @@ function TikTokFeed({ s, t, store }) {
                 {v.cover ? (
                   <img
                     src={v.cover}
-                    alt={v.title || 'TikTok video'}
+                    alt=""
                     loading="lazy"
                     decoding="async"
                     className="h-full w-full object-cover"
+                    // A cover that fails to load must not dump a paragraph of
+                    // alt text into a customer's face. Hide the broken image
+                    // and let the tile fall back to its tinted panel and play
+                    // button, which still reads as a video.
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
                   />
                 ) : null}
                 {/* Play affordance. An inline SVG, so this costs no icon import
