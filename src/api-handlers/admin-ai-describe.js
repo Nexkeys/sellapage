@@ -46,10 +46,12 @@ export default async function handler(req, res) {
 
       const [usageSnap, logsSnap] = await Promise.all([
         db.collectionGroup('aiUsage').select('count', 'plan', 'date').limit(MAX_USAGE_DOCS).get(),
-        // No filter and no orderBy, so no composite index is needed. Sorted and
-        // sliced below.
+        // Newest first, so a long history summarises the RECENT picture rather
+        // than an arbitrary slice. Ordering on one field uses Firestore's
+        // automatic single-field index, so nothing needs deploying.
         db.collection(AI_DESCRIBE_LOGS)
           .select('status', 'model', 'keyLabel', 'mode', 'durationMs', 'totalTokens', 'dayKey', 'createdAtMs', 'storeId')
+          .orderBy('createdAtMs', 'desc')
           .limit(MAX_LOGS)
           .get(),
       ])
@@ -158,14 +160,29 @@ export default async function handler(req, res) {
     }
 
     if (action === 'logs') {
-      const limit = Math.min(Math.max(parseInt(req.query.limit) || DEFAULT_PAGE, 1), 200)
+      // A nonsense limit falls back to the default rather than being clamped to
+      // 1, which is what "?limit=-5" used to produce: one entry per page.
+      const rawLimit = parseInt(req.query.limit)
+      const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : DEFAULT_PAGE
       const page = Math.max(parseInt(req.query.page) || 1, 1)
       const status = String(req.query.status || '').trim()
       const keyLabel = String(req.query.key || '').trim()
       const mode = String(req.query.mode || '').trim()
       const search = String(req.query.search || '').trim().toLowerCase()
 
-      const snap = await db.collection(AI_DESCRIBE_LOGS).limit(MAX_LOGS).get()
+      // Newest first in the QUERY, not after the fact. Without this, Firestore
+      // returns documents in id order (log ids are random), so once the
+      // collection passed MAX_LOGS the window stopped being the newest entries
+      // and page 1 could miss today's.
+      //
+      // Filtering and paging then happen inside that window, which keeps every
+      // filter combination on one automatic index instead of a composite index
+      // per filter. `truncated` says when a window was full, so the figure is
+      // never silently partial.
+      const snap = await db.collection(AI_DESCRIBE_LOGS)
+        .orderBy('createdAtMs', 'desc')
+        .limit(MAX_LOGS)
+        .get()
 
       let rows = snap.docs.map((doc) => {
         const d = doc.data()
@@ -213,6 +230,7 @@ export default async function handler(req, res) {
         total,
         totalPages: Math.max(Math.ceil(total / limit), 1),
         truncated: snap.size >= MAX_LOGS,
+        windowSize: MAX_LOGS,
       })
     }
 

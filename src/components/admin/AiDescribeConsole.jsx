@@ -57,6 +57,7 @@ export default function AiDescribeConsole({ authHeaders }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [openId, setOpenId] = useState(null)
+  const [truncated, setTruncated] = useState(false)
 
   const loadSummary = useCallback(async () => {
     const headers = await authHeaders()
@@ -87,6 +88,7 @@ export default function AiDescribeConsole({ authHeaders }) {
       if (!r.ok) throw new Error(d.error || 'Could not load the log.')
       setLogs(d.logs || [])
       setMeta({ page: d.page || 1, totalPages: d.totalPages || 1, total: d.total || 0 })
+      setTruncated(Boolean(d.truncated))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -355,8 +357,9 @@ export default function AiDescribeConsole({ authHeaders }) {
               >
                 Prev
               </button>
-              <span className="text-[10px] font-semibold text-gray-500">
+              <span className="text-center text-[10px] font-semibold text-gray-500">
                 {meta.page}/{meta.totalPages} · {Number(meta.total).toLocaleString()} entries
+                {truncated ? <span className="block font-normal text-gray-400">newest 2,000 only</span> : null}
               </span>
               <button
                 onClick={() => setPage((p) => p + 1)}
