@@ -8,11 +8,13 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
   Gift, Search, Loader2, AlertCircle, RefreshCw, Pause, Play, XCircle, Clock,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { SkeletonRows } from '../Skeleton'
 
 const PLANS = ['growth', 'pro', 'premium']
 const LENGTHS = [7, 14, 30, 60, 90]
+const PER_PAGE = 10
 
 const STATUS_STYLES = {
   active: 'bg-green-50 text-green-700 border-green-200',
@@ -43,6 +45,10 @@ export default function TrialsAdmin({ authHeaders }) {
   const [formMsg, setFormMsg] = useState(null)
 
   const [busyId, setBusyId] = useState(null)
+  // { row, action } while an admin is typing the reason a vendor will be sent.
+  const [confirming, setConfirming] = useState(null)
+  const [reason, setReason] = useState('')
+  const [page, setPage] = useState(1)
 
   const call = useCallback(
     async (action, { method = 'GET', body, query: qs = '' } = {}) => {
@@ -75,6 +81,12 @@ export default function TrialsAdmin({ authHeaders }) {
   useEffect(() => {
     load()
   }, [load])
+
+  // Derived, not state: clamping during render means a page that empties after
+  // a revoke cannot leave the table blank with no way back.
+  const totalPages = Math.max(1, Math.ceil(trials.length / PER_PAGE))
+  const safePage = Math.min(page, totalPages)
+  const pageRows = trials.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
 
   const search = async () => {
     if (query.trim().length < 2) return
@@ -120,16 +132,16 @@ export default function TrialsAdmin({ authHeaders }) {
     }
   }
 
-  const act = async (action, row) => {
-    // Revoking drops a vendor off paid features straight away, so it asks first.
-    if (action === 'revoke') {
-      const back = row.returnsTo === 'starter' ? 'the free Starter plan' : `their ${row.returnsTo} plan`
-      if (!window.confirm(`End ${row.storeName}'s ${row.trialPlan} trial now? They go back to ${back}.`)) return
-    }
+  const act = async (action, row, reason = '') => {
     setBusyId(row.storeId)
     try {
-      const data = await call(action, { method: 'POST', body: { storeId: row.storeId } })
+      const data = await call(action, {
+        method: 'POST',
+        body: { storeId: row.storeId, ...(reason ? { reason } : {}) },
+      })
       if (!data.success) setError(data.message || 'That did not work.')
+      setConfirming(null)
+      setReason('')
       load()
     } catch (err) {
       setError(err.message)
@@ -318,8 +330,14 @@ export default function TrialsAdmin({ authHeaders }) {
         <p className="text-sm text-gray-500 py-6 text-center">No trials granted yet.</p>
       ) : (
         <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
-          {trials.map((t) => (
-            <div key={t.storeId} className="p-3 flex items-center justify-between gap-3 flex-wrap">
+          {pageRows.map((t) => (
+            <div
+              key={t.storeId}
+              // Column on a phone, row from sm up. The action buttons sat on the
+              // same line as a long store name before, which pushed Revoke off
+              // a 390px screen.
+              className="p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3"
+            >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-bold text-gray-900">{t.storeName}</span>
@@ -351,9 +369,14 @@ export default function TrialsAdmin({ authHeaders }) {
                   returns to {t.returnsTo}
                   {t.note ? ` · ${t.note}` : ''}
                 </p>
+                {(t.endedMessage || t.pausedReason) && (
+                  <p className="text-xs text-gray-400 mt-0.5 italic break-words">
+                    Reason sent to vendor: {t.endedMessage || t.pausedReason}
+                  </p>
+                )}
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-3 shrink-0">
                 {busyId === t.storeId ? (
                   <Loader2 size={15} className="animate-spin text-gray-400" />
                 ) : (
@@ -361,7 +384,10 @@ export default function TrialsAdmin({ authHeaders }) {
                     {t.status === 'active' && (
                       <button
                         type="button"
-                        onClick={() => act('pause', t)}
+                        onClick={() => {
+                          setConfirming({ storeId: t.storeId, action: 'pause' })
+                          setReason('')
+                        }}
                         className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700"
                       >
                         <Pause size={13} />
@@ -381,7 +407,10 @@ export default function TrialsAdmin({ authHeaders }) {
                     {(t.status === 'active' || t.status === 'paused') && (
                       <button
                         type="button"
-                        onClick={() => act('revoke', t)}
+                        onClick={() => {
+                          setConfirming({ storeId: t.storeId, action: 'revoke' })
+                          setReason('')
+                        }}
                         className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700"
                       >
                         <XCircle size={13} />
@@ -391,8 +420,84 @@ export default function TrialsAdmin({ authHeaders }) {
                   </>
                 )}
               </div>
+
+              {/* Reason box. Opens under the row rather than as a browser
+                  confirm, because what is typed here is sent to the vendor
+                  word for word and needs room to be written properly. */}
+              {confirming?.storeId === t.storeId && (
+                <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-bold text-gray-900">
+                    {confirming.action === 'revoke' ? 'Stop' : 'Pause'} {t.storeName}&apos;s{' '}
+                    {t.trialPlan} trial?{' '}
+                    <span className="font-normal text-gray-500">
+                      They go back to{' '}
+                      {t.returnsTo === 'starter' ? 'the free Starter plan' : `their ${t.returnsTo} plan`}
+                      {confirming.action === 'pause' ? `, keeping ${t.daysLeft} day(s)` : ''}.
+                    </span>
+                  </p>
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={2}
+                    maxLength={300}
+                    placeholder="Why? This is sent to the vendor in the email, word for word."
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => act(confirming.action, t, reason.trim())}
+                      disabled={busyId === t.storeId}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-50 ${
+                        confirming.action === 'revoke' ? 'bg-red-600' : 'bg-amber-600'
+                      }`}
+                    >
+                      {confirming.action === 'revoke' ? 'Stop the trial' : 'Pause the trial'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirming(null)
+                        setReason('')
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <span className="text-[11px] text-gray-400">
+                      Leave blank to send no reason.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+            className="flex items-center gap-1 text-xs font-bold text-gray-600 disabled:opacity-40"
+          >
+            <ChevronLeft size={14} />
+            Previous
+          </button>
+          <span className="text-xs text-gray-500">
+            Page {safePage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+            className="flex items-center gap-1 text-xs font-bold text-gray-600 disabled:opacity-40"
+          >
+            Next
+            <ChevronRight size={14} />
+          </button>
         </div>
       )}
     </div>

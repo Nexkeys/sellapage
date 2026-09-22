@@ -28,15 +28,38 @@ async function getRawBody(req) {
 
 // Termii's wording, mapped to the three things worth counting. Anything not
 // listed is stored verbatim and counted as pending, rather than guessed at.
+//
+// The live payload puts a code AND a sentence in one field:
+//   "status": "DELIVERED | Message delivered to handset"
+// so only the part before the pipe is matched. It also sends a separate
+// `messagestate` ("Delivered"), which is used when status says nothing useful.
 const OUTCOME = {
   delivered: 'delivered',
   'message sent': 'pending',
+  sent: 'pending',
+  submitted: 'pending',
   'message failed': 'failed',
+  failed: 'failed',
+  undeliverable: 'failed',
+  expired: 'failed',
   rejected: 'dnd',
   'dnd active on phone number': 'dnd',
-  expired: 'failed',
+  dnd: 'dnd',
 }
-export const classify = (status) => OUTCOME[String(status || '').trim().toLowerCase()] || 'pending'
+
+const normaliseStatus = (value) => String(value || '')
+  .split('|')[0]
+  .trim()
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+
+export function classify(status, messageState) {
+  const direct = OUTCOME[normaliseStatus(status)]
+  if (direct) return direct
+  // A DND sentence can arrive without the code in front of it.
+  if (/dnd|do.not.disturb/i.test(String(status || ''))) return 'dnd'
+  return OUTCOME[normaliseStatus(messageState)] || 'pending'
+}
 
 const COUNTER = { delivered: 'delivered', dnd: 'dndBlocked', failed: 'undelivered' }
 
@@ -142,14 +165,21 @@ export default async function handler(req, res) {
     }
 
     const existing = doc.data()
-    const outcome = classify(payload.status)
+    const outcome = classify(payload.status, payload.messagestate)
     const previous = existing.outcome || 'pending'
+    // Pages is what Termii actually billed for this message, which is the
+    // honest figure to compare our estimate against.
+    const pages = Number(payload.pages) || 0
 
     await ref.set({
       status: String(payload.status || ''),
+      messageState: String(payload.messagestate || ''),
       outcome,
+      // Stored exactly as Termii reports it, in whatever unit they bill in.
       cost: payload.cost ?? existing.cost ?? null,
+      pages: pages || existing.pages || null,
       channel: payload.channel || existing.channel || '',
+      deliveredAt: payload.delivered_at || existing.deliveredAt || null,
       reportedAt: FieldValue.serverTimestamp(),
     }, { merge: true })
 
@@ -159,6 +189,8 @@ export default async function handler(req, res) {
       const update = {}
       if (COUNTER[outcome]) update[COUNTER[outcome]] = FieldValue.increment(1)
       if (COUNTER[previous]) update[COUNTER[previous]] = FieldValue.increment(-1)
+      // Counted once per message, the first time a report carries it.
+      if (pages && !existing.pages) update.pagesBilled = FieldValue.increment(pages)
       if (Object.keys(update).length) {
         await db.collection(SMS_CAMPAIGNS).doc(existing.campaignId).update(update).catch(() => {})
       }

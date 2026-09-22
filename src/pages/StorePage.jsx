@@ -68,6 +68,9 @@ const EMPTY_CHECKOUT_FORM = {
   customerPhone: "",
   deliveryState: "",
   deliveryLga: "",
+  // Picked from Topship's own recognised city list, not typed free-hand. See CityCombo
+  // below and Changelog-README.md 2026-09-22 for why this field has to exist.
+  deliveryCity: "",
   deliveryAddress: "",
   notes: "",
 };
@@ -255,6 +258,104 @@ function CartSummary({ cart, subtotal, collapsible = false }) {
   );
 }
 
+// City picker backed by Topship's own /get-cities list.
+//
+// WHY THIS EXISTS (2026-09-22): Topship quotes domestic rates by cityName alone - the street
+// address is never sent for a quote - and a city it doesn't recognise returns 200 with an
+// empty array, no error. Proven on one route: "Apapa" quoted Dellyman at ₦4,145; the same
+// route with "Olodi-Apapa" quoted nothing. A customer typing their city free-hand was
+// therefore able to silently make their own order un-bookable, and neither they nor the
+// vendor would ever see why.
+//
+// Searching SUBURBS as well as city names is the whole trick: a customer who types "Olodi"
+// is shown "Apapa", selects it, and never learns the distinction exists.
+function CityCombo({ value, onChange, cities, loading }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+
+  const matches = q
+    ? cities.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.suburbs.some((s) => s.toLowerCase().includes(q)),
+      )
+    : cities;
+  // Long lists are capped for render cost only; typing narrows them immediately.
+  const filtered = matches.slice(0, 60);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((o) => !o);
+          setQuery("");
+        }}
+        className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 flex items-center justify-between text-left"
+      >
+        <span className={value ? "truncate text-gray-900" : "truncate text-gray-400"}>
+          {value || (loading ? "Loading cities..." : "Select your city")}
+        </span>
+        <ChevronDown size={14} className="shrink-0 text-gray-400" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg">
+            <div className="flex items-center gap-1.5 border-b border-gray-100 px-3 py-2">
+              <Search size={13} className="shrink-0 text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search city or area..."
+                className="w-full text-sm outline-none placeholder:text-gray-300"
+              />
+            </div>
+            <div className="max-h-52 overflow-y-auto py-1">
+              {filtered.length === 0 && (
+                <p className="px-3 py-2 text-xs text-gray-400">
+                  No city or area matches that. Try the nearest bigger town.
+                </p>
+              )}
+              {filtered.map((c) => {
+                // When the match came from a suburb, show it, so the customer can see why
+                // "Apapa" answered their search for "Olodi".
+                const viaSuburb = q
+                  ? c.suburbs.find((s) => s.toLowerCase().includes(q))
+                  : "";
+                return (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => {
+                      onChange(c.name);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                    className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-green-50 ${
+                      c.name === value
+                        ? "bg-green-50 font-semibold text-green-700"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {c.name}
+                    {viaSuburb && (
+                      <span className="text-[11px] text-gray-400"> · {viaSuburb}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function StoreCheckoutModal({
   store,
   cart,
@@ -310,6 +411,30 @@ function StoreCheckoutModal({
     subtotal + deliveryFee + processingFee - discountAmount - loyaltyValue;
   const deliveryZones = store?.deliveryZones || [];
 
+  // Topship's recognised city list, fetched once when the checkout opens. The endpoint is
+  // deliberately unauthenticated - the shopper is never signed in. See topship-cities.js.
+  const [cities, setCities] = useState([]);
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/topship-cities?countryCode=NG")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setCities(Array.isArray(d?.cities) ? d.cities : []);
+      })
+      .catch(() => {
+        // Non-fatal by design. The field falls back to free text below, so a Topship
+        // outage can never stop a store from taking orders.
+        if (!cancelled) setCities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCitiesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const steps = [
     { id: "details", label: "1. Details" },
     { id: "delivery", label: "2. Delivery" },
@@ -351,7 +476,7 @@ function StoreCheckoutModal({
   };
 
   const handleContinueDelivery = () => {
-    if (!selectedZone || !form.deliveryAddress.trim()) return
+    if (!selectedZone || !form.deliveryAddress.trim() || !form.deliveryCity.trim()) return
     setStep("payment")
   };
 
@@ -668,15 +793,32 @@ function StoreCheckoutModal({
                       </div>
                       <div>
                         <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
-                          City / LGA
+                          City *
                         </label>
-                        <input
-                          type="text"
-                          value={form.deliveryLga}
-                          onChange={updateForm("deliveryLga")}
-                          placeholder="Local government area"
-                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                        />
+                        {!citiesLoading && cities.length === 0 ? (
+                          // Fallback when the city list can't be reached. Free typing is
+                          // allowed here on purpose: a checkout that refuses to proceed is
+                          // worse than an order the vendor has to adjust the city on.
+                          <input
+                            type="text"
+                            value={form.deliveryCity}
+                            onChange={updateForm("deliveryCity")}
+                            placeholder="Your city or town"
+                            className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                          />
+                        ) : (
+                          <CityCombo
+                            value={form.deliveryCity}
+                            onChange={(name) =>
+                              setForm((prev) => ({ ...prev, deliveryCity: name }))
+                            }
+                            cities={cities}
+                            loading={citiesLoading}
+                          />
+                        )}
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Search your area — couriers use this to price the delivery.
+                        </p>
                       </div>
                       <div>
                         <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
@@ -685,10 +827,13 @@ function StoreCheckoutModal({
                         <input
                           type="text"
                           value={form.deliveryState}
-                          onChange={updateForm("deliveryState")}
+                          readOnly
                           placeholder="State"
-                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                          className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none bg-gray-50 text-gray-600 cursor-not-allowed"
                         />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Set by the delivery zone you picked above.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -700,7 +845,7 @@ function StoreCheckoutModal({
                     <textarea
                       value={form.notes}
                       onChange={updateForm("notes")}
-                      placeholder="Any special instructions"
+                      placeholder="Nearest bus stop, junction or landmark — e.g. 5B Bolu Street, by Ikeja bus stop, off Awolowo Way"
                       rows={2}
                       className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none resize-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                     />
@@ -750,7 +895,7 @@ function StoreCheckoutModal({
                 <button
                   type="button"
                   onClick={handleContinueDelivery}
-                  disabled={deliveryZones.length === 0 || !selectedZone || !form.deliveryAddress.trim()}
+                  disabled={deliveryZones.length === 0 || !selectedZone || !form.deliveryAddress.trim() || !form.deliveryCity.trim()}
                   className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3.5 rounded-xl font-bold text-sm transition-all"
                 >
                   Continue to Payment
@@ -1854,8 +1999,15 @@ export default function StorePage() {
           cartItems: cart,
           deliveryFee,
           deliveryAddress: {
+            // state/lga stay zone-derived: they identify WHICH delivery zone was priced, and
+            // letting them drift from the zone would decouple the fee from the destination.
             state: selectedZone?.state || '',
             lga: selectedZone?.lga || '',
+            // city is the customer's own choice from Topship's recognised list, and is what
+            // the Orders tab now books with. Previously there was no city field at all here,
+            // so the vendor's rate lookup fell back to the zone's LGA - which is how
+            // un-quotable values like "Olodi-Apapa" reached Topship. 2026-09-22.
+            city: checkoutForm.deliveryCity.trim(),
             address: checkoutForm.deliveryAddress.trim(),
           },
           notes: checkoutForm.notes.trim(),

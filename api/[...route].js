@@ -94,6 +94,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/topship-countries.js");
         return await handlerFunc(req, res);
       }
+      case "topship-cities": {
+        const { default: handler } = await import("../src/api-handlers/topship-cities.js")
+        return handler(req, res)
+      }
       case "topship-webhook": {
         const { default: handler } = await import("../src/api-handlers/topship-webhook.js")
         return handler(req, res)

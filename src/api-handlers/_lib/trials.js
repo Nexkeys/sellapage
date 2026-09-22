@@ -56,7 +56,15 @@ export const PLAN_LIMITS = {
   },
 }
 
-// Mirrors STARTER_RESET in expiry-cron.js, same reasoning as above.
+// Mirrors STARTER_RESET in expiry-cron.js, same reasoning as above, with one
+// deliberate addition: the dates are CLEARED.
+//
+// expiry-cron's copy leaves planEndDate and graceUntil behind, which is
+// harmless for a lapsed paid plan (the dates are in the past and describe
+// something that really happened). After a trial they are in the FUTURE, so the
+// store reads as "starter until 24 September", the vendor's billing tab says
+// "Renews", and anything comparing planEndDate to now believes there is time
+// left on a plan that has just been taken away.
 export const STARTER_RESET = {
   plan: 'starter',
   planStatus: 'expired',
@@ -65,11 +73,15 @@ export const STARTER_RESET = {
   hasGrowthFeatures: false,
   hasProFeatures: false,
   hasPremiumFeatures: false,
+  planEndDate: null,
+  graceUntil: null,
+  billingPeriod: null,
 }
 
 export const TRIAL_PLANS = Object.keys(PLAN_LIMITS)
 const DAY_MS = 24 * 60 * 60 * 1000
 export const MAX_TRIAL_DAYS = 120
+
 
 /** True when the store currently has a trial that is running (not paused). */
 export function hasActiveTrial(data) {
@@ -212,6 +224,8 @@ export async function grantTrial(db, storeId, { plan, days, adminUid, note = '',
     // Never fail a grant on this. The cards unfreeze on the next paid event too.
   }
 
+  // Telling the vendor is admin-trials.js's job, not this file's: this module
+  // is imported by expiry-cron and must not drag the push stack in with it.
   return { ok: true, plan, endsAt: endsAt.toDate().toISOString(), days: length }
 }
 
@@ -220,7 +234,7 @@ export async function grantTrial(db, storeId, { plan, days, adminUid, note = '',
  * the unused days are banked. Used when a vendor abuses a trial, or asks to
  * hold it until they are ready to use it properly.
  */
-export async function pauseTrial(db, storeId, { adminUid }) {
+export async function pauseTrial(db, storeId, { adminUid, reason = '' }) {
   const storeRef = db.collection('stores').doc(storeId)
   const snap = await storeRef.get()
   if (!snap.exists) return { ok: false, error: 'not_found' }
@@ -233,11 +247,14 @@ export async function pauseTrial(db, storeId, { adminUid }) {
   const restored = restoreFields(data.trial.previous)
   const { landedOn, ...fields } = restored
 
+  const cleanReason = String(reason || '').slice(0, 300)
+
   await storeRef.update({
     ...fields,
     'trial.status': 'paused',
     'trial.pausedAt': Timestamp.now(),
     'trial.pausedBy': adminUid,
+    'trial.pausedReason': cleanReason,
     'trial.remainingMs': remainingMs,
   })
 
@@ -249,7 +266,9 @@ export async function pauseTrial(db, storeId, { adminUid }) {
     }
   }
 
-  return { ok: true, landedOn, daysBanked: Math.ceil(remainingMs / DAY_MS) }
+  const daysBanked = Math.ceil(remainingMs / DAY_MS)
+
+  return { ok: true, landedOn, daysBanked }
 }
 
 /** Resumes a paused trial for exactly the days that were banked. */
@@ -302,7 +321,7 @@ export async function resumeTrial(db, storeId, { adminUid }) {
  * so a revoked trial and an expired one leave the store in exactly the same
  * state. `reason` only changes what is recorded, never what is written.
  */
-export async function endTrial(db, storeId, { reason = 'expired', adminUid = null } = {}) {
+export async function endTrial(db, storeId, { reason = 'expired', adminUid = null, message = '' } = {}) {
   const storeRef = db.collection('stores').doc(storeId)
   const snap = await storeRef.get()
   if (!snap.exists) return { ok: false, error: 'not_found' }
@@ -313,6 +332,8 @@ export async function endTrial(db, storeId, { reason = 'expired', adminUid = nul
   const restored = restoreFields(data.trial.previous)
   const { landedOn, ...fields } = restored
 
+  const cleanMessage = String(message || '').slice(0, 300)
+
   await storeRef.update({
     ...fields,
     trial: {
@@ -321,6 +342,9 @@ export async function endTrial(db, storeId, { reason = 'expired', adminUid = nul
       endedAt: Timestamp.now(),
       endedBy: adminUid,
       endedReason: reason,
+      // What the admin typed, kept on the record so the reason the vendor was
+      // given and the reason we hold are the same sentence.
+      endedMessage: cleanMessage,
       landedOn,
       remainingMs: 0,
     },

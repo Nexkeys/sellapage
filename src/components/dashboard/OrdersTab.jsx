@@ -235,6 +235,75 @@ function CountrySelect({ value, onChange, countries }) {
   )
 }
 
+// City picker backed by Topship's own /get-cities list, searching suburbs as well as city
+// names. Same component idea as CountrySelect above.
+//
+// WHY (2026-09-22): /get-shipment-rate matches on cityName alone and returns 200 with an
+// empty array for a city it doesn't know - no error, nothing to show. "Apapa" quoted
+// Dellyman at ₦4,145; the identical route with "Olodi-Apapa" quoted nothing, because
+// Olodi-Apapa is a suburb of Apapa. Typing a city free-hand was the bug.
+function CitySelect({ value, onChange, cities }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const matches = q
+    ? cities.filter(c => c.name.toLowerCase().includes(q) || c.suburbs.some(s => s.toLowerCase().includes(q)))
+    : cities
+  const filtered = matches.slice(0, 60)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setQuery('') }}
+        className={`${INPUT_CLASS} flex items-center justify-between text-left`}
+      >
+        <span className={value ? 'truncate' : 'truncate text-gray-400'}>{value || 'Select city'}</span>
+        <ChevronDown size={14} className="shrink-0 text-gray-400" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg">
+            <div className="flex items-center gap-1.5 border-b border-gray-100 px-3 py-2">
+              <Search size={13} className="shrink-0 text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search city or area..."
+                className="w-full text-sm outline-none placeholder:text-gray-300"
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto py-1">
+              {filtered.length === 0 && (
+                <p className="px-3 py-2 text-xs text-gray-400">No city or area matches that.</p>
+              )}
+              {filtered.map(c => {
+                // Shows WHY a city matched, so "Apapa" answering a search for "Olodi" reads
+                // as correct rather than as a bug.
+                const viaSuburb = q ? c.suburbs.find(s => s.toLowerCase().includes(q)) : ''
+                return (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => { onChange(c.name); setOpen(false); setQuery('') }}
+                    className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-green-50 ${c.name === value ? 'bg-green-50 font-semibold text-green-700' : 'text-gray-700'}`}
+                  >
+                    {c.name}
+                    {viaSuburb && <span className="text-[11px] text-gray-400"> · {viaSuburb}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function OrdersTab({
   store,
   user,
@@ -262,6 +331,9 @@ export default function OrdersTab({
   const [itemCategory, setItemCategory] = useState('Fashion')
   const [insuranceType, setInsuranceType] = useState('None')
   const [topshipCountries, setTopshipCountries] = useState([])
+  // Topship's recognised city list - see CitySelect above for why free-typed cities broke
+  // rate lookups silently.
+  const [topshipCities, setTopshipCities] = useState([])
   const [senderCountryCode, setSenderCountryCode] = useState('NG')
   const [receiverCountryCode, setReceiverCountryCode] = useState('NG')
   const [senderPostalCode, setSenderPostalCode] = useState('')
@@ -566,6 +638,14 @@ export default function OrdersTab({
         .then(res => res.json())
         .then(data => setTopshipCountries(Array.isArray(data.countries) ? data.countries : []))
         .catch(() => setTopshipCountries([]))
+    }
+    if (provider === 'topship' && topshipCities.length === 0) {
+      fetch('/api/topship-cities?countryCode=NG')
+        .then(res => res.json())
+        .then(data => setTopshipCities(Array.isArray(data.cities) ? data.cities : []))
+        // Falls back to the plain text input below, so a failed fetch degrades to exactly
+        // the behaviour that shipped before this change rather than blocking booking.
+        .catch(() => setTopshipCities([]))
     }
     if (bookingShipmentOrder) initShipmentForm(bookingShipmentOrder, provider)
   }
@@ -1948,12 +2028,16 @@ export default function OrdersTab({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">City</label>
-                    <input
-                      type="text"
-                      value={senderCity}
-                      onChange={(e) => setSenderCity(e.target.value)}
-                      className={INPUT_CLASS}
-                    />
+                    {selectedProvider === 'topship' && topshipCities.length > 0 ? (
+                      <CitySelect value={senderCity} onChange={setSenderCity} cities={topshipCities} />
+                    ) : (
+                      <input
+                        type="text"
+                        value={senderCity}
+                        onChange={(e) => setSenderCity(e.target.value)}
+                        className={INPUT_CLASS}
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">State</label>
@@ -2026,15 +2110,23 @@ export default function OrdersTab({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">City / LGA</label>
-                    <input
-                      type="text"
-                      value={receiverCity}
-                      onChange={(e) => {
-                        setReceiverCity(e.target.value)
-                        setReceiverLga(e.target.value)
-                      }}
-                      className={INPUT_CLASS}
-                    />
+                    {selectedProvider === 'topship' && topshipCities.length > 0 ? (
+                      <CitySelect
+                        value={receiverCity}
+                        onChange={(name) => { setReceiverCity(name); setReceiverLga(name) }}
+                        cities={topshipCities}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={receiverCity}
+                        onChange={(e) => {
+                          setReceiverCity(e.target.value)
+                          setReceiverLga(e.target.value)
+                        }}
+                        className={INPUT_CLASS}
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">State</label>

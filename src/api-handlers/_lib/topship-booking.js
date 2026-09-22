@@ -137,6 +137,33 @@ export async function getTopshipCountries() {
 }
 
 /**
+ * City list - GET /get-cities?countryCode=NG. Returns [{ cityName, suburbName, postcode }].
+ *
+ * WHY THIS MATTERS (2026-09-22): /get-shipment-rate matches on cityName ONLY - the street
+ * address is never sent for a quote. A cityName Topship doesn't recognise returns 200 with
+ * an empty array: no error, no message, nothing to show the vendor. That is the entire
+ * "Topship returns no rates" bug. Proven side by side on one route: sender city "Apapa"
+ * returned Dellyman at NGN 4,145; the same route with sender city "Olodi-Apapa" returned
+ * zero couriers. Olodi-Apapa is a SUBURB of Apapa, not a city.
+ *
+ * So the fix is to stop letting anyone type a city free-hand and offer Topship's own
+ * vocabulary instead - which is exactly what this endpoint is for, and it's free.
+ */
+export async function getTopshipCities(countryCode = 'NG') {
+  const { baseUrl, apiKey } = getTopshipConfig()
+  const res = await fetch(`${baseUrl}/get-cities?countryCode=${encodeURIComponent(countryCode)}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  const data = await res.json()
+
+  if (!res.ok) {
+    console.error('[topship-booking] get-cities error:', data)
+    return { success: false, error: friendlyTopshipError(describeTopshipError(data, 'Failed to fetch Topship cities')), data }
+  }
+  return { success: true, data: Array.isArray(data) ? data : [] }
+}
+
+/**
  * Resolves Topship's shipmentRoute enum (Domestic/Export/Import) from sender/receiver
  * country codes. Sellapage vendors are Nigerian, so Nigeria is the reference point.
  * Neither-side-Nigeria routes (e.g. Ghana -> Togo) aren't covered explicitly in

@@ -85,6 +85,8 @@ async function runTrialDay(storeDoc, data) {
   // ENDED. Hand back whatever they were on before the trial, which is Starter
   // only if they had nothing paid to return to.
   if (msLeft <= 0) {
+    // endTrial only changes state. The "your trial has ended" message is sent
+    // below, with the wording this cron owns.
     const result = await endTrial(db, storeId, { reason: 'expired' })
     if (!result.ok) return
 
