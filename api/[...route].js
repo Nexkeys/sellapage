@@ -370,6 +370,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/admin-domains.js")
         return handler(req, res)
       }
+      case "admin-trials": {
+        const { default: handler } = await import("../src/api-handlers/admin-trials.js")
+        return handler(req, res)
+      }
       case "admin-flags": {
         const { default: handler } = await import("../src/api-handlers/admin-flags.js")
         return handler(req, res)
@@ -408,6 +412,12 @@ export default async function handler(req, res) {
       // Public links printed inside a promotional SMS: /r/<code> and /x/<token>.
       case "sms-link": {
         const { default: handler } = await import("../src/api-handlers/sms-link.js")
+        return handler(req, res)
+      }
+
+      // Termii delivery reports and inbound messages.
+      case "termii-webhook": {
+        const { default: handler } = await import("../src/api-handlers/termii-webhook.js")
         return handler(req, res)
       }
 

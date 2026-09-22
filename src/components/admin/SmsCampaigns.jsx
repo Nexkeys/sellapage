@@ -228,8 +228,14 @@ export default function SmsCampaigns({ authHeaders }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { l: 'Termii wallet', v: data?.wallet?.balance !== undefined ? naira(data.wallet.balance) : 'Unknown', s: `about ${config?.rate ? Math.floor((data?.wallet?.balance || 0) / config.rate) : 0} pages left`, i: Wallet },
-          { l: 'Campaigns sent', v: Number(totals?.campaigns || 0).toLocaleString(), s: `${Number(totals?.delivered || 0).toLocaleString()} messages`, i: Send },
+          { l: 'Campaigns sent', v: Number(totals?.campaigns || 0).toLocaleString(), s: `${Number(totals?.sentMessages || 0).toLocaleString()} messages`, i: Send },
           { l: 'Link taps', v: Number(totals?.clicks || 0).toLocaleString(), s: `${totals?.clickRate || 0}% of messages`, i: MousePointerClick },
+          {
+            l: 'Blocked by DND',
+            v: Number(totals?.dndBlocked || 0).toLocaleString(),
+            s: totals?.delivered ? `${Number(totals.delivered).toLocaleString()} confirmed delivered` : 'Reported by Termii',
+            i: Ban,
+          },
           { l: 'Spent on SMS', v: naira(totals?.spend), s: totals?.failed ? `${totals.failed} failed` : 'No failures', i: Wallet },
         ].map((s) => (
           <div key={s.l} className="rounded-xl border border-gray-100 bg-white p-3 shadow-xs">
@@ -464,6 +470,15 @@ export default function SmsCampaigns({ authHeaders }) {
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500">
                   <span><span className="font-bold text-gray-900">{c.sent.toLocaleString()}</span> delivered{c.failed ? <span className="text-red-600"> · {c.failed} failed</span> : null}</span>
                   <span><span className="font-bold text-gray-900">{c.clicks.toLocaleString()}</span> taps{c.clickedBy ? ` · ${c.clickedBy} vendors` : ''}</span>
+                  {(c.delivered || c.dndBlocked || c.undelivered) ? (
+                    <span>
+                      <span className="font-bold text-gray-900">{c.delivered.toLocaleString()}</span> delivered to handset
+                      {c.dndBlocked ? <span className="text-amber-700"> · {c.dndBlocked} blocked by DND</span> : null}
+                      {c.undelivered ? <span className="text-red-600"> · {c.undelivered} not delivered</span> : null}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Delivery reports pending</span>
+                  )}
                   <span>{naira(c.cost)}</span>
                   <span>{c.sentAt ? new Date(c.sentAt).toLocaleString('en-NG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
                 </div>
@@ -478,7 +493,8 @@ export default function SmsCampaigns({ authHeaders }) {
         Promotional messages go out on the {config?.senderId ? `"${config.senderId}"` : 'promotional'} sender ID and Termii's generic route,
         which is separate from sign-in codes. Numbers registered on DND may not receive them, and MTN does not deliver
         promotional SMS between 8pm and 8am. Every message carries an opt-out link, and anyone who opts out is skipped
-        from then on.
+        from then on. Delivered, DND and not delivered come from Termii's delivery reports, which arrive after a send,
+        so they fill in over the minutes that follow.
       </p>
     </div>
   )

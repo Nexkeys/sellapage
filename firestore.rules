@@ -261,14 +261,19 @@ service cloud.firestore {
       ];
     }
 
-    // Plan entitlements. Written only by paystack-webhook.js (on payment) and
-    // expiry-cron.js (on downgrade).
+    // Plan entitlements. Written only by paystack-webhook.js (on payment),
+    // expiry-cron.js (on downgrade) and admin-trials.js (on a granted trial).
+    //
+    // `trial` is in this list for the same reason as the rest: it carries the
+    // snapshot of the plan the vendor goes back to when the trial ends. A
+    // vendor who could edit it could hand themselves a paid plan they never
+    // bought, simply by rewriting what they are "restored" to.
     function planFields() {
       return [
         'plan', 'planStatus', 'planStartDate', 'planEndDate', 'graceUntil',
         'maxProducts', 'maxImagesPerProduct', 'maxJobListings',
         'hasGrowthFeatures', 'hasProFeatures', 'hasPremiumFeatures',
-        'subscriptionStatus'
+        'subscriptionStatus', 'trial', 'billingPeriod'
       ];
     }
 

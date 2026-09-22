@@ -24,6 +24,9 @@ export default function BillingTab({
 
   const isExpired = planStatus === 'expired'
   const isGrace = planStatus === 'grace'
+  // Granted by an admin, never paid for. Written by admin-trials.js and ended
+  // by expiry-cron.js; the vendor cannot write it (see firestore.rules).
+  const isTrial = store?.trial?.status === 'active'
   const currentPlan = isExpired ? null : plan
   const billingPeriod = store?.billingPeriod || 'monthly'
 
@@ -81,7 +84,15 @@ export default function BillingTab({
                   {periodLabel}
                 </span>
               )}
-              {isGrace && (
+              {/* A trial is not a purchase. Without this the tab would say
+                  "Premium, Renews 3 October" to someone who never paid, and
+                  they would reasonably think their plan auto-continues. */}
+              {isTrial && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+                  Free Trial
+                </span>
+              )}
+              {isGrace && !isTrial && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
                   Grace Period
                 </span>
@@ -95,7 +106,13 @@ export default function BillingTab({
             {formattedEnd && isGrowthOrPro && (
               <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5">
                 <Calendar size={11} />
-                {isGrace ? 'Grace period ends' : 'Renews'} {formattedEnd}
+                {isTrial ? 'Free trial ends' : isGrace ? 'Grace period ends' : 'Renews'}{' '}
+                {formattedEnd}
+              </p>
+            )}
+            {isTrial && (
+              <p className="text-[11px] text-gray-500 mt-1">
+                Pick a plan before then to keep these features. Nothing is charged automatically.
               </p>
             )}
           </div>

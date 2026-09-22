@@ -30,6 +30,9 @@ const TAB_ACCESS = {
   cac:            ['super_admin', 'operations'],
   domains:        ['super_admin', 'operations'],
   flags:          ['super_admin'],
+  // Free trials hand a vendor paid features for nothing, and granting one can
+  // overwrite a plan somebody paid for. Money decision, super_admin only.
+  trials:         ['super_admin'],
   announcements:  ['super_admin'],
   // Broadcast push. Reaches every vendor's phone in one press and cannot be
   // recalled once delivered, so it is deliberately narrower than announcements

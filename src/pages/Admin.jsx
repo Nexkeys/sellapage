@@ -5,7 +5,7 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon, MessageSquare
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon, MessageSquare, Gift
 } from 'lucide-react';
 import { uploadSingleImage } from '../firebase/products';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
@@ -15,6 +15,7 @@ import CacRequests from '../components/admin/CacRequests';
 import PushConsole from '../components/admin/PushConsole';
 import PartnersAdmin from '../components/admin/PartnersAdmin';
 import NewsletterAdmin from '../components/admin/NewsletterAdmin';
+import TrialsAdmin from '../components/admin/TrialsAdmin';
 import EmailBroadcast from '../components/admin/EmailBroadcast';
 import MarketplaceAdmin from '../components/admin/MarketplaceAdmin';
 import { SkeletonRows } from '../components/Skeleton';
@@ -42,6 +43,7 @@ const ADMIN_TABS = [
   { id: 'tickets', label: 'Support Tickets', icon: LifeBuoy, short: 'Tickets' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, short: 'Analytics' },
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
+  { id: 'trials', label: 'Free Trials', icon: Gift, short: 'Trials' },
   { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
   { id: 'ai-describe', label: 'AI Description Engine', icon: Sparkles, short: 'AI Desc' },
   { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
@@ -58,7 +60,7 @@ const ADMIN_TABS = [
 // ADMIN_TABS, role filtering (canAccessTab), or any tab's content/logic.
 const ADMIN_TAB_GROUPS = [
   { label: 'Overview', ids: ['health'] },
-  { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue'] },
+  { label: 'Merchants & Money', ids: ['directory', 'referrals', 'withdrawals', 'revenue', 'trials'] },
   { label: 'Trust & Growth', ids: ['cac', 'domains', 'marketplace', 'analytics', 'partners'] },
   { label: 'Engagement', ids: ['announcements', 'push', 'sms', 'email', 'tickets', 'sella-ai', 'ai-describe', 'reports', 'jobs', 'blog', 'reviews', 'newsletter'] },
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
@@ -1174,6 +1176,9 @@ export default function Admin() {
 
         {/* INVESTORS & PARTNERS */}
         {activeTab === 'partners' && <PartnersAdmin authHeaders={H} />}
+
+        {/* FREE TRIALS - granted by hand, expired by expiry-cron */}
+        {activeTab === 'trials' && <TrialsAdmin authHeaders={H} />}
 
         {/* NEWSLETTER */}
         {activeTab === 'newsletter' && <NewsletterAdmin authHeaders={H} />}

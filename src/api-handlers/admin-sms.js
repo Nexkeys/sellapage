@@ -24,6 +24,7 @@ import { normaliseNgMobile } from '../utils/phone.js'
 
 const CAMPAIGNS = 'smsCampaigns'
 const CLICKS = 'smsClicks'
+const MESSAGES = 'smsMessages'
 const MAX_BODY = 480
 const MAX_RECIPIENTS = 5000
 
@@ -102,6 +103,10 @@ export default async function handler(req, res) {
           audience: Number(d.audience) || 0,
           sent: Number(d.sent) || 0,
           failed: Number(d.failed) || 0,
+          // From Termii's delivery reports (termii-webhook.js), not from us.
+          delivered: Number(d.delivered) || 0,
+          dndBlocked: Number(d.dndBlocked) || 0,
+          undelivered: Number(d.undelivered) || 0,
           pages: Number(d.pages) || 0,
           cost: Number(d.cost) || 0,
           clicks: Number(d.clicks) || 0,
@@ -132,12 +137,20 @@ export default async function handler(req, res) {
       const sentCampaigns = campaigns.filter((c) => c.status === 'sent')
       const totals = {
         campaigns: sentCampaigns.length,
-        delivered: sentCampaigns.reduce((n, c) => n + c.sent, 0),
+        // Accepted by Termii.
+        sentMessages: sentCampaigns.reduce((n, c) => n + c.sent, 0),
         failed: sentCampaigns.reduce((n, c) => n + c.failed, 0),
         clicks: sentCampaigns.reduce((n, c) => n + c.clicks, 0),
+        // Confirmed on a handset by a delivery report.
+        delivered: sentCampaigns.reduce((n, c) => n + c.delivered, 0),
+        dndBlocked: sentCampaigns.reduce((n, c) => n + c.dndBlocked, 0),
+        undelivered: sentCampaigns.reduce((n, c) => n + c.undelivered, 0),
         spend: Math.round(sentCampaigns.reduce((n, c) => n + c.cost, 0) * 100) / 100,
       }
-      totals.clickRate = totals.delivered > 0 ? Math.round((totals.clicks / totals.delivered) * 1000) / 10 : 0
+      // Against messages sent, not against confirmed deliveries: reports
+      // trickle in, and dividing by a number that is still filling would show a
+      // tap rate above 100%.
+      totals.clickRate = totals.sentMessages > 0 ? Math.round((totals.clicks / totals.sentMessages) * 1000) / 10 : 0
 
       return res.status(200).json({
         success: true,
@@ -344,6 +357,20 @@ export default async function handler(req, res) {
         if (result.ok) {
           sent += 1
           if (Number.isFinite(result.balance)) lastBalance = result.balance
+          // Keyed by Termii's message id, which is what the delivery report
+          // carries. Never awaited: a bookkeeping write must not slow a send.
+          if (result.messageId) {
+            db.collection(MESSAGES).doc(String(result.messageId)).set({
+              campaignId: id,
+              storeId: r.storeId,
+              storeName: r.storeName,
+              phone: r.phone,
+              status: 'Message Sent',
+              outcome: 'pending',
+              sentAt: FieldValue.serverTimestamp(),
+              sentAtMs: Date.now(),
+            }).catch((err) => console.error('[admin-sms] message record failed:', err?.message))
+          }
           continue
         }
         failed += 1
@@ -357,6 +384,9 @@ export default async function handler(req, res) {
         status: 'sent',
         sent,
         failed,
+        delivered: 0,
+        dndBlocked: 0,
+        undelivered: 0,
         sentAt: FieldValue.serverTimestamp(),
         balanceAfter: lastBalance,
         error: errors[0] || '',

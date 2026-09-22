@@ -16,6 +16,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { sendEmail } from './_lib/send-email.js'
 import { notifyStore } from './_lib/notifications.js'
+import { endTrial } from './_lib/trials.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -41,6 +42,143 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
+const TRIAL_DAY_MS = 24 * 60 * 60 * 1000
+
+function trialEmailShell(heading, headingColour, storeName, bodyHtml) {
+  return `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333333; line-height: 1.6;">
+      <h2 style="color: ${headingColour};">${heading}</h2>
+      <p>Hello ${storeName},</p>
+      ${bodyHtml}
+      <div style="margin: 25px 0;">
+        <a href="https://sellapage.com.ng/dashboard/billing" style="background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 12px 24px; font-weight: bold; border-radius: 6px; display: inline-block;">Choose a plan</a>
+      </div>
+      <p style="font-size: 13px; color: #666666;">The Sellapage Team</p>
+    </div>
+  `
+}
+
+/**
+ * One day's work for one store on a free trial.
+ *
+ * Trials get NO grace period and exactly three messages: five days before the
+ * end, one day before, and one when it has actually ended. The two warnings are
+ * latched on the trial document so a vendor is never told twice, which matters
+ * because this cron runs daily and a 5-day warning would otherwise be sent on
+ * day 5, 4, 3 and so on if the window were treated as a range.
+ *
+ * Writes go straight through (not via the shared batch) because endTrial needs
+ * to read the trial's snapshot and restore a whole plan, which is more than a
+ * field update.
+ */
+async function runTrialDay(storeDoc, data) {
+  const trial = data.trial || {}
+  const storeId = storeDoc.id
+  const storeName = data.storeName || 'Vendor'
+  const vendorEmail = data.vendorEmail || data.email
+  const displayPlan = capitalize(trial.plan || data.plan || '')
+  const endsMs = trial.endsAt?.toMillis?.() || 0
+  if (!endsMs) return
+
+  const msLeft = endsMs - Date.now()
+
+  // ENDED. Hand back whatever they were on before the trial, which is Starter
+  // only if they had nothing paid to return to.
+  if (msLeft <= 0) {
+    const result = await endTrial(db, storeId, { reason: 'expired' })
+    if (!result.ok) return
+
+    const back = result.landedOn === 'starter'
+      ? 'Your store is now on the free Starter plan.'
+      : `Your store is back on your ${capitalize(result.landedOn)} plan.`
+
+    // plan_downgraded, not a new trial-only type: the app routes and iconifies
+    // on data.type, and a value it has never heard of would land a tap nowhere
+    // and fall off the 'money' notification channel onto 'default'. `trial`
+    // rides along so the app CAN tell the two apart later without a new type.
+    await notifyStore(db, storeId, {
+      type: 'plan_downgraded',
+      title: 'Your free trial has ended',
+      body: `Your ${displayPlan} trial is over. ${back}`,
+      data: { plan: displayPlan, landedOn: result.landedOn, trial: true },
+    })
+
+    if (vendorEmail) {
+      try {
+        await sendEmail(
+          vendorEmail,
+          `Your Sellapage ${displayPlan} free trial has ended`,
+          trialEmailShell('Your free trial has ended', '#dc2626', storeName, `
+            <p>Your <strong>${displayPlan} trial</strong> has finished. ${back}</p>
+            <p>Everything you added during the trial is safe. Pick up a plan whenever you are ready and it all comes straight back.</p>
+          `),
+        )
+      } catch (emailErr) {
+        console.error(`Trial ended email failed for ${vendorEmail}:`, emailErr.message)
+      }
+    }
+    return
+  }
+
+  const daysLeft = Math.ceil(msLeft / TRIAL_DAY_MS)
+
+  // ONE DAY LEFT. Checked before the five-day case so a short trial that was
+  // never warned at five days still gets this one.
+  if (daysLeft <= 1 && !trial.remindedOne) {
+    await storeDoc.ref.update({ 'trial.remindedOne': true })
+
+    await notifyStore(db, storeId, {
+      type: 'plan_expiring',
+      title: 'Your free trial ends tomorrow',
+      body: `Your ${displayPlan} trial ends tomorrow. Pick a plan to keep these features.`,
+      data: { plan: displayPlan, daysLeft: 1, trial: true },
+    })
+
+    if (vendorEmail) {
+      try {
+        await sendEmail(
+          vendorEmail,
+          `Last day: your Sellapage ${displayPlan} trial ends tomorrow`,
+          trialEmailShell('Your trial ends tomorrow', '#ea580c', storeName, `
+            <p>Your free <strong>${displayPlan} trial</strong> ends tomorrow.</p>
+            <p>Choose a plan today and nothing changes for your store or your customers.</p>
+          `),
+        )
+      } catch (emailErr) {
+        console.error(`Trial 1-day email failed for ${vendorEmail}:`, emailErr.message)
+      }
+    }
+    return
+  }
+
+  // FIVE DAYS LEFT.
+  if (daysLeft <= 5 && !trial.remindedFive) {
+    await storeDoc.ref.update({ 'trial.remindedFive': true })
+
+    await notifyStore(db, storeId, {
+      type: 'plan_expiring',
+      title: `Your free trial ends in ${daysLeft} days`,
+      body: `Your ${displayPlan} trial ends on ${new Date(endsMs).toDateString()}.`,
+      data: { plan: displayPlan, daysLeft, trial: true },
+    })
+
+    if (vendorEmail) {
+      try {
+        await sendEmail(
+          vendorEmail,
+          `Your Sellapage ${displayPlan} trial ends in ${daysLeft} days`,
+          trialEmailShell(`${daysLeft} days left on your free trial`, '#ea580c', storeName, `
+            <p>Your free <strong>${displayPlan} trial</strong> ends on ${new Date(endsMs).toDateString()}.</p>
+            <p>If it is working for you, pick a plan before then and your store carries on exactly as it is.</p>
+          `),
+        )
+      } catch (emailErr) {
+        console.error(`Trial 5-day email failed for ${vendorEmail}:`, emailErr.message)
+      }
+    }
+  }
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') {
@@ -64,12 +202,22 @@ export default async function handler(req, res) {
     const ONE_DAY = 24 * 60 * 60 * 1000
     const THREE_DAYS = 3 * ONE_DAY
 
-    const summary = { active: 0, warning: 0, grace: 0, expired: 0, total: 0 }
+    const summary = { active: 0, warning: 0, grace: 0, expired: 0, total: 0, trialActive: 0, trialWarned: 0, trialEnded: 0 }
     const batch = db.batch()
 
     for (const storeDoc of storesSnap.docs) {
       const data = storeDoc.data()
       const plan = data.plan
+
+      // TRIALS FIRST, and they never fall through to the paid logic below.
+      // A trial carries graceUntil equal to its end date (see _lib/trials.js),
+      // so the paid branch would treat the last day as a grace period and then
+      // reset the vendor to Starter, wiping the plan they are owed back.
+      if (data.trial?.status === 'active') {
+        summary.trialActive++
+        await runTrialDay(storeDoc, data)
+        continue
+      }
 
       if (plan === 'starter' || plan === 'free') {
         continue
