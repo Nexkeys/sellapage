@@ -378,7 +378,13 @@ export default async function handler(req, res) {
   }
 
   const startedAt = Date.now()
-  const cursor = Math.max(0, parseInt(req.query.cursor, 10) || 0)
+  // An explicit ?cursor still wins, because the GitHub workflow drives its own
+  // loop and passes `next` straight back. Without one, the run resumes from
+  // where the last call stopped (see progressRef below), which is what lets a
+  // caller that hangs up after 30 seconds still finish a long run: it just
+  // calls again, and again, until the day is done.
+  const explicitCursor = parseInt(req.query.cursor, 10)
+  const hasExplicitCursor = Number.isFinite(explicitCursor)
   const summary = {
     job,
     stores: 0,
@@ -394,12 +400,35 @@ export default async function handler(req, res) {
 
   try {
     const db = getAdminDb()
+
+    // Where this job got to, and for which Lagos day. One document, one read,
+    // so a call that arrives after the day is finished costs almost nothing:
+    // that is what makes it safe to point a every-minute trigger at this.
+    const progressRef = db.collection('platform').doc('digestProgress')
+    const dayKey = job === 'evening' ? eveningDayKey(Date.now()) : watDayKey(Date.now())
+    let cursor = 0
+
+    if (hasExplicitCursor) {
+      cursor = Math.max(0, explicitCursor)
+    } else {
+      const progressSnap = await progressRef.get()
+      const saved = (progressSnap.data() || {})[job]
+      if (saved?.day === dayKey) {
+        if (saved.done) {
+          console.log('[digest-cron]', JSON.stringify({ job, day: dayKey, skipped: 'already_done' }))
+          return res.status(200).json({ ok: true, done: true, skipped: 'already_done', job })
+        }
+        cursor = Math.max(0, Number(saved.next) || 0)
+      }
+    }
+
     const storeIds = await linkedStoreIds(db)
     summary.stores = storeIds.length
     const run = job === 'morning' ? runMorning : runEvening
 
     for (let i = cursor; i < storeIds.length; i++) {
       if (Date.now() - startedAt > TIME_BUDGET_MS) {
+        await progressRef.set({ [job]: { day: dayKey, next: i, done: false } }, { merge: true })
         console.log('[digest-cron]', JSON.stringify({ ...summary, done: false, next: i }))
         return res.status(200).json({ ok: true, done: false, next: i, ...summary })
       }
@@ -413,6 +442,7 @@ export default async function handler(req, res) {
       }
     }
 
+    await progressRef.set({ [job]: { day: dayKey, next: storeIds.length, done: true } }, { merge: true })
     console.log('[digest-cron]', JSON.stringify({ ...summary, done: true }))
     return res.status(200).json({ ok: true, done: true, ...summary })
   } catch (err) {

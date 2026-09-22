@@ -150,7 +150,15 @@ export default async function handler(req, res) {
           parcelAmount: Number(packageAmount) || 0,
           pickupTime,
         })
-        if (!breakdown.success) return { vehicle, error: breakdown.error }
+        // NOT fatal (2026-09-22). /get_bill_breakdown enforces a wallet-balance
+        // precondition - "Order Cannot be created as the kwik wallet do not have sufficient
+        // balance" - and it accepts no payment_method, so it applies that check even when
+        // the booking is meant to be cash-on-delivery or EOMB. Treating it as fatal meant an
+        // unfunded account could not see ANY price. The breakdown only adds VAT and surge on
+        // top of per_task_cost, so losing it degrades the quote rather than blanking it.
+        if (!breakdown.success) {
+          return { vehicle, pricing: pricing.data, breakdown: null, breakdownError: breakdown.error }
+        }
 
         return { vehicle, pricing: pricing.data, breakdown: breakdown.data }
       }),
@@ -166,16 +174,30 @@ export default async function handler(req, res) {
       console.log('[kwik-rates] bill breakdown sample:', JSON.stringify(firstOk.breakdown))
     }
 
+    // The vehicle tariffs themselves, logged because staging ships absurd test values -
+    // a time_fare of 120/minute produced a ₦72,000 Apapa->Lekki quote on 2026-09-22. The
+    // pricing formula was correct; the fare table was fiction. Seeing base/distance/time
+    // fares next to the quote is what distinguishes "our bug" from "their test data".
+    console.log('[kwik-rates] vehicle tariffs:', JSON.stringify(
+      vehicles.map((v) => ({
+        id: v.vehicle_id, name: v.name,
+        base_fare: v.base_fare, distance_fare: v.distance_fare, time_fare: v.time_fare,
+      })),
+    ))
+
     const rates = quotes
-      .filter((q) => q.breakdown)
+      .filter((q) => q.pricing)
       .map((q) => ({
         courier_id: String(q.vehicle.vehicle_id),
         courier_name: prettyVehicleName(q.vehicle.name),
-        fee: pickAmount(q.breakdown),
-        total_shipping_fee: pickAmount(q.breakdown),
+        fee: pickAmount(q.breakdown, q.pricing),
+        total_shipping_fee: pickAmount(q.breakdown, q.pricing),
         return_fee: 0,
         service_code: String(q.vehicle.vehicle_id),
         delivery_eta: 'Same-day (Kwik)',
+        // True when the wallet precondition blocked the breakdown, so the figure shown is
+        // the raw task cost before VAT and surge.
+        estimateOnly: !q.breakdown,
       }))
       .filter((r) => r.total_shipping_fee > 0)
 
@@ -207,11 +229,14 @@ function prettyVehicleName(name) {
   return `Kwik ${n.charAt(0).toUpperCase()}${n.slice(1)}`
 }
 
-function pickAmount(breakdown) {
+function pickAmount(breakdown, pricing) {
   const candidate =
     breakdown?.NET_PAYABLE_AMOUNT ??
     breakdown?.PAYABLE_AMOUNT ??
     breakdown?.AMOUNT_PER_TASK ??
+    // Fallback when the breakdown was refused on wallet grounds - the raw per-task cost
+    // from /send_payment_for_task, i.e. before VAT and surge.
+    pricing?.per_task_cost ??
     0
   return Math.round(Number(candidate) || 0)
 }

@@ -12,19 +12,28 @@
 # Vercel. Without it every call returns 401 and the run fails loudly.
 #
 # TIMING: cron here is UTC and Lagos is UTC+1 with no daylight saving.
-#   07:00 UTC = 08:00 WAT   morning
-#   21:00 UTC = 22:00 WAT   evening
-# GitHub may start a scheduled run late when it is busy. The endpoint allows
-# for that: an evening run that starts after midnight still summarises the day
-# that just ended, and every send is recorded per store per period, so a late
-# or repeated run never sends anything twice.
+#   06:00 UTC = 07:00 WAT   morning
+#   19:00 UTC = 20:00 WAT   evening
+#
+# GitHub may start a scheduled run late when it is busy, and runs asked for on
+# the hour queue behind everybody else's. Observed in production: a 22:00 WAT
+# evening digest landing at midnight and an 08:00 WAT morning one landing at
+# noon. GitHub documents this and offers no guarantee, so these two entries are
+# the FLOOR, not the promise: /api/digest-cron now remembers how far it got, so
+# a punctual caller (cron-job.org, which fires to the second) can drive it
+# instead and this workflow becomes the safety net that catches anything the
+# punctual caller missed.
+#
+# Nothing is ever sent twice: each send is recorded per store per period, an
+# evening run that starts after midnight still summarises the day that ended,
+# and a run that finds the day already done exits after a single read.
 
 name: Scheduled notifications
 
 on:
   schedule:
-    - cron: '0 7 * * *'
-    - cron: '0 21 * * *'
+    - cron: '0 6 * * *'
+    - cron: '0 19 * * *'
   workflow_dispatch:
     inputs:
       job:
@@ -43,7 +52,10 @@ jobs:
       - name: Call digest-cron until done
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          JOB: ${{ github.event.inputs.job || (github.event.schedule == '0 7 * * *' && 'morning' || 'evening') }}
+          # Must match a cron string in `on.schedule` above EXACTLY. If the two
+          # drift, this silently evaluates false and both daily runs become
+          # 'evening', so the morning digest stops without any error anywhere.
+          JOB: ${{ github.event.inputs.job || (github.event.schedule == '0 6 * * *' && 'morning' || 'evening') }}
         run: |
           set -euo pipefail
           if [ -z "${CRON_SECRET}" ]; then

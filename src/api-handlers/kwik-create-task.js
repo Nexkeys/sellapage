@@ -146,14 +146,22 @@ export default async function handler(req, res) {
       parcelAmount: Number(packageAmount) || 0,
       pickupTime,
     })
-    if (!breakdown.success) return res.status(502).json({ error: breakdown.error })
+    // Non-fatal, mirroring kwik-rates. /get_bill_breakdown refuses on wallet balance even
+    // for cash and EOMB bookings, and it contributes only surge_cost/surge_type to the
+    // booking payload - every other figure comes from /send_payment_for_task. Failing here
+    // would make an unfunded wallet block booking at a step that is only an estimate, so
+    // instead we proceed with zero surge and let /create_task be the real arbiter of
+    // whether this account can book.
+    if (!breakdown.success) {
+      console.warn('[kwik-create-task] bill breakdown refused, booking with zero surge:', breakdown.error)
+    }
 
     const result = await createKwikTask({
       pickup,
       delivery,
       vehicleId,
       pricing: pricing.data,
-      breakdown: breakdown.data,
+      breakdown: breakdown.success ? breakdown.data : null,
       pickupTime,
       deliveryTime: pickupTime,
       parcelAmount: Number(packageAmount) || 0,
