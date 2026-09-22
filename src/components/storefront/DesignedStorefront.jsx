@@ -1088,10 +1088,17 @@ function compactCount(n) {
  * costs a page nothing.
  */
 function TikTokFeed({ s, t, store }) {
-  const videos = Array.isArray(store?.tiktokVideos) ? store.tiktokVideos : []
+  const all = Array.isArray(store?.tiktokVideos) ? store.tiktokVideos : []
+  // Sections saved before these controls existed have no `limit`, so an absent
+  // value has to mean "all of them" or their pages would silently lose videos.
+  const limit = Number(s.limit) > 0 ? Number(s.limit) : all.length
+  const videos = all.slice(0, limit)
   if (!videos.length) return null
 
   const cols = Number(s.columns) || 3
+  const slider = s.layout === 'slider'
+  const aspect = s.shape === 'square' ? 'aspect-square' : 'aspect-[9/16]'
+
   // Always 2 up on the smallest phones regardless of the vendor's choice: a
   // 4-column grid at 280px is four unreadable slivers.
   const gridCls = cols === 2
@@ -1099,6 +1106,14 @@ function TikTokFeed({ s, t, store }) {
     : cols === 4
       ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
       : 'grid-cols-2 sm:grid-cols-3'
+
+  // In the side-scroll row the per-row count sets how many fit the viewport,
+  // so the same control still means the same thing to the vendor.
+  const slideCls = cols === 2
+    ? 'w-[46%] sm:w-[31%]'
+    : cols === 4
+      ? 'w-[40%] sm:w-[23%]'
+      : 'w-[42%] sm:w-[27%]'
 
   const followers = Number(store?.tiktokFollowerCount) || 0
   const likes = Number(store?.tiktokLikesCount) || 0
@@ -1123,7 +1138,11 @@ function TikTokFeed({ s, t, store }) {
           </div>
         ) : null}
 
-        <div className={`mt-6 grid gap-3 ${gridCls}`}>
+        <div
+          className={slider
+            ? 'mt-6 -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+            : `mt-6 grid gap-3 ${gridCls}`}
+        >
           {videos.map((v) => (
             <a
               key={v.id}
@@ -1131,9 +1150,11 @@ function TikTokFeed({ s, t, store }) {
               target="_blank"
               rel="noopener noreferrer"
               style={{ borderRadius: t.radius, border: `1px solid ${t.border}` }}
-              className="group relative block overflow-hidden transition-transform hover:scale-[1.02]"
+              className={`group relative block overflow-hidden transition-transform hover:scale-[1.02] ${
+                slider ? `${slideCls} shrink-0 snap-start` : ''
+              }`}
             >
-              <div className="relative aspect-[9/16] w-full overflow-hidden bg-black/5">
+              <div className={`relative ${aspect} w-full overflow-hidden bg-black/5`}>
                 {v.cover ? (
                   <img
                     src={v.cover}

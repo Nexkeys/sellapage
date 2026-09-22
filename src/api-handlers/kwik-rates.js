@@ -106,6 +106,17 @@ export default async function handler(req, res) {
 
     const vehiclesResult = await getKwikVehicles(Number(vehicleSize) || 0)
     if (!vehiclesResult.success) {
+      // "Sorry, No Vehicle Found." is Kwik's answer when a size class has no vehicles
+      // configured for the account - staging has Bike but no Large, which produced a 502 on
+      // 2026-09-22. That is an empty result, not a failure: surface it as "pick another
+      // vehicle" rather than an error the vendor can do nothing about.
+      if (/no vehicle found/i.test(vehiclesResult.error || '')) {
+        return res.status(200).json({
+          rates: [],
+          addressMatch: summariseMatch(pickupGeo, deliveryGeo),
+          notice: 'Kwik has no vehicle of that size available for your account. Try a different vehicle.',
+        })
+      }
       return res.status(502).json({ error: vehiclesResult.error })
     }
     const vehicles = vehiclesResult.data.filter((v) => !v.is_deleted).slice(0, MAX_VEHICLES_QUOTED)

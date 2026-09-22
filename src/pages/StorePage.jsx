@@ -23,6 +23,7 @@ import { getServices } from "../firebase/services";
 import { db } from "../firebase/config";
 import { doc, setDoc, updateDoc, increment } from "firebase/firestore";
 import { buildEnquiryURL } from "../utils/whatsapp";
+import { setStoreFavicon, resetFavicon } from "../utils/storeFavicon";
 import LeadForm from "../components/LeadForm";
 import ProductCard from "../components/ProductCard";
 import StoreNavbar from "../components/StoreNavbar";
@@ -1310,6 +1311,20 @@ export default function StorePage() {
   // just bought, and restoring them would show the buyer a cart full of things
   // they already paid for.
   // ------------------------------------------------------------------
+  // The vendor's logo in the browser tab, in place of Sellapage's. Runs for
+  // every store on every plan, custom domain or /slug: it is their own logo,
+  // which they have already uploaded, and a shop whose tab shows somebody
+  // else's brand looks like somebody else's shop.
+  //
+  // The cleanup matters as much as the effect. This is a single-page app, so a
+  // visitor who leaves a storefront for a Sellapage page keeps whatever icon
+  // was set last unless it is put back.
+  useEffect(() => {
+    if (!store) return undefined;
+    setStoreFavicon(store.logoUrl || store.logo);
+    return () => resetFavicon();
+  }, [store]);
+
   // Vendor's own Meta Pixel. Fires only for stores that configured one, so a
   // store without a pixel loads no script and sets no cookie.
   useEffect(() => {

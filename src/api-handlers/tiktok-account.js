@@ -19,10 +19,17 @@ import { applyCors } from './_lib/http.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { getTikTokAuth, setTikTokAuth, clearTikTokAuth } from './_lib/store-secrets.js'
 import { refreshAccessToken, getUserInfo, listVideos, isTikTokConfigured, getTikTokEnv } from './_lib/tiktok-client.js'
+import { mirrorRemoteImage } from './_lib/cloudinary-upload.js'
 
 const TIKTOK_PLANS = new Set(['premium'])
 const TAB_ID = 'tiktok-pixel'
 const MAX_STORED_VIDEOS = 12
+const COVER_FOLDER = 'sellapage/tiktok'
+
+/** True for a url we copied ourselves, i.e. one that will not expire. */
+function isMirrored(url) {
+  return typeof url === 'string' && /^https:\/\/res\.cloudinary\.com\//.test(url)
+}
 
 /** Keeps only what the storefront renders. */
 function shapeVideo(v) {
@@ -177,7 +184,15 @@ export default async function handler(req, res) {
         const profile = await getUserInfo(tokens.access_token)
         if (profile) {
           update.tiktokUsername = profile.display_name || null
-          update.tiktokAvatarUrl = profile.avatar_url || null
+          // The avatar url expires exactly like the covers do, so it gets the
+          // same treatment. Falls back to the previous mirror, then to the raw
+          // TikTok url, so a Cloudinary hiccup never blanks the avatar.
+          const avatar = await mirrorRemoteImage(profile.avatar_url, `${COVER_FOLDER}/${storeId}/avatar`)
+          update.tiktokAvatarUrl =
+            avatar ||
+            (isMirrored(store.tiktokAvatarUrl) ? store.tiktokAvatarUrl : null) ||
+            profile.avatar_url ||
+            null
           update.tiktokProfileLink = profile.profile_deep_link || null
           update.tiktokIsVerified = profile.is_verified === true
           update.tiktokFollowerCount = Number(profile.follower_count) || 0
@@ -192,7 +207,26 @@ export default async function handler(req, res) {
       let videoError = null
       try {
         const videos = await listVideos(tokens.access_token, MAX_STORED_VIDEOS)
-        update.tiktokVideos = videos.slice(0, MAX_STORED_VIDEOS).map(shapeVideo).filter((v) => v.id && v.cover)
+        const shaped = videos.slice(0, MAX_STORED_VIDEOS).map(shapeVideo).filter((v) => v.id && v.cover)
+
+        // TikTok's cover urls expire, so copy them to our own CDN and keep
+        // those instead. In parallel: 12 sequential round trips would push this
+        // request towards the serverless timeout.
+        const previous = new Map(
+          (Array.isArray(store.tiktokVideos) ? store.tiktokVideos : [])
+            .filter((v) => v?.id && isMirrored(v.cover))
+            .map((v) => [v.id, v.cover])
+        )
+        const mirrored = await Promise.all(
+          shaped.map(async (v) => {
+            const permanent = await mirrorRemoteImage(v.cover, `${COVER_FOLDER}/${storeId}/${v.id}`)
+            // If the copy failed, keep whatever we already had rather than
+            // regressing a working cover to one that dies within the hour.
+            return { ...v, cover: permanent || previous.get(v.id) || v.cover }
+          })
+        )
+
+        update.tiktokVideos = mirrored
         update.tiktokVideosSyncedAt = new Date().toISOString()
       } catch (err) {
         console.warn('[tiktok-account] listVideos failed:', err.message)

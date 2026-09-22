@@ -428,7 +428,24 @@ export const SECTION_TYPES = {
       // is presentation, which is the whole point of this builder.
       { key: 'showStats', label: 'Show follower count', type: 'toggle', default: true },
       { key: 'showCaptions', label: 'Show video captions', type: 'toggle', default: false },
+      {
+        key: 'limit', label: 'How many videos to show', type: 'select',
+        options: ['3', '4', '6', '8', '12'], default: '12',
+        optionLabels: { 3: '3 videos', 4: '4 videos', 6: '6 videos', 8: '8 videos', 12: 'All of them' },
+        help: 'Your newest videos come first. Fewer videos means a faster page.',
+      },
       { key: 'columns', label: 'Videos per row', type: 'select', options: ['2', '3', '4'], default: '3' },
+      {
+        key: 'layout', label: 'How they sit on the page', type: 'select',
+        options: ['grid', 'slider'], default: 'grid',
+        optionLabels: { grid: 'Grid', slider: 'Side-scroll row' },
+        help: 'A side-scroll row keeps the page short and feels like TikTok on a phone.',
+      },
+      {
+        key: 'shape', label: 'Video shape', type: 'select',
+        options: ['portrait', 'square'], default: 'portrait',
+        optionLabels: { portrait: 'Tall (like TikTok)', square: 'Square' },
+      },
       { key: 'ctaLabel', label: 'Button text', type: 'text', max: 30, default: 'Follow us on TikTok' },
       { key: 'bg', label: 'Background', type: 'color', default: '#ffffff' },
       { key: 'fg', label: 'Text colour', type: 'color', default: '#0f172a' },

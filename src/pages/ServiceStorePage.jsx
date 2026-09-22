@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 
 import LeadForm from "../components/LeadForm";
+import { setStoreFavicon, resetFavicon } from "../utils/storeFavicon";
 import ServiceCard from "../components/ServiceCard";
 import StoreNavbar from "../components/StoreNavbar";
 import StoreFooter from "../components/StoreFooter";
@@ -273,6 +274,16 @@ export default function ServiceStorePage() {
     };
     load();
   }, [storeName, navigate]);
+
+  // The vendor's logo in the browser tab, in place of Sellapage's. Same rule as
+  // the product storefront: every plan, custom domain or /slug. The cleanup
+  // puts Sellapage's icon back, or it would follow a visitor off the store and
+  // onto Sellapage's own pages.
+  useEffect(() => {
+    if (!store) return undefined;
+    setStoreFavicon(store.logoUrl || store.logo);
+    return () => resetFavicon();
+  }, [store]);
 
   // Customer reviews for the designed Reviews section. The service page reads
   // its OWN sections list, which is serviceSections, not the shop front's.
