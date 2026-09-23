@@ -11,6 +11,7 @@
 // NEVER add a secret to this response. RECAPTCHA_SECRET_KEY stays server-side.
 import { applyCors } from './_lib/http.js'
 import { getSmsConfigStatus } from './_lib/termii.js'
+import { marketplaceStage } from './_lib/marketplace-gate.js'
 
 export default async function handler(req, res) {
   if (applyCors(req, res, { methods: 'GET,OPTIONS' })) return
@@ -40,5 +41,10 @@ export default async function handler(req, res) {
     // leaves nothing publicly visible. Enable only AFTER grandfathering
     // existing stores, or the whole platform disappears.
     storefrontEmailGate: String(process.env.ENABLE_STOREFRONT_EMAIL_GATE || '').toLowerCase() === 'true',
+    // Dropshipping Marketplace lock: 'coming_soon' (the default), 'testing' or
+    // 'live', set from the admin panel. Public and cached like the rest of this
+    // response, so it says the STAGE only; whether a particular store is a
+    // tester is decided per request by the server, never here.
+    dropshippingStage: await marketplaceStage(),
   })
 }

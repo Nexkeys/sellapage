@@ -13,7 +13,7 @@ import crypto from 'crypto'
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { notifyStore } from './_lib/notifications.js'
 import { sendPush } from './_lib/send-push.js'
-import { sendEmail } from './_lib/send-email.js'
+import { sendStoreEmail } from './_lib/store-emails.js'
 import { COLLECTION, markFired, formatWat } from './_lib/reminders.js'
 
 // Constant-time secret comparison - a plain !== leaks how many leading bytes of
@@ -137,9 +137,12 @@ export default async function handler(req, res) {
       // FALLBACK 2: email. Push reaches nobody who has not granted permission,
       // and a reminder that silently never arrives is worse than no feature. This
       // fires only when both push paths found no device, so it never duplicates.
-      if (delivered === 'none' && store.email) {
-        const ok = await sendEmail(
-          store.email,
+      if (delivered === 'none') {
+        // The owner, plus the staff member who asked for this reminder if it
+        // was one of theirs. No tab is named: Reminders is not a role tab, so
+        // it reaches that person by uid or nobody.
+        const mail = await sendStoreEmail(
+          db, r.storeId, [],
           `Reminder: ${String(r.message).slice(0, 60)}`,
           `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333333; line-height: 1.6;">
              <h2 style="color: #16a34a;">Reminder</h2>
@@ -147,9 +150,10 @@ export default async function handler(req, res) {
              <p style="font-size: 16px; background: #f6f6f6; padding: 14px; border-radius: 8px;">${String(r.message)}</p>
              <p style="color: #666; font-size: 13px;">You asked to be reminded at ${formatWat(r.nextDueAt)}.</p>
              <p style="color: #666; font-size: 13px;">Manage your reminders in the Reminders tab of your dashboard.</p>
-           </div>`
+           </div>`,
+          { sender: 'support', store, extraUids: createdByUid ? [createdByUid] : [] },
         )
-        if (ok !== false) { delivered = 'email'; emailed++ }
+        if (mail.sent) { delivered = 'email'; emailed++ }
       }
 
       await markFired(db, doc.ref, r, delivered)

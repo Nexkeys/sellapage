@@ -5,11 +5,12 @@
 // Both are "coming soon" for now: what it will do, the waitlist, and a live
 // checklist of what the vendor will need at launch so they can get ready now.
 // Owner only (Dashboard.jsx does not render it for staff).
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Warehouse, PackageSearch, CheckCircle2, Circle, Clock, ArrowRight, Loader2, ExternalLink, BellRing,
 } from 'lucide-react'
 import { readInterest, readiness } from '../../utils/marketplace'
+import { isMarketplaceUnlocked } from '../../utils/marketplaceStage'
 
 const COPY = {
   supply: {
@@ -45,6 +46,15 @@ export default function MarketplaceTab({ role, store, navigateTo, onJoin }) {
   const checks = readiness(store, role)
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState('')
+  // The lock (utils/marketplaceStage.js). Stays false unless the server says
+  // this store may use the real marketplace, so everyone keeps seeing "coming
+  // soon" while the rest of it is built.
+  const [unlocked, setUnlocked] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    isMarketplaceUnlocked(store).then((v) => { if (!cancelled) setUnlocked(v) })
+    return () => { cancelled = true }
+  }, [store])
 
   const join = async () => {
     setJoining(true)
@@ -64,9 +74,15 @@ export default function MarketplaceTab({ role, store, navigateTo, onJoin }) {
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-gray-900">
             {copy.title}
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
-              Coming soon
-            </span>
+            {unlocked ? (
+              <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700">
+                Early access
+              </span>
+            ) : (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                Coming soon
+              </span>
+            )}
           </h1>
           <p className="mt-0.5 text-xs text-gray-400">Part of the Sellapage Dropshipping Marketplace.</p>
         </div>
@@ -81,7 +97,15 @@ export default function MarketplaceTab({ role, store, navigateTo, onJoin }) {
         </div>
 
         <div className="mt-5 rounded-xl bg-white/10 p-3.5">
-          {joined ? (
+          {unlocked ? (
+            <p className="flex items-start gap-2 text-sm font-semibold">
+              <BellRing size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                Your store has early access while we finish building this.
+                {role === 'supply' ? ' The supplier application appears here in the next update.' : ' Browsing and importing appear here in the next update.'}
+              </span>
+            </p>
+          ) : joined ? (
             <p className="flex items-start gap-2 text-sm font-semibold">
               <BellRing size={16} className="mt-0.5 flex-shrink-0" />
               <span>You&apos;re on the waitlist. We&apos;ll notify you here and by email the moment it opens.</span>

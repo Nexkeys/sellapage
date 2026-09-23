@@ -73,16 +73,57 @@ export const uploadSingleImage = async (imageFile, folder = 'sellapage/logos') =
 // the Cloudinary preset must have video allowed as a resource type for
 // this to succeed (an account/dashboard-side setting, not something this
 // code can control).
-export const MAX_VIDEO_UPLOAD_BYTES = 10 * 1024 * 1024 // 10MB
+export const MAX_VIDEO_UPLOAD_BYTES = 10 * 1024 * 1024 // 10MB, review videos
 
-export const uploadVideo = async (videoFile, folder = 'sellapage/reviews/videos') => {
+// The supplier application video (Dropshipping Marketplace, Phase 1). Bigger
+// than a review clip because it has to show real stock, and only Pro and
+// Premium vendors ever upload one. Both limits are checked before the upload
+// starts, so a vendor on mobile data is never made to send 50MB to find out.
+export const SUPPLIER_VIDEO_MAX_BYTES = 50 * 1024 * 1024 // 50MB
+export const SUPPLIER_VIDEO_MAX_SECONDS = 45
+
+/**
+ * How long a video is, read from the file itself in the browser.
+ * Resolves null when the browser cannot read it (unknown codec, no metadata),
+ * and callers treat null as "cannot tell, let it through" - the size limit and
+ * the admin review are the real guards.
+ */
+export const videoDurationSeconds = (file) =>
+  new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file)
+      const video = document.createElement('video')
+      video.preload = 'metadata'
+      const done = (value) => { URL.revokeObjectURL(url); resolve(value) }
+      video.onloadedmetadata = () => done(Number.isFinite(video.duration) ? video.duration : null)
+      video.onerror = () => done(null)
+      setTimeout(() => done(null), 10000)
+      video.src = url
+    } catch {
+      resolve(null)
+    }
+  })
+
+const mb = (bytes) => Math.round(bytes / (1024 * 1024))
+
+export const uploadVideo = async (
+  videoFile,
+  folder = 'sellapage/reviews/videos',
+  { maxBytes = MAX_VIDEO_UPLOAD_BYTES, maxSeconds = 0 } = {},
+) => {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error(
       'Cloudinary is not configured. Please check VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your .env file.'
     )
   }
-  if (videoFile.size > MAX_VIDEO_UPLOAD_BYTES) {
-    throw new Error('Video is too large - each video must be 10MB or smaller.')
+  if (videoFile.size > maxBytes) {
+    throw new Error(`Video is too large - each video must be ${mb(maxBytes)}MB or smaller.`)
+  }
+  if (maxSeconds > 0) {
+    const seconds = await videoDurationSeconds(videoFile)
+    if (seconds !== null && seconds > maxSeconds + 0.5) {
+      throw new Error(`Video is too long - it must be ${maxSeconds} seconds or shorter.`)
+    }
   }
 
   const formData = new FormData()

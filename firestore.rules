@@ -4,6 +4,12 @@
 // Last updated: 2026-09-18 (stores create closed, phone-first signup)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-23  Locked `marketplaceTester` (verificationFields). It grants a
+//               store early access to the Dropshipping Marketplace while
+//               DROPSHIPPING_STAGE is 'testing', so it must never be
+//               client-writable. Safe to publish any time: it only tightens a
+//               path no client uses. Set it by hand in the Firebase console
+//               (or from the admin panel once Phase 1 ships).
 //   2026-09-19  Dropshipping Marketplace, Phase 0 (coming soon + waitlist).
 //               Added top-level `match /marketplaceWaitlist/{entryId}`, server
 //               only. SAFE TO PUBLISH ANY TIME: no client reads or writes it.
@@ -225,6 +231,10 @@ service cloud.firestore {
         // MUST be server-only: if a client could set either, a bot would simply
         // exempt itself and the gates would be decorative.
         'phoneGateExempt', 'gateExempt',
+        // Early access to the Dropshipping Marketplace while DROPSHIPPING_STAGE
+        // is 'testing'. Server set only: if a vendor could write it, the lock
+        // that keeps a half-built marketplace out of reach would be decorative.
+        'marketplaceTester',
         // Server-only, written ONLY by store-seo.js on a slug change. It holds
         // addresses this store used to own, and the storefront renderer 301s
         // them to the current one. A client that could write it would add

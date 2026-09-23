@@ -148,6 +148,7 @@ export default async function handler(req, res) {
         tab_not_granted: 'Your role does not have access to this section.',
         owner_only_tab: 'Only the store owner can make this change.',
         not_a_staff_member: 'You do not have access to this store.',
+        store_downgraded: 'Team accounts are a Premium feature and this store is no longer on Premium. Ask the owner to renew.',
         role_not_found: 'Your role no longer exists - ask the store owner to reassign you.',
       }
       return res.status(403).json({ error: messages[access.reason] || 'You do not have permission to make this change.' })

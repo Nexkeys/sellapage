@@ -36,10 +36,36 @@ export default async function handler(req, res) {
           name: s.name,
           email: s.email,
           roleId: s.roleId,
+          // Unset means on: staff added before the switch existed still get
+          // the emails their role entitles them to.
+          emailOptIn: s.emailOptIn !== false,
           createdAt: s.createdAt?.toDate?.()?.toISOString() || null,
         }))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       return res.status(200).json({ success: true, staff })
+    }
+
+    // Whether this staff member receives the store's operational emails their
+    // role entitles them to (_lib/store-emails.js). No OTP step-up: it changes
+    // nothing about what they can see or do, only whether a copy of an email
+    // lands in their inbox, and every email counts against the daily sending
+    // quota shared with login codes.
+    if (action === 'update-email-pref' && req.method === 'POST') {
+      let body = {}
+      try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body } catch { /* handled below */ }
+      const { membershipId, emailOptIn } = body
+      if (!membershipId || typeof emailOptIn !== 'boolean') {
+        return res.status(400).json({ error: 'membershipId and emailOptIn (true or false) are required' })
+      }
+
+      const ref = db.collection('staffMemberships').doc(membershipId)
+      const snap = await ref.get()
+      if (!snap.exists || snap.data().storeId !== ownerUid) {
+        return res.status(404).json({ error: 'Staff member not found' })
+      }
+
+      await ref.update({ emailOptIn })
+      return res.status(200).json({ success: true, emailOptIn })
     }
 
     if (action === 'update-role' && req.method === 'POST') {

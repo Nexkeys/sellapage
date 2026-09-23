@@ -20,6 +20,30 @@ async function findActiveMembership(db, callerUid, storeId) {
 }
 
 /**
+ * Staff exist only while the store is on Premium.
+ *
+ * staff-invites.js refuses to invite below Premium and staff-identity.js
+ * refuses to load the dashboard for a downgraded store, but nothing re-checked
+ * the plan once a staff member was signed in, so their token kept working
+ * against every staff-capable API after the owner stopped paying for Team, and
+ * (since 2026-09-23) they would have kept receiving store emails and push.
+ *
+ * Checked here because both resolvers below funnel through it, so one read
+ * closes the API, the emails and the notifications together. Owners never
+ * reach this: they return before it.
+ *
+ * Costs one store read per STAFF request. Deliberately not denormalised onto
+ * the membership: a copy of the plan would still say "premium" the day after a
+ * downgrade, which is the exact moment this matters.
+ */
+async function storeHasTeam(db, storeId) {
+  const snap = await db.collection('stores').doc(storeId).get()
+  if (!snap.exists) return false
+  const store = snap.data() || {}
+  return (store.hasPremiumFeatures ?? store.plan === 'premium') === true
+}
+
+/**
  * Resolves whether callerUid may act on requestedStoreId for a given tab,
  * and at what access level. Returns:
  *   { allowed: true, role: 'owner' }
@@ -36,6 +60,11 @@ export async function resolveStoreAccess(callerUid, requestedStoreId, tabId, nee
   const db = getAdminDb()
   const membership = await findActiveMembership(db, callerUid, requestedStoreId)
   if (!membership) return { allowed: false, reason: 'not_a_staff_member' }
+
+  // Team is a Premium feature: a downgraded store has no staff.
+  if (!(await storeHasTeam(db, requestedStoreId))) {
+    return { allowed: false, reason: 'store_downgraded' }
+  }
 
   if (tabId && OWNER_ONLY_TABS.includes(tabId)) {
     return { allowed: false, reason: 'owner_only_tab' }
@@ -73,5 +102,9 @@ export async function resolveCallerStoreId(callerUid) {
   const doc = snap.docs.find((d) => d.data().active === true)
   if (!doc) return null
   const data = doc.data()
+  // Same Premium rule as resolveStoreAccess. Without it a staff member of a
+  // downgraded store would still register devices, read the bell and change
+  // notification settings through the handlers that use this resolver.
+  if (!(await storeHasTeam(db, data.storeId))) return null
   return { storeId: data.storeId, role: data.roleId, staffName: data.name, staffUid: callerUid }
 }

@@ -1,6 +1,7 @@
 //sellapage/api/_lib/handle-product-checkout.js/
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail, escapeHtml } from "./send-email.js";
+import { sendStoreEmail } from './store-emails.js';
 import { sendPush } from "./send-push.js";
 import { notifyStore } from "./notifications.js";
 import { earnPointsForOrder, commitRedemption, formatCode } from "./loyalty.js";
@@ -486,9 +487,10 @@ export async function handleProductCheckout(db, data, res) {
         body: `${customerName} just placed an order - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
         data: { orderId: orderRef.id },
       }),
-      storeData.email
-        ? sendEmail(
-            storeData.email,
+      // Owner, plus staff whose role grants the Orders tab and who have email
+      // switched on in the Team tab. Each gets their own copy.
+      sendStoreEmail(
+            db, storeId, 'orders',
             `New order received - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             `
               <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
@@ -554,9 +556,8 @@ export async function handleProductCheckout(db, data, res) {
                   This order was placed via Sellapage · sellapage.com.ng
                 </div>
               </div>
-            `, { sender: 'orders' },
-          )
-        : Promise.resolve(),
+            `, { sender: 'orders', store: storeData },
+          ),
     ]);
   } catch (error) {
     console.error("[Checkout Notifications] Error:", error);

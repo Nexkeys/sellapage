@@ -11,7 +11,7 @@ function timingSafeMatch(provided, expected) {
 }
 
 import { getAdminDb } from './_lib/firebase-admin.js'
-import { sendEmail } from './_lib/send-email.js'
+import { sendStoreEmail } from './_lib/store-emails.js'
 import { notifyStore } from './_lib/notifications.js'
 import { bookingStartMs } from './_lib/digests.js'
 
@@ -126,9 +126,12 @@ export default async function handler(req, res) {
           if (push.sent > 0) summary.pushed = (summary.pushed || 0) + 1
         }
 
-        if (storeData?.email) {
-          await sendEmail(
-            storeData.email,
+        if (storeData) {
+          // Owner, plus Bookings staff who have email switched on. `sent` is 0
+          // when the store has no email address and no such staff, which is the
+          // case the old `if (storeData?.email)` guard covered.
+          const mail = await sendStoreEmail(
+            db, storeId, 'bookings',
             `⏰ Upcoming booking: ${booking.customerName || 'A customer'} - ${formatScheduled(booking.bookingDate, booking.bookingTime)}`,
             `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333333; line-height: 1.6;">
@@ -168,9 +171,10 @@ export default async function handler(req, res) {
                 </div>
                 <p style="font-size: 13px; color: #666666; margin-top: 20px;">The Sellapage Team</p>
               </div>
-            `, { sender: 'orders' },
+            `, { sender: 'orders', store: storeData },
           )
-          summary.reminded++
+          if (mail.sent) summary.reminded++
+          else summary.skipped++
         } else {
           summary.skipped++
         }

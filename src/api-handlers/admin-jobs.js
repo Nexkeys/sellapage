@@ -5,7 +5,7 @@
 // the vendor on the admin's action), both approve and reject here email the
 // vendor - closing that gap for the first time in this codebase.
 import { getAdminDb } from './_lib/firebase-admin.js'
-import { sendEmail } from './_lib/send-email.js'
+import { sendStoreEmail } from './_lib/store-emails.js'
 import { notifyStore } from './_lib/notifications.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
@@ -115,7 +115,8 @@ export default async function handler(req, res) {
               </div>
             </div>
           `
-          sendEmail(vendorEmail, 'Your Job Listing Is Now Live', html).catch(() => {})
+          // Owner, plus staff whose role grants the Job Listings tab.
+          sendStoreEmail(db, job.storeId, 'job-listings', 'Your Job Listing Is Now Live', html, { store }).catch(() => {})
         } else {
           const html = `
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -131,7 +132,7 @@ export default async function handler(req, res) {
               </div>
             </div>
           `
-          sendEmail(vendorEmail, 'Action Needed: Your Job Listing Was Rejected', html).catch(() => {})
+          sendStoreEmail(db, job.storeId, 'job-listings', 'Action Needed: Your Job Listing Was Rejected', html, { store }).catch(() => {})
         }
       }
 

@@ -1,7 +1,8 @@
 //src/api-handlers/submit-review.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
-import { sendEmail, escapeHtml } from './_lib/send-email.js'
+import { escapeHtml } from './_lib/send-email.js'
+import { sendStoreEmail } from './_lib/store-emails.js'
 import { sendPush } from './_lib/send-push.js'
 import { notifyStore } from './_lib/notifications.js'
 
@@ -110,7 +111,6 @@ export default async function handler(req, res) {
     try {
       const storeSnap = await db.collection('stores').doc(storeId).get()
       const storeData = storeSnap.data() || {}
-      const emailTo = storeData.email
       const fcm = storeData.fcmToken
       const subject = `New ${numericRating}-star review on ${itemName || 'your item'}`
       const html = `
@@ -131,7 +131,8 @@ export default async function handler(req, res) {
       const pushBody = `${customerName || 'A customer'} reviewed ${itemName || 'your item'}: ${cleanedReviewText || 'No written review'}`
 
       await Promise.all([
-        emailTo ? sendEmail(emailTo, subject, html, { sender: 'orders' }) : Promise.resolve(),
+        // Owner, plus staff whose role grants the Reviews tab.
+        sendStoreEmail(db, storeId, 'reviews', subject, html, { sender: 'orders', store: storeData }),
         // `type` was the one push in the system missing it. The app switches on
         // data.type to route a tap, so without it a review notification is the
         // single case that cannot be opened to anywhere.

@@ -1,5 +1,5 @@
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
-import { sendEmail } from './_lib/send-email.js'
+import { sendStoreEmail } from './_lib/store-emails.js'
 
 const PREMBLY_SECRET_KEY = process.env.PREMBLY_SECRET_KEY
 
@@ -142,7 +142,8 @@ export default async function handler(req, res) {
             </div>
           </div>
         `
-        sendEmail(vendorEmail, emailSubject, failedHtml).catch(() => {})
+        // Owner, plus staff whose role grants the CAC Verification tab.
+        sendStoreEmail(db, storeId, 'cac-verification', emailSubject, failedHtml, { store: storeData }).catch(() => {})
       }
 
       return res.status(400).json({
@@ -219,7 +220,7 @@ export default async function handler(req, res) {
           </div>
         </div>
       `
-      sendEmail(vendorEmail, 'Your Business Is Now Verified!', successHtml).catch(() => {})
+      sendStoreEmail(db, storeId, 'cac-verification', 'Your Business Is Now Verified!', successHtml, { store: storeData }).catch(() => {})
     }
 
     return res.status(200).json({

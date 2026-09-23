@@ -9,6 +9,7 @@ import {
   Store, Globe, CheckCircle2, Circle,
 } from 'lucide-react'
 import { SkeletonRows } from '../Skeleton'
+import MarketplaceAccess from './MarketplaceAccess'
 
 async function callAdmin(action, authHeaders, { method = 'GET', body, query = '' } = {}) {
   const res = await fetch(`/api/admin-marketplace?action=${action}${query}`, {
@@ -46,6 +47,9 @@ const LIMIT = 20
 const fmtDate = (value) => (value ? new Date(value).toLocaleDateString('en-NG', { dateStyle: 'medium' }) : '')
 
 export default function MarketplaceAdmin({ authHeaders }) {
+  // Sub tabs: the waitlist (Phase 0) and access (the stage + early access).
+  // Supplier applications join this row in Phase 1.
+  const [view, setView] = useState('waitlist')
   const [items, setItems] = useState([])
   const [counts, setCounts] = useState({})
   const [total, setTotal] = useState(0)
@@ -76,9 +80,10 @@ export default function MarketplaceAdmin({ authHeaders }) {
   }, [authHeaders, page, role, search])
 
   useEffect(() => {
+    if (view !== 'waitlist') return undefined
     const t = setTimeout(() => { fetchItems() }, 350)
     return () => clearTimeout(t)
-  }, [fetchItems])
+  }, [fetchItems, view])
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
 
@@ -121,7 +126,7 @@ export default function MarketplaceAdmin({ authHeaders }) {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <button
+          {view === 'waitlist' && <button
             type="button"
             onClick={copyAll}
             disabled={copying || !counts.all}
@@ -129,8 +134,8 @@ export default function MarketplaceAdmin({ authHeaders }) {
           >
             {copying ? <Loader2 size={12} className="animate-spin" /> : copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
             {copied ? 'Copied' : 'Copy all emails'}
-          </button>
-          <button
+          </button>}
+          {view === 'waitlist' && <button
             type="button"
             onClick={fetchItems}
             disabled={loading}
@@ -138,10 +143,31 @@ export default function MarketplaceAdmin({ authHeaders }) {
             className="inline-flex items-center gap-1.5 rounded-xl bg-gray-900 px-3 py-2 text-xs font-bold text-white disabled:bg-gray-200"
           >
             {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-          </button>
+          </button>}
         </div>
       </div>
 
+      <div className="flex gap-1 rounded-xl border border-gray-100 bg-white p-1">
+        {[
+          { id: 'waitlist', label: 'Waitlist' },
+          { id: 'access', label: 'Access' },
+        ].map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => setView(v.id)}
+            className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+              view === v.id ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'access' && <MarketplaceAccess authHeaders={authHeaders} />}
+
+      {view === 'waitlist' && (<>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {[
           { key: 'all', label: 'Total' },
@@ -285,6 +311,7 @@ export default function MarketplaceAdmin({ authHeaders }) {
           )}
         </div>
       )}
+      </>)}
     </div>
   )
 }

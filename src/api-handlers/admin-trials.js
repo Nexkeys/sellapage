@@ -102,10 +102,22 @@ export default async function handler(req, res) {
     const action = req.query.action || 'list'
 
     if (action === 'list') {
-      // Every store that has ever been granted a trial, newest first. Reading
-      // the whole collection matches what expiry-cron and admin-analytics
-      // already do at this size; revisit if the store count gets large.
-      const snap = await db.collection('stores').get()
+      // Stores that have a trial, found by querying the nested field rather
+      // than reading the whole collection and filtering in memory.
+      //
+      // The scan version cost one read PER STORE on every load and every press
+      // of Refresh. On 2026-09-23 this project hit 45k of its 50k free daily
+      // reads and the admin console started returning 500s, and panels like
+      // this one are why. This costs one read per trial, and there are only
+      // ever a handful.
+      //
+      // Firestore indexes nested fields automatically, so `trial.status` needs
+      // no composite index. A store with no trial has no such field and is
+      // never returned.
+      const snap = await db
+        .collection('stores')
+        .where('trial.status', 'in', ['active', 'paused', 'ended', 'revoked'])
+        .get()
       const trials = []
 
       for (const doc of snap.docs) {

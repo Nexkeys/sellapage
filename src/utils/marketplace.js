@@ -6,6 +6,38 @@
 
 export const MARKETPLACE_ROLES = ['supply', 'dropship', 'both']
 
+/**
+ * THE LOCK. `DROPSHIPPING_STAGE` decides who sees anything beyond "coming
+ * soon", so the marketplace can be built and tested in production while every
+ * vendor keeps seeing the Phase 0 page.
+ *
+ *   coming_soon (default)  everybody sees "coming soon". Every marketplace
+ *                          handler refuses. This is what an unset variable
+ *                          means, so a fresh environment is always locked.
+ *   testing                only stores with `marketplaceTester: true` (set by
+ *                          the server, locked in firestore.rules) get the real
+ *                          thing. Everyone else still sees "coming soon".
+ *   live                   everyone, subject to plan and supplier approval.
+ *
+ * The browser copy is cosmetic: it only decides which screen to draw. Every
+ * server handler asks again (_lib/marketplace-gate.js), so flipping the
+ * variable is the only way in, and a vendor cannot make themselves a tester.
+ */
+export const MARKETPLACE_STAGES = ['coming_soon', 'testing', 'live']
+
+export function cleanStage(value) {
+  const s = String(value || '').trim().toLowerCase()
+  return MARKETPLACE_STAGES.includes(s) ? s : 'coming_soon'
+}
+
+/** Can THIS store use the real marketplace yet? */
+export function marketplaceUnlocked(stage, store) {
+  const s = cleanStage(stage)
+  if (s === 'live') return true
+  if (s === 'testing') return store?.marketplaceTester === true
+  return false
+}
+
 export const MARKETPLACE_TABS = {
   supply: { id: 'supplier-hub', label: 'Supplier Hub' },
   dropship: { id: 'dropship', label: 'Dropship Marketplace' },

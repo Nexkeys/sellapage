@@ -1,6 +1,7 @@
 //sellapage/api/_lib/handle-booking-checkout.js/
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { sendEmail, escapeHtml } from "./send-email.js";
+import { sendStoreEmail } from './store-emails.js';
 import { sendPush } from "./send-push.js";
 import { notifyStore } from "./notifications.js";
 import { markRecovered } from "./abandoned-checkout.js";
@@ -261,9 +262,10 @@ export async function handleBookingCheckout(db, data, res) {
         body: `${customerName} just booked ${serviceName || "a service"} - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
         data: { bookingId: bookingRef.id },
       }, storeData),
-      storeData.email
-        ? sendEmail(
-            storeData.email,
+      // Owner, plus staff whose role grants the Bookings tab and who have email
+      // switched on in the Team tab. Each gets their own copy.
+      sendStoreEmail(
+            db, storeId, 'bookings',
             `New booking received - ₦${Number(grandTotal).toLocaleString("en-NG")}`,
             `
               <div style="max-width: 600px; margin: 0 auto; background: white; font-family: Arial, sans-serif;">
@@ -320,9 +322,8 @@ export async function handleBookingCheckout(db, data, res) {
                   This booking was made via Sellapage · sellapage.com.ng
                 </div>
               </div>
-            `, { sender: 'orders' },
-          )
-        : Promise.resolve(),
+            `, { sender: 'orders', store: storeData },
+          ),
     ]);
   } catch (error) {
     console.error("[Booking Checkout Notifications] Error:", error);

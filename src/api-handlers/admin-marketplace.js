@@ -10,6 +10,11 @@
 //   GET  ?action=export     every email on that list
 //   POST ?action=delete     { id } removes a PUBLIC sign up (a store's
 //                           interest is the vendor's own setting)
+//   GET  ?action=access     the stage, whether an env var overrides it, and
+//                           every store that has early access
+//   POST ?action=set-stage  { stage } coming_soon | testing | live, super_admin
+//   GET  ?action=find-store &q=  store id, slug or email, to add a tester
+//   POST ?action=set-tester { storeId, on } early access on or off
 //
 // Phase 1 adds supplier applications and approvals to this same handler.
 // Tab `marketplace`: super_admin and operations (Docs/Dropshipping-Marketplace-Plan.md, Part F).
@@ -17,7 +22,8 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors, parseJsonBody } from './_lib/http.js'
-import { readInterest, roleFromInterest, readiness } from '../utils/marketplace.js'
+import { readInterest, roleFromInterest, readiness, MARKETPLACE_STAGES } from '../utils/marketplace.js'
+import { marketplaceStage, stageOverride, clearStageCache, SETTINGS_DOC } from './_lib/marketplace-gate.js'
 
 const iso = (v) => {
   if (typeof v === 'string') return v
@@ -121,6 +127,94 @@ export default async function handler(req, res) {
         limit,
         counts,
       })
+    }
+
+    // ------------------------------------------------------------- access
+    // The stage, and which stores have early access while it is 'testing'.
+    if (action === 'access') {
+      const [stage, testers] = await Promise.all([
+        marketplaceStage(),
+        db.collection('stores').where('marketplaceTester', '==', true).limit(200).get(),
+      ])
+      return res.status(200).json({
+        success: true,
+        stage,
+        // When the environment variable is set it wins over anything set here,
+        // so the panel must say so rather than pretend the buttons work.
+        lockedByEnv: stageOverride(),
+        canSetStage: admin.role === 'super_admin',
+        testers: testers.docs.map((d) => ({
+          storeId: d.id,
+          name: d.data().businessName || '',
+          storeName: d.data().storeName || '',
+          email: d.data().email || '',
+          plan: String(d.data().plan || 'starter').toLowerCase(),
+        })),
+      })
+    }
+
+    if (action === 'set-stage' && req.method === 'POST') {
+      // Opening the marketplace to every vendor is a launch decision, so it is
+      // narrower than the rest of this tab: super_admin only.
+      if (admin.role !== 'super_admin') {
+        return res.status(403).json({ error: 'Only a super admin can change the stage.' })
+      }
+      if (stageOverride()) {
+        return res.status(409).json({
+          error: 'The DROPSHIPPING_STAGE environment variable is set, so it overrides this. Remove it in Vercel first.',
+        })
+      }
+      let body
+      try { body = parseJsonBody(req) || {} } catch { return res.status(400).json({ error: 'Invalid JSON body' }) }
+      if (!MARKETPLACE_STAGES.includes(body.stage)) {
+        return res.status(400).json({ error: 'Unknown stage.' })
+      }
+      await db.collection('platformSettings').doc(SETTINGS_DOC).set(
+        { stage: body.stage, updatedAt: new Date(), updatedBy: admin.uid },
+        { merge: true },
+      )
+      clearStageCache()
+      return res.status(200).json({ success: true, stage: body.stage })
+    }
+
+    // Finds a store to give early access to. Small and exact on purpose: the
+    // whole store list is thousands of documents and the Spark read quota is
+    // an outage when it runs out.
+    if (action === 'find-store') {
+      const q = String(req.query.q || '').trim().toLowerCase()
+      if (q.length < 2) return res.status(200).json({ success: true, stores: [] })
+
+      const byId = await db.collection('stores').doc(q).get()
+      const bySlug = await db.collection('stores').where('storeName', '==', q).limit(5).get()
+      const byEmail = await db.collection('stores').where('email', '==', q).limit(5).get()
+
+      const found = new Map()
+      for (const d of [...(byId.exists ? [byId] : []), ...bySlug.docs, ...byEmail.docs]) {
+        found.set(d.id, {
+          storeId: d.id,
+          name: d.data().businessName || '',
+          storeName: d.data().storeName || '',
+          email: d.data().email || '',
+          plan: String(d.data().plan || 'starter').toLowerCase(),
+          isTester: d.data().marketplaceTester === true,
+        })
+      }
+      return res.status(200).json({ success: true, stores: [...found.values()] })
+    }
+
+    if (action === 'set-tester' && req.method === 'POST') {
+      let body
+      try { body = parseJsonBody(req) || {} } catch { return res.status(400).json({ error: 'Invalid JSON body' }) }
+      const storeId = String(body.storeId || '').trim()
+      if (!storeId) return res.status(400).json({ error: 'storeId is required' })
+
+      const ref = db.collection('stores').doc(storeId)
+      if (!(await ref.get()).exists) return res.status(404).json({ error: 'Store not found' })
+
+      // Written server-side because `marketplaceTester` is locked in
+      // firestore.rules: a store can never switch its own early access on.
+      await ref.set({ marketplaceTester: body.on === true }, { merge: true })
+      return res.status(200).json({ success: true, storeId, on: body.on === true })
     }
 
     if (action === 'delete' && req.method === 'POST') {

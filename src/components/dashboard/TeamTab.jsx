@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   Loader2, RefreshCw, UserPlus, Copy, Check, X, Trash2, Shield,
-  ChevronRight, Clock, Users as UsersIcon, Pencil,
+  ChevronRight, Clock, Users as UsersIcon, Pencil, Mail, MailX,
 } from 'lucide-react'
 import { auth } from '../../firebase/auth'
 import { OWNER_ONLY_TABS } from '../../utils/staffRoles'
@@ -207,6 +207,24 @@ export default function TeamTab({ store }) {
     }
   }
 
+  // Whether this person receives the store emails their role entitles them to.
+  // No OTP: it changes nothing about their access, only their inbox. Updated
+  // on screen first so the switch feels instant, and put back if the save fails.
+  const toggleStaffEmail = async (membershipId, next) => {
+    setError('')
+    setStaff((list) => list.map((s) => (s.id === membershipId ? { ...s, emailOptIn: next } : s)))
+    try {
+      const headers = { 'Content-Type': 'application/json', ...(await authHeaders()) }
+      const res = await fetch('/api/staff-manage?action=update-email-pref', {
+        method: 'POST', headers, body: JSON.stringify({ membershipId, emailOptIn: next }),
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Could not save that.')
+    } catch (e) {
+      setStaff((list) => list.map((s) => (s.id === membershipId ? { ...s, emailOptIn: !next } : s)))
+      setError(e.message)
+    }
+  }
+
   const removeStaff = (membershipId) => {
     if (!window.confirm('Remove this staff member? They will be logged out immediately.')) return
     setError('')
@@ -350,6 +368,15 @@ export default function TeamTab({ store }) {
                   </button>
                 )}
               </div>
+              <button
+                onClick={() => toggleStaffEmail(s.id, !s.emailOptIn)}
+                title={s.emailOptIn
+                  ? 'Email is on: this person gets order, booking and other emails their role covers. Click to stop sending them.'
+                  : 'Email is off: this person gets no store emails. They still see everything in the dashboard and the app.'}
+                className={`flex-shrink-0 p-1.5 rounded-lg ${s.emailOptIn ? 'text-green-600 hover:bg-green-50' : 'text-gray-300 hover:bg-gray-50'}`}
+              >
+                {s.emailOptIn ? <Mail size={14} /> : <MailX size={14} />}
+              </button>
               <button onClick={() => removeStaff(s.id)} disabled={busyId === s.id} className="flex-shrink-0 text-red-400 hover:text-red-600 p-1.5 disabled:opacity-50">
                 {busyId === s.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               </button>

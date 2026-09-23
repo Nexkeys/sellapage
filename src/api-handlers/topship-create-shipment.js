@@ -14,7 +14,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, getAdminAuth } from './_lib/firebase-admin.js'
 import { bookTopshipShipment, resolveShipmentRoute } from './_lib/topship-booking.js'
-import { sendEmail } from './_lib/send-email.js'
+import { sendStoreEmail } from './_lib/store-emails.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 
 export default async function handler(req, res) {
@@ -217,7 +217,8 @@ export default async function handler(req, res) {
             </div>
           </div>
         `
-        await sendEmail(storeData.email, `Shipment Booked - Tracking ${trackingId || ''}`.trim(), html, { sender: 'orders' })
+        // A shipment shows in both Orders and Delivery, so either role qualifies.
+        await sendStoreEmail(db, storeId, ['orders', 'delivery'], `Shipment Booked - Tracking ${trackingId || ''}`.trim(), html, { sender: 'orders', store: storeData })
       }
     } catch (err) {
       console.error('[topship-create-shipment] vendor email failed (non-fatal):', err)

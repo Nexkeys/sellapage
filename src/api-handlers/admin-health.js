@@ -13,6 +13,43 @@ if (!getApps().length) {
 
 const adminDb = getFirestore();
 
+// ---------------------------------------------------------------------------
+// MERCHANT DIRECTORY CACHE
+//
+// The directory reads EVERY store document, because search and sorting happen
+// in memory (see the comment at the query). That is one read per store per
+// request, and the client re-requests on every search, every page button,
+// every payout filter and after every verify. Opening the tab and clicking
+// around a few times used to cost tens of thousands of reads, which on the
+// Spark free quota is the difference between a working platform and a dead
+// one: on 2026-09-23 the project hit 45k of its 50k daily reads, and the admin
+// console started returning 500s.
+//
+// Module scope survives between invocations on a warm Vercel instance, so the
+// scan happens at most once a minute per instance instead of once per click.
+// A cold instance simply repeats it.
+//
+// Sixty seconds is chosen so a mistake is never more than a minute stale, and
+// the two paths that MUST be current bypass it: ?fresh=1, and any write in
+// this file, which clears it outright.
+// ---------------------------------------------------------------------------
+const DIRECTORY_TTL_MS = 60 * 1000;
+let directoryCache = { at: 0, stores: null };
+
+function clearDirectoryCache() {
+  directoryCache = { at: 0, stores: null };
+}
+
+async function readAllStores(force) {
+  const fresh = !force && directoryCache.stores && Date.now() - directoryCache.at < DIRECTORY_TTL_MS;
+  if (fresh) return { stores: directoryCache.stores, cached: true };
+
+  const snap = await adminDb.collection('stores').get();
+  const stores = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  directoryCache = { at: Date.now(), stores };
+  return { stores, cached: false };
+}
+
 export default async function handler(req, res) {
   try {
     // Standardize CORS headers for Vercel execution context
@@ -50,6 +87,9 @@ export default async function handler(req, res) {
         }
 
         await adminDb.collection('stores').doc(storeId).update({ payoutsVerified: !!verified });
+        // The directory this admin is looking at just became wrong. Per
+        // instance, which is why the client should refetch with ?fresh=1.
+        clearDirectoryCache();
 
         return res.status(200).json({ success: true, storeId, payoutsVerified: !!verified });
       } catch (err) {
@@ -72,13 +112,11 @@ export default async function handler(req, res) {
         // every document missing the field it orders by, so merchants signed up
         // before createdAt was written were absent from this list entirely.
         // Sorting in memory below keeps them, newest first, undated last.
-        const storesSnap = await adminDb.collection('stores').get();
+        const { stores: allStores } = await readAllStores(queryParams.fresh === '1');
 
-        // In-memory filter
-        let filteredStores = storesSnap.docs.map((doc) => {
-          const data = doc.data();
-          return { id: doc.id, ...data };
-        });
+        // A copy, because the sort below is in place and the cached array is
+        // reused by the next request on this instance.
+        let filteredStores = allStores.slice();
 
         const joinedMs = (s) => {
           const d = s.createdAt?.toDate?.() || (s.createdAt ? new Date(s.createdAt) : null);
