@@ -3,6 +3,7 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { verifyAdmin } from './_lib/verify-admin.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
+import { meter, flushUsage } from './_lib/usage-meter.js'
 
 
 if (!getApps().length) {
@@ -45,6 +46,9 @@ async function readAllStores(force) {
   if (fresh) return { stores: directoryCache.stores, cached: true };
 
   const snap = await adminDb.collection('stores').get();
+  // Counted here, inside the cache, so the number reflects scans that actually
+  // happened rather than requests that were served from memory.
+  meter.reads('admin-directory', snap.size);
   const stores = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   directoryCache = { at: Date.now(), stores };
   return { stores, cached: false };
@@ -255,6 +259,11 @@ export default async function handler(req, res) {
             };
           })
         );
+
+        // Persists what this instance has counted. Not forced, so a single
+        // page view writes nothing; it only records once enough has built up
+        // to be worth a write of its own.
+        await flushUsage(adminDb);
 
         return res.status(200).json({
           stores: finalStores,

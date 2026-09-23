@@ -19,15 +19,8 @@
 // not one per document. The per-day breakdown does read documents, but only
 // those created inside the history window, which is bounded by real sales.
 
-import {
-  collection,
-  getCountFromServer,
-  getDocs,
-  orderBy,
-  query,
-  Timestamp,
-  where,
-} from 'firebase/firestore'
+import { collection, getCountFromServer, orderBy, query, Timestamp, where } from 'firebase/firestore';
+import { getDocs } from '../firebase/metered';
 import { db } from '../firebase/config'
 import { auth } from '../firebase/auth'
 import { isActingAsStaffFor } from './staffDataFetch'

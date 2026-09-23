@@ -17,6 +17,7 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { sendEmail } from './_lib/send-email.js'
 import { notifyStore } from './_lib/notifications.js'
 import { endTrial } from './_lib/trials.js'
+import { meter, flushUsage } from './_lib/usage-meter.js'
 
 if (!getApps().length) {
   initializeApp({
@@ -193,6 +194,9 @@ export default async function handler(req, res) {
     }
 
     const storesSnap = await db.collection('stores').get()
+    // One read per store, every day. The single largest scheduled read in the
+    // platform, and the reason this cron is worth watching on a free quota.
+    meter.reads('expiry-cron', storesSnap.size)
 
     if (storesSnap.empty) {
       return res.status(200).json({ active: 0, warning: 0, grace: 0, expired: 0, total: 0 })
@@ -377,6 +381,9 @@ export default async function handler(req, res) {
     }
 
     await batch.commit()
+    // Its own write, plus everything runTrialDay did.
+    meter.writes('expiry-cron', summary.total || 1)
+    await flushUsage(db, { force: true })
     return res.status(200).json(summary)
     
   } catch (err) {

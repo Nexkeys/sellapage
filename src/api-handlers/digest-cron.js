@@ -53,6 +53,7 @@ import {
   watDayKey,
   watStartOfDay,
 } from './_lib/digests.js'
+import { meter, flushUsage } from './_lib/usage-meter.js'
 
 const TIME_BUDGET_MS = 40 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -93,6 +94,10 @@ function eveningDayKey(nowMs) {
  */
 async function linkedStoreIds(db) {
   const snap = await db.collection(DEVICES).where('storeId', '!=', null).select('storeId', 'disabledAt').get()
+  // One read per device row, on EVERY call. With the every-minute trigger this
+  // is the part of the digest run that multiplies, so it is counted separately
+  // from the per-store work below.
+  meter.reads('digest-cron:devices', snap.size)
   const ids = new Set()
   for (const d of snap.docs) {
     const data = d.data()
@@ -429,11 +434,16 @@ export default async function handler(req, res) {
     for (let i = cursor; i < storeIds.length; i++) {
       if (Date.now() - startedAt > TIME_BUDGET_MS) {
         await progressRef.set({ [job]: { day: dayKey, next: i, done: false } }, { merge: true })
+        await flushUsage(db, { force: true })
         console.log('[digest-cron]', JSON.stringify({ ...summary, done: false, next: i }))
         return res.status(200).json({ ok: true, done: false, next: i, ...summary })
       }
       try {
         await run(db, storeIds[i], Date.now(), summary)
+        // A store visit reads the store, its digest marker and its prefs, and
+        // the Pro sweeps read orders and discounts on top. Three is the floor,
+        // counted as the floor rather than guessed higher.
+        meter.reads(`digest-cron:${job}`, 3)
         summary.processed++
       } catch (err) {
         // One store's bad data must not stop every store after it.
@@ -443,6 +453,7 @@ export default async function handler(req, res) {
     }
 
     await progressRef.set({ [job]: { day: dayKey, next: storeIds.length, done: true } }, { merge: true })
+    await flushUsage(db, { force: true })
     console.log('[digest-cron]', JSON.stringify({ ...summary, done: true }))
     return res.status(200).json({ ok: true, done: true, ...summary })
   } catch (err) {

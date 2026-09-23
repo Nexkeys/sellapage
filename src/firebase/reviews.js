@@ -15,7 +15,8 @@
 // every write, so items with nothing to show are never read at all. A store
 // with no reviews costs zero queries.
 
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { getDocs } from './metered';
 import { db } from './config'
 
 const MAX_ITEMS = 8

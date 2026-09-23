@@ -1,7 +1,8 @@
 // src/components/dashboard/ReviewsTab.jsx
 import { useState, useEffect } from 'react'
 import { Lock, Star, ChevronDown, MessageSquare, Calendar, ShieldCheck, Layers } from 'lucide-react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, query, where } from 'firebase/firestore';
+import { getDocs } from '../../firebase/metered';
 import { db } from '../../firebase/config'
 import { SkeletonRows } from '../Skeleton'
 

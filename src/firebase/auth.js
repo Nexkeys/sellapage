@@ -6,7 +6,8 @@ import {
   onAuthStateChanged,
   deleteUser,
 } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc } from 'firebase/firestore';
+import { getDoc } from './metered';
 import { auth, db } from './config'
 import { clearSessionId } from '../utils/sessionTracking'
 

@@ -104,6 +104,26 @@ export default function FirestoreUsageCard({ authHeaders }) {
 
       {/* The 403 case is its own message, not an error, because nothing is
           broken: one IAM role has to be granted once. */}
+      {/* Says plainly that the number is a floor. Without this line an admin
+          would read "8,000 of 50,000" as plenty of room on the afternoon the
+          platform runs out. */}
+      {data && data.partial && (
+        <div className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2.5 space-y-1">
+          <p>
+            <span className="font-bold text-gray-900">Sellapage&apos;s own count.</span>{' '}
+            {data.partialNote}
+          </p>
+          <a
+            href="https://console.firebase.google.com/project/sellapage-7145d/firestore/usage"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block font-bold text-green-700 underline"
+          >
+            See the exact figure in Firebase
+          </a>
+        </div>
+      )}
+
       {data && data.needsPermission && (
         <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">
           <p className="font-bold text-gray-900">Usage not connected yet</p>
@@ -143,6 +163,25 @@ export default function FirestoreUsageCard({ authHeaders }) {
             <Meter label="Writes" data={data.writes} />
             <Meter label="Deletes" data={data.deletes} />
           </div>
+
+          {/* Which job spent it. A total says there is a problem; this says
+              where to go and look. */}
+          {data.byLabel?.length > 0 && (
+            <div className="pt-2 border-t border-gray-100 space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                Where it went today
+              </p>
+              {data.byLabel.map((row) => (
+                <div key={row.label} className="flex items-baseline justify-between gap-2 text-[11px]">
+                  <span className="font-medium text-gray-700 truncate">{row.label}</span>
+                  <span className="text-gray-500 shrink-0">
+                    {fmt(row.reads)} reads
+                    {row.writes ? ` · ${fmt(row.writes)} writes` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 

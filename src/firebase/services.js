@@ -1,17 +1,6 @@
 // src/firebase/services.js
-import {
-  collection,
-  updateDoc,
-  doc,
-  getDocs,
-  getDoc,
-  query,
-  orderBy,
-  limit,
-  getCountFromServer,
-  writeBatch,
-  increment,
-} from 'firebase/firestore'
+import { collection, updateDoc, doc, query, orderBy, limit, getCountFromServer, writeBatch, increment } from 'firebase/firestore';
+import { getDocs, getDoc } from './metered';
 import { db } from './config'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../utils/staffDataFetch'
 

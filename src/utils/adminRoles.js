@@ -1,4 +1,5 @@
-import { doc, getDoc } from 'firebase/firestore'
+import { doc } from 'firebase/firestore';
+import { getDoc } from '../firebase/metered';
 import { db } from '../firebase/config'
 
 export const ADMIN_ROLES = {

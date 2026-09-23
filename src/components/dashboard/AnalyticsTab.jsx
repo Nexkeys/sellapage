@@ -5,7 +5,8 @@ import {
   Check, Info, Calendar, CalendarClock, ChevronLeft, ChevronRight, AlertCircle, Sparkles,
   ShoppingBag,
 } from 'lucide-react'
-import { doc, writeBatch, collection, getDocs } from 'firebase/firestore'
+import { doc, writeBatch, collection } from 'firebase/firestore';
+import { getDocs } from '../../firebase/metered';
 import { db } from '../../firebase/config'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../../utils/staffDataFetch'
 import {

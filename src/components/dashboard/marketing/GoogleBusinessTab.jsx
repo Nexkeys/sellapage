@@ -20,7 +20,8 @@
 // orders and the customers who placed them, so the vendor can ask exactly the
 // people who actually bought.
 import { useState, useEffect, useCallback } from 'react'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { collection, query, orderBy } from 'firebase/firestore';
+import { getDocs } from '../../../firebase/metered';
 import {
   MapPin, Copy, Check, ExternalLink, Star, Loader2, AlertCircle, Users, Search,
 } from 'lucide-react'

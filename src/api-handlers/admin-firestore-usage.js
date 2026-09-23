@@ -19,6 +19,8 @@
 import { GoogleAuth } from 'google-auth-library'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
+import { getAdminDb } from './_lib/firebase-admin.js'
+import { flushUsage, readUsageDay, quotaDayKey } from './_lib/usage-meter.js'
 
 // Spark plan daily allowances.
 const FREE_LIMITS = { reads: 50000, writes: 20000, deletes: 20000 }
@@ -95,6 +97,76 @@ async function readMetric(client, projectId, metric, startTime, endTime) {
   return { total: hourly.reduce((n, p) => n + p.value, 0), hourly }
 }
 
+/**
+ * Sellapage's own tally for today, shaped exactly like the Monitoring reply so
+ * the card renders one way regardless of which source answered.
+ *
+ * `partial: true` is the important field. These counters see what this server
+ * does at the call sites that opt in, and nothing the browser SDK does on
+ * vendor dashboards and storefronts, so the real figure is always higher. A
+ * number presented as complete when it is a floor would be worse than none:
+ * it would read as "plenty of quota left" on the afternoon the platform dies.
+ */
+async function ownCounters() {
+  const db = getAdminDb()
+  // Anything this instance is holding, written first, so the card is not behind
+  // its own process.
+  await flushUsage(db, { force: true })
+  const day = await readUsageDay(db)
+
+  const dayStart = quotaDayStart()
+  const now = new Date()
+  const hoursElapsed = Math.max(0.25, (now - dayStart) / 3600000)
+  const hoursLeft = Math.max(0, 24 - hoursElapsed)
+
+  const shape = (kind) => {
+    const limit = FREE_LIMITS[kind]
+    const used = day[kind] || 0
+    const perHour = used / hoursElapsed
+    const projected = Math.round(used + perHour * hoursLeft)
+    return {
+      used,
+      limit,
+      percent: Math.min(100, Math.round((used / limit) * 100)),
+      perHour: Math.round(perHour),
+      projected,
+      willExceed: projected > limit,
+      hourly: [],
+    }
+  }
+
+  // Who spent it. The whole point of labelling: a total says there is a
+  // problem, this says which job to go and look at.
+  const byLabel = Object.entries(day.byLabel || {})
+    .map(([label, counts]) => ({
+      label,
+      reads: Number(counts?.reads || 0),
+      writes: Number(counts?.writes || 0),
+      deletes: Number(counts?.deletes || 0),
+    }))
+    .sort((a, b) => b.reads + b.writes - (a.reads + a.writes))
+    .slice(0, 8)
+
+  return {
+    success: true,
+    source: 'sellapage',
+    partial: true,
+    partialNote:
+      'Counted by Sellapage itself, because Cloud Monitoring needs billing. This covers what the server does (crons, admin, webhooks) and not what runs in a visitor’s browser, so the real figure is higher.',
+    plan: 'spark',
+    quotaDayStart: dayStart.toISOString(),
+    resetsAt: new Date(dayStart.getTime() + 24 * 3600000).toISOString(),
+    hoursElapsed: Math.round(hoursElapsed * 10) / 10,
+    day: day.day || quotaDayKey(),
+    reads: shape('reads'),
+    writes: shape('writes'),
+    deletes: shape('deletes'),
+    byLabel,
+    spiking: false,
+    lastHourReads: 0,
+  }
+}
+
 export default async function handler(req, res) {
   applyCorsOrigin(req, res)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
@@ -155,9 +227,12 @@ export default async function handler(req, res) {
       // it does to anyone reading this in Lagos.
       resetsAt: new Date(dayStart.getTime() + 24 * 3600000).toISOString(),
       hoursElapsed: Math.round(hoursElapsed * 10) / 10,
+      source: 'monitoring',
+      partial: false,
       reads: shape('reads', reads),
       writes: shape('writes', writes),
       deletes: shape('deletes', deletes),
+      byLabel: [],
       spiking,
       lastHourReads,
     }
@@ -169,7 +244,21 @@ export default async function handler(req, res) {
     const message = err?.response?.data?.error?.message || err.message || 'Unknown error'
 
     if (status === 403) {
-      // Not an outage. Someone has to grant one IAM role, once.
+      // Two different 403s, and telling them apart matters: one is fixed by a
+      // click, the other cannot be fixed at all on this plan.
+      //
+      // Confirmed against the live project on 2026-09-23: with the Monitoring
+      // Viewer role granted, Google still answers "This API method requires
+      // billing to be enabled". Cloud Monitoring's API is Blaze-only. Firebase
+      // will SHOW these numbers in its own console on Spark but will not serve
+      // them to an API caller, so there is no code that can get them here.
+      if (/billing/i.test(message)) {
+        // Fall back to Sellapage's own counters. The Monitoring code above is
+        // left untouched on purpose: the day this project moves to Blaze, it
+        // starts answering and becomes the source again with no rewrite.
+        return res.status(200).json(await ownCounters())
+      }
+
       return res.status(200).json({
         success: false,
         needsPermission: true,

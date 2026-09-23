@@ -1,7 +1,8 @@
 // src/components/dashboard/CustomersTab.jsx/
 import { useState, useEffect, useMemo } from 'react'
 import { Lock, ChevronDown, MessageCircle, Users, Mail, CreditCard } from 'lucide-react'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { collection, query, orderBy } from 'firebase/firestore';
+import { getDocs } from '../../firebase/metered';
 import { db } from '../../firebase/config'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../../utils/staffDataFetch'
 import { SkeletonRows } from '../Skeleton'

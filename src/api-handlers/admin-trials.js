@@ -11,6 +11,7 @@
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
+import { meter } from './_lib/usage-meter.js'
 import { sendEmail, escapeHtml } from './_lib/send-email.js'
 import { notifyStore } from './_lib/notifications.js'
 import {
@@ -118,6 +119,7 @@ export default async function handler(req, res) {
         .collection('stores')
         .where('trial.status', 'in', ['active', 'paused', 'ended', 'revoked'])
         .get()
+      meter.reads('admin-trials', snap.size)
       const trials = []
 
       for (const doc of snap.docs) {
