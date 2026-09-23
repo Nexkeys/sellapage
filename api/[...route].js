@@ -387,6 +387,10 @@ export default async function handler(req, res) {
         const { default: handler } = await import("../src/api-handlers/admin-domains.js")
         return handler(req, res)
       }
+      case "admin-firestore-usage": {
+        const { default: handler } = await import("../src/api-handlers/admin-firestore-usage.js")
+        return handler(req, res)
+      }
       case "admin-trials": {
         const { default: handler } = await import("../src/api-handlers/admin-trials.js")
         return handler(req, res)

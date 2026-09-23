@@ -16,6 +16,7 @@ import PushConsole from '../components/admin/PushConsole';
 import PartnersAdmin from '../components/admin/PartnersAdmin';
 import NewsletterAdmin from '../components/admin/NewsletterAdmin';
 import TrialsAdmin from '../components/admin/TrialsAdmin';
+import FirestoreUsageCard from '../components/admin/FirestoreUsageCard';
 import EmailBroadcast from '../components/admin/EmailBroadcast';
 import MarketplaceAdmin from '../components/admin/MarketplaceAdmin';
 import { SkeletonRows } from '../components/Skeleton';
@@ -725,6 +726,11 @@ export default function Admin() {
         {/* HEALTH */}
         {activeTab === 'health' && <div className="space-y-4 animate-in fade-in duration-200">
           {healthError && <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{healthError}</div>}
+
+          {/* Firestore quota. First card on the page because it is the only one
+              whose running out stops the whole platform rather than one
+              feature, and it gives no warning of its own. */}
+          <FirestoreUsageCard authHeaders={H} />
 
 
           {/* Termii SMS - wallet + sender ID. An empty wallet or a missing
