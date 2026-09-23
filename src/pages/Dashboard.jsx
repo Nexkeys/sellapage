@@ -26,8 +26,8 @@ import {
 import { logoutSeller, updateStore, deleteAuthUser } from "../firebase/auth";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { db } from "../firebase/config";
-import { collection, query, where, orderBy, writeBatch, deleteDoc, doc, addDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { getDocs, getDoc, onSnapshot } from '../firebase/metered';
+import { collection, query, where, orderBy, writeBatch, doc } from 'firebase/firestore';
+import { addDoc, deleteDoc, getDoc, getDocs, onSnapshot, setDoc, updateDoc } from '../firebase/metered';
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
 import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
 import { countSales } from "../utils/sales";

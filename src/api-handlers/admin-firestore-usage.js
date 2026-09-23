@@ -20,7 +20,15 @@ import { GoogleAuth } from 'google-auth-library'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 import { getAdminDb } from './_lib/firebase-admin.js'
-import { flushUsage, readUsageDay, quotaDayKey } from './_lib/usage-meter.js'
+import {
+  flushUsage,
+  readUsageDay,
+  readUsageHistory,
+  setUsageBaseline,
+  applyBaseline,
+  quotaDayKey,
+  quotaSlot,
+} from './_lib/usage-meter.js'
 
 // Spark plan daily allowances.
 const FREE_LIMITS = { reads: 50000, writes: 20000, deletes: 20000 }
@@ -107,12 +115,13 @@ async function readMetric(client, projectId, metric, startTime, endTime) {
  * number presented as complete when it is a floor would be worse than none:
  * it would read as "plenty of quota left" on the afternoon the platform dies.
  */
-async function ownCounters() {
+async function ownCounters({ historyDays = 14 } = {}) {
   const db = getAdminDb()
-  // Anything this instance is holding, written first, so the card is not behind
-  // its own process.
+  // Anything this instance is holding, written first, so the screen is not
+  // behind its own process.
   await flushUsage(db, { force: true })
   const day = await readUsageDay(db)
+  const applied = applyBaseline(day)
 
   const dayStart = quotaDayStart()
   const now = new Date()
@@ -121,7 +130,7 @@ async function ownCounters() {
 
   const shape = (kind) => {
     const limit = FREE_LIMITS[kind]
-    const used = day[kind] || 0
+    const used = applied[kind] || 0
     const perHour = used / hoursElapsed
     const projected = Math.round(used + perHour * hoursLeft)
     return {
@@ -147,10 +156,50 @@ async function ownCounters() {
     .sort((a, b) => b.reads + b.writes - (a.reads + a.writes))
     .slice(0, 8)
 
+  // 15-minute buckets into a shape the chart can draw without re-deriving
+  // anything in the browser. Only slots up to now are returned: drawing the
+  // rest of the day as zeroes would look like a collapse in traffic.
+  const nowSlot = quotaSlot(now)
+  const slots = []
+  for (let i = 0; i <= nowSlot; i++) {
+    const v = day.slots?.[`s${i}`] || {}
+    slots.push({
+      slot: i,
+      // Minutes from the start of the quota day, so the browser can label it in
+      // whatever timezone it likes.
+      minute: i * 15,
+      reads: Number(v.reads || 0),
+      writes: Number(v.writes || 0),
+      deletes: Number(v.deletes || 0),
+    })
+  }
+
+  const sumSlots = (from) =>
+    slots.filter((x) => x.slot >= from).reduce((n, x) => n + x.reads, 0)
+
+  const last30 = sumSlots(nowSlot - 1)
+  const lastHour = sumSlots(nowSlot - 3)
+  // A spike is the last hour running at more than double the day's average
+  // hour. Below 200 reads it is noise, not a spike.
+  const avgHour = applied.reads / hoursElapsed
+  const spiking = avgHour > 0 && lastHour > avgHour * 2 && lastHour > 200
+
+  const history = await readUsageHistory(db, historyDays)
+
   return {
     success: true,
     source: 'sellapage',
     partial: true,
+    slots,
+    last30Reads: last30,
+    lastHourReads: lastHour,
+    spiking,
+    history,
+    synced: applied.synced,
+    syncedAt: applied.syncedAt || null,
+    syncedBy: applied.syncedBy || null,
+    syncedBaseline: applied.baseline || null,
+    countedToday: { reads: day.reads, writes: day.writes, deletes: day.deletes },
     partialNote:
       'Counted by Sellapage itself, because Cloud Monitoring needs billing. This covers what the server does (crons, admin, webhooks) and not what runs in a visitor’s browser, so the real figure is higher.',
     plan: 'spark',
@@ -162,19 +211,51 @@ async function ownCounters() {
     writes: shape('writes'),
     deletes: shape('deletes'),
     byLabel,
-    spiking: false,
-    lastHourReads: 0,
   }
 }
 
 export default async function handler(req, res) {
   applyCorsOrigin(req, res)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(204).end()
 
-  const admin = await verifyAdmin(req, 'health')
+  const admin = await verifyAdmin(req, 'usage')
   if (!admin) return res.status(403).json({ error: 'Forbidden' })
+
+  // SYNC WITH FIREBASE
+  //
+  // The only source of truth on the free plan is the number a human can read in
+  // the Firebase console, so this is how it gets in. Everything counted after
+  // the sync is added on top, and what was already counted before it is
+  // subtracted, so nothing lands twice. See setUsageBaseline.
+  if (req.method === 'POST' && req.query.action === 'sync') {
+    let body
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON' })
+    }
+
+    const n = (v) => Math.max(0, Math.floor(Number(v) || 0))
+    const reads = n(body.reads)
+    const writes = n(body.writes)
+    const deletes = n(body.deletes)
+
+    if (!reads && !writes && !deletes) {
+      return res.status(200).json({ success: false, message: 'Enter the numbers you can see in Firebase.' })
+    }
+    // A typo of a few extra zeroes would show the platform as dead when it is
+    // fine. The free limits are the ceiling of anything plausible.
+    if (reads > FREE_LIMITS.reads * 20 || writes > FREE_LIMITS.writes * 20) {
+      return res.status(200).json({ success: false, message: 'That looks too large to be right. Check the figure and try again.' })
+    }
+
+    const baseline = await setUsageBaseline(getAdminDb(), { reads, writes, deletes, by: admin.uid })
+    cache = { at: 0, payload: null }
+    console.log(`[admin-firestore-usage] baseline synced by ${admin.uid}: ${reads} reads`)
+    return res.status(200).json({ success: true, baseline })
+  }
 
   if (cache.payload && Date.now() - cache.at < TTL_MS && req.query.fresh !== '1') {
     return res.status(200).json({ ...cache.payload, cached: true })

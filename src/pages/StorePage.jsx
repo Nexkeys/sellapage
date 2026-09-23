@@ -21,7 +21,8 @@ import {
 import { getStoreBySlug, getProducts } from "../firebase/products";
 import { getServices } from "../firebase/services";
 import { db } from "../firebase/config";
-import { doc, setDoc, updateDoc, increment } from "firebase/firestore";
+import { doc, increment } from 'firebase/firestore';
+import { setDoc, updateDoc } from '../firebase/metered';
 import { buildEnquiryURL } from "../utils/whatsapp";
 import { setStoreFavicon, resetFavicon } from "../utils/storeFavicon";
 import LeadForm from "../components/LeadForm";

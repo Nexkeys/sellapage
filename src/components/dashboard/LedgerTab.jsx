@@ -5,8 +5,8 @@ import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-
 
 // Firebase Cloud Sync Imports
 import { db } from '../../firebase/config'
-import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { onSnapshot } from '../../firebase/metered';
+import { collection, doc } from 'firebase/firestore';
+import { deleteDoc, onSnapshot, setDoc, updateDoc } from '../../firebase/metered';
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../../utils/staffDataFetch'
 import { SkeletonRows } from '../Skeleton'
 

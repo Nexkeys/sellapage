@@ -33,6 +33,9 @@ const TAB_ACCESS = {
   // Free trials hand a vendor paid features for nothing, and granting one can
   // overwrite a plan somebody paid for. Money decision, super_admin only.
   trials:         ['super_admin'],
+  // Firestore quota. Read-only numbers, but the sync action writes a baseline
+  // every other figure is measured against, so it stays with super admins.
+  usage:          ['super_admin'],
   announcements:  ['super_admin'],
   // Broadcast push. Reaches every vendor's phone in one press and cannot be
   // recalled once delivered, so it is deliberately narrower than announcements

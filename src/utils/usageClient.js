@@ -21,6 +21,8 @@ const MIN_TO_REPORT = 5
 const FLUSH_EVERY_MS = 60 * 1000
 
 let reads = 0
+let writes = 0
+let deletes = 0
 let started = false
 
 /** Where these reads came from, so the admin card can separate a storefront
@@ -35,9 +37,14 @@ function context() {
 }
 
 function send(useBeacon) {
-  if (reads < MIN_TO_REPORT) return
-  const body = JSON.stringify({ label: context(), reads })
+  // Writes and deletes are reported however few there are: a daily write budget
+  // is less than half the read budget, so single writes matter proportionally
+  // more than single reads do.
+  if (reads < MIN_TO_REPORT && !writes && !deletes) return
+  const body = JSON.stringify({ label: context(), reads, writes, deletes })
   reads = 0
+  writes = 0
+  deletes = 0
 
   try {
     if (useBeacon && navigator.sendBeacon) {
@@ -72,11 +79,25 @@ function start() {
   setInterval(() => send(false), FLUSH_EVERY_MS)
 }
 
-export function countReads(n = 1) {
+function bump(kind, n) {
   const count = Number(n)
   if (!Number.isFinite(count) || count <= 0) return
-  reads += count
+  if (kind === 'reads') reads += count
+  else if (kind === 'writes') writes += count
+  else deletes += count
   start()
+}
+
+export function countReads(n = 1) {
+  bump('reads', n)
+}
+
+export function countWrites(n = 1) {
+  bump('writes', n)
+}
+
+export function countDeletes(n = 1) {
+  bump('deletes', n)
 }
 
 /** Exposed for tests and for a deliberate flush before a full page navigation. */

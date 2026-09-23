@@ -1,8 +1,8 @@
 //src/components/dashboard/DiscountsTab.jsx/
 import { useEffect, useState } from "react";
 import { Percent, Lock, Plus, X, Loader2, Trash2 } from "lucide-react";
-import { collection, query, orderBy, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { getDocs } from '../../firebase/metered';
+import { collection, query, orderBy, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { addDoc, deleteDoc, getDocs, updateDoc } from '../../firebase/metered';
 import { db } from "../../firebase/config";
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from "../../utils/staffDataFetch";
 import { SkeletonRows } from '../Skeleton'

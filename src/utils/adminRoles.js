@@ -25,6 +25,8 @@ const TAB_ACCESS = {
   // Mirrors verify-admin.js. Granting a trial can overwrite a paid plan, so it
   // stays with super admins even though support would find it handy.
   trials: [ADMIN_ROLES.SUPER_ADMIN],
+  // Mirrors verify-admin.js.
+  usage: [ADMIN_ROLES.SUPER_ADMIN],
   announcements: [ADMIN_ROLES.SUPER_ADMIN],
   // Must stay in step with TAB_ACCESS in _lib/verify-admin.js. This copy only
   // decides whether the tab renders; that copy decides what the API permits.

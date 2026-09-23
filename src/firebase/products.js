@@ -1,6 +1,6 @@
 //src/firebase/products.js/
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getCountFromServer, writeBatch, increment } from 'firebase/firestore';
-import { getDocs, getDoc } from './metered';
+import { collection, doc, query, where, orderBy, limit, getCountFromServer, writeBatch, increment } from 'firebase/firestore';
+import { addDoc, deleteDoc, getDoc, getDocs, updateDoc } from './metered';
 import { db } from './config'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from '../utils/staffDataFetch'
 import { isStorefrontHidden, filterVisibleStores, isStorefrontGateEnabled } from '../utils/storefrontGate'

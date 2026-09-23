@@ -21,8 +21,8 @@
 // how the old writes failed unnoticed, so the rules are kept in step with the
 // field list below.
 
-import { doc, setDoc, updateDoc, increment, collection, query, orderBy, limit } from 'firebase/firestore';
-import { getDocs } from '../firebase/metered';
+import { doc, increment, collection, query, orderBy, limit } from 'firebase/firestore';
+import { getDocs, setDoc, updateDoc } from '../firebase/metered';
 import { db } from '../firebase/config'
 
 /**

@@ -25,8 +25,12 @@ import {
   getDocs as fsGetDocs,
   getDoc as fsGetDoc,
   onSnapshot as fsOnSnapshot,
+  setDoc as fsSetDoc,
+  updateDoc as fsUpdateDoc,
+  addDoc as fsAddDoc,
+  deleteDoc as fsDeleteDoc,
 } from 'firebase/firestore'
-import { countReads } from '../utils/usageClient'
+import { countReads, countWrites, countDeletes } from '../utils/usageClient'
 
 export async function getDocs(query) {
   const snap = await fsGetDocs(query)
@@ -69,4 +73,38 @@ export function onSnapshot(ref, ...rest) {
     return fsOnSnapshot(ref, { ...rest[0], next: wrap(rest[0].next) }, ...rest.slice(1))
   }
   return fsOnSnapshot(ref, ...rest)
+}
+
+// ---------------------------------------------------------------- writes
+//
+// Counted AFTER the operation resolves, so a write that failed is never
+// counted, and never before, so the count cannot outrun reality.
+//
+// NOT COVERED: writeBatch(). A batch bills one write per operation in it, and
+// counting that means wrapping the batch object itself, which sits in the
+// checkout path. Left alone deliberately; the usage screen says so rather than
+// quietly under-reporting.
+
+export async function setDoc(...args) {
+  const result = await fsSetDoc(...args)
+  countWrites(1)
+  return result
+}
+
+export async function updateDoc(...args) {
+  const result = await fsUpdateDoc(...args)
+  countWrites(1)
+  return result
+}
+
+export async function addDoc(...args) {
+  const result = await fsAddDoc(...args)
+  countWrites(1)
+  return result
+}
+
+export async function deleteDoc(...args) {
+  const result = await fsDeleteDoc(...args)
+  countDeletes(1)
+  return result
 }

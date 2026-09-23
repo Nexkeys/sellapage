@@ -77,21 +77,26 @@ export default async function handler(req, res) {
     body = body || {}
 
     const label = ALLOWED_LABELS.has(body.label) ? body.label : 'client:other'
-    const reads = Math.min(MAX_PER_REQUEST, Math.max(0, Math.floor(Number(body.reads) || 0)))
-    if (!reads) return res.status(204).end()
+    const cap = (v) => Math.min(MAX_PER_REQUEST, Math.max(0, Math.floor(Number(v) || 0)))
+    const reads = cap(body.reads)
+    const writes = cap(body.writes)
+    const deletes = cap(body.deletes)
+    if (!reads && !writes && !deletes) return res.status(204).end()
 
     const ip =
       (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
       req.socket?.remoteAddress ||
       'unknown'
 
-    if (!withinIpBudget(ip, reads)) {
+    if (!withinIpBudget(ip, reads + writes + deletes)) {
       // Silently accepted and dropped. Telling a script it has been rate
       // limited only tells it how to pace itself.
       return res.status(204).end()
     }
 
-    meter.reads(label, reads)
+    if (reads) meter.reads(label, reads)
+    if (writes) meter.writes(label, writes)
+    if (deletes) meter.deletes(label, deletes)
     // Not forced: this writes only once the shared buffer is full, so a busy
     // hour of storefront traffic costs a handful of writes, not one per visit.
     await flushUsage(getAdminDb())

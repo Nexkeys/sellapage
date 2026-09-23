@@ -5,14 +5,8 @@ import { Package, Search, X, Grid, Tag, Calendar, Check, Loader2, MessageCircle,
 import { getStoreBySlug } from "../firebase/products";
 import { getServices } from "../firebase/services";
 import { db } from "../firebase/config";
-import {
-  addDoc,
-  collection,
-  doc,
-  increment,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
+import { collection, doc, increment } from 'firebase/firestore';
+import { addDoc, setDoc, updateDoc } from '../firebase/metered';
 
 import LeadForm from "../components/LeadForm";
 import { setStoreFavicon, resetFavicon } from "../utils/storeFavicon";
