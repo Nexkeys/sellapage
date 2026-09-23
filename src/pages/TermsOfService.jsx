@@ -6,7 +6,7 @@ import SEO from '../components/SEO'
 import { pageSeo } from '../data/seoPages'
 
 
-const LAST_UPDATED = 'April 2026'
+const LAST_UPDATED = 'September 2026'
 
 const sections = [
   {
