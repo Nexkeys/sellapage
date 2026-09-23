@@ -29,6 +29,14 @@
 // end of a run) or when enough has piled up to be worth recording.
 import { FieldValue } from 'firebase-admin/firestore'
 
+// TURNED OFF (2026-09-23), same decision as the client half: the meter's own
+// writes and reads came out of the quota it was measuring, and keeping it
+// honest meant syncing it against the Firebase console by hand every day.
+//
+// Every call site still calls meter.reads(...) and flushUsage(...); both now
+// do nothing. One line brings it all back.
+const DISABLED = true
+
 const COLLECTION = 'platform'
 const DOC = 'usageDays'
 
@@ -67,6 +75,7 @@ export function quotaDayKey(now = new Date()) {
 }
 
 function bump(label, kind, n) {
+  if (DISABLED) return
   const count = Number(n)
   if (!Number.isFinite(count) || count <= 0) return
   pending[kind] += count
@@ -105,6 +114,7 @@ export const meter = {
  * work. A lost flush loses a number, which matters far less than the job.
  */
 export async function flushUsage(db, { force = false } = {}) {
+  if (DISABLED) return { flushed: 0, disabled: true }
   const total = meter.pendingTotal()
   if (!total) return { flushed: 0 }
   if (!force && total < AUTO_FLUSH_AT) return { flushed: 0, deferred: total }

@@ -13,6 +13,18 @@
 //   3. Cost nothing in Firestore. The report is an HTTP POST to our own API,
 //      which adds it to the server's in-memory tally. No document is written
 //      per visitor.
+// TURNED OFF (2026-09-23), by decision.
+//
+// Counting our own usage cost the very thing it measured: every flush was a
+// Firestore write, and reading the figures back cost reads, on a free quota
+// that was the problem in the first place. It also had to be corrected by hand
+// against the Firebase console, daily, which is work nobody should be doing.
+//
+// The wrappers in firebase/metered.js stay in place and stay harmless: they
+// call these functions, which now do nothing. Flip this to false and the whole
+// thing comes back, without touching the 23 files that import them.
+const DISABLED = true
+
 const ENDPOINT = '/api/usage-report'
 
 // Below this, a page's reads are not worth a request of their own. A storefront
@@ -80,6 +92,7 @@ function start() {
 }
 
 function bump(kind, n) {
+  if (DISABLED) return
   const count = Number(n)
   if (!Number.isFinite(count) || count <= 0) return
   if (kind === 'reads') reads += count

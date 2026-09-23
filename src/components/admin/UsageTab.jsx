@@ -7,7 +7,7 @@
 // every visitor's bundle than it is worth here.
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Database, RefreshCw, Loader2, AlertTriangle, TrendingUp, Check, Link2,
+  Database, RefreshCw, Loader2, AlertTriangle, TrendingUp,
 } from 'lucide-react'
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-NG')
@@ -100,11 +100,6 @@ export default function UsageTab({ authHeaders }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [syncOpen, setSyncOpen] = useState(false)
-  const [form, setForm] = useState({ reads: '', writes: '', deletes: '' })
-  const [syncing, setSyncing] = useState(false)
-  const [syncMsg, setSyncMsg] = useState(null)
-
   const load = useCallback(async (fresh) => {
     setLoading(true)
     setError('')
@@ -124,35 +119,6 @@ export default function UsageTab({ authHeaders }) {
 
   useEffect(() => { load(false) }, [load])
 
-  const sync = async () => {
-    setSyncing(true)
-    setSyncMsg(null)
-    try {
-      const res = await fetch('/api/admin-firestore-usage?action=sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({
-          reads: Number(form.reads) || 0,
-          writes: Number(form.writes) || 0,
-          deletes: Number(form.deletes) || 0,
-        }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (json.success) {
-        setSyncMsg({ ok: true, text: 'Synced. Counting continues from that figure.' })
-        setSyncOpen(false)
-        setForm({ reads: '', writes: '', deletes: '' })
-        load(true)
-      } else {
-        setSyncMsg({ ok: false, text: json.message || json.error || 'Could not sync.' })
-      }
-    } catch (err) {
-      setSyncMsg({ ok: false, text: err.message })
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   const resetsLocal = data?.resetsAt
     ? new Date(data.resetsAt).toLocaleTimeString('en-NG', { hour: 'numeric', minute: '2-digit', hour12: true })
     : null
@@ -168,14 +134,6 @@ export default function UsageTab({ authHeaders }) {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setSyncOpen((v) => !v)}
-            className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-gray-900"
-          >
-            <Link2 size={13} />
-            Sync with Firebase
-          </button>
           <button
             type="button"
             onClick={() => load(true)}
@@ -195,84 +153,22 @@ export default function UsageTab({ authHeaders }) {
         </div>
       )}
 
-      {/* The honest statement of what this number is. Kept at the top, not
-          buried under the charts, because everything below is read in its
-          light. */}
-      {data?.partial && (
-        <div className="text-xs bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
-          <p className="text-gray-700">
-            <span className="font-bold text-gray-900">Counted by Sellapage.</span>{' '}
-            Cloud Monitoring needs billing, so Google will not serve these numbers on the free plan.
-            This counts the crons, the admin panel, storefronts and dashboards. It does not count
-            batched writes or anything done in the Firebase console, so treat it as a floor.
-          </p>
-          {data.synced ? (
-            <p className="text-green-700 font-medium flex items-center gap-1">
-              <Check size={12} />
-              Anchored to Firebase&apos;s figure of {fmt(data.syncedBaseline?.reads)} reads, synced{' '}
-              {new Date(data.syncedAt).toLocaleTimeString('en-NG', { hour: 'numeric', minute: '2-digit', hour12: true })}.
-              Counted since: {fmt((data.reads?.used || 0) - (data.syncedBaseline?.reads || 0))}.
-            </p>
-          ) : (
-            <p className="text-gray-500">
-              Not anchored today. Open Firebase &gt; Firestore &gt; Usage, then press &quot;Sync with
-              Firebase&quot; above and type what it says, and today&apos;s figure starts from there.
-            </p>
-          )}
+      {/* Free plan: Google will not serve these numbers to an API caller. Said
+          plainly, with the console link, rather than leaving a refresh button
+          that can never succeed. */}
+      {data?.needsBilling && (
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+          <p className="text-sm font-bold text-gray-900">Waiting on Blaze</p>
+          <p className="text-xs text-gray-600">{data.message}</p>
+          <a
+            href="https://console.firebase.google.com/project/sellapage-7145d/firestore/usage"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-xs font-bold text-green-700 underline"
+          >
+            Open Firestore usage in Firebase
+          </a>
         </div>
-      )}
-
-      {syncOpen && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-bold text-gray-900">Type what Firebase shows right now</p>
-          <p className="text-[11px] text-gray-500">
-            From Firebase console &gt; Firestore &gt; Usage, the totals for the current quota
-            period. Everything counted after this is added on top, and what was already counted
-            before it is subtracted, so nothing is counted twice.
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {['reads', 'writes', 'deletes'].map((k) => (
-              <label key={k} className="block">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{k}</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={form[k]}
-                  onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))}
-                  placeholder="0"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                />
-              </label>
-            ))}
-          </div>
-          <p className="text-[11px] text-gray-400">
-            7.2k means 7200. Type the exact number if the console shows one.
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={sync}
-              disabled={syncing}
-              className="flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50"
-            >
-              {syncing ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              Save baseline
-            </button>
-            <button
-              type="button"
-              onClick={() => setSyncOpen(false)}
-              className="px-3 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {syncMsg && (
-        <p className={`text-xs font-medium ${syncMsg.ok ? 'text-green-600' : 'text-red-600'}`}>
-          {syncMsg.text}
-        </p>
       )}
 
       {data?.success && (
