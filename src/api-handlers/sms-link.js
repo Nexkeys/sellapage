@@ -12,9 +12,11 @@ import { FieldValue } from 'firebase-admin/firestore'
 import {
   splitTrackingCode, recipientCode, readOptOutToken, publicBase,
 } from './_lib/sms-campaign.js'
+import { toLocalNgPhone } from '../utils/phone.js'
 
 export const SMS_CAMPAIGNS = 'smsCampaigns'
 export const SMS_CLICKS = 'smsClicks'
+export const SMS_OPT_OUTS = 'smsOptOuts'
 
 const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
@@ -52,8 +54,8 @@ export default async function handler(req, res) {
 
   // ------------------------------------------------------------ opt out
   if (mode === 'optout') {
-    const storeId = readOptOutToken(req.query.token)
-    if (!storeId) {
+    const phone = readOptOutToken(req.query.token)
+    if (!phone) {
       return page(res, 400, 'Link not recognised', `
         <h1>This link is not valid</h1>
         <p>Check the full link from the message, or reply to the WhatsApp number on your dashboard and we will take you off.</p>
@@ -61,10 +63,21 @@ export default async function handler(req, res) {
     }
 
     try {
+      // Keyed by the number, not by a store id.
+      //
+      // The number is the thing a person owns, and it is what every later send
+      // is checked against, so one tap silences that handset whichever account
+      // it belongs to, or none at all. Writing to a store id instead would
+      // create an empty store document for a number we do not know, which is
+      // exactly what a test send is.
       const db = getAdminDb()
-      await db.collection('stores').doc(storeId).set({
-        smsOptOut: true,
-        smsOptOutAt: FieldValue.serverTimestamp(),
+      await db.collection(SMS_OPT_OUTS).doc(phone).set({
+        phone,
+        local: toLocalNgPhone(phone),
+        optedOut: true,
+        at: FieldValue.serverTimestamp(),
+        atMs: Date.now(),
+        source: 'link',
       }, { merge: true })
     } catch (err) {
       console.error('[sms-link] opt-out write failed:', err?.message)
@@ -89,7 +102,7 @@ export default async function handler(req, res) {
       <a href="${publicBase()}">Go to Sellapage</a>`)
   }
 
-  let destination = publicBase()
+  let destination = ''
   try {
     const db = getAdminDb()
     const snap = await db.collection(SMS_CAMPAIGNS).where('code', '==', campaignPart).limit(1).get()
@@ -121,6 +134,16 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error('[sms-link] click tracking failed:', err?.message)
+  }
+
+  // No silent fall back to the home page. A link that cannot find its
+  // campaign is broken, and sending people to the home page instead hides
+  // that: it looks identical to a link that ignored the URL it was given.
+  if (!destination) {
+    return page(res, 404, 'Link not recognised', `
+      <h1>This link has expired</h1>
+      <p>The campaign behind it is no longer available.</p>
+      <a href="${publicBase()}">Go to Sellapage</a>`)
   }
 
   res.setHeader('Cache-Control', 'no-store')

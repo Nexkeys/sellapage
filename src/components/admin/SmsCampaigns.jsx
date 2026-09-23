@@ -56,6 +56,9 @@ export default function SmsCampaigns({ authHeaders }) {
   const [logSearch, setLogSearch] = useState('')
   const [logPage, setLogPage] = useState(1)
   const [logLoading, setLogLoading] = useState(false)
+  // Numbers that tapped "Stop", and the control to put one back on.
+  const [optOuts, setOptOuts] = useState(null)
+  const [optOutsLoading, setOptOutsLoading] = useState(false)
   // Worked out in the browser and refreshed every minute, so the state is right
   // even when the tab has been open since before 8pm. The server still decides:
   // this only shows what it will say.
@@ -102,6 +105,22 @@ export default function SmsCampaigns({ authHeaders }) {
   }, [authHeaders, logPage, logOutcome, logCampaign, logSearch])
 
   useEffect(() => { loadLog() }, [loadLog])
+
+  const loadOptOuts = useCallback(async () => {
+    const headers = await authHeaders()
+    setOptOutsLoading(true)
+    try {
+      const r = await fetch('/api/admin-sms?action=opt-outs', { headers })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) setOptOuts(d)
+    } catch {
+      // The rest of the tab still works without the list.
+    } finally {
+      setOptOutsLoading(false)
+    }
+  }, [authHeaders])
+
+  useEffect(() => { loadOptOuts() }, [loadOptOuts])
 
   // Audience and costing follow what is typed, a moment behind it.
   useEffect(() => {
@@ -164,9 +183,37 @@ export default function SmsCampaigns({ authHeaders }) {
   const sendTest = async () => {
     setBusy('test'); setError(''); setNotice('')
     try {
-      const d = await post('test', { phone: testPhone, body: draft.body, includeLink: draft.includeLink, linkUrl: draft.linkUrl })
-      setNotice(`Test sent to ${testPhone}. Termii balance now ${naira(d.balance)}.`)
+      // A tracked link points at the URL stored on the campaign, so the draft
+      // has to exist before a test can follow it anywhere. Saved here rather
+      // than asking, because the alternative is a test that lands on the home
+      // page and looks like the link was ignored.
+      let id = draft.id
+      if (draft.includeLink && draft.linkUrl) {
+        const saved = await post('save', draft)
+        id = saved.id
+        setDraft((prev) => ({ ...prev, id: saved.id }))
+      }
+      const d = await post('test', {
+        id,
+        phone: testPhone,
+        body: draft.body,
+        includeLink: draft.includeLink,
+        linkUrl: draft.linkUrl,
+      })
+      const balance = Number.isFinite(d.balance) ? ` Termii balance now ${naira(d.balance)}.` : ''
+      setNotice(`Test sent to ${testPhone}, ${d.pages} page${d.pages === 1 ? '' : 's'}.${balance}`)
       load()
+      loadLog()
+    } catch (e) { setError(e.message) } finally { setBusy('') }
+  }
+
+  const optIn = async (row) => {
+    if (!window.confirm(`Put ${row.local} back on the list?\n\nOnly do this for a number that opted out by mistake, or your own test number. Sending to someone who asked to be left alone is what gets a sender ID blocked.`)) return
+    setBusy(`optin-${row.phone}`); setError(''); setNotice('')
+    try {
+      await post('opt-in', { phone: row.phone })
+      setNotice(`${row.local} can receive promotional texts again.`)
+      loadOptOuts()
     } catch (e) { setError(e.message) } finally { setBusy('') }
   }
 
@@ -653,6 +700,49 @@ export default function SmsCampaigns({ authHeaders }) {
               <button onClick={() => setLogPage((n) => n + 1)} disabled={log.page >= log.totalPages} className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-600 disabled:opacity-50">Next</button>
             </div>
           </>
+        )}
+      </div>
+      {/* Numbers that asked to be left alone, and the way back for a mistake. */}
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2.5">
+          <div>
+            <h3 className="text-xs font-bold text-gray-800">Opted out</h3>
+            <p className="text-[10px] text-gray-400">Numbers that tapped Stop. They are skipped from every campaign and every test.</p>
+          </div>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-black text-gray-500">
+            {Number(optOuts?.total || 0).toLocaleString()}
+          </span>
+        </div>
+
+        {optOutsLoading && <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-gray-300" /></div>}
+
+        {!optOutsLoading && !(optOuts?.optOuts || []).length && (
+          <div className="px-4 py-8 text-center">
+            <Ban size={18} className="mx-auto mb-2 text-gray-300" />
+            <p className="text-xs font-bold text-gray-900">Nobody has opted out</p>
+            <p className="mt-0.5 text-[10px] text-gray-400">Anyone who taps the Stop link in a message appears here, and stops receiving promotional texts straight away.</p>
+          </div>
+        )}
+
+        {!optOutsLoading && (optOuts?.optOuts || []).length > 0 && (
+          <div className="divide-y divide-gray-50">
+            {optOuts.optOuts.map((row) => (
+              <div key={row.phone} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-gray-900">{row.storeName || 'Not a vendor number'}</p>
+                  <p className="mt-0.5 font-mono text-[10px] text-gray-400">{row.local} · opted out {when(row.at, row.atMs)}</p>
+                </div>
+                <button
+                  onClick={() => optIn(row)}
+                  disabled={busy === `optin-${row.phone}`}
+                  className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {busy === `optin-${row.phone}` ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                  Put back on
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
       <p className="text-[10px] leading-snug text-gray-400">

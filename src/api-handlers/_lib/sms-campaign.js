@@ -60,7 +60,7 @@ export function countSms(text) {
 }
 
 /** Naira per page. Termii bills per page per recipient. */
-export const DEFAULT_PAGE_RATE = Number(process.env.TERMII_PAGE_RATE || 4)
+export const DEFAULT_PAGE_RATE = Number(process.env.TERMII_PAGE_RATE || 5)
 
 export function estimateCost(pages, recipients, rate = DEFAULT_PAGE_RATE) {
   return Math.round(Number(pages) * Number(recipients) * Number(rate) * 100) / 100
@@ -96,27 +96,64 @@ export const splitTrackingCode = (code) => {
   return { campaignPart: clean.slice(0, 5), recipientPart: clean.slice(5) }
 }
 
-/** Opt-out token: stateless, so nothing is written until someone actually opts out. */
-export const optOutToken = (storeId) => `${shortHash(`o:${storeId}`, 6)}${Buffer.from(String(storeId)).toString('base64url')}`
+/**
+ * Opt-out token: it identifies the NUMBER, not the store.
+ *
+ * A number is what a network actually blocks, and the same number can belong to
+ * a store, to several stores, or to nobody we know (a test send). Keying on the
+ * phone means one tap on "Stop" silences that handset for good, whatever
+ * account it is attached to.
+ *
+ * The number is packed in base62 rather than base64, which turns
+ * 2348033004474 into seven characters. That matters: the token rides in every
+ * single message, and characters are what an SMS is billed in.
+ */
+function packDigits(digits) {
+  let n = Number(digits)
+  if (!Number.isSafeInteger(n) || n <= 0) return ''
+  let out = ''
+  while (n > 0) {
+    out = BASE62[n % 62] + out
+    n = Math.floor(n / 62)
+  }
+  return out
+}
+
+function unpackDigits(packed) {
+  const raw = String(packed || '')
+  if (!raw) return ''
+  let n = 0
+  for (const char of raw) {
+    const value = BASE62.indexOf(char)
+    if (value < 0) return ''
+    n = n * 62 + value
+    if (!Number.isSafeInteger(n)) return ''
+  }
+  return String(n)
+}
+
+const OPT_OUT_SIG_LENGTH = 5
+
+export function optOutToken(phone) {
+  const digits = normaliseNgMobile(phone)
+  if (!digits) return ''
+  return `${shortHash(`o:${digits}`, OPT_OUT_SIG_LENGTH)}${packDigits(digits)}`
+}
+
 export function readOptOutToken(token) {
   const raw = String(token || '').trim()
-  if (raw.length < 7) return null
-  const signature = raw.slice(0, 6)
-  let storeId
-  try {
-    storeId = Buffer.from(raw.slice(6), 'base64url').toString('utf8')
-  } catch {
-    return null
-  }
-  if (!storeId || shortHash(`o:${storeId}`, 6) !== signature) return null
-  return storeId
+  if (raw.length <= OPT_OUT_SIG_LENGTH) return null
+  const signature = raw.slice(0, OPT_OUT_SIG_LENGTH)
+  const phone = normaliseNgMobile(unpackDigits(raw.slice(OPT_OUT_SIG_LENGTH)))
+  if (!phone || shortHash(`o:${phone}`, OPT_OUT_SIG_LENGTH) !== signature) return null
+  return phone
 }
 
 export const publicBase = () =>
   (process.env.PUBLIC_APP_URL || 'https://www.sellapage.com.ng').replace(/\/+$/, '')
 
 export const trackedLink = (campaignId, storeId) => `${publicBase()}/r/${trackingCode(campaignId, storeId)}`
-export const optOutLink = (storeId) => `${publicBase()}/x/${optOutToken(storeId)}`
+export const optOutLink = (phone) => `${publicBase()}/x/${optOutToken(phone)}`
 
 export const LINK_PLACEHOLDER = '{link}'
 export const OPT_OUT_SUFFIX = '\nStop: '
@@ -125,10 +162,10 @@ export const OPT_OUT_SUFFIX = '\nStop: '
  * The exact text one recipient receives. The composer previews this with a
  * sample recipient, so what is counted is what is sent.
  */
-export function buildMessage({ body, campaignId, storeId, includeLink, includeOptOut = true }) {
+export function buildMessage({ body, campaignId, storeId, phone, includeLink, includeOptOut = true }) {
   let text = String(body || '')
   if (includeLink) text = text.split(LINK_PLACEHOLDER).join(trackedLink(campaignId, storeId))
-  if (includeOptOut) text += `${OPT_OUT_SUFFIX}${optOutLink(storeId)}`
+  if (includeOptOut) text += `${OPT_OUT_SUFFIX}${optOutLink(phone)}`
   return text
 }
 
@@ -139,12 +176,16 @@ export function buildMessage({ body, campaignId, storeId, includeLink, includeOp
  */
 export const SAMPLE_CAMPAIGN_ID = 'sample-campaign-id'
 export const SAMPLE_STORE_ID = 'sample-store-id-000000000000'
+// Every Nigerian mobile number packs to the same seven characters, so a sample
+// number gives the true length for everyone.
+export const SAMPLE_PHONE = '2348000000000'
 
 export function previewMessage({ body, includeLink, includeOptOut = true }) {
   return buildMessage({
     body,
     campaignId: SAMPLE_CAMPAIGN_ID,
     storeId: SAMPLE_STORE_ID,
+    phone: SAMPLE_PHONE,
     includeLink,
     includeOptOut,
   })
@@ -162,7 +203,7 @@ export const PAID_PLANS = new Set(['growth', 'pro', 'premium'])
  * WhatsApp number on the store. Anyone who opted out is dropped here, not in
  * the UI, so no filter combination can ever reach them.
  */
-export function selectRecipients(stores, filters = {}) {
+export function selectRecipients(stores, filters = {}, optedOutPhones = new Set()) {
   const seen = new Set()
   const recipients = []
   const skipped = { optedOut: 0, noPhone: 0, badPhone: 0, duplicate: 0, filtered: 0 }
@@ -183,6 +224,10 @@ export function selectRecipients(stores, filters = {}) {
 
     const phone = normaliseNgMobile(raw)
     if (!phone) { skipped.badPhone += 1; continue }
+
+    // Checked on the number, after normalising, so it holds whichever store
+    // the number is attached to and however the number was typed in.
+    if (optedOutPhones.has(phone)) { skipped.optedOut += 1; continue }
 
     if (seen.has(phone)) { skipped.duplicate += 1; continue }
     seen.add(phone)

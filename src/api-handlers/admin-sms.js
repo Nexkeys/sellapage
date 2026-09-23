@@ -20,11 +20,18 @@ import {
   countSms, estimateCost, DEFAULT_PAGE_RATE, selectRecipients, sendWindow,
   buildMessage, previewMessage, campaignCode, LINK_PLACEHOLDER, publicBase,
 } from './_lib/sms-campaign.js'
-import { normaliseNgMobile, maskNgPhone } from '../utils/phone.js'
+import { normaliseNgMobile, maskNgPhone, toLocalNgPhone } from '../utils/phone.js'
 
 const CAMPAIGNS = 'smsCampaigns'
 const CLICKS = 'smsClicks'
 const MESSAGES = 'smsMessages'
+const OPT_OUTS = 'smsOptOuts'
+// Restoring consent is recorded rather than silently deleted, so there is
+// always an answer to "why is this number getting our texts again".
+const OPT_OUT_LOG = 'smsOptOutLog'
+// A test send has no store behind it, but the tracked link still needs a
+// recipient part, so it gets a fixed one.
+const TEST_STORE_ID = 'test-send'
 const MAX_MESSAGES = 2000
 const MAX_BODY = 480
 const MAX_RECIPIENTS = 5000
@@ -51,6 +58,17 @@ async function readStores(db) {
     .select('storeName', 'handle', 'plan', 'vendorType', 'verifiedPhone', 'whatsappNumber', 'smsOptOut')
     .get()
   return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+}
+
+async function readOptOutPhones(db) {
+  const snap = await db.collection(OPT_OUTS).get()
+  const phones = new Set()
+  snap.docs.forEach((doc) => {
+    if (doc.data().optedOut === false) return
+    const phone = normaliseNgMobile(doc.data().phone || doc.id)
+    if (phone) phones.add(phone)
+  })
+  return phones
 }
 
 function costing({ body, includeLink, linkUrl, recipients }) {
@@ -175,8 +193,8 @@ export default async function handler(req, res) {
     // Who would receive this, and what it would cost.
     if (action === 'audience') {
       const filters = parseFilters(body.filters)
-      const stores = await readStores(db)
-      const { recipients, skipped } = selectRecipients(stores, filters)
+      const [stores, optedOut] = await Promise.all([readStores(db), readOptOutPhones(db)])
+      const { recipients, skipped } = selectRecipients(stores, filters, optedOut)
       const wallet = await getWalletBalance()
       const quote = costing({
         body: body.body,
@@ -271,17 +289,72 @@ export default async function handler(req, res) {
       const text = clean(body.body, MAX_BODY)
       if (!text) return res.status(400).json({ error: 'Write the message first.' })
 
+      // A test that ignores the opt-out list is not a test of what we send.
+      const optedOut = await readOptOutPhones(db)
+      if (optedOut.has(phone)) {
+        return res.status(400).json({
+          error: `${toLocalNgPhone(phone)} has opted out of promotional SMS. Put it back on the list below if it was a test.`,
+        })
+      }
+
+      // The tracked link is built from a SAVED campaign, because /r/<code>
+      // finds the destination URL on the campaign document. Testing against an
+      // unsaved draft used to send a code that matched nothing, and the link
+      // then landed on the home page instead of the URL that was typed in,
+      // which reads as "it ignores my link".
+      const wantsLink = Boolean(body.includeLink) && Boolean(body.linkUrl)
+      const campaignId = String(body.id || '')
+      if (wantsLink && !campaignId) {
+        return res.status(400).json({ error: 'Save the campaign first, so the tracked link knows where to send people.' })
+      }
+      if (wantsLink) {
+        const draft = await db.collection(CAMPAIGNS).doc(campaignId).get()
+        if (!draft.exists) return res.status(404).json({ error: 'That campaign no longer exists. Save it again.' })
+        if (!draft.data().linkUrl) {
+          return res.status(400).json({ error: 'Save the campaign first: the link on the saved version is what the tracked link points at.' })
+        }
+      }
+
       const message = buildMessage({
         body: text,
-        campaignId: 'test-campaign',
-        storeId: 'test-store',
-        includeLink: Boolean(body.includeLink) && Boolean(body.linkUrl),
+        campaignId: campaignId || 'test-campaign',
+        storeId: TEST_STORE_ID,
+        phone,
+        includeLink: wantsLink,
         includeOptOut: true,
       })
 
       const result = await sendPromotionalSms({ to: [phone], sms: message })
       if (!result.ok) return res.status(502).json({ error: result.message || 'Termii refused the test send.' })
-      return res.status(200).json({ success: true, balance: result.balance, sentText: message })
+
+      // A test costs money and lands on a real handset, so it belongs in the
+      // log like any other message. Keyed by Termii's message id, so its
+      // delivery report finds it.
+      const counts = countSms(message)
+      if (result.messageId) {
+        await db.collection(MESSAGES).doc(String(result.messageId)).set({
+          campaignId: '',
+          isTest: true,
+          storeId: '',
+          storeName: 'Test send',
+          phone,
+          status: 'Message Sent',
+          outcome: 'pending',
+          pages: counts.pages,
+          sentAt: FieldValue.serverTimestamp(),
+          sentAtMs: Date.now(),
+        }).catch((err) => console.error('[admin-sms] test record failed:', err?.message))
+      }
+
+      // Termii's send response does not always carry the balance, and showing
+      // "NGN 0" after a successful send reads as an empty wallet. Ask for it.
+      const wallet = await getWalletBalance()
+      return res.status(200).json({
+        success: true,
+        balance: wallet.ok ? wallet.balance : (Number.isFinite(result.balance) ? result.balance : null),
+        pages: counts.pages,
+        sentText: message,
+      })
     }
 
     // The real thing.
@@ -304,8 +377,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'This campaign has already been sent.' })
       }
 
-      const stores = await readStores(db)
-      const { recipients } = selectRecipients(stores, campaign.filters || {})
+      const [stores, optedOut] = await Promise.all([readStores(db), readOptOutPhones(db)])
+      const { recipients } = selectRecipients(stores, campaign.filters || {}, optedOut)
       if (!recipients.length) return res.status(400).json({ error: 'Nobody matches this audience.' })
       if (recipients.length > MAX_RECIPIENTS) {
         return res.status(400).json({ error: `That is ${recipients.length} recipients, above the ${MAX_RECIPIENTS} safety limit.` })
@@ -352,6 +425,7 @@ export default async function handler(req, res) {
           body: campaign.body,
           campaignId: id,
           storeId: r.storeId,
+          phone: r.phone,
           includeLink: Boolean(campaign.includeLink && campaign.linkUrl),
         })
         const result = await sendPromotionalSms({ to: [r.phone], sms: message })
@@ -473,17 +547,70 @@ export default async function handler(req, res) {
       })
     }
 
-    // Who opted out, so the number is visible rather than silently shrinking.
+    // Who opted out, so the number is visible rather than the audience
+    // silently shrinking with no explanation.
     if (action === 'opt-outs') {
-      const snap = await db.collection('stores')
-        .select('storeName', 'handle', 'smsOptOut', 'smsOptOutAt')
-        .get()
+      const [snap, stores] = await Promise.all([
+        db.collection(OPT_OUTS).get(),
+        readStores(db),
+      ])
+
+      // Which store, if any, that number belongs to. Opt-out is by number, so
+      // a number with no store (a test send) is listed on its own.
+      const byPhone = new Map()
+      stores.forEach((s) => {
+        const phone = normaliseNgMobile(s.verifiedPhone || s.whatsappNumber || '')
+        if (phone && !byPhone.has(phone)) byPhone.set(phone, s.storeName || s.handle || '')
+      })
+
       const rows = snap.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((s) => s.smsOptOut === true)
-        .map((s) => ({ id: s.id, storeName: s.storeName || s.handle || '', at: iso(s.smsOptOutAt) }))
-        .sort((a, b) => String(b.at).localeCompare(String(a.at)))
+        .map((doc) => {
+          const d = doc.data()
+          const phone = normaliseNgMobile(d.phone || doc.id) || ''
+          return {
+            phone,
+            local: toLocalNgPhone(phone) || String(doc.id),
+            storeName: byPhone.get(phone) || '',
+            source: d.source || 'link',
+            at: iso(d.at) || null,
+            atMs: Number(d.atMs) || 0,
+          }
+        })
+        .filter((r) => r.phone)
+        .sort((a, b) => b.atMs - a.atMs)
+
       return res.status(200).json({ success: true, optOuts: rows, total: rows.length })
+    }
+
+    // Putting a number back on the list.
+    //
+    // Only ever done by hand, from the admin panel, for a number that opted out
+    // by mistake or during testing. Consent is the vendor's to give, so this
+    // records who did it rather than quietly deleting the evidence.
+    if (action === 'opt-in' && req.method === 'POST') {
+      const phone = normaliseNgMobile(body.phone)
+      if (!phone) return res.status(400).json({ error: 'Enter a valid Nigerian mobile number.' })
+
+      const ref = db.collection(OPT_OUTS).doc(phone)
+      const doc = await ref.get()
+      if (!doc.exists) return res.status(404).json({ error: 'That number is not on the opt-out list.' })
+
+      // Read before deleting: the record of when they opted out is the part
+      // worth keeping, and it is gone once the document is.
+      const was = doc.data() || {}
+      await ref.delete()
+      await db.collection(OPT_OUT_LOG).add({
+        phone,
+        local: toLocalNgPhone(phone),
+        optedOut: false,
+        restoredAt: FieldValue.serverTimestamp(),
+        restoredBy: admin.uid || admin.email || 'admin',
+        at: was.at || null,
+        atMs: Number(was.atMs) || 0,
+        source: 'restored',
+      }).catch((err) => console.error('[admin-sms] opt-in log failed:', err?.message))
+
+      return res.status(200).json({ success: true, phone, local: toLocalNgPhone(phone) })
     }
 
     return res.status(400).json({ error: 'Invalid action' })
