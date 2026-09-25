@@ -281,7 +281,7 @@ export default async function handler(req, res) {
         pushBody: `${result.days} days of ${title(result.plan)}, free. Ends ${prettyDate(result.endsAt)}.`,
         bodyHtml: `
           <p>We have put your store on <strong>${title(result.plan)}</strong> for <strong>${result.days} days</strong>, free of charge.</p>
-          <p>It runs until <strong>${prettyDate(result.endsAt)}</strong>. Nothing is charged and no card is needed. We will remind you 5 days before it ends, and again the day before.</p>
+          <p>It runs until <strong>${prettyDate(result.endsAt)}</strong>. Nothing is charged and no card is needed. We will remind you few days before it ends, and again the day before.</p>
           ${body.note ? `<p style="color:#6b7280;font-size:13px;">Note from our team: ${escapeHtml(String(body.note).slice(0, 300))}</p>` : ''}
           <p>Go and use everything. If it earns its keep, pick the plan up before the end date and nothing changes.</p>
         `,

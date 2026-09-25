@@ -165,7 +165,8 @@ export const OPT_OUT_SUFFIX = '\nStop: '
 export function buildMessage({ body, campaignId, storeId, phone, includeLink, includeOptOut = true }) {
   let text = String(body || '')
   if (includeLink) text = text.split(LINK_PLACEHOLDER).join(trackedLink(campaignId, storeId))
-  if (includeOptOut) text += `${OPT_OUT_SUFFIX}${optOutLink(phone)}`
+  // Commented by owner
+  // if (includeOptOut) text += `${OPT_OUT_SUFFIX}${optOutLink(phone)}`
   return text
 }
 

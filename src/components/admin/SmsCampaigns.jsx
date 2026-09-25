@@ -429,7 +429,7 @@ export default function SmsCampaigns({ authHeaders }) {
                   A special character (₦, emoji, curly quotes) cut the page to 70 characters. Use "NGN" to keep 160.
                 </p>
               )}
-              <p className="mt-1 text-[10px] text-gray-500">Opt-out link is added automatically and counted above.</p>
+              {/* <p className="mt-1 text-[10px] text-gray-500">Opt-out link is added automatically and counted above.</p> */}
             </div>
 
             <div className="rounded-lg border border-gray-100 bg-gray-50/70 p-3">
