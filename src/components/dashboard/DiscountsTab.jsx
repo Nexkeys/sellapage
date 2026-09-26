@@ -6,6 +6,7 @@ import { addDoc, deleteDoc, getDocs, updateDoc } from '../../firebase/metered';
 import { db } from "../../firebase/config";
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from "../../utils/staffDataFetch";
 import { SkeletonRows } from '../Skeleton'
+import ExportMenu from './ExportMenu'
 
 const formatExpiryDate = (expiryDate) => {
   if (!expiryDate) return "";
@@ -281,6 +282,7 @@ export default function DiscountsTab({ store, isPro, navigateTo }) {
           <p className="text-gray-400 text-sm mt-1">
             Create promo codes for your store checkout
           </p>
+          <ExportMenu storeId={store?.id} tab="discounts" className="mt-2" />
         </div>
 
         {!showForm && (

@@ -74,6 +74,8 @@ const PLAN_WELCOME = {
 
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import OverviewTab from "../components/dashboard/Overview";
+import Celebration from "../components/dashboard/ui/Celebration";
+import { clearOverviewCache } from "../utils/overviewData";
 import ProductsTab from "../components/dashboard/Products";
 import ServicesTab from "../components/dashboard/ServicesTab";
 import LeadsTab from "../components/dashboard/LeadsTab";
@@ -213,6 +215,9 @@ export default function Dashboard() {
     }
   }, [welcomePlan]);
   const [showChecklist, setShowChecklist] = useState(false);
+  // The first-listing party (components/dashboard/ui/Celebration.jsx):
+  // { kind: "product" | "service", name } while it is showing.
+  const [celebrate, setCelebrate] = useState(null);
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [products, setProducts] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -624,6 +629,7 @@ export default function Dashboard() {
       const { id, ...payload } = newOrder;
       await setDoc(orderRef, payload);
       setOrdersSynced(true);
+      clearOverviewCache(store.id);
     } catch (err) {
       console.error("Failed to add order", err);
       setOrders((prev) => prev.filter((order) => order.id !== orderRef.id));
@@ -778,6 +784,24 @@ export default function Dashboard() {
     if (!store?.id) return;
     localStorage.setItem(`sellapage_onboarding_dismissed_${store.id}`, "true");
     setShowChecklist(false);
+  };
+
+  // Once per store, remembered on this device. Only called when the store had
+  // no listings at all before this save, so a vendor who already sells never
+  // sees it, and adding a second product never repeats it.
+  const celebrateFirstListing = (kind, name) => {
+    if (!store?.id) return;
+    const key = `sellapage_first_listing_${store.id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+    } catch { /* storage blocked: still shown, just not remembered */ }
+    setCelebrate({ kind, name });
+  };
+
+  const openSetupGuide = () => {
+    setShowChecklist(true);
+    document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const copyLink = () => {
@@ -1074,6 +1098,8 @@ export default function Dashboard() {
           setSaving(false);
           return;
         }
+        const wasFirstListing = productCount + serviceCount === 0;
+        const newProductName = form.name.trim();
         const newProduct = await addProduct(
           store.id,
           {
@@ -1098,6 +1124,7 @@ export default function Dashboard() {
         setProducts((prev) => [newProduct, ...prev]);
         setProductCount((c) => c + 1);
         resetForm();
+        if (wasFirstListing) celebrateFirstListing("product", newProductName);
       }
     } catch (err) {
       console.error("Failed to save product", err);
@@ -1218,6 +1245,8 @@ export default function Dashboard() {
           setSavingService(false);
           return;
         }
+        const wasFirstListing = productCount + serviceCount === 0;
+        const newServiceName = serviceForm.name.trim();
         const newService = await addService(
           store.id,
           {
@@ -1234,6 +1263,7 @@ export default function Dashboard() {
         setServices((prev) => [newService, ...prev]);
         setServiceCount((c) => c + 1);
         resetServiceForm();
+        if (wasFirstListing) celebrateFirstListing("service", newServiceName);
       }
     } catch (err) {
       console.error("Failed to save service", err);
@@ -1714,115 +1744,113 @@ export default function Dashboard() {
     >
       {activeTab === "overview" && (
         <div className="animate-in fade-in duration-300 w-full">
-          {showPushBanner && (
-            <div className="w-full bg-green-50 border border-green-100 rounded-2xl px-4 py-3 mb-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-green-600" />
-                  <span className="text-sm text-gray-600">
-                    Enable notifications to get real-time alerts for new orders
-                    and payments
-                  </span>
+          {(showPushBanner || showChecklist) && (
+            <div className="mx-auto w-full max-w-[1320px] space-y-4 px-4 pt-5 sm:px-6 lg:px-8 lg:pt-7">
+              {showPushBanner && (
+                <div className="flex flex-col gap-3 rounded-2xl border border-dash-line bg-white px-4 py-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-forest-50">
+                      <Bell className="h-4 w-4 text-forest-600" />
+                    </span>
+                    <span className="text-sm text-slate-600">
+                      Turn on notifications to hear about new orders and payments the moment they happen.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 sm:flex-shrink-0">
+                    <button
+                      onClick={async () => {
+                        const token = await requestFCMPermission(
+                          store.id,
+                          async (data) => {
+                            await updateDoc(doc(db, "stores", store.id), data);
+                          },
+                        );
+                        if (token) setShowPushBanner(false);
+                      }}
+                      className="rounded-xl bg-forest px-4 py-2 text-xs font-semibold text-white transition hover:bg-forest-700"
+                    >
+                      Turn on
+                    </button>
+                    <button
+                      onClick={() => setShowPushBanner(false)}
+                      className="rounded-xl px-3 py-2 text-xs font-semibold text-dash-muted transition hover:bg-gray-50 hover:text-dash-ink"
+                    >
+                      Not now
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={async () => {
-                      const token = await requestFCMPermission(
-                        store.id,
-                        async (data) => {
-                          await updateDoc(doc(db, "stores", store.id), data);
-                        },
-                      );
-                      if (token) setShowPushBanner(false);
-                    }}
-                    className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
-                  >
-                    Enable
-                  </button>
-                  <button
-                    onClick={() => setShowPushBanner(false)}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          {showChecklist && (
-            <div className="mb-6 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-green-500" />
-              <div className="flex justify-between items-start mb-5">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">
-                    Welcome to Sellapage! Let's get you set up.
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Complete these quick steps to launch your store and start
-                    making sales.
-                  </p>
-                </div>
-                <button
-                  onClick={dismissChecklist}
-                  className="text-gray-400 hover:text-gray-600 text-sm font-bold bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  Dismiss
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  onClick={() => setActiveTab("products")}
-                  className="flex flex-col items-start p-4 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl transition-all text-left group"
-                >
-                  <span className="w-8 h-8 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-200 mb-3 font-bold text-xs">
-                    1
-                  </span>
-                  <span className="font-bold text-gray-900 text-sm mb-1 group-hover:text-green-700">
-                    Upload First Product
-                  </span>
-                  <span className="text-xs text-gray-500 group-hover:text-green-600">
-                    Add your items, descriptions, and prices.
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("online-store")}
-                  className="flex flex-col items-start p-4 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl transition-all text-left group"
-                >
-                  <span className="w-8 h-8 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-200 mb-3 font-bold text-xs">
-                    2
-                  </span>
-                  <span className="font-bold text-gray-900 text-sm mb-1 group-hover:text-green-700">
-                    Share Store Link
-                  </span>
-                  <span className="text-xs text-gray-500 group-hover:text-green-600">
-                    Copy your unique link to your social bios.
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("marketing")}
-                  className="flex flex-col items-start p-4 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl transition-all text-left group"
-                >
-                  <span className="w-8 h-8 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 group-hover:text-green-500 group-hover:border-green-200 mb-3 font-bold text-xs">
-                    3
-                  </span>
-                  <span className="font-bold text-gray-900 text-sm mb-1 group-hover:text-green-700">
-                    Start Daily Growth
-                  </span>
-                  <span className="text-xs text-gray-500 group-hover:text-green-600">
-                    Check your growth workspace to complete your daily tasks.
-                  </span>
-                </button>
-              </div>
-            </div>
-          )}
-          {!showChecklist && (
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowChecklist(true)}
-                className="text-xs font-semibold text-gray-500 hover:text-green-600 transition-colors flex items-center gap-1 bg-white border border-gray-100 shadow-sm px-3 py-1.5 rounded-lg"
-              >
-                View Setup Guide
-              </button>
+              )}
+              {showChecklist && (() => {
+                const vt = store?.vendorType || "products";
+                const listings = (vt === "services" ? 0 : productCount) + (vt === "products" ? 0 : serviceCount);
+                const steps = [
+                  {
+                    n: 1,
+                    done: listings > 0,
+                    title: vt === "services" ? "Add your first service" : "Add your first product",
+                    body: "A name, a price and a clear photo. That is all it takes.",
+                    go: () => setActiveTab(vt === "services" ? "services" : "products"),
+                  },
+                  {
+                    n: 2,
+                    done: !!store?.logoUrl,
+                    title: "Dress up your Business Page",
+                    body: "Add your logo and cover so buyers trust you on sight.",
+                    go: () => setActiveTab("online-store"),
+                  },
+                  {
+                    n: 3,
+                    done: false,
+                    title: "Start daily growth",
+                    body: "Share your link and work through today's growth tasks.",
+                    go: () => setActiveTab("marketing"),
+                  },
+                ];
+                const doneCount = steps.filter((st) => st.done).length;
+                return (
+                  <div className="rounded-2xl border border-dash-line bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-forest-600">Setup guide</p>
+                        <h2 className="mt-1 font-body text-base font-bold text-dash-ink sm:text-lg">
+                          Let&apos;s get your store selling
+                        </h2>
+                        <p className="mt-0.5 text-xs text-dash-muted">{doneCount} of {steps.length} done</p>
+                      </div>
+                      <button
+                        onClick={dismissChecklist}
+                        className="flex-shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold text-dash-muted transition hover:bg-gray-50 hover:text-dash-ink"
+                      >
+                        Hide
+                      </button>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                      <div className="h-full rounded-full bg-forest-600 transition-all duration-500" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                      {steps.map((st) => (
+                        <button
+                          key={st.n}
+                          onClick={st.go}
+                          className={`group flex items-start gap-3 rounded-xl border p-3.5 text-left transition ${
+                            st.done ? "border-forest-100 bg-forest-50/60" : "border-dash-line bg-white hover:border-forest-200 hover:bg-forest-50/40"
+                          }`}
+                        >
+                          <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                            st.done ? "bg-forest text-white" : "bg-gray-100 text-slate-500 group-hover:bg-forest-50 group-hover:text-forest"
+                          }`}>
+                            {st.done ? <Check size={14} strokeWidth={3} /> : st.n}
+                          </span>
+                          <span className="min-w-0">
+                            <span className={`block text-[13px] font-semibold ${st.done ? "text-forest" : "text-dash-ink"}`}>{st.title}</span>
+                            <span className="mt-0.5 block text-xs leading-relaxed text-dash-muted">{st.body}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
           <OverviewTab
@@ -1843,6 +1871,8 @@ export default function Dashboard() {
             copyLink={copyLink}
             navigateTo={setActiveTab}
             setShowForm={setShowForm}
+            setShowServiceForm={setShowServiceForm}
+            onOpenSetupGuide={openSetupGuide}
             analyticsData={analyticsView}
           />
         </div>
@@ -1850,6 +1880,8 @@ export default function Dashboard() {
 
       {activeTab === "products" && (
         <ProductsTab
+          storeId={store?.id}
+          marketplaceStore={store}
           plan={plan}
           productCount={productCount}
           maxProducts={maxProducts}
@@ -1900,6 +1932,7 @@ export default function Dashboard() {
 
       {activeTab === "services" && (
         <ServicesTab
+          storeId={store?.id}
           plan={plan}
           serviceCount={serviceCount}
           maxServices={maxProducts}
@@ -1955,7 +1988,7 @@ export default function Dashboard() {
       )}
 
       {activeTab === "leads" && (
-        <LeadsTab leadsLoading={leadsLoading} leads={leads} isPro={isPro} />
+        <LeadsTab leadsLoading={leadsLoading} leads={leads} isPro={isPro} storeId={store?.id} />
       )}
 
       {activeTab === "settings" && (
@@ -2292,6 +2325,21 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <Celebration
+        open={!!celebrate}
+        kind={celebrate?.kind}
+        name={celebrate?.name}
+        storeUrl={storeUrl}
+        onClose={() => setCelebrate(null)}
+        onGoToBusinessPage={() => { setCelebrate(null); setActiveTab("online-store"); }}
+        onAddAnother={() => {
+          const kind = celebrate?.kind;
+          setCelebrate(null);
+          if (kind === "service") { setShowServiceForm(true); setActiveTab("services"); }
+          else { setShowForm(true); setActiveTab("products"); }
+        }}
+      />
 
       <OtpVerifyModal
         open={!!otpFlow}

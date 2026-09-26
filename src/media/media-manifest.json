@@ -1,0 +1,107 @@
+{
+  "dashboard-banner": {
+    "type": "image",
+    "src": "/media/dashboard-banner/58d68aa186-lg.webp",
+    "srcSmall": "/media/dashboard-banner/58d68aa186-sm.webp",
+    "width": 560,
+    "height": 296
+  },
+  "dashboard-howto": {
+    "type": "image",
+    "src": "/media/dashboard-howto/3edffb342e-lg.webp",
+    "srcSmall": "/media/dashboard-howto/3edffb342e-sm.webp",
+    "width": 188,
+    "height": 200
+  },
+  "feature-abandoned": {
+    "type": "image",
+    "src": "/media/feature-abandoned/05af718540-lg.webp",
+    "srcSmall": "/media/feature-abandoned/05af718540-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "feature-analytics": {
+    "type": "image",
+    "src": "/media/feature-analytics/ca57afa99c-lg.webp",
+    "srcSmall": "/media/feature-analytics/ca57afa99c-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "feature-customers": {
+    "type": "image",
+    "src": "/media/feature-customers/aab28790da-lg.webp",
+    "srcSmall": "/media/feature-customers/aab28790da-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "feature-delivery": {
+    "type": "image",
+    "src": "/media/feature-delivery/83aa3784bf-lg.webp",
+    "srcSmall": "/media/feature-delivery/83aa3784bf-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "feature-discounts": {
+    "type": "image",
+    "src": "/media/feature-discounts/f33d2c51fb-lg.webp",
+    "srcSmall": "/media/feature-discounts/f33d2c51fb-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "feature-loyalty": {
+    "type": "image",
+    "src": "/media/feature-loyalty/aeab67596b-lg.webp",
+    "srcSmall": "/media/feature-loyalty/aeab67596b-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "feature-receipts": {
+    "type": "image",
+    "src": "/media/feature-receipts/8dc1963700-lg.webp",
+    "srcSmall": "/media/feature-receipts/8dc1963700-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "feature-reviews": {
+    "type": "image",
+    "src": "/media/feature-reviews/c4860851f6-lg.webp",
+    "srcSmall": "/media/feature-reviews/c4860851f6-sm.webp",
+    "width": 1120,
+    "height": 700
+  },
+  "home-app-1": {
+    "type": "image",
+    "src": "/media/home-app-1/ff59fb211d-lg.webp",
+    "srcSmall": "/media/home-app-1/ff59fb211d-sm.webp",
+    "width": 367,
+    "height": 822
+  },
+  "home-app-2": {
+    "type": "image",
+    "src": "/media/home-app-2/44d704f653-lg.webp",
+    "srcSmall": "/media/home-app-2/44d704f653-sm.webp",
+    "width": 265,
+    "height": 592
+  },
+  "home-hero-main": {
+    "type": "video",
+    "src": "/media/home-hero-main/24a9b5051c.mp4",
+    "poster": "/media/home-hero-main/24a9b5051c-poster.webp",
+    "width": 1280,
+    "height": 654
+  },
+  "home-hero-phone": {
+    "type": "image",
+    "src": "/media/home-hero-phone/5aabc382c5-lg.webp",
+    "srcSmall": "/media/home-hero-phone/5aabc382c5-sm.webp",
+    "width": 720,
+    "height": 1080
+  },
+  "home-showcase": {
+    "type": "image",
+    "src": "/media/home-showcase/2783c72c15-lg.webp",
+    "srcSmall": "/media/home-showcase/2783c72c15-sm.webp",
+    "width": 1280,
+    "height": 853
+  }
+}

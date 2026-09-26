@@ -73,6 +73,7 @@ export const TYPE_CHANNEL = {
 
   domain_verified: 'account',
   cac_status: 'account',
+  supplier_status: 'account',
   job_status: 'account',
   security_alert: 'account',
 

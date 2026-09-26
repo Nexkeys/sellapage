@@ -4,6 +4,25 @@
 // Last updated: 2026-09-18 (stores create closed, phone-first signup)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-26  Dropshipping Marketplace, Phase 2 (supplier listings).
+//               stores/{id}/products: `allow write` split into create /
+//               update / delete so the marketplace fields (listing, wholesale
+//               and minimum prices, category, NAFDAC number, and the Phase 3
+//               dropshipper-copy fields) cannot be set or changed from a
+//               browser. Everything else about products is unchanged for the
+//               owner. Added `supplierTermsVersion` and
+//               `supplierTermsUpdatedAt` to verificationFields, and
+//               `match /supplierTerms/{supplierId}` (+ versions), server only.
+//               SAFE TO PUBLISH ANY TIME: no browser code writes any of these.
+//   2026-09-25  Dropshipping Marketplace, Phase 1 (supplier onboarding).
+//               Locked the supplier* fields (verificationFields): status,
+//               applied/approved/rejected/suspended timestamps, the reasons,
+//               the application video and who decided. Written only by
+//               /api/supplier-application (the vendor applying) and
+//               /api/admin-marketplace (the decision), both on the Admin SDK.
+//               SAFE TO PUBLISH ANY TIME: no client writes any of them today,
+//               and the marketplace itself stays shut until the stage is
+//               moved off 'coming_soon' in Admin > Dropshipping > Access.
 //   2026-09-23  Locked `marketplaceTester` (verificationFields). It grants a
 //               store early access to the Dropshipping Marketplace while
 //               DROPSHIPPING_STAGE is 'testing', so it must never be
@@ -235,6 +254,20 @@ service cloud.firestore {
         // is 'testing'. Server set only: if a vendor could write it, the lock
         // that keeps a half-built marketplace out of reach would be decorative.
         'marketplaceTester',
+        // Dropshipping Marketplace supplier approval (Phase 1). These decide
+        // whose stock other people's stores are allowed to sell, so they carry
+        // the same rule as cacVerified: Sellapage states them after a human has
+        // reviewed the video and the checks, and the vendor cannot. A writable
+        // supplierStatus is a vendor approving themselves.
+        'supplierStatus', 'supplierAppliedAt', 'supplierApprovedAt',
+        'supplierRejectedAt', 'supplierRejectionReason', 'supplierSuspendedAt',
+        'supplierSuspendedReason', 'supplierVideoUrl', 'supplierApplicationNotes',
+        'supplierDecidedBy', 'supplierDecidedAt',
+        // Which version of the supplier's terms is current (Phase 2). Every
+        // dropshipper acceptance is recorded against a version; a vendor who
+        // could rewind this could make dropshippers "have accepted" terms
+        // they never saw.
+        'supplierTermsVersion', 'supplierTermsUpdatedAt',
         // Server-only, written ONLY by store-seo.js on a slug change. It holds
         // addresses this store used to own, and the storefront renderer 301s
         // them to the current one. A client that could write it would add
@@ -310,6 +343,22 @@ service cloud.firestore {
       return ['storeDesign'];
     }
 
+// Dropshipping Marketplace fields on a product (Phase 2). Mirrors
+    // MARKETPLACE_PRODUCT_FIELDS in src/utils/marketplace.js: keep them the
+    // same. Written only by /api/marketplace-listing on the Admin SDK, where
+    // the wholesale price, category and NAFDAC number are validated. The
+    // dropshipper-copy fields (dropshipped, source*) are locked now, before
+    // Phase 3 trusts them, so nobody can mark their own product as another
+    // supplier's in the meantime.
+    function marketplaceProductFields() {
+      return [
+        'marketplaceListed', 'marketplaceStatus', 'wholesalePrice', 'minSellingPrice',
+        'marketplaceCategory', 'marketplaceSubcategory', 'nafdacNumber', 'listingVersion',
+        'marketplaceListedAt', 'marketplaceUpdatedAt',
+        'dropshipped', 'sourceSupplierId', 'sourceProductId', 'marketplaceImportId', 'termsVersionAccepted'
+      ];
+    }
+
     function lockedStoreFields() {
       return moneyFields()
         .concat(verificationFields())
@@ -363,7 +412,16 @@ service cloud.firestore {
 
       match /products/{productId} {
         allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == storeId;
+        // The owner keeps full control of their products EXCEPT the
+        // marketplace fields (marketplaceProductFields above). A create may
+        // not carry any of them; an update may not change, add or remove any
+        // of them. The product form uses partial updates, so a listed
+        // product's untouched fields never count as changed.
+        allow create: if request.auth != null && request.auth.uid == storeId
+          && !request.resource.data.keys().hasAny(marketplaceProductFields());
+        allow update: if request.auth != null && request.auth.uid == storeId
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(marketplaceProductFields());
+        allow delete: if request.auth != null && request.auth.uid == storeId;
 
         match /reviews/{reviewId} {
           allow read: if true;
@@ -619,6 +677,28 @@ service cloud.firestore {
 
       match /sellaAiChats/{sessionId} {
         allow read, write: if false;
+
+        // Text of files the vendor sent in this chat, kept for follow-ups.
+        match /files/{fileId} {
+          allow read, write: if false;
+        }
+      }
+
+      // Monthly credit ledger and purchased top-ups. A vendor able to write
+      // here could reset their own usage to zero or grant themselves credit.
+      match /sellaCredits/{docId} {
+        allow read, write: if false;
+      }
+
+      // What Sella remembers about the store, and saved prompts. Server-only:
+      // memory steers every future answer, and the API allows only the owner
+      // to change it. A client rule would let staff write it directly.
+      match /sellaMemory/{memoryId} {
+        allow read, write: if false;
+      }
+
+      match /sellaPrompts/{promptId} {
+        allow read, write: if false;
       }
     }
 
@@ -761,6 +841,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Sella background jobs (bulk imports). Server-only: a job document holds
+    // the rows it will write, and the Admin SDK trusts them, so a client able
+    // to edit one could write anything into any store. Progress is read
+    // through /api/sella-ai action "job", which checks the store.
+    match /sellaJobs/{jobId} {
+      allow read, write: if false;
+    }
+
     // Push device registry. One document per FCM token, id = sha256(token).
     //
     // SERVER ONLY, and that is the whole point of the collection existing.
@@ -836,6 +924,18 @@ service cloud.firestore {
     // names, emails and phone numbers of people who are not Sellapage
     // vendors yet, and the document id is the email address, so a readable
     // collection would be a harvestable contact list. Server only.
+// A supplier's terms and every past version (Phase 2). SERVER ONLY: the
+    // versions are the record of what each dropshipper agreed to, so they
+    // must never be editable, even by the supplier who wrote them. Read
+    // through /api/supplier-application (and the Phase 3 import dialog).
+    match /supplierTerms/{supplierId} {
+      allow read, write: if false;
+
+      match /versions/{version} {
+        allow read, write: if false;
+      }
+    }
+
     match /marketplaceWaitlist/{entryId} {
       allow read, write: if false;
     }

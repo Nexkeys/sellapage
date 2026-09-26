@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { X, ShieldCheck, FileText } from "lucide-react";
 
-const UPDATED = "7 September 2026";
+const UPDATED = "25 September 2026";
 
 // Tabs Sella is structurally forbidden from writing to, mirrored from
 // AI_NEVER_WRITE in src/api-handlers/_lib/ai-schema.js. Kept in sync by hand
@@ -110,10 +110,21 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
                 member cannot use {assistantName} to reach a tab their role does not already allow.
               </P>
 
-              <H>Fair use</H>
+              <H>Files, imports and exports</H>
               <P>
-                {assistantName} is limited to 50 messages per day per store. Do not use it to generate unlawful content, to
-                impersonate others, or to attempt to extract data belonging to other stores.
+                You can send {assistantName} files and photos. Only send files you have the right to use. When it adds items
+                from a file, it shows you every row to review first, and it writes descriptions only from what the file
+                says, but <B>check prices and details before you rely on them</B>. Exports are built from your data at the
+                moment you download them, and once downloaded, keeping that file safe is your responsibility, because it can
+                contain your customers&apos; personal data.
+              </P>
+
+              <H>Credits and fair use</H>
+              <P>
+                {assistantName} uses a monthly allowance of credits, charged by how much work each request takes. A quick
+                question uses little, and reading large files or Deep mode uses more. Unused credits do not carry over to
+                the next month. Do not use {assistantName} to generate unlawful content, to impersonate others, or to attempt
+                to extract data belonging to other stores.
               </P>
             </>
           ) : (
@@ -138,6 +149,10 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
                 <Li>
                   <B>Customer personal data</B>: names, phone numbers, delivery addresses and order history, where your
                   question requires it
+                </Li>
+                <Li>
+                  <B>Files and photos you send</B> in the chat. The text of documents is kept with that chat so you can ask
+                  follow-up questions, and is deleted when you delete the chat.
                 </Li>
               </ul>
 

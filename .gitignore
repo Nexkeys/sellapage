@@ -38,3 +38,10 @@ scripts/*
 scripts/migration-output
 
 src/api-handlers/_generated/
+
+# Original photos and videos dropped in for the website. They stay on this
+# computer: phone videos are tens of megabytes and do not belong in git. Only
+# the compressed copies in public/media/ and src/media/media-manifest.json are
+# committed. The README is kept so the folder explains itself on a new machine.
+media-src/*
+!media-src/README.md

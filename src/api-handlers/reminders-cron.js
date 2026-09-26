@@ -15,6 +15,13 @@ import { notifyStore } from './_lib/notifications.js'
 import { sendPush } from './_lib/send-push.js'
 import { sendStoreEmail } from './_lib/store-emails.js'
 import { COLLECTION, markFired, formatWat } from './_lib/reminders.js'
+import { tickDueJobs } from './_lib/sella-jobs.js'
+import { waitUntil } from '@vercel/functions'
+
+// Time Sella background jobs may use after the cron has answered. Well under
+// the 300s function ceiling, and short enough that the next minute's tick
+// takes over rather than two long runs stacking up.
+const JOBS_BUDGET_MS = 100000
 
 // Constant-time secret comparison - a plain !== leaks how many leading bytes of
 // a guess were correct.
@@ -158,6 +165,20 @@ export default async function handler(req, res) {
 
       await markFired(db, doc.ref, r, delivered)
     }
+
+    // SELLA BACKGROUND JOBS ride on this same minute tick (a second
+    // cron-job.org job would work too, but one fewer thing to configure is one
+    // fewer thing to forget). They run AFTER the response, via waitUntil,
+    // because one chunk of an import can include a model call that writes
+    // descriptions, and that can outlast cron-job.org's hard 30 second hang-up.
+    // Answering first keeps the cron green; Fluid compute keeps the function
+    // alive to finish. Leases in _lib/sella-jobs.js make overlapping minutes
+    // harmless. Never allowed to affect the reminders result.
+    waitUntil(
+      tickDueJobs(db, Date.now() + JOBS_BUDGET_MS)
+        .then((j) => { if (j.ticked) console.log('[reminders-cron] sella jobs', JSON.stringify(j)) })
+        .catch((err) => console.error('[reminders-cron] sella jobs tick failed:', err.message)),
+    )
 
     const summary = { scanned: due.size, pushed, emailed, skipped, stale, muted, ranOut, ms: Date.now() - startedAt }
     console.log('[reminders-cron]', JSON.stringify(summary))

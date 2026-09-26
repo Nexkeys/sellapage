@@ -11,7 +11,9 @@
     "postbuild": "node scripts/prerender-seo.mjs",
     "preview": "vite preview",
     "check:ai": "node scripts/check-ai-models.js",
-    "check:api": "node scripts/check-api-syntax.mjs"
+    "check:api": "node scripts/check-api-syntax.mjs",
+    "media": "node tools/media/run.mjs",
+    "screenshots": "node tools/screenshots/shoot.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
@@ -22,8 +24,10 @@
     "@tiptap/react": "^3.28.0",
     "@tiptap/starter-kit": "^3.28.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/functions": "^3.9.9",
     "@vercel/speed-insights": "^2.0.0",
     "dompurify": "^3.4.13",
+    "exceljs": "^4.4.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.8.0",
     "font-awesome": "^4.7.0",
@@ -31,6 +35,8 @@
     "grapesjs-preset-newsletter": "^1.0.2",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.303.0",
+    "mammoth": "^1.12.3",
+    "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -39,7 +45,8 @@
     "recharts": "^3.10.1",
     "resend": "^6.12.4",
     "sanitize-html": "2.16.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

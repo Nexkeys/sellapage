@@ -44,7 +44,11 @@ function applyOp(a, b, op) {
   }
 }
 
-export default function CalculatorFAB() {
+// besideNav: the desktop sidebar is open, so the default spot (bottom left)
+// would sit on top of the sidebar's store card and logout button. The
+// default then starts to the right of the 256px sidebar instead. A position
+// the vendor dragged it to is always kept as is.
+export default function CalculatorFAB({ besideNav = false }) {
   const [open, setOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [fabPos, setFabPos] = useState(null)
@@ -200,7 +204,7 @@ export default function CalculatorFAB() {
 
   const fabStyle = fabPos
     ? { left: fabPos.x, top: fabPos.y, right: 'auto', bottom: 'auto' }
-    : { left: 20, bottom: 20 }
+    : undefined
 
   const KEY_BASE = 'flex items-center justify-center rounded-2xl text-lg font-bold transition-all active:scale-95 select-none'
 
@@ -212,7 +216,7 @@ export default function CalculatorFAB() {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           style={fabStyle}
-          className="fixed z-[55] flex h-[60px] w-[60px] touch-none items-center justify-center rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-xl shadow-slate-900/30 ring-1 ring-white/10 transition-transform hover:scale-[1.03] active:scale-95"
+          className={`fixed z-[55] ${fabPos ? "" : `bottom-5 left-5 ${besideNav ? "md:left-[276px]" : ""}`} flex h-[60px] w-[60px] touch-none items-center justify-center rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-xl shadow-slate-900/30 ring-1 ring-white/10 transition-transform hover:scale-[1.03] active:scale-95`}
           title="Calculator"
           aria-label="Open calculator"
         >

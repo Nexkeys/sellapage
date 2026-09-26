@@ -1,6 +1,7 @@
 //src/components/dashboard/LeadsTab.jsx/
 import { Users, Phone, Calendar, Tag, MessageSquare, Lock } from 'lucide-react'
 import { SkeletonRows } from '../Skeleton'
+import ExportMenu from './ExportMenu'
 
 const STATUS_STYLES = {
   new:       'bg-blue-50 text-blue-700 border border-blue-200',
@@ -22,7 +23,7 @@ function LeadTypeBadge({ leadType }) {
   )
 }
 
-export default function LeadsTab({ leadsLoading, leads, isPro }) {
+export default function LeadsTab({ leadsLoading, leads, isPro, storeId }) {
   // Pro view
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
@@ -34,6 +35,7 @@ export default function LeadsTab({ leadsLoading, leads, isPro }) {
           </div>
           <p className="text-gray-400 text-sm mt-1">People who left their details on your store page.</p>
         </div>
+        <ExportMenu storeId={storeId} tab="leads" />
       </div>
 
       {/* Stats */}

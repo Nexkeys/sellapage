@@ -1,0 +1,10 @@
+{
+  "name": "sellapage-media-tool",
+  "private": true,
+  "description": "Compresses photos and videos from media-src/ into public/media/. Run with `npm run media` from the project root. Kept out of the main package.json on purpose: Vercel never installs these, so they cannot slow down or break a deploy.",
+  "type": "module",
+  "dependencies": {
+    "ffmpeg-static": "5.2.0",
+    "sharp": "0.33.5"
+  }
+}

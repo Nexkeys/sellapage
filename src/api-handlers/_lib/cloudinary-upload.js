@@ -117,3 +117,47 @@ export async function mirrorRemoteImage(remoteUrl, publicId, { timeoutMs = 15000
     return ''
   }
 }
+
+/**
+ * Uploads image BYTES (a data: URI) into Cloudinary with a signed request.
+ *
+ * Used for images Sella generates: the image model returns base64, and a
+ * vendor's storefront must never point at anything but our own CDN. Same
+ * guarantees as mirrorRemoteImage: never throws, returns '' on failure, and
+ * only ever hands back a res.cloudinary.com url.
+ */
+export async function uploadImageData(dataUri, publicId, { folder = '', timeoutMs = 30000 } = {}) {
+  if (!isCloudinaryConfigured()) return ''
+  if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(String(dataUri || ''))) return ''
+  // ~15MB of base64 is ~11MB of image, far beyond any generated picture.
+  if (dataUri.length > 15 * 1024 * 1024) return ''
+
+  const timestamp = Math.floor(Date.now() / 1000)
+  const signedParams = {
+    ...(folder ? { folder } : {}),
+    overwrite: 'true',
+    public_id: publicId,
+    timestamp: String(timestamp),
+  }
+  const body = new URLSearchParams({
+    ...signedParams,
+    file: dataUri,
+    api_key: API_KEY,
+    signature: sign(signedParams),
+  })
+  try {
+    const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+      method: 'POST', body, signal: AbortSignal.timeout(timeoutMs),
+    })
+    if (!resp.ok) {
+      // Never log the body: it would put the signature in the logs.
+      console.warn(`[cloudinary] data upload ${resp.status} for ${publicId}`)
+      return ''
+    }
+    const url = String((await resp.json())?.secure_url || '')
+    return /^https:\/\/res\.cloudinary\.com\//.test(url) ? url : ''
+  } catch (err) {
+    console.warn(`[cloudinary] data upload failed for ${publicId}: ${err.message}`)
+    return ''
+  }
+}

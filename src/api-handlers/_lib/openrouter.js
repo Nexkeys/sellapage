@@ -64,12 +64,34 @@ export const TIERS = {
     'openai/gpt-5',
     'google/gemini-2.5-pro',
   ],
+  // DEEP mode, chosen by the vendor. The strongest reasoning models available,
+  // run with extended thinking. Every id supports tools, reasoning, images and
+  // files (checked against the live catalogue). Deep turns are charged at real
+  // cost with a higher minimum, see _lib/sella-credits.js.
+  deep: [
+    'anthropic/claude-opus-5.5',
+    'openai/gpt-5.5',
+    'google/gemini-3.1-pro-preview',
+  ],
+  // VOICE: turning a vendor's recording into text. Only models that accept
+  // audio input are listed (all Gemini: the catalogue shows audio input for
+  // these). A phone's built-in speech recognition handles Nigerian English and
+  // Pidgin poorly; these handle both. No fallback tier on purpose: a text-only
+  // model cannot help with audio.
+  // ORDER IS DELIBERATE, tested 2026-09-26 on a pure tone and on background
+  // noise: 3.5 Flash Lite returned nothing for both (correct), 2.5 Flash
+  // returned nothing for noise, and 3.8 Flash INVENTED a sentence from noise
+  // ("I do sell 36,000 for one full bag of fish feed"), so it is not used.
+  audio: [
+    'google/gemini-3.5-flash-lite',
+    'google/gemini-2.5-flash',
+  ],
 }
 
 // A tier that exhausts itself drops here rather than failing outright.
 // read -> standard is the important one: free models are rate limited, so
 // overflow must land on paid rather than erroring at the vendor.
-const TIER_FALLBACK = { heavy: 'standard', standard: 'fast', read: 'standard', fast: 'read' }
+const TIER_FALLBACK = { deep: 'heavy', heavy: 'standard', standard: 'fast', read: 'standard', fast: 'read' }
 
 export const DEFAULT_TIER = 'standard'
 
@@ -141,7 +163,7 @@ export function modelsForTier(tier) {
  * Returns the completion JSON, or null when the whole request was rejected
  * (e.g. a stale id) so the caller can fall back to trying models one at a time.
  */
-async function nativeCall({ models, messages, tools, maxTokens, temperature, timeoutMs }) {
+async function nativeCall({ models, messages, tools, maxTokens, temperature, timeoutMs, reasoning }) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -151,7 +173,9 @@ async function nativeCall({ models, messages, tools, maxTokens, temperature, tim
       body: JSON.stringify({
         model: models[0],
         models, // server-side fallback order
-        temperature,
+        // Reasoning models reject a custom temperature, so it is only sent
+        // when the call is not a reasoning call.
+        ...(reasoning ? { reasoning } : { temperature }),
         max_tokens: maxTokens,
         messages,
         ...(tools ? { tools, tool_choice: 'auto' } : {}),
@@ -173,7 +197,7 @@ async function nativeCall({ models, messages, tools, maxTokens, temperature, tim
  *
  * @returns {Promise<object>} completion JSON, with `_model` noting who answered
  */
-export async function callModel({ messages, tools, tier = DEFAULT_TIER, maxTokens = 500, temperature = 0.6, timeoutMs = 28000 }) {
+export async function callModel({ messages, tools, tier = DEFAULT_TIER, maxTokens = 500, temperature = 0.6, timeoutMs = 28000, reasoning = null }) {
   const models = modelsForTier(tier)
   let lastErr = null
 
@@ -188,7 +212,7 @@ export async function callModel({ messages, tools, tier = DEFAULT_TIER, maxToken
   // 400s - which is exactly what the sequential loop below is kept for, and
   // why scripts/check-ai-models.js exists.
   try {
-    const native = await nativeCall({ models, messages, tools, maxTokens, temperature, timeoutMs, stream: false })
+    const native = await nativeCall({ models, messages, tools, maxTokens, temperature, timeoutMs, reasoning })
     if (native) return native
   } catch (e) {
     console.error('[openrouter] native fallback unavailable, using sequential:', e?.message || e)
@@ -203,7 +227,7 @@ export async function callModel({ messages, tools, tier = DEFAULT_TIER, maxToken
         headers: headers(),
         body: JSON.stringify({
           model,
-          temperature,
+          ...(reasoning ? { reasoning } : { temperature }),
           max_tokens: maxTokens,
           messages,
           ...(tools ? { tools, tool_choice: 'auto' } : {}),
@@ -251,7 +275,7 @@ export async function callModel({ messages, tools, tier = DEFAULT_TIER, maxToken
  * would duplicate or contradict what they are already reading. After first
  * token, a mid-stream failure returns what was received.
  *
- * @returns {Promise<{content: string, toolCalls: Array, model: string}>}
+ * @returns {Promise<{content: string, toolCalls: Array, model: string, costUsd: number}>}
  */
 export async function streamModel({ messages, tools, onToken, tier = DEFAULT_TIER, maxTokens = 700, temperature = 0.6, timeoutMs = 28000 }) {
   const models = modelsForTier(tier)
@@ -288,6 +312,7 @@ export async function streamModel({ messages, tools, onToken, tier = DEFAULT_TIE
       }
 
       let content = ''
+      let costUsd = 0
       const toolAcc = [] // [{ id, name, arguments }] assembled by index
       let buffer = ''
       const decoder = new TextDecoder()
@@ -309,6 +334,11 @@ export async function streamModel({ messages, tools, onToken, tier = DEFAULT_TIE
 
           let parsed
           try { parsed = JSON.parse(payload) } catch { continue }
+
+          // The real USD cost arrives in the trailing chunk, which often has
+          // an EMPTY choices array. It has to be read before the delta check
+          // below, or every streamed turn would be charged as free.
+          if (parsed.usage && parsed.usage.cost != null) costUsd = Number(parsed.usage.cost) || 0
 
           const delta = parsed.choices?.[0]?.delta
           if (!delta) continue
@@ -336,7 +366,7 @@ export async function streamModel({ messages, tools, onToken, tier = DEFAULT_TIE
         }
       }
 
-      return { content, toolCalls: toolAcc.filter(Boolean), model }
+      return { content, toolCalls: toolAcc.filter(Boolean), model, costUsd }
     } catch (e) {
       if (e?.status && !isRetryable(e.status)) throw e
       console.error(`[openrouter] stream ${model} failed:`, e?.name || e?.message || e)

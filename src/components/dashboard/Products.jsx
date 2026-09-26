@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import MarketplaceListButton from './MarketplaceListButton'
 import {
   Plus, Edit2, Trash2, UploadCloud, X, Loader2,
   AlertCircle, ImageIcon, Package, ToggleLeft, ToggleRight, Lock, Sparkles,
@@ -9,6 +10,7 @@ import {
   GROUP_SINGLE, GROUP_MULTI, MAX_GROUPS, MAX_OPTIONS_PER_GROUP, LIMITS,
 } from '../../utils/productOptions'
 import { SkeletonCardGrid } from '../Skeleton'
+import ExportMenu from './ExportMenu'
 
 const LISTINGS_PER_PAGE = 10
 
@@ -24,6 +26,10 @@ export default function ProductsTab({
   customCategories = [],
   onSaveCustomCategory,
   setForm,
+  storeId,
+  // The store document, for the Dropship Marketplace "List" button. Omitted
+  // (or a staff session) means no button.
+  marketplaceStore = null,
 }) {
   const maxLabel = maxProducts >= 999999 ? 'Unlimited' : maxProducts
   const pct      = maxProducts >= 999999 ? 0 : Math.min(100, Math.round((productCount / maxProducts) * 100))
@@ -494,14 +500,17 @@ export default function ProductsTab({
           <h1 className="text-xl font-bold text-gray-900 tracking-tight">Offers</h1>
           <p className="text-gray-400 text-xs mt-0.5">Manage products, services, prices, stock, and visibility.</p>
         </div>
-        {!limitReached && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0"
-          >
-            <Plus size={14} /> Add Offer
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <ExportMenu storeId={storeId} tab="products" />
+          {!limitReached && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0"
+            >
+              <Plus size={14} /> Add Offer
+            </button>
+          )}
+        </div>
       </div>
 
 
@@ -719,6 +728,7 @@ export default function ProductsTab({
                           : <Trash2 size={14} />
                         }
                       </button>
+                      <MarketplaceListButton product={product} store={marketplaceStore} />
                     </div>
 
                     {/* Product on/off toggle - Growth/Pro only */}

@@ -6,6 +6,7 @@ import { getDocs } from '../../firebase/metered';
 import { db } from '../../firebase/config'
 import { fetchStoreCollectionAsStaff, isActingAsStaffFor } from '../../utils/staffDataFetch'
 import { SkeletonRows } from '../Skeleton'
+import ExportMenu from './ExportMenu'
 
 function getInitials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -180,6 +181,7 @@ export default function CustomersTab({ store, isPro, navigateTo }) {
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-gray-500">
             Buyers who have completed checkout orders from your store.
           </p>
+          <ExportMenu storeId={store?.id} tab="customers" className="mt-3" />
         </div>
         <div className="relative w-full sm:w-72">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

@@ -23,6 +23,25 @@ export default {
           900: '#14532d',
         },
         whatsapp: '#25D366',
+        // Dashboard palette, sampled from the 2026-09-26 dashboard design:
+        // DEFAULT is the dark "Store Active" / "View Plans" button green, 50 is
+        // the active sidebar pill and the Grow Faster card.
+        forest: {
+          50:  '#ecf9f2',
+          100: '#d5f1e1',
+          200: '#a9e2c3',
+          600: '#0b6b35',
+          700: '#075a2b',
+          DEFAULT: '#034e22',
+          900: '#023a19',
+        },
+        // Dashboard neutrals: page ground, card hairline, muted body text.
+        dash: {
+          bg: '#fcfcfd',
+          line: '#eef1f4',
+          muted: '#7c8a99',
+          ink: '#0f172a',
+        },
       },
       fontFamily: {
         display: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'],

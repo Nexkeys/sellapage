@@ -1,5 +1,6 @@
 //src/components/dashboard/BookingsTab.jsx/
 import { useState, useMemo, useEffect, Fragment } from 'react'
+import ExportMenu from './ExportMenu'
 import {
   AlertCircle,
   Calendar,
@@ -419,6 +420,7 @@ export default function BookingsTab({
           <p className="mt-0.5 text-xs text-gray-400">
             Bookings created via Paystack checkout appear here automatically, separate from product orders.
           </p>
+          <ExportMenu storeId={store?.id} tab="bookings" className="mt-2" />
         </div>
         <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1">
           <button

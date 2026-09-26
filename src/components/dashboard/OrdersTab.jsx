@@ -1,6 +1,7 @@
 //src/components/dashboard/OrdersTab.jsx/
 import { useState, useMemo, useEffect } from 'react'
 import OrderDetail from './OrderDetail'
+import ExportMenu from './ExportMenu'
 import {
   AlertCircle,
   Calendar,
@@ -1413,6 +1414,7 @@ export default function OrdersTab({
             Track product orders here. Service bookings live in the Bookings tab. WhatsApp orders can be logged manually in the ledger tab.
           </p>
         </div>
+        <ExportMenu storeId={store?.id} tab="orders" className="self-start sm:self-end" />
       </div>
 
       {/* Operational Filter Strip */}

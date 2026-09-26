@@ -6,6 +6,7 @@ import {
   Search, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { SkeletonCardGrid } from '../Skeleton'
+import ExportMenu from './ExportMenu'
 
 const SERVICES_PER_PAGE = 10
 
@@ -19,6 +20,7 @@ export default function ServicesTab({
   onGenerateDescription, generatingDesc, aiDescError,
   handleSave, resetForm, startEdit, handleDelete,
   onToggleActive,
+  storeId,
 }) {
   const maxLabel = maxServices >= 999999 ? 'Unlimited' : maxServices
   const pct      = maxServices >= 999999 ? 0 : Math.min(100, Math.round((serviceCount / maxServices) * 100))
@@ -48,14 +50,17 @@ export default function ServicesTab({
           <h1 className="text-xl font-bold text-gray-900 tracking-tight">Services</h1>
           <p className="text-gray-400 text-xs mt-0.5">Manage bookable services, session durations, location types, and booking instructions.</p>
         </div>
-        {!limitReached && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0"
-          >
-            <Plus size={14} /> Add Service
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <ExportMenu storeId={storeId} tab="services" />
+          {!limitReached && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0"
+            >
+              <Plus size={14} /> Add Service
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Service count bar */}

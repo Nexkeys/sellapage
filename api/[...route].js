@@ -163,6 +163,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/reminders-cron.js");
         return await handlerFunc(req, res);
       }
+      case "export-data": {
+        const { default: handlerFunc } = await import("../src/api-handlers/export-data.js");
+        return await handlerFunc(req, res);
+      }
       case "platform-review-submit": {
         const { default: handlerFunc } = await import("../src/api-handlers/platform-review-submit.js");
         return await handlerFunc(req, res);
@@ -611,6 +615,16 @@ export default async function handler(req, res) {
       }
       case "marketplace-waitlist": {
         const { default: handler } = await import("../src/api-handlers/marketplace-waitlist.js")
+        return handler(req, res)
+      }
+      // Dropshipping Marketplace, Phase 1: the supplier application.
+      case "supplier-application": {
+        const { default: handler } = await import("../src/api-handlers/supplier-application.js")
+        return handler(req, res)
+      }
+      // Dropshipping Marketplace, Phase 2: supplier listings.
+      case "marketplace-listing": {
+        const { default: handler } = await import("../src/api-handlers/marketplace-listing.js")
         return handler(req, res)
       }
       case "admin-marketplace": {

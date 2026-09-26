@@ -12,6 +12,7 @@ import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { notifyStore } from './_lib/notifications.js'
 import { announceTeamActivity } from './_lib/team-activity.js'
+import { MARKETPLACE_PRODUCT_FIELDS } from '../utils/marketplace.js'
 
 const TYPES = {
   products: { collection: 'products', tab: 'products', countsTowardListings: true },
@@ -47,10 +48,20 @@ function coerceTimestamps(type, data) {
 }
 
 // Never let a client-supplied payload write internal/derived fields.
+//
+// The marketplace fields are dropped too. This handler runs on the Admin SDK,
+// so firestore.rules (which lock them) never see a staff write: without this a
+// staff member could set a wholesale price, switch a listing on, or mark a
+// product as another supplier's. Those go through /api/marketplace-listing,
+// which is owner-only. Dropped silently, like `_` keys, because the product
+// form sends whole documents back and a listed product carries them.
+const MARKETPLACE_FIELDS = new Set(MARKETPLACE_PRODUCT_FIELDS)
+
 function sanitize(data) {
   const out = {}
   for (const [key, value] of Object.entries(data || {})) {
     if (key.startsWith('_') || key === 'id') continue
+    if (MARKETPLACE_FIELDS.has(key)) continue
     out[key] = value === undefined ? null : value
   }
   return out

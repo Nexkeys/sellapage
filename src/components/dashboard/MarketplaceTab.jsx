@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { readInterest, readiness } from '../../utils/marketplace'
 import { isMarketplaceUnlocked } from '../../utils/marketplaceStage'
+import SupplierApplication from './SupplierApplication'
 
 const COPY = {
   supply: {
@@ -102,7 +103,7 @@ export default function MarketplaceTab({ role, store, navigateTo, onJoin }) {
               <BellRing size={16} className="mt-0.5 flex-shrink-0" />
               <span>
                 Your store has early access while we finish building this.
-                {role === 'supply' ? ' The supplier application appears here in the next update.' : ' Browsing and importing appear here in the next update.'}
+                {role === 'supply' ? '' : ' Browsing and importing appear here in the next update.'}
               </span>
             </p>
           ) : joined ? (
@@ -128,6 +129,8 @@ export default function MarketplaceTab({ role, store, navigateTo, onJoin }) {
         </div>
       </div>
 
+      {unlocked && role === 'supply' && <SupplierApplication navigateTo={navigateTo} />}
+
       <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
         <h2 className="text-sm font-bold text-gray-900">How it will work</h2>
         <ol className="mt-3 space-y-3">
@@ -145,6 +148,7 @@ export default function MarketplaceTab({ role, store, navigateTo, onJoin }) {
         </ol>
       </div>
 
+      {!(unlocked && role === 'supply') && (
       <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
         <h2 className="text-sm font-bold text-gray-900">Get ready now</h2>
         <p className="mt-0.5 text-xs text-gray-500">
@@ -177,6 +181,7 @@ export default function MarketplaceTab({ role, store, navigateTo, onJoin }) {
           ))}
         </ul>
       </div>
+      )}
 
       <div className="flex flex-col gap-2 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
         <a

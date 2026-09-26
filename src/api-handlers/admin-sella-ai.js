@@ -6,6 +6,10 @@ import { getAdminDb } from './_lib/firebase-admin.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
+// Mirrors DAILY_LIMIT in sella-ai.js. Vendors are now metered in monthly
+// credits (_lib/sella-credits.js); this daily cap is only an abuse guard.
+const DAILY_GUARD = 300
+
 const getTodayKey = () =>
   new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -61,14 +65,14 @@ export default async function handler(req, res) {
         businessName: nameById[id] || id,
         today: perStore[id].today,
         allTime: perStore[id].allTime,
-        remainingToday: Math.max(50 - perStore[id].today, 0),
+        remainingToday: Math.max(DAILY_GUARD - perStore[id].today, 0),
       }))
       .sort((a, b) => b.allTime - a.allTime)
       .slice(0, 100)
 
     return res.status(200).json({
       success: true,
-      dailyLimit: 50,
+      dailyLimit: DAILY_GUARD,
       summary: {
         todayTotal,
         allTimeTotal,

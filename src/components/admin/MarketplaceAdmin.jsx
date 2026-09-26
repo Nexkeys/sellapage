@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { SkeletonRows } from '../Skeleton'
 import MarketplaceAccess from './MarketplaceAccess'
+import SupplierApplications from './SupplierApplications'
 
 async function callAdmin(action, authHeaders, { method = 'GET', body, query = '' } = {}) {
   const res = await fetch(`/api/admin-marketplace?action=${action}${query}`, {
@@ -47,8 +48,8 @@ const LIMIT = 20
 const fmtDate = (value) => (value ? new Date(value).toLocaleDateString('en-NG', { dateStyle: 'medium' }) : '')
 
 export default function MarketplaceAdmin({ authHeaders }) {
-  // Sub tabs: the waitlist (Phase 0) and access (the stage + early access).
-  // Supplier applications join this row in Phase 1.
+  // Sub tabs: the waitlist (Phase 0), supplier applications (Phase 1) and
+  // access (the stage + early access).
   const [view, setView] = useState('waitlist')
   const [items, setItems] = useState([])
   const [counts, setCounts] = useState({})
@@ -122,7 +123,7 @@ export default function MarketplaceAdmin({ authHeaders }) {
         <div className="min-w-0">
           <h2 className="font-bold text-gray-800">Dropshipping Marketplace</h2>
           <p className="mt-0.5 text-xs text-gray-400">
-            Coming soon. Everyone waiting to supply or dropship, stores first. Supplier approvals arrive here in Phase 1.
+            The waitlist, supplier applications, and who can use the marketplace while it is being built.
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
@@ -150,6 +151,7 @@ export default function MarketplaceAdmin({ authHeaders }) {
       <div className="flex gap-1 rounded-xl border border-gray-100 bg-white p-1">
         {[
           { id: 'waitlist', label: 'Waitlist' },
+          { id: 'suppliers', label: 'Suppliers' },
           { id: 'access', label: 'Access' },
         ].map((v) => (
           <button
@@ -164,6 +166,8 @@ export default function MarketplaceAdmin({ authHeaders }) {
           </button>
         ))}
       </div>
+
+      {view === 'suppliers' && <SupplierApplications authHeaders={authHeaders} />}
 
       {view === 'access' && <MarketplaceAccess authHeaders={authHeaders} />}
 

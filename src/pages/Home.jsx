@@ -10,6 +10,20 @@ import {
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import PlayStoreBadge from '../components/PlayStoreBadge'
+import MediaSlot from '../media/MediaSlot'
+import { hasMedia } from '../media/hasMedia'
+
+// Pictures appear in the "What Sellapage does" grid only once EVERY card has
+// one. A grid that is half screenshots and half small icons has rows of
+// different heights and looks unfinished, which is worse than all icons. Fill
+// the remaining media-src/feature-* folders and the grid switches over by
+// itself; empty one and it switches back.
+const FEATURE_CARD_SLOTS = [
+  'feature-store-page', 'feature-products', 'feature-payments', 'feature-delivery',
+  'feature-customers', 'feature-reviews', 'feature-discounts', 'feature-analytics',
+  'feature-receipts', 'feature-loyalty', 'feature-abandoned',
+]
+const FEATURE_CARDS_READY = FEATURE_CARD_SLOTS.every(hasMedia)
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
@@ -151,6 +165,12 @@ const features = [
     title: 'Referral Program (All Plans)',
     description: 'Share your referral code and earn cash when the businesses you refer upgrade to a paid plan.',
   },
+  // Moved in from the old "Commerce Tools" section when the two were merged
+  // (2026-09-26). Everything else it listed was already here.
+  { icon: BarChart2, title: 'Advanced Analytics', description: 'Track store views, clicks, engagement rate, top-performing products and services from one dashboard.' },
+  { icon: MessageCircle, title: 'Business Messaging', description: 'Automate order confirmations and customer support from the same commerce flow.' },
+  { icon: Sparkles, title: 'AI Business Partner (Premium)', description: 'A context-aware assistant that reads your whole dashboard and helps you run your business, hands-free.' },
+  { icon: BarChart2, title: 'Google Ads Integration (Premium)', description: 'Run and track Google Ads campaigns yourself, or let Sellapage manage them for you.' },
 ]
 
 const testimonials = [
@@ -221,25 +241,6 @@ const stats = [
   { value: '24/7', label: 'Always Online' },
 ]
 
-const platformFeatures = [
-  { icon: Settings, title: 'Structured Checkout', desc: 'Give customers a clear path from browsing to payment confirmation and order follow-up.' },
-  { icon: CreditCard, title: 'In-App Paystack Checkout', desc: 'Accept card, bank transfer, and USSD payments directly on your store. Orders create automatically.' },
-  { icon: Truck, title: 'Sendbox & Topship Delivery Integration', desc: 'Show live delivery rates at checkout, book shipments, and share tracking links from your dashboard.' },
-  { icon: CreditCard, title: 'Payouts & Bank Settlement', desc: 'Connect your bank via Paystack subaccount. View earnings KPIs, transaction history, and get paid on your schedule.' },
-  { icon: Users, title: 'Customer CRM', desc: 'Auto-built from confirmed orders. Expandable profiles, WhatsApp direct links, sort by spend, orders, or recency.' },
-  { icon: Star, title: 'Verified Reviews & Ratings', desc: 'Buyers leave star ratings and reviews after delivery. Aggregate scores show on product and service cards.' },
-  { icon: Tag, title: 'Discounts & Promo Codes', desc: 'Create percentage or flat discounts, set usage limits and expiry dates. Applied automatically at checkout.' },
-  { icon: BarChart2, title: 'Advanced Analytics', desc: 'Track store views, clicks, engagement rate, top-performing products and services from one dashboard.' },
-  { icon: Download, title: 'Product Export', desc: 'Export your catalogue to PDF, CSV, Excel, and downloadable files for offline records or marketing.' },
-  { icon: Globe, title: 'Custom Domain', desc: 'Use your own domain (yourbrand.com) for a fully branded store experience.' },
-  { icon: Shield, title: 'CAC Verification', desc: 'Verify your business with Corporate Affairs Commission for added trust and credibility.' },
-  { icon: MessageCircle, title: 'Business Messaging', desc: 'Automate order confirmations and customer support from the same commerce flow.' },
-  { icon: Briefcase, title: 'Job Listings', desc: 'Post job openings from your dashboard on any plan. Approved listings go live on the public Sellapage Jobs board.' },
-  { icon: BookOpen, title: 'Sellapage Blog', desc: 'Guides, tips, and stories to help you sell more - read and comment on the public blog.' },
-  { icon: Gift, title: 'Referral Program', desc: 'Share your referral code and earn cash when the businesses you refer upgrade to a paid plan.' },
-  { icon: Sparkles, title: 'AI Business Partner (Premium)', desc: 'A context-aware assistant that reads your whole dashboard and helps you run your business, hands-free.' },
-  { icon: BarChart2, title: 'Google Ads Integration (Premium)', desc: 'Run and track Google Ads campaigns yourself, or let Sellapage manage them for you.' },
-]
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -322,22 +323,40 @@ export default function Home() {
             {/* Right - hero images */}
               <div className="relative flex justify-center items-end lg:items-center lg:justify-end h-[280px] sm:h-[420px] lg:h-[540px]">
               {/* Main laptop */}
-              <img
-                src="/Herosection-mainlaptop.png"
+              {/* media-src/home-hero-main. Empty folder = this original image. */}
+              <MediaSlot
+                name="home-hero-main"
                 alt="Sellapage dashboard on laptop"
-                width={620}
-                height={420}
-                loading="eager"
+                priority
                 className="relative z-10 w-[88%] sm:w-[78%] lg:w-full max-w-[600px] object-contain drop-shadow-2xl"
+                fallback={
+                  <img
+                    src="/Herosection-mainlaptop.png"
+                    alt="Sellapage dashboard on laptop"
+                    width={620}
+                    height={420}
+                    loading="eager"
+                    className="relative z-10 w-[88%] sm:w-[78%] lg:w-full max-w-[600px] object-contain drop-shadow-2xl"
+                  />
+                }
               />
               {/* Phone overlay */}
-              <img
-                src="/Herosection-mobilephone.png"
+              {/* media-src/home-hero-phone. A phone screen recording goes here. */}
+              <MediaSlot
+                name="home-hero-phone"
                 alt="Sellapage store on mobile phone"
-                width={160}
-                height={280}
-                loading="eager"
+                priority
                 className="absolute bottom-0 right-0 lg:-right-4 z-20 w-[28%] sm:w-[24%] lg:w-[30%] max-w-[180px] object-contain drop-shadow-xl animate-float"
+                fallback={
+                  <img
+                    src="/Herosection-mobilephone.png"
+                    alt="Sellapage store on mobile phone"
+                    width={160}
+                    height={280}
+                    loading="eager"
+                    className="absolute bottom-0 right-0 lg:-right-4 z-20 w-[28%] sm:w-[24%] lg:w-[30%] max-w-[180px] object-contain drop-shadow-xl animate-float"
+                  />
+                }
               />
               {/* Floating badge - New Order */}
               <div className="absolute top-8 left-4 sm:left-0 z-30 flex items-center gap-2 bg-white rounded-2xl shadow-xl shadow-gray-200/70 px-3 py-2 border border-gray-100 animate-float-delayed">
@@ -384,22 +403,31 @@ export default function Home() {
 
           <Reveal delay={100} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {[
-              { icon: Store, title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
-              { icon: Package, title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
-              { icon: CreditCard, title: 'Accept Payments (Pro+)', desc: 'In-app Paystack checkout for card, transfer, and USSD. Orders create automatically in your dashboard.' },
-              { icon: Truck, title: 'Manage Delivery (Pro+)', desc: 'Sendbox & Topship integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
-              { icon: Users, title: 'Customer CRM (Pro+)', desc: 'Auto-built from confirmed orders. Profiles, WhatsApp links, sort by spend, orders, or recency.' },
-              { icon: Star, title: 'Reviews & Ratings (Pro+)', desc: 'Verified buyer reviews with aggregate stars on product and service cards.' },
-              { icon: Tag, title: 'Discounts & Promos (Pro+)', desc: 'Percentage or flat discounts, usage limits, expiry dates. Applied automatically at checkout.' },
-              { icon: BarChart2, title: 'Analytics & Growth', desc: 'Track store views, clicks, engagement and top performers. Marketing tab with SEO tools, free Google listings and a social post kit.' },
-              { icon: Receipt, title: 'Receipts & Invoices (Pro+)', desc: 'Branded receipts with your logo, stamp and QR code. Six templates, exported as PDF or PNG.' },
-              { icon: Gift, title: 'Loyalty Points (Premium)', desc: 'Customers earn points as they shop and spend them with a code at checkout. No account needed.' },
-              { icon: ShoppingCart, title: 'Abandoned Checkout Recovery (Premium)', desc: 'See who started an order and did not pay, then bring them back by email or WhatsApp.' },
+              { icon: Store, slot: 'feature-store-page', title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
+              { icon: Package, slot: 'feature-products', title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
+              { icon: CreditCard, slot: 'feature-payments', title: 'Accept Payments (Pro+)', desc: 'In-app Paystack checkout for card, transfer, and USSD. Orders create automatically in your dashboard.' },
+              { icon: Truck, slot: 'feature-delivery', title: 'Manage Delivery (Pro+)', desc: 'Sendbox & Topship integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
+              { icon: Users, slot: 'feature-customers', title: 'Customer CRM (Pro+)', desc: 'Auto-built from confirmed orders. Profiles, WhatsApp links, sort by spend, orders, or recency.' },
+              { icon: Star, slot: 'feature-reviews', title: 'Reviews & Ratings (Pro+)', desc: 'Verified buyer reviews with aggregate stars on product and service cards.' },
+              { icon: Tag, slot: 'feature-discounts', title: 'Discounts & Promos (Pro+)', desc: 'Percentage or flat discounts, usage limits, expiry dates. Applied automatically at checkout.' },
+              { icon: BarChart2, slot: 'feature-analytics', title: 'Analytics & Growth', desc: 'Track store views, clicks, engagement and top performers. Marketing tab with SEO tools, free Google listings and a social post kit.' },
+              { icon: Receipt, slot: 'feature-receipts', title: 'Receipts & Invoices (Pro+)', desc: 'Branded receipts with your logo, stamp and QR code. Six templates, exported as PDF or PNG.' },
+              { icon: Gift, slot: 'feature-loyalty', title: 'Loyalty Points (Premium)', desc: 'Customers earn points as they shop and spend them with a code at checkout. No account needed.' },
+              { icon: ShoppingCart, slot: 'feature-abandoned', title: 'Abandoned Checkout Recovery (Premium)', desc: 'See who started an order and did not pay, then bring them back by email or WhatsApp.' },
             ].map((item) => (
               <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
-                <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
-                  <item.icon className="w-5 h-5 text-brand-600" />
-                </div>
+                {/* media-src/<item.slot>: a screenshot or clip replaces the icon. */}
+                {FEATURE_CARDS_READY ? (
+                  <MediaSlot
+                    name={item.slot}
+                    alt={item.title}
+                    className="w-full aspect-[16/10] object-cover object-top rounded-xl mb-3 border border-gray-100"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
+                    <item.icon className="w-5 h-5 text-brand-600" />
+                  </div>
+                )}
                 <h3 className="font-display font-bold text-gray-900 text-sm mb-1.5">{item.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
               </div>
@@ -462,13 +490,20 @@ export default function Home() {
 
             {/* Right image */}
             <Reveal direction="right" delay={150} className="relative flex justify-center">
-              <img
-                src="/midpageshowcase-secondarylaptop.png"
+              <MediaSlot
+                name="home-showcase"
                 alt="Sellapage dashboard showing products, orders, analytics, and customers"
-                width={560}
-                height={420}
-                loading="lazy"
                 className="w-full max-w-[520px] object-contain rounded-2xl drop-shadow-xl"
+                fallback={
+                  <img
+                    src="/midpageshowcase-secondarylaptop.png"
+                    alt="Sellapage dashboard showing products, orders, analytics, and customers"
+                    width={560}
+                    height={420}
+                    loading="lazy"
+                    className="w-full max-w-[520px] object-contain rounded-2xl drop-shadow-xl"
+                  />
+                }
               />
             </Reveal>
           </div>
@@ -592,23 +627,28 @@ export default function Home() {
       {/* ── FEATURES GRID ───────────────────────────────────────────────── */}
       <section className="py-14 sm:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-14">
+          {/* One section. "Commerce Tools / Built for the full selling
+              workflow" used to follow the testimonials and repeated twelve of
+              these seventeen items, so visitors read the same list twice.
+              Merged on 2026-09-26; the compact four-column cards take about
+              half the height the two sections did together. */}
+          <Reveal className="text-center mb-12">
             <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What You Get</span>
             <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
               Built to help you sell more
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto text-base">
-              Every feature is live today. Starter gives you the essentials. Growth, Pro, and Premium unlock the full commerce workspace.
+              Every feature is live today. Starter covers the essentials; Growth, Pro and Premium add checkout, delivery, customers and the rest.
             </p>
           </Reveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
             {features.map((f) => (
-              <div key={f.title} className="bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-md hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
-                <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
+              <div key={f.title} className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md hover:border-brand-100 transition-all duration-200 group">
+                <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center mb-2.5 group-hover:bg-brand-100 transition-colors">
                   <f.icon className="w-5 h-5 text-brand-600" />
                 </div>
-                <h3 className="font-display font-bold text-gray-900 text-sm mb-1.5">{f.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{f.description}</p>
+                <h3 className="font-display font-bold text-gray-900 text-sm mb-1">{f.title}</h3>
+                <p className="text-gray-500 text-xs leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>
@@ -635,13 +675,21 @@ export default function Home() {
                 <div className="text-brand-200 text-5xl font-serif leading-none mb-3 select-none">&ldquo;</div>
                 <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">{t.text}</p>
                 <div className="flex items-center gap-3 pt-4 border-t border-gray-50">
-                  <img
-                    src={t.avatar}
+                  {/* media-src/testimonial-1, -2, -3: real vendor photos. */}
+                  <MediaSlot
+                    name={`testimonial-${i + 1}`}
                     alt={t.name}
-                    width={40}
-                    height={40}
-                    loading="lazy"
                     className="w-10 h-10 rounded-full object-cover border-2 border-brand-100"
+                    fallback={
+                      <img
+                        src={t.avatar}
+                        alt={t.name}
+                        width={40}
+                        height={40}
+                        loading="lazy"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-brand-100"
+                      />
+                    }
                   />
                   <div>
                     <p className="font-display font-bold text-gray-900 text-sm">- {t.name}</p>
@@ -649,32 +697,6 @@ export default function Home() {
                   </div>
                 </div>
               </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── PLATFORM FEATURES ───────────────────────────────────────────── */}
-      <section className="py-14 sm:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Commerce Tools</span>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
-              Built for the full selling workflow
-            </h2>
-            <p className="text-gray-500 text-base max-w-2xl mx-auto">
-              Checkout, delivery, customers, reviews, discounts, and analytics, all in one dashboard. Pro and Premium add the rest.
-            </p>
-          </Reveal>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-            {platformFeatures.map((item) => (
-              <div key={item.title} className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-all duration-200 group">
-                <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center mb-2.5 group-hover:bg-brand-100 transition-colors">
-                  <item.icon className="w-5 h-5 text-brand-600" />
-                </div>
-                <h3 className="font-display font-bold text-gray-900 text-sm mb-1">{item.title}</h3>
-                <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
-              </div>
             ))}
           </div>
         </div>
@@ -748,21 +770,35 @@ export default function Home() {
                 <div className="w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] rounded-full bg-brand-50 blur-3xl opacity-70" />
               </div>
               <div className="relative flex items-end gap-3 sm:gap-5">
-                <img
-                  src="/mobile-app-screen-1.jpg"
+                <MediaSlot
+                  name="home-app-1"
                   alt="The Sellapage app showing today's sales, orders waiting and quick actions"
-                  width={300}
-                  height={620}
-                  loading="lazy"
                   className="relative z-10 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-2xl shadow-gray-300/60 object-contain"
+                  fallback={
+                    <img
+                      src="/mobile-app-screen-1.jpg"
+                      alt="The Sellapage app showing today's sales, orders waiting and quick actions"
+                      width={300}
+                      height={620}
+                      loading="lazy"
+                      className="relative z-10 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-2xl shadow-gray-300/60 object-contain"
+                    />
+                  }
                 />
-                <img
-                  src="/mobile-app-screen-2.jpg"
+                <MediaSlot
+                  name="home-app-2"
                   alt="The Sellapage app showing the orders list with their payment status"
-                  width={300}
-                  height={620}
-                  loading="lazy"
                   className="relative z-0 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-xl shadow-gray-300/50 object-contain mb-6 sm:mb-10"
+                  fallback={
+                    <img
+                      src="/mobile-app-screen-2.jpg"
+                      alt="The Sellapage app showing the orders list with their payment status"
+                      width={300}
+                      height={620}
+                      loading="lazy"
+                      className="relative z-0 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-xl shadow-gray-300/50 object-contain mb-6 sm:mb-10"
+                    />
+                  }
                 />
               </div>
             </Reveal>

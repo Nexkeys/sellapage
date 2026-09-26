@@ -10,8 +10,18 @@
 import crypto from 'crypto'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendEmail } from './send-email.js'
-import { applyGenericWrite, TAB_SCHEMA } from './ai-schema.js'
+import { applyGenericWrite, TAB_SCHEMA } from './ai-schema.js'
 import { createReminder, formatWat } from './reminders.js'
+import { createImportJob } from './sella-jobs.js'
+import { describeImport } from './sella-import.js'
+import { applyBulkUpdate, describeBulk } from './sella-bulk.js'
+
+// A photo the vendor sent in the chat is uploaded to Cloudinary by the client
+// first, so only https URLs are ever stored against a listing.
+const httpsUrl = (u) => {
+  const s = String(u || '').trim()
+  return /^https:\/\/\S+$/i.test(s) && s.length < 1000 ? s : ''
+}
 
 const money = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`
 
@@ -95,6 +105,24 @@ export async function executeWriteAction(db, storeId, action) {
     return applyGenericWrite(db, storeId, { tab: a.tab, docId: a.docId, changes: a.changes })
   }
 
+  // Bulk import does not write here: it queues a background job and returns
+  // at once, because hundreds of rows plus written descriptions cannot finish
+  // inside one request. See _lib/sella-jobs.js.
+  // Bulk edits are fast batch updates (at most 500 items), so they apply here
+  // directly rather than as a background job.
+  if (action?.type === 'bulk_update') return applyBulkUpdate(db, storeId, action.args || {})
+
+  if (action?.type === 'import_records') {
+    const a = action.args || {}
+    const actor = action.actor || { uid: storeId, label: 'Owner', role: 'owner' }
+    return createImportJob(db, storeId, actor, {
+      target: a.target,
+      rows: a.rows,
+      writeDescriptions: a.writeDescriptions,
+      sessionId: action.sessionId,
+    })
+  }
+
   const type = action?.type
   const args = action?.args || {}
   const storeRef = db.collection('stores').doc(storeId)
@@ -124,6 +152,7 @@ export async function executeWriteAction(db, storeId, action) {
         return { ok: false, message: 'A product needs at least a name and a price.' }
       }
       const ref = storeRef.collection('products').doc()
+      const photo = httpsUrl(args.imageUrl)
       await ref.set({
         name: String(args.name).trim(),
         price: Number(args.price),
@@ -132,15 +161,17 @@ export async function executeWriteAction(db, storeId, action) {
         stock: args.stock != null ? Number(args.stock) : null,
         type: args.type || 'physical',
         visible: true,
-        imageUrls: [],
-        imageUrl: '',
+        imageUrls: photo ? [photo] : [],
+        imageUrl: photo,
         createdAt: new Date(),
       })
       await storeRef.set({ productCount: FieldValue.increment(1) }, { merge: true })
       return {
         ok: true,
-        message: `Added "${args.name}" (${money(args.price)}) to your Products. Want to add a photo? Upload it right here.`,
-        imageTarget: { collection: 'products', id: ref.id, name: String(args.name).trim() },
+        message: photo
+          ? `Added "${args.name}" (${money(args.price)}) to your Products, with the photo you sent.`
+          : `Added "${args.name}" (${money(args.price)}) to your Products. Want to add a photo? Upload it right here.`,
+        ...(photo ? {} : { imageTarget: { collection: 'products', id: ref.id, name: String(args.name).trim() } }),
       }
     }
 
@@ -150,6 +181,7 @@ export async function executeWriteAction(db, storeId, action) {
         return { ok: false, message: 'A service needs at least a name and a price.' }
       }
       const ref = storeRef.collection('services').doc()
+      const photo = httpsUrl(args.imageUrl)
       await ref.set({
         name: String(args.name).trim(),
         price: Number(args.price),
@@ -157,14 +189,16 @@ export async function executeWriteAction(db, storeId, action) {
         category: args.category ? String(args.category).trim() : '',
         duration: args.duration || '',
         visible: true,
-        imageUrls: [],
-        imageUrl: '',
+        imageUrls: photo ? [photo] : [],
+        imageUrl: photo,
         createdAt: new Date(),
       })
       return {
         ok: true,
-        message: `Added service "${args.name}" (${money(args.price)}) to your Services. Want to add a photo? Upload it right here.`,
-        imageTarget: { collection: 'services', id: ref.id, name: String(args.name).trim() },
+        message: photo
+          ? `Added service "${args.name}" (${money(args.price)}) to your Services, with the photo you sent.`
+          : `Added service "${args.name}" (${money(args.price)}) to your Services. Want to add a photo? Upload it right here.`,
+        ...(photo ? {} : { imageTarget: { collection: 'services', id: ref.id, name: String(args.name).trim() } }),
       }
     }
 
@@ -358,6 +392,9 @@ export function describeAction(action) {
     return `Set a reminder for ${formatWat(a.dueAt)}${rep}: "${a.message}"`
   }
 
+  if (action?.type === 'import_records') return describeImport(action.args || {})
+  if (action?.type === 'bulk_update') return describeBulk(action.args || {})
+
   if (action?.type === 'update_tab_record') {
     const a = action.args || {}
     const tab = TAB_SCHEMA[a.tab]?.label || a.tab
@@ -371,9 +408,9 @@ export function describeAction(action) {
     case 'add_ledger_entry':
       return `Log a ${money2(a.amount)} sale to ${a.customerName} (${a.itemName}) in your Ledger.`
     case 'add_product':
-      return `Add product "${a.name}" priced ${money2(a.price)} to your store.`
+      return `Add product "${a.name}" priced ${money2(a.price)} to your store${httpsUrl(a.imageUrl) ? ', with the photo you sent' : ''}.`
     case 'add_service':
-      return `Add service "${a.name}" priced ${money2(a.price)} to your store.`
+      return `Add service "${a.name}" priced ${money2(a.price)} to your store${httpsUrl(a.imageUrl) ? ', with the photo you sent' : ''}.`
     case 'create_discount':
       return `Create promo code ${String(a.code || '').toUpperCase()} (${a.type === 'flat' ? money2(a.value) + ' off' : a.value + '% off'}).`
     case 'update_order_status':

@@ -6,7 +6,10 @@
 // 'payouts' = bank/settlement details, 'referral-program' = the owner's own
 // commission balance and withdrawals to the owner's personal bank account.
 // Both are the owner's money, not store operations - never delegatable.
-export const OWNER_ONLY_TABS = ['billing', 'settings', 'team', 'payouts', 'referral-program']
+// The two Dropshipping Marketplace tabs commit the store to shipping other
+// people's orders and set prices that move money, so no staff role holds them
+// (Docs/Dropshipping-Marketplace-Plan.md, Part E2).
+export const OWNER_ONLY_TABS = ['billing', 'settings', 'team', 'payouts', 'referral-program', 'supplier-hub', 'dropship']
 
 export const MAX_STAFF_ROLES = 20
 export const MAX_ACTIVE_STAFF = 10

@@ -15,14 +15,17 @@
 //   POST ?action=set-stage  { stage } coming_soon | testing | live, super_admin
 //   GET  ?action=find-store &q=  store id, slug or email, to add a tester
 //   POST ?action=set-tester { storeId, on } early access on or off
-//
-// Phase 1 adds supplier applications and approvals to this same handler.
+//   GET  ?action=suppliers &status=  the supplier queue (pending by default)
+//   POST ?action=supplier-decision  { storeId, decision, reason } approve /
+//                           reject / suspend / unsuspend, with a notification.
 // Tab `marketplace`: super_admin and operations (Docs/Dropshipping-Marketplace-Plan.md, Part F).
 
 import { getAdminDb } from './_lib/firebase-admin.js'
 import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors, parseJsonBody } from './_lib/http.js'
-import { readInterest, roleFromInterest, readiness, MARKETPLACE_STAGES } from '../utils/marketplace.js'
+import { notifyStore } from './_lib/notifications.js'
+import { termsSummary } from '../utils/supplierTerms.js'
+import { readInterest, roleFromInterest, readiness, supplierStatus, MARKETPLACE_STAGES } from '../utils/marketplace.js'
 import { marketplaceStage, stageOverride, clearStageCache, SETTINGS_DOC } from './_lib/marketplace-gate.js'
 
 const iso = (v) => {
@@ -48,6 +51,70 @@ function storeRow(id, s) {
     // Everything a supplier needs today except the launch-time video.
     supplierReady: supplierChecks.every((i) => i.done),
     createdAt: iso(s.createdAt),
+  }
+}
+
+const SUPPLIER_VIEWS = ['pending', 'approved', 'rejected', 'suspended', 'all']
+
+/**
+ * What each decision does, in one place: which states it is legal from, what
+ * the store becomes, and what the vendor is told.
+ */
+const DECISIONS = {
+  approve: {
+    from: ['pending'],
+    to: 'approved',
+    notify: () => ({
+      title: 'You are an approved supplier',
+      body: 'You can now list products on the Dropshipping Marketplace from your Supplier Hub.',
+    }),
+  },
+  reject: {
+    from: ['pending'],
+    to: 'rejected',
+    notify: (reason) => ({
+      title: 'Your supplier application was not approved',
+      body: reason || 'Open Supplier Hub to see what to fix.',
+    }),
+  },
+  suspend: {
+    from: ['approved'],
+    to: 'suspended',
+    notify: (reason) => ({
+      title: 'Your supplier account is suspended',
+      body: reason || 'Your marketplace listings are unavailable. Please contact support.',
+    }),
+  },
+  unsuspend: {
+    from: ['suspended'],
+    to: 'approved',
+    notify: () => ({
+      title: 'Your supplier account is active again',
+      body: 'Your marketplace listings are back on.',
+    }),
+  },
+}
+
+function supplierRow(id, s) {
+  const checks = readiness(s, 'supply').filter((i) => !i.pending)
+  return {
+    storeId: id,
+    name: s.businessName || '',
+    storeName: s.storeName || '',
+    email: s.email || '',
+    phone: s.whatsappNumber || '',
+    plan: String(s.plan || 'starter').toLowerCase(),
+    status: supplierStatus(s),
+    videoUrl: s.supplierVideoUrl || '',
+    notes: s.supplierApplicationNotes || '',
+    rejectionReason: s.supplierRejectionReason || '',
+    suspendedReason: s.supplierSuspendedReason || '',
+    checks: Object.fromEntries(checks.map((i) => [i.key, i.done])),
+    appliedAt: iso(s.supplierAppliedAt),
+    approvedAt: iso(s.supplierApprovedAt),
+    rejectedAt: iso(s.supplierRejectedAt),
+    termsVersion: Number.isInteger(s.supplierTermsVersion) ? s.supplierTermsVersion : 0,
+    terms: null,
   }
 }
 
@@ -215,6 +282,108 @@ export default async function handler(req, res) {
       // firestore.rules: a store can never switch its own early access on.
       await ref.set({ marketplaceTester: body.on === true }, { merge: true })
       return res.status(200).json({ success: true, storeId, on: body.on === true })
+    }
+
+    // -------------------------------------------------- supplier applications
+    // One indexed query over `stores`, not a scan: the queue IS the status
+    // field, so there is no second collection to keep in step and nothing to
+    // go stale between the two.
+    if (action === 'suppliers') {
+      const wanted = SUPPLIER_VIEWS.includes(req.query.status) ? req.query.status : 'pending'
+      const states = wanted === 'all' ? ['pending', 'approved', 'rejected', 'suspended'] : [wanted]
+      const snap = await db.collection('stores').where('supplierStatus', 'in', states).limit(300).get()
+
+      const rows = snap.docs.map((d) => supplierRow(d.id, d.data()))
+
+      // The terms are reviewed with the video, so they come with the row. One
+      // read per supplier that has saved terms; the queue is small and this
+      // tab is opened by people, not by traffic.
+      await Promise.all(rows.map(async (r) => {
+        if (!(r.termsVersion > 0)) return
+        const t = await db.collection('supplierTerms').doc(r.storeId).get()
+        if (!t.exists) return
+        const data = t.data()
+        r.terms = { summary: termsSummary(data), extraTerms: data.extraTerms || '', version: data.version || r.termsVersion }
+      }))
+
+      // Oldest application first: a queue is fair or it is not a queue.
+      rows.sort((a, b) => String(a.appliedAt || '').localeCompare(String(b.appliedAt || '')))
+
+      return res.status(200).json({ success: true, suppliers: rows, total: rows.length, status: wanted })
+    }
+
+    if (action === 'supplier-decision' && req.method === 'POST') {
+      let body
+      try { body = parseJsonBody(req) || {} } catch { return res.status(400).json({ error: 'Invalid JSON body' }) }
+
+      const storeId = String(body.storeId || '').trim()
+      const decision = String(body.decision || '').trim()
+      const reason = String(body.reason || '').trim().slice(0, 500)
+      if (!storeId) return res.status(400).json({ error: 'storeId is required' })
+      if (!DECISIONS[decision]) return res.status(400).json({ error: 'Unknown decision' })
+      // The vendor is shown this, so it is not optional on a no.
+      if ((decision === 'reject' || decision === 'suspend') && reason.length < 5) {
+        return res.status(400).json({ error: 'Please give a reason. The vendor is shown it.' })
+      }
+
+      const ref = db.collection('stores').doc(storeId)
+      const snap = await ref.get()
+      if (!snap.exists) return res.status(404).json({ error: 'Store not found' })
+      const store = snap.data() || {}
+      const from = supplierStatus(store)
+
+      // A decision only makes sense from certain states. Saying so is better
+      // than one admin silently overwriting another's decision.
+      if (!DECISIONS[decision].from.includes(from)) {
+        return res.status(409).json({
+          error: 'This store is "' + from + '", so that decision does not apply to it any more.',
+          status: from,
+        })
+      }
+
+      const now = new Date()
+      const patch = { supplierStatus: DECISIONS[decision].to, supplierDecidedBy: admin.uid, supplierDecidedAt: now }
+      if (decision === 'approve') {
+        patch.supplierApprovedAt = now
+        patch.supplierRejectionReason = ''
+        patch.supplierSuspendedReason = ''
+      }
+      if (decision === 'reject') {
+        patch.supplierRejectedAt = now
+        patch.supplierRejectionReason = reason
+      }
+      if (decision === 'suspend') {
+        patch.supplierSuspendedAt = now
+        patch.supplierSuspendedReason = reason
+      }
+      if (decision === 'unsuspend') {
+        patch.supplierSuspendedReason = ''
+        patch.supplierApprovedAt = store.supplierApprovedAt || now
+      }
+
+      await ref.set(patch, { merge: true })
+
+      // Suspending takes every listing off the marketplace in this same
+      // instant (plan decision 11) without touching a single product:
+      // availability is worked out from supplierStatus on every read
+      // (listingAvailability in utils/marketplace.js). Lifting it brings back
+      // exactly what was live, for the same reason.
+
+      const copy = DECISIONS[decision].notify(reason)
+      // Never let a push failure lose the decision: it is already written.
+      await notifyStore(
+        db,
+        storeId,
+        {
+          type: 'supplier_status',
+          title: copy.title,
+          body: copy.body,
+          data: { status: patch.supplierStatus, tab: 'supplier-hub' },
+        },
+        store,
+      )
+
+      return res.status(200).json({ success: true, storeId, status: patch.supplierStatus })
     }
 
     if (action === 'delete' && req.method === 'POST') {
