@@ -41,3 +41,9 @@ GitHub). Only the small compressed copies are.
 | `testimonial-3` | Homepage, "Loved by Business Owners", third person | square | A real vendor, face centred. |
 | `dashboard-banner` | Dashboard home, top right, the "Level up your store" banner | landscape | Products and a plant on a light background, fading to white on the right where the text sits. |
 | `dashboard-howto` | Dashboard home, the "Watch how Sellapage works" card under Recent Activity | landscape | The still shown on the card. The card itself only appears once HOWTO_VIDEO_URL in src/media/howto.js is set. |
+| `products-hero` | Products and Services tabs, top banner, right side | portrait | Product boxes and a sneaker on a light green background. |
+| `products-marketing-phone` | Products tab, "Turn browsing into buying" card | portrait | A phone showing a store. |
+| `products-empty-hero` | Products and Services tabs with nothing added yet, top banner | landscape | A phone with a store and an Add Product button. |
+| `products-empty-art` | Products and Services tabs with nothing added yet, above "No products added yet" | landscape | A product card with a sneaker and a small plant. |
+| `products-first-popper` | Products and Services tabs with nothing added yet, "Good things start" card | square | A small party popper, 3D style. |
+| `products-growth-chart` | Products and Services tabs, "Get more with Growth" card | square | Green rising bars with an arrow. |

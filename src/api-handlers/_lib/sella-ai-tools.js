@@ -15,6 +15,9 @@ import { createReminder, formatWat } from './reminders.js'
 import { createImportJob } from './sella-jobs.js'
 import { describeImport } from './sella-import.js'
 import { applyBulkUpdate, describeBulk } from './sella-bulk.js'
+import { createVideoJob } from './sella-jobs.js'
+import { VIDEO_SHAPES, planVideo } from './sella-video.js'
+import { getBalance, creditsForUsd } from './sella-credits.js'
 
 // A photo the vendor sent in the chat is uploaded to Cloudinary by the client
 // first, so only https URLs are ever stored against a listing.
@@ -111,6 +114,25 @@ export async function executeWriteAction(db, storeId, action) {
   // Bulk edits are fast batch updates (at most 500 items), so they apply here
   // directly rather than as a background job.
   if (action?.type === 'bulk_update') return applyBulkUpdate(db, storeId, action.args || {})
+
+  // A video is submitted to the provider now and finished in the background;
+  // the vendor is charged only when it is delivered (see _lib/sella-jobs.js).
+  if (action?.type === 'create_video') {
+    // The confirm request comes back from the client, so the plan is rebuilt
+    // and re-priced here rather than trusted: an edited card cannot lower the
+    // price, lengthen the clip past the limits, or point at an outside photo.
+    const a = action.args || {}
+    const photo = /^https:\/\/res\.cloudinary\.com\/\S+$/i.test(String(a.photoUrl || '')) ? a.photoUrl : ''
+    const planned = planVideo({ prompt: a.prompt, shape: a.shape, seconds: a.seconds, sound: a.sound, photoUrl: photo })
+    if (!planned.ok) return { ok: false, message: planned.reason }
+    const needed = Math.ceil(creditsForUsd(planned.plan.estimatedUsd))
+    const balance = await getBalance(db, storeId)
+    if (balance.remaining < needed) {
+      return { ok: false, message: `This video needs about ${needed} credits and you have ${Math.floor(balance.remaining)} left this month.` }
+    }
+    const actor = action.actor || { uid: storeId, label: 'Owner', role: 'owner' }
+    return createVideoJob(db, storeId, actor, { plan: planned.plan, sessionId: action.sessionId })
+  }
 
   if (action?.type === 'import_records') {
     const a = action.args || {}
@@ -394,6 +416,11 @@ export function describeAction(action) {
 
   if (action?.type === 'import_records') return describeImport(action.args || {})
   if (action?.type === 'bulk_update') return describeBulk(action.args || {})
+  if (action?.type === 'create_video') {
+    const a = action.args || {}
+    const shape = VIDEO_SHAPES[a.shape]?.label || 'portrait (9:16)'
+    return `Make a ${a.seconds || 6}-second ${shape} video${a.sound === false ? ' without sound' : ' with sound'}${a.photoUrl ? ', starting from your photo' : ''}. It uses about ${a.estimatedCredits || '?'} credits, charged only when the video is delivered.`
+  }
 
   if (action?.type === 'update_tab_record') {
     const a = action.args || {}

@@ -17,7 +17,9 @@ import { createServer } from 'vite'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe'
-const [outDir = './preview-out', q = 'preview=dashboard', widthArg = '390,1536', heightArg] = process.argv.slice(2)
+// act: optional page JavaScript run once the page is ready (e.g. a click),
+// so an interaction can be pictured too.
+const [outDir = './preview-out', q = 'preview=dashboard', widthArg = '390,1536', heightArg, act] = process.argv.slice(2)
 const widths = widthArg.split(',').map(Number)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -62,6 +64,10 @@ for (const width of widths) {
     if (r?.result?.value === 1) break
   }
   await sleep(2500)
+  if (act) {
+    await send('Runtime.evaluate', { expression: act, awaitPromise: true })
+    await sleep(1200)
+  }
   const png = await send('Page.captureScreenshot', { format: 'png' })
   fs.writeFileSync(path.join(outDir, `${width}.png`), Buffer.from(png.data, 'base64'))
   console.log(`${width}px saved`)

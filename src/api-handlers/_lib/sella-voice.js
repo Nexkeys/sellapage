@@ -28,7 +28,7 @@ const NO_SPEECH = '[NO_SPEECH]'
 /**
  * @returns {Promise<{ok: true, text: string, costUsd: number} | {ok: false, message: string}>}
  */
-export async function transcribe({ audioBase64, format = 'wav' }) {
+export async function transcribe({ audioBase64, format = 'wav', languageHint = '' }) {
   const fmt = String(format || 'wav').toLowerCase()
   if (!FORMATS.has(fmt)) return { ok: false, message: 'That recording format is not supported.' }
   const data = String(audioBase64 || '').replace(/^data:[^,]*,/, '')
@@ -47,6 +47,7 @@ export async function transcribe({ audioBase64, format = 'wav' }) {
         {
           type: 'text',
           text:
+            (languageHint ? `The speaker usually talks in ${languageHint}. ` : '') +
             'Transcribe this voice note from a Nigerian business owner exactly as spoken. It may be English, ' +
             'Nigerian Pidgin, or mixed with Yoruba, Igbo or Hausa words: keep their words, do not translate or ' +
             'correct their grammar. Write numbers and prices as digits (5000, not five thousand). Reply with ' +

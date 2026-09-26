@@ -32,6 +32,8 @@ import { IMPORT_TARGETS, cleanRow, describeImport } from './sella-import.js'
 import { callModel } from './openrouter.js'
 import { charge } from './sella-credits.js'
 import { sendPushToStore } from './push-devices.js'
+import { submitVideo, checkVideo, downloadVideo } from './sella-video.js'
+import { uploadVideoBytes } from './cloudinary-upload.js'
 
 export const JOBS = 'sellaJobs'
 const CHUNK = 10
@@ -93,6 +95,7 @@ export function jobView(id, j) {
     created: j.created || 0,
     skipped: j.skipped || 0,
     message: j.resultMessage || null,
+    ...(j.type === 'video' ? { videoUrl: j.videoUrl || null, shape: j.plan?.shape || 'story', seconds: j.plan?.seconds || null } : {}),
   }
 }
 
@@ -264,6 +267,7 @@ export async function tickJob(db, ref, deadline) {
     const snap = await ref.get()
     return snap.exists ? jobView(ref.id, snap.data()) : null
   }
+  if (j.type === 'video') return tickVideo(db, ref, j)
 
   let cursor = j.cursor || 0
   let created = j.created || 0
@@ -322,3 +326,109 @@ export async function tickDueJobs(db, deadline, max = 3) {
 }
 
 export { describeImport }
+
+// ---------------------------------------------------------------- VIDEO
+// A video job holds the provider's job id. Ticking it only CHECKS the
+// provider (the work happens on their side), so checks are throttled: the
+// chat polls every couple of seconds, which the provider does not need.
+const VIDEO_CHECK_EVERY_MS = 6000
+const VIDEO_GIVE_UP_MS = 20 * 60 * 1000
+
+/** Submits the video and creates its job. Called only after the vendor confirmed. */
+export async function createVideoJob(db, storeId, actor, { plan, sessionId }) {
+  const sub = await submitVideo(plan)
+  if (!sub.ok) return { ok: false, message: sub.message }
+  const ref = db.collection(JOBS).doc()
+  await ref.set({
+    storeId,
+    type: 'video',
+    plan,
+    providerId: sub.providerId,
+    model: sub.model,
+    status: 'running',
+    total: 1, cursor: 0, created: 0, skipped: 0,
+    submittedAt: nowMs(),
+    nextRunAt: nowMs() + 30000, // the minute cron checks it even if the vendor leaves
+    leaseUntil: 0,
+    sessionId: sessionId ? String(sessionId) : null,
+    createdBy: { uid: actor.uid, label: actor.label, role: actor.role },
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+  return {
+    ok: true,
+    jobId: ref.id,
+    message: 'Making your video now. It usually takes 1 to 3 minutes. You can leave this screen; I will notify you when it is ready.',
+  }
+}
+
+async function finishVideo(db, ref, j, { ok, url, message }) {
+  const resultMessage = ok ? 'Your video is ready.' : message
+  await ref.update({
+    status: ok ? 'done' : 'failed',
+    resultMessage,
+    ...(ok ? { videoUrl: url, cursor: 1, created: 1 } : {}),
+    nextRunAt: FieldValue.delete(),
+    leaseUntil: 0,
+    finishedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+  if (j.sessionId) {
+    const msg = ok
+      ? { role: 'assistant', content: resultMessage, videos: [{ url, shape: j.plan?.shape || 'story' }], jobId: ref.id, at: new Date().toISOString() }
+      : { role: 'assistant', content: resultMessage, kind: 'action-result', ok: false, jobId: ref.id, at: new Date().toISOString() }
+    try {
+      await db.collection('stores').doc(j.storeId).collection('sellaAiChats').doc(j.sessionId).set({
+        messages: FieldValue.arrayUnion(msg),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true })
+    } catch (err) {
+      console.error('[sella-jobs] could not append video to chat:', err.message)
+    }
+  }
+  try {
+    await sendPushToStore(j.storeId, {
+      title: ok ? 'Your video is ready' : 'Video could not be made',
+      body: ok ? 'Open Sella to watch and download it.' : resultMessage,
+      data: { type: 'sella_job', jobId: ref.id, sessionId: j.sessionId || '' },
+    }, { onlyUids: [j.createdBy?.uid].filter(Boolean) })
+  } catch (err) {
+    console.error('[sella-jobs] video push failed:', err?.message || err)
+  }
+}
+
+async function tickVideo(db, ref, j) {
+  const release = async (extra = {}) => {
+    await ref.update({ leaseUntil: 0, updatedAt: FieldValue.serverTimestamp(), ...extra })
+    return jobView(ref.id, { ...j, ...extra, status: 'running' })
+  }
+  if (j.lastCheckedAt && nowMs() - j.lastCheckedAt < VIDEO_CHECK_EVERY_MS) return release()
+  try {
+    const r = await checkVideo(j.providerId)
+    if (r.state === 'running') {
+      if (nowMs() - (j.submittedAt || nowMs()) <= VIDEO_GIVE_UP_MS) {
+        return release({ lastCheckedAt: nowMs(), nextRunAt: nowMs() + 20000 })
+      }
+      await finishVideo(db, ref, j, { ok: false, message: 'The video took too long and was stopped. You were not charged. Please try again.' })
+    } else if (r.state === 'failed') {
+      await finishVideo(db, ref, j, { ok: false, message: r.message })
+    } else {
+      const publicId = `${String(j.storeId).replace(/[^a-zA-Z0-9_-]/g, '')}_${ref.id}`
+      const file = await downloadVideo(r.sourceUrl, j.providerId)
+      const url = file ? await uploadVideoBytes(file.buffer, file.contentType, publicId, { folder: 'sellapage/sella-video' }) : ''
+      if (!url) {
+        // The provider made it but it could not be saved: not the vendor's loss.
+        await finishVideo(db, ref, j, { ok: false, message: 'The video was made but could not be saved. You were not charged. Please try again.' })
+      } else {
+        // Charged only for a video the vendor actually receives, at the real cost.
+        await charge(db, j.storeId, { usd: r.costUsd || j.plan?.estimatedUsd || 0, minimum: 0, kind: 'video' })
+        await finishVideo(db, ref, j, { ok: true, url })
+      }
+    }
+  } catch (err) {
+    console.error('[sella-jobs] video tick failed:', err?.message || err)
+    return release({ lastError: String(err?.message || err).slice(0, 300), nextRunAt: nowMs() + 20000 })
+  }
+  const after = await ref.get()
+  return after.exists ? jobView(ref.id, after.data()) : null
+}

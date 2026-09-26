@@ -700,6 +700,11 @@ service cloud.firestore {
       match /sellaPrompts/{promptId} {
         allow read, write: if false;
       }
+
+      // Each person's Sella language and voice, keyed by their uid.
+      match /sellaPrefs/{uid} {
+        allow read, write: if false;
+      }
     }
 
     // Staff accounts - server-only (Admin SDK via staff-*.js handlers).

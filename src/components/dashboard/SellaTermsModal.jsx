@@ -154,6 +154,10 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
                   <B>Files and photos you send</B> in the chat. The text of documents is kept with that chat so you can ask
                   follow-up questions, and is deleted when you delete the chat.
                 </Li>
+                <Li>
+                  <B>Voice</B>: recordings you speak into the chat are sent to be turned into text and are not kept. Replies you
+                  ask to hear may be sent to a speech provider to be read aloud.
+                </Li>
               </ul>
 
               <H>Your customers did not agree to this, you did</H>

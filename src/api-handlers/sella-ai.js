@@ -21,7 +21,8 @@ import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { validateReminder, formatWat, nowInWat } from './_lib/reminders.js'
 import { callModel, streamModel } from './_lib/openrouter.js'
 import { sendPushToStore } from './_lib/push-devices.js'
-import { getBalance, charge, MIN_CREDITS_PER_TURN, MIN_CREDITS_DEEP } from './_lib/sella-credits.js'
+import { getBalance, charge, creditsForUsd, MIN_CREDITS_PER_TURN, MIN_CREDITS_DEEP } from './_lib/sella-credits.js'
+import { planVideo, VIDEO_SHAPES, VIDEO_SECONDS } from './_lib/sella-video.js'
 import {
   MAX_FILES, parseDocument, safeImageUrl, buildUserContent,
   fileRecordForSave, tableFromRecord, earlierFilesForPrompt,
@@ -35,6 +36,7 @@ import {
 } from './_lib/sella-memory.js'
 import { proposeBulkUpdate, BULK_FIELDS, BULK_OPS } from './_lib/sella-bulk.js'
 import { transcribe } from './_lib/sella-voice.js'
+import { getPrefs, setPrefs, languageForPrompt, synthesize, speechProvider, LANGUAGES, MAX_SPEAK_CHARS } from './_lib/sella-speech.js'
 import { generateImages, storeImages, ASPECTS, MAX_IMAGES_PER_REQUEST } from './_lib/sella-images.js'
 
 // Model selection now lives in _lib/openrouter.js, which fails over across
@@ -105,7 +107,7 @@ const getTodayKey = () =>
 
 // Names the model can call. Writes are intercepted (never auto-run); web_search runs inline.
 const WRITE_ACTIONS = new Set([
-  'update_tab_record', 'create_reminder', 'import_records', 'bulk_update',
+  'update_tab_record', 'create_reminder', 'import_records', 'bulk_update', 'create_video',
   'add_ledger_entry', 'add_product', 'add_service', 'create_discount',
   'update_order_status', 'update_booking_status', 'update_delivery_pickup', 'update_store_settings',
 ])
@@ -176,7 +178,34 @@ const IMPORT_FIELD_PROPS = Object.fromEntries(
   [...new Set(Object.values(IMPORT_TARGETS).flatMap((t) => t.fields))].map((f) => [f, { type: 'string' }]),
 )
 
+// Actions that spend credits but touch no dashboard tab, so they are not
+// gated by a tab permission (staff with Sella access may use them).
+const NO_TAB_ACTIONS = new Set(['create_video'])
+
 const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'create_video',
+      description:
+        'Make a short marketing video (4, 6 or 8 seconds): a WhatsApp status, Instagram Reel or TikTok clip, a product ' +
+        'showcase, or a promo. It can start from a photo the vendor sent (photoUrl), keeping the product unchanged. ' +
+        'It is the most expensive thing you do (about 20 to 60 credits), so the vendor always sees the cost and confirms ' +
+        'first. Write the prompt yourself in detail: scene, camera movement, light, mood, and any on-screen words ' +
+        'spelled exactly.',
+      parameters: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Detailed description of the video.' },
+          shape: { type: 'string', enum: Object.keys(VIDEO_SHAPES), description: 'story for WhatsApp status, Reels and TikTok (default), landscape for YouTube and website banners, square for feed posts.' },
+          seconds: { type: 'number', enum: VIDEO_SECONDS, description: 'Length. Default 6.' },
+          sound: { type: 'boolean', description: 'Background sound and music. Default true. Without sound is cheaper.' },
+          photoUrl: { type: 'string', description: 'Optional: URL of a photo the vendor sent in this chat (or an image you made) to start the video from.' },
+        },
+        required: ['prompt'],
+      },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -569,6 +598,8 @@ IMAGES. You can create images and improve the vendor's photos with create_image:
    - Never make images of real, identifiable people or celebrities, other companies' logos or trademarks, or anything unlawful or deceptive. Politely decline those.
    - Write the image prompt yourself, in detail, and spell any words that should appear in the image exactly. After making an image, tell the vendor in one short sentence what you made; the image appears under your reply with Download, Add to a listing and Edit buttons, so never paste its URL.
 
+VIDEO. You can make short videos (4, 6 or 8 seconds) with create_video: product showcases, promos, WhatsApp status and Reels. It can start from the vendor's product photo. It takes 1 to 3 minutes and costs about 20 to 60 credits, so offer it when it clearly helps, and say the vendor will see the exact cost to confirm. The same honesty and safety rules as images apply.
+
 VOICE. The vendor may speak to you; their words arrive as text and may read like speech, with Pidgin or local words. Understand them as spoken, and do not comment on spelling.
 
 DASHBOARD TABS you can read with read_tab (this is the COMPLETE list - if a
@@ -704,7 +735,7 @@ export default async function handler(req, res) {
 
     // ---------- lightweight, non-consuming actions ----------
     if (action === 'usage') {
-      const [u, credits] = await Promise.all([usageRef.get(), getBalance(db, storeId)])
+      const [u, credits, prefs] = await Promise.all([usageRef.get(), getBalance(db, storeId), getPrefs(db, storeId, decoded.uid)])
       const used = u.exists ? (u.data().count || 0) : 0
       // Who the chat greets ("Hello, Ada"). The store has no owner-name field,
       // so the owner is greeted by the first name on their sign-in account,
@@ -715,7 +746,38 @@ export default async function handler(req, res) {
         used, limit: DAILY_LIMIT, remaining: Math.max(DAILY_LIMIT - used, 0), credits, assistantName,
         sellaStaffAccess: store.sellaStaffAccess === true, isOwner,
         greetingName, businessName: store.businessName || '', logoUrl: store.logoUrl || '', email: decoded.email || '',
+        // This person's own language and voice, and whether replies can be read
+        // aloud by the server's Nigerian voices ('spitch') or only by the device.
+        language: prefs.language, voice: prefs.voice, speechProvider: speechProvider(),
       })
+    }
+
+    // ---------- language and voice (per person, not per store) ----------
+    if (action === 'set-preferences') {
+      const prefs = await setPrefs(db, storeId, decoded.uid, { language: body.language, voice: body.voice })
+      return res.status(200).json({ ...prefs, speechProvider: speechProvider() })
+    }
+
+    // ---------- read a reply aloud with a Nigerian voice (Spitch) ----------
+    // Returns audio bytes. 404 with speechProvider 'device' when the server has
+    // no voice key, so clients fall back to the device's own voice.
+    if (action === 'speak') {
+      if (speechProvider() !== 'spitch') return res.status(404).json({ error: 'Server voices are not switched on.', speechProvider: 'device' })
+      const balance = await getBalance(db, storeId)
+      if (balance.remaining < MIN_CREDITS_PER_TURN) {
+        return res.status(402).json({ error: `You have used all your ${assistantName} credits for this month. They reset on the 1st.`, creditsExhausted: true, credits: balance })
+      }
+      const prefs = await getPrefs(db, storeId, decoded.uid)
+      const text = String(body.text || '').slice(0, MAX_SPEAK_CHARS)
+      // The language of the text: an explicit one from the client (e.g. a
+      // reply Sella wrote in Yoruba for an English-preference user), else theirs.
+      const language = LANGUAGES[body.language] ? body.language : prefs.language
+      const r = await synthesize({ text, language, voice: prefs.voice })
+      if (!r.ok) return res.status(r.unavailable ? 404 : 502).json({ error: r.message })
+      await charge(db, storeId, { usd: r.costUsd, minimum: 0, kind: 'speech' })
+      res.setHeader('Content-Type', r.contentType)
+      res.setHeader('Cache-Control', 'no-store')
+      return res.status(200).send(r.audio)
     }
 
     // ---------- voice: recording -> text for the message box ----------
@@ -726,7 +788,8 @@ export default async function handler(req, res) {
       }
       let t
       try {
-        t = await transcribe({ audioBase64: body.audioBase64, format: body.format })
+        const prefs = await getPrefs(db, storeId, decoded.uid)
+        t = await transcribe({ audioBase64: body.audioBase64, format: body.format, languageHint: LANGUAGES[prefs.language]?.label })
       } catch (err) {
         console.error('[sella-ai] transcribe failed:', err?.status || '', err?.message || err)
         return res.status(502).json({ error: 'I could not hear that clearly. Please try again.' })
@@ -904,7 +967,7 @@ export default async function handler(req, res) {
       // client sends the pending action back, so a confirm is an independent
       // request that must stand on its own - a staff member could otherwise
       // replay a card for a tab they cannot write to.
-      if (!isOwner) {
+      if (!isOwner && !NO_TAB_ACTIONS.has(pending.type)) {
         const wTab = tabForAction(pending)
         if (!wTab) return res.status(403).json({ error: 'Only the store owner can approve that change.' })
         const wAccess = await resolveStoreAccess(decoded.uid, storeId, wTab, true)
@@ -1001,10 +1064,11 @@ export default async function handler(req, res) {
 
     // Load prior transcript, earlier files, the live store context, and build the message stack.
     const chatRef = storeRef.collection('sellaAiChats').doc(sessionId)
-    const [chatSnap, earlierSnap, memories] = await Promise.all([
+    const [chatSnap, earlierSnap, memories, prefs] = await Promise.all([
       chatRef.get(),
       chatRef.collection('files').orderBy('savedAt', 'desc').limit(3).get().catch(() => null),
       listMemories(db, storeId).catch(() => []),
+      getPrefs(db, storeId, decoded.uid).catch(() => ({ language: 'en', voice: 'female' })),
     ])
     // A session id is a guessable timestamp: never continue someone else's chat.
     if (chatSnap.exists && !ownsChat(chatSnap.data())) {
@@ -1047,7 +1111,7 @@ export default async function handler(req, res) {
     }
 
     const messages = [
-      systemMessage(systemPrompt(assistantName, context, earlierFilesForPrompt(earlierRecords), memoriesForPrompt(memories))),
+      systemMessage(systemPrompt(assistantName, context, earlierFilesForPrompt(earlierRecords), memoriesForPrompt(memories) + languageForPrompt(prefs))),
       ...priorTurns,
       { role: 'user', content: userContent },
     ]
@@ -1171,7 +1235,7 @@ export default async function handler(req, res) {
           // Refuse at PROPOSAL time too. The confirm endpoint re-checks this and is
           // the real gate, but showing a staff member a card they are not allowed
           // to approve teaches them the wrong thing about their own permissions.
-          if (!isOwner) {
+          if (!isOwner && !NO_TAB_ACTIONS.has(writeCall.function.name)) {
             const pTab = tabForAction({ type: writeCall.function.name, args })
             const pAccess = pTab ? await resolveStoreAccess(decoded.uid, storeId, pTab, true) : { allowed: false }
             if (!pAccess.allowed) {
@@ -1208,6 +1272,28 @@ export default async function handler(req, res) {
               pendingAction = null
               break
             }
+          }
+
+          if (writeCall.function.name === 'create_video') {
+            const photo = String(args.photoUrl || '')
+            const planned = planVideo({
+              prompt: args.prompt, shape: args.shape, seconds: args.seconds, sound: args.sound,
+              photoUrl: photo && knownImages.has(photo) ? photo : '',
+            })
+            if (!planned.ok) {
+              reply = planned.reason
+              sse('token', { t: reply })
+              pendingAction = null
+              break
+            }
+            const estimatedCredits = Math.ceil(creditsForUsd(planned.plan.estimatedUsd))
+            if (balance.remaining < estimatedCredits) {
+              reply = `That video would use about ${estimatedCredits} credits, and you have ${Math.floor(balance.remaining)} left this month. A shorter video, or one without sound, costs less.`
+              sse('token', { t: reply })
+              pendingAction = null
+              break
+            }
+            args = { ...planned.plan, estimatedCredits }
           }
 
           if (writeCall.function.name === 'bulk_update') {

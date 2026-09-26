@@ -1,14 +1,11 @@
 // src/components/dashboard/CalculatorFAB.jsx
-// A movable floating calculator, available on every dashboard screen for
-// every plan (unlike Sella AI, which is Premium-only) - mounted once in
-// DashboardLayout, same drag-to-reposition pattern as the Sella AI orb but
-// anchored to the opposite corner by default so the two never start stacked.
-import { useCallback, useEffect, useRef, useState } from 'react'
+// The dashboard calculator, available to every plan. It used to float over
+// every screen as a draggable button; it now opens from the "Calculator" item
+// in the sidebar (DashboardLayout), so nothing floats over the vendor's work.
+// The file keeps its old name so existing imports and history stay valid.
+import { useCallback, useEffect, useState } from 'react'
 import { Calculator as CalculatorIcon, X, Delete, History, Trash2 } from 'lucide-react'
 
-import { clampFabPosition, FAB_SIZE } from '../../utils/fabPosition'
-
-const LS_FABPOS = 'sellapage_calc_fabpos'
 const LS_HISTORY = 'sellapage_calc_history'
 const MAX_HISTORY = 50
 
@@ -44,15 +41,18 @@ function applyOp(a, b, op) {
   }
 }
 
-// besideNav: the desktop sidebar is open, so the default spot (bottom left)
-// would sit on top of the sidebar's store card and logout button. The
-// default then starts to the right of the 256px sidebar instead. A position
-// the vendor dragged it to is always kept as is.
-export default function CalculatorFAB({ besideNav = false }) {
-  const [open, setOpen] = useState(false)
+// besideNav: on desktop the panel opens beside the sidebar instead of over it.
+export default function CalculatorFAB({ open = false, onClose = () => {}, besideNav = false }) {
   const [showHistory, setShowHistory] = useState(false)
-  const [fabPos, setFabPos] = useState(null)
-  const [history, setHistory] = useState([])
+  const [history, setHistory] = useState(() => loadHistory())
+
+  // Escape closes it, like any panel.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
 
   const [display, setDisplay] = useState('0')
   const [expression, setExpression] = useState('')
@@ -62,57 +62,6 @@ export default function CalculatorFAB({ besideNav = false }) {
   // cases the next digit typed must start a fresh number, not append to
   // whatever's on screen.
   const [awaitingOperand, setAwaitingOperand] = useState(false)
-
-  const dragState = useRef({ dragging: false, moved: false, offX: 0, offY: 0 })
-
-  useEffect(() => {
-    try {
-      const p = JSON.parse(localStorage.getItem(LS_FABPOS) || 'null')
-      // Clamped on restore, not just while dragging. A position saved on a wide
-      // desktop would otherwise be applied verbatim on a phone and put the
-      // button hundreds of pixels off-screen.
-      if (p && typeof p.x === 'number') setFabPos(clampFabPosition(p))
-    } catch { /* ignore */ }
-    setHistory(loadHistory())
-  }, [])
-
-  // Rotating a phone or resizing a window can strand the button just as easily.
-  useEffect(() => {
-    const onResize = () => setFabPos((prev) => (prev ? clampFabPosition(prev) : prev))
-    window.addEventListener('resize', onResize)
-    window.addEventListener('orientationchange', onResize)
-    return () => {
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('orientationchange', onResize)
-    }
-  }, [])
-
-  const onPointerDown = (e) => {
-    if (open) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    dragState.current = { dragging: true, moved: false, offX: e.clientX - rect.left, offY: e.clientY - rect.top }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
-  const onPointerMove = (e) => {
-    const ds = dragState.current
-    if (!ds.dragging) return
-    ds.moved = true
-    const size = FAB_SIZE
-    let x = e.clientX - ds.offX
-    let y = e.clientY - ds.offY
-    x = Math.max(8, Math.min(window.innerWidth - size - 8, x))
-    y = Math.max(8, Math.min(window.innerHeight - size - 8, y))
-    setFabPos({ x, y })
-  }
-  const onPointerUp = (e) => {
-    const ds = dragState.current
-    e.currentTarget.releasePointerCapture?.(e.pointerId)
-    if (ds.dragging && ds.moved && fabPos) {
-      localStorage.setItem(LS_FABPOS, JSON.stringify(fabPos))
-    }
-    if (ds.dragging && !ds.moved) setOpen(true)
-    dragState.current.dragging = false
-  }
 
   const pushHistory = (expr, result) => {
     const entry = { id: Date.now(), expr, result, at: new Date().toISOString() }
@@ -202,33 +151,14 @@ export default function CalculatorFAB({ besideNav = false }) {
     setShowHistory(false)
   }, [])
 
-  const fabStyle = fabPos
-    ? { left: fabPos.x, top: fabPos.y, right: 'auto', bottom: 'auto' }
-    : undefined
-
   const KEY_BASE = 'flex items-center justify-center rounded-2xl text-lg font-bold transition-all active:scale-95 select-none'
 
   return (
     <>
-      {!open && (
-        <button
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          style={fabStyle}
-          className={`fixed z-[55] ${fabPos ? "" : `bottom-5 left-5 ${besideNav ? "md:left-[276px]" : ""}`} flex h-[60px] w-[60px] touch-none items-center justify-center rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-xl shadow-slate-900/30 ring-1 ring-white/10 transition-transform hover:scale-[1.03] active:scale-95`}
-          title="Calculator"
-          aria-label="Open calculator"
-        >
-          <span className="pointer-events-none absolute inset-0 rounded-2xl bg-slate-500/30 blur-md -z-10" />
-          <CalculatorIcon size={24} strokeWidth={2} />
-        </button>
-      )}
-
       {open && (
-        <div className="fixed inset-0 z-[65] flex items-end justify-center sm:items-end sm:justify-start sm:p-5">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm sm:hidden" onClick={() => setOpen(false)} />
-          <div className="relative flex w-full flex-col overflow-hidden rounded-t-[26px] bg-slate-950 text-white shadow-2xl ring-1 ring-white/10 sm:h-auto sm:w-[340px] sm:rounded-[26px]">
+        <div className={`fixed inset-0 z-[65] flex items-end justify-center sm:items-end sm:justify-start sm:p-5 sm:pointer-events-none ${besideNav ? "md:pl-[276px]" : ""}`}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm sm:hidden" onClick={() => onClose()} />
+          <div className="relative flex w-full flex-col overflow-hidden rounded-t-[26px] sm:pointer-events-auto bg-slate-950 text-white shadow-2xl ring-1 ring-white/10 sm:h-auto sm:w-[340px] sm:rounded-[26px]">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
               <div className="flex items-center gap-2">
@@ -246,7 +176,7 @@ export default function CalculatorFAB({ besideNav = false }) {
                 >
                   <History size={16} />
                 </button>
-                <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-gray-400 hover:bg-white/10 hover:text-white" aria-label="Close calculator">
+                <button type="button" onClick={() => onClose()} className="rounded-xl p-2 text-gray-400 hover:bg-white/10 hover:text-white" aria-label="Close calculator">
                   <X size={16} />
                 </button>
               </div>

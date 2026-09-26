@@ -46,11 +46,14 @@ import {
   Search,
   Home,
   UserRound,
+  Calculator as CalculatorIcon,
+  Lock,
 } from "lucide-react";
 import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
 import SellaAI from "./SellaAI";
 import CalculatorFAB from "./CalculatorFAB";
+import SellaLogo from "../SellaLogo";
 import ReviewPromptModal from "./ReviewPromptModal";
 import { sendHeartbeat } from "../../utils/sessionTracking";
 import { canStaffAccessTab } from "../../utils/staffRoles";
@@ -331,6 +334,25 @@ export default function DashboardLayout({
   const [desktopNavOpen, setDesktopNavOpen] = useState(() => readJson(LS_NAV_DESKTOP, true) !== false);
   const setDesktopNav = (open) => { setDesktopNavOpen(open); writeJson(LS_NAV_DESKTOP, open); };
 
+  // Sella and the calculator are opened from the sidebar. They used to float
+  // over every screen as draggable buttons, covering content and each other.
+  const [sellaOpen, setSellaOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
+  // Other screens open Sella with a request typed in (e.g. Import Products):
+  // window.dispatchEvent(new CustomEvent("sella:open", { detail: { prompt } })).
+  // SellaAI fills in the prompt; this opens the workspace.
+  useEffect(() => {
+    const onOpen = () => { setCalcOpen(false); setSellaOpen(true); };
+    window.addEventListener("sella:open", onOpen);
+    return () => window.removeEventListener("sella:open", onOpen);
+  }, []);
+  // Who sees Sella in the menu: Premium owners (and, as an upgrade prompt, other
+  // owners, marked Premium); staff only when the owner switched staff access on.
+  const sellaEntry = isStaffIdentity
+    ? (isPremiumPlan && store?.sellaStaffAccess === true ? "open" : "hidden")
+    : (isPremiumPlan ? "open" : "upsell");
+  const sellaName = store?.sellaAiName || "Sella AI";
+
   const handleTabChange = (tabId, options = {}) => {
     if (sidebarNavRef.current) {
       sidebarScrollTopRef.current = sidebarNavRef.current.scrollTop;
@@ -482,7 +504,45 @@ export default function DashboardLayout({
         {SECTIONS.map((section) => {
           const items = section.items.filter((i) => visibleIds.has(i.id));
           if (!items.length) return null;
-          if (!section.label) return <div key="top" className="space-y-0.5 mb-2">{items.map(renderNavItem)}</div>;
+          if (!section.label) {
+            return (
+              <div key="top" className="space-y-0.5 mb-2">
+                {items.map(renderNavItem)}
+                {/* Tools that open a panel rather than a tab, on their own, under no group. */}
+                {sellaEntry !== "hidden" && (
+                  <button
+                    onClick={() => {
+                      setSidebarOpen(false);
+                      if (sellaEntry === "upsell") { handleTabChange("billing"); return; }
+                      setCalcOpen(false);
+                      setSellaOpen(true);
+                    }}
+                    className={`w-full flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-xl text-[13.5px] transition-colors duration-150 ${
+                      sellaOpen ? "bg-forest-50 text-forest font-semibold" : "text-slate-600 font-medium hover:text-dash-ink hover:bg-gray-50"
+                    }`}
+                  >
+                    <SellaLogo size={20} className="-mx-px" />
+                    <span className="truncate">{sellaName}</span>
+                    {sellaEntry === "upsell" ? (
+                      <span className="ml-auto inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-100"><Lock size={9} /> Premium</span>
+                    ) : (
+                      <span className="ml-auto rounded-md bg-forest-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-forest-600 ring-1 ring-forest-100">AI</span>
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={() => { setSidebarOpen(false); setSellaOpen(false); setCalcOpen((o) => !o); }}
+                  aria-pressed={calcOpen}
+                  className={`w-full flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-xl text-[13.5px] transition-colors duration-150 ${
+                    calcOpen ? "bg-forest-50 text-forest font-semibold" : "text-slate-600 font-medium hover:text-dash-ink hover:bg-gray-50"
+                  }`}
+                >
+                  <CalculatorIcon size={18} strokeWidth={calcOpen ? 2.1 : 1.7} className={`flex-shrink-0 ${calcOpen ? "text-forest" : "text-slate-500"}`} />
+                  <span className="truncate">Calculator</span>
+                </button>
+              </div>
+            );
+          }
           const open = isGroupOpen(section.label);
           const holdsActive = section.label === activeGroup;
           const panelId = `nav-group-${section.label.toLowerCase()}`;
@@ -825,8 +885,8 @@ export default function DashboardLayout({
       </div>
 
       {/* Sella AI - movable Business Partner, persistent across every tab (Premium only) */}
-      <SellaAI store={store} />
-      <CalculatorFAB besideNav={desktopNavOpen} />
+      <SellaAI store={store} open={sellaOpen} onClose={() => setSellaOpen(false)} />
+      <CalculatorFAB open={calcOpen} onClose={() => setCalcOpen(false)} besideNav={desktopNavOpen} />
       <ReviewPromptModal store={store} navigateTo={setActiveTab} />
     </div>
   );

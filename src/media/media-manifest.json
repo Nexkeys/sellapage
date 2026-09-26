@@ -103,5 +103,47 @@
     "srcSmall": "/media/home-showcase/2783c72c15-sm.webp",
     "width": 1280,
     "height": 853
+  },
+  "products-empty-art": {
+    "type": "image",
+    "src": "/media/products-empty-art/96739893fa-lg.webp",
+    "srcSmall": "/media/products-empty-art/96739893fa-sm.webp",
+    "width": 580,
+    "height": 300
+  },
+  "products-empty-hero": {
+    "type": "image",
+    "src": "/media/products-empty-hero/e4d08cdf47-lg.webp",
+    "srcSmall": "/media/products-empty-hero/e4d08cdf47-sm.webp",
+    "width": 720,
+    "height": 436
+  },
+  "products-first-popper": {
+    "type": "image",
+    "src": "/media/products-first-popper/65e536c006-lg.webp",
+    "srcSmall": "/media/products-first-popper/65e536c006-sm.webp",
+    "width": 120,
+    "height": 120
+  },
+  "products-growth-chart": {
+    "type": "image",
+    "src": "/media/products-growth-chart/2f7620e9dd-lg.webp",
+    "srcSmall": "/media/products-growth-chart/2f7620e9dd-sm.webp",
+    "width": 192,
+    "height": 244
+  },
+  "products-hero": {
+    "type": "image",
+    "src": "/media/products-hero/161fbd6385-lg.webp",
+    "srcSmall": "/media/products-hero/161fbd6385-sm.webp",
+    "width": 380,
+    "height": 436
+  },
+  "products-marketing-phone": {
+    "type": "image",
+    "src": "/media/products-marketing-phone/2f05d97913-lg.webp",
+    "srcSmall": "/media/products-marketing-phone/2f05d97913-sm.webp",
+    "width": 192,
+    "height": 252
   }
 }

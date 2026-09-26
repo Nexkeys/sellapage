@@ -25,8 +25,9 @@ import { Link } from 'react-router-dom'
 import {
   ArrowRight, Check, Loader2, AlertCircle, TrendingUp, Layers, Users, Rocket,
   Linkedin, ExternalLink, ShieldCheck, Store, CreditCard, Truck, CalendarDays,
-  BarChart3, Sparkles, ChevronDown,
+  BarChart3, ChevronDown,
 } from 'lucide-react'
+import SellaLogo from '../components/SellaLogo'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
@@ -121,7 +122,7 @@ const LIVE_TODAY = [
   { Icon: Truck, text: 'Sendbox and Topship delivery rates and shipment booking' },
   { Icon: CalendarDays, text: 'Orders, bookings, customer records, reviews and discount codes' },
   { Icon: BarChart3, text: 'Analytics, a store designer, custom domains and staff accounts' },
-  { Icon: Sparkles, text: 'Sella, an AI business assistant for store owners' },
+  { Icon: SellaLogo, text: 'Sella, an AI business assistant for store owners' },
 ]
 
 const LOOKING_FOR = [

@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import { X, Loader2, AlertCircle, ShieldAlert, Info } from 'lucide-react'
 import { MARKETPLACE_CATEGORIES, findSubcategory } from '../../utils/marketplaceCategories'
 import { callMarketplace, naira } from '../../utils/marketplaceApi'
+import { commissionFor } from '../../utils/marketplace'
 
 const INPUT =
   'w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
@@ -41,7 +42,9 @@ export default function ListingDialog({ product, onClose, onSaved }) {
   const wholesale = Number(String(form.wholesalePrice).replace(/[,\s₦]/g, '')) || 0
   const category = MARKETPLACE_CATEGORIES.find((c) => c.id === form.marketplaceCategory)
   const sub = findSubcategory(form.marketplaceCategory, form.marketplaceSubcategory)
-  const margin = retail > 0 && wholesale > 0 ? retail - wholesale : null
+  // The supplier gets the full wholesale price; Sellapage's cut comes out of
+  // the dropshipper's side (Docs/Dropshipping-Marketplace-Legal.md, A1).
+  const margin = retail > 0 && wholesale > 0 ? retail - wholesale - commissionFor(wholesale) : null
   const categories = useMemo(() => MARKETPLACE_CATEGORIES.filter((c) => !c.retired), [])
 
   const save = async () => {
@@ -114,8 +117,8 @@ export default function ListingDialog({ product, onClose, onSaved }) {
             <p className="flex items-start gap-1.5 rounded-xl bg-green-50 p-3 text-xs text-green-800">
               <Info size={13} className="mt-0.5 flex-shrink-0" />
               <span>
-                A dropshipper selling at your price of {naira(retail)} makes {naira(margin)} a sale, before fees. You get{' '}
-                {naira(wholesale)} less Sellapage&apos;s 5%, plus the delivery fee.
+                You get the full {naira(wholesale)} on every sale, plus the delivery fee. A dropshipper selling at your
+                price of {naira(retail)} keeps about {naira(margin)} after Sellapage&apos;s 5%, before card fees.
               </span>
             </p>
           )}

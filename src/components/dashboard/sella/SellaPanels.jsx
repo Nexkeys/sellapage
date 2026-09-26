@@ -2,7 +2,9 @@
 // The non-chat views of the Sella workspace: Memory, Saved prompts, Settings.
 
 import { useEffect, useState } from "react";
-import { Brain, Trash2, Pencil, Check, X, Loader2, Plus, Sparkles, Users, ShieldAlert, Coins } from "lucide-react";
+import { Brain, Trash2, Pencil, Check, X, Loader2, Plus, Bookmark, Users, ShieldAlert, Coins, Languages, Volume2, Square } from "lucide-react";
+import { LANGUAGE_OPTIONS } from "./languages";
+import { stopSpeaking } from "../../../utils/sellaVoice";
 
 const fmtCredits = (n) => (n == null ? "" : Math.floor(Number(n)).toLocaleString("en-NG"));
 
@@ -154,7 +156,7 @@ export function PromptsPanel({ storeId, callSella, prompts, setPrompts, onUse, i
   };
 
   return (
-    <PanelShell icon={Sparkles} title="Saved prompts" subtitle="Save the requests you make often and send them again in one tap. Everyone on your store who uses the assistant sees these.">
+    <PanelShell icon={Bookmark} title="Saved prompts" subtitle="Save the requests you make often and send them again in one tap. Everyone on your store who uses the assistant sees these.">
       <div className="rounded-2xl border border-gray-200 bg-white p-3.5 mb-5">
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} placeholder="Name (optional), e.g. Monday report" className="w-full px-2 py-1.5 text-[13px] font-semibold outline-none border-b border-gray-100 mb-2" />
         <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} rows={3} placeholder="The prompt, e.g. Summarise last week's sales and tell me what to restock." className="w-full px-2 py-1 text-[13px] outline-none resize-none" />
@@ -191,13 +193,15 @@ export function PromptsPanel({ storeId, callSella, prompts, setPrompts, onUse, i
 export function SettingsPanel({
   assistantName, renameValue, setRenameValue, saveName,
   credits, isOwner, staffAccess, savingStaff, toggleStaffAccess, openTerms,
+  prefs = { language: "en", voice: "female", speechProvider: "device" }, savePrefs = () => {}, playSample = () => {},
 }) {
+  const [sampling, setSampling] = useState(false);
   const pct = credits?.included ? Math.min(100, Math.round((credits.used / credits.included) * 100)) : 0;
   const resetLabel = credits?.resetsAt
     ? new Date(credits.resetsAt).toLocaleDateString("en-NG", { day: "numeric", month: "long", timeZone: "Africa/Lagos" })
     : "";
   return (
-    <PanelShell icon={Coins} title="Settings" subtitle="Your assistant's name, your monthly credits, and who on your team can use it.">
+    <PanelShell icon={Coins} title="Settings" subtitle="Your assistant's name, language and voice, your monthly credits, and who on your team can use it.">
       <div className="space-y-4">
         <div className="rounded-2xl border border-gray-200 bg-white p-4">
           <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Assistant name</label>
@@ -205,6 +209,48 @@ export function SettingsPanel({
             <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} maxLength={40} className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-green-500" placeholder="Sella AI" />
             <button onClick={saveName} className="px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold inline-flex items-center gap-1.5"><Pencil size={12} /> Save</button>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><Languages size={12} /> Language and voice</p>
+          <p className="text-[12px] text-gray-500 mt-1.5 leading-relaxed">{assistantName} replies in the language you pick, and reads replies aloud in the voice you pick. This is your own setting; your staff choose theirs.</p>
+          <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Language">
+            {LANGUAGE_OPTIONS.map((l) => (
+              <button
+                key={l.id}
+                role="radio"
+                aria-checked={prefs.language === l.id}
+                onClick={() => savePrefs({ language: l.id })}
+                className={`px-3 py-1.5 rounded-xl border text-[12.5px] font-semibold transition-colors ${prefs.language === l.id ? "border-green-500 bg-green-50 text-green-800" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-xl border border-gray-200 p-0.5" role="radiogroup" aria-label="Voice">
+              {[["female", "Female voice"], ["male", "Male voice"]].map(([id, label]) => (
+                <button
+                  key={id}
+                  role="radio"
+                  aria-checked={prefs.voice === id}
+                  onClick={() => savePrefs({ voice: id })}
+                  className={`px-3 py-1.5 rounded-lg text-[12.5px] font-semibold transition-colors ${prefs.voice === id ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { if (sampling) { stopSpeaking(); setSampling(false); return; } setSampling(true); playSample(() => setSampling(false)); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-[12.5px] font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              {sampling ? <Square size={12} fill="currentColor" /> : <Volume2 size={14} />} Hear a sample
+            </button>
+          </div>
+          {prefs.speechProvider !== "spitch" && ["yo", "ig", "ha"].includes(prefs.language) && (
+            <p className="text-[11.5px] text-amber-700 mt-2.5 leading-relaxed">Replies will be written in this language. Reading them aloud uses your device's voice, which does not speak it well yet.</p>
+          )}
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-4">

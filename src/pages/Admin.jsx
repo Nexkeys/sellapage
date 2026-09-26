@@ -7,6 +7,7 @@ import {
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
   Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon, MessageSquare, Gift
 } from 'lucide-react';
+import SellaLogo from '../components/SellaLogo';
 import { uploadSingleImage } from '../firebase/products';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
 import BlogAdmin from '../components/admin/BlogAdmin';
@@ -47,7 +48,7 @@ const ADMIN_TABS = [
   { id: 'revenue', label: 'Revenue', icon: Wallet, short: 'Revenue' },
   { id: 'trials', label: 'Free Trials', icon: Gift, short: 'Trials' },
   { id: 'usage', label: 'Firestore Usage', icon: Database, short: 'Usage' },
-  { id: 'sella-ai', label: 'Sella AI Usage', icon: Sparkles, short: 'Sella AI' },
+  { id: 'sella-ai', label: 'Sella AI Usage', icon: SellaLogo, short: 'Sella AI' },
   { id: 'ai-describe', label: 'AI Description Engine', icon: Sparkles, short: 'AI Desc' },
   { id: 'reports', label: 'Store Reports', icon: Flag, short: 'Reports' },
   { id: 'jobs', label: 'Job Listings', icon: Briefcase, short: 'Jobs' },

@@ -14,8 +14,9 @@
 // of the main bundle until someone actually asks for a code.
 import { useState } from 'react'
 import {
-  Smartphone, QrCode, Loader2, Copy, Check, Apple, Bell, Receipt, Wallet, ClipboardList, Sparkles,
+  Smartphone, QrCode, Loader2, Copy, Check, Apple, Bell, Receipt, Wallet, ClipboardList,
 } from 'lucide-react'
+import SellaLogo from '../SellaLogo'
 import PlayStoreBadge, { PLAY_STORE_URL } from '../PlayStoreBadge'
 
 const FEATURES = [
@@ -23,7 +24,7 @@ const FEATURES = [
   { Icon: ClipboardList, title: 'Orders in your pocket', body: 'Confirm, track and update orders while you are out.' },
   { Icon: Receipt, title: 'Record a sale, send a receipt', body: 'Log a walk in sale and send the receipt on WhatsApp.' },
   { Icon: Bell, title: 'Know the moment an order lands', body: 'A push alert the second a customer pays.' },
-  { Icon: Sparkles, title: 'Ask Sella', body: 'Your business partner, in the app with your store data.' },
+  { Icon: SellaLogo, title: 'Ask Sella', body: 'Your business partner, in the app with your store data.' },
 ]
 
 export default function MobileAppTab() {

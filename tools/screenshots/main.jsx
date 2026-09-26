@@ -21,6 +21,9 @@ import { recalcTotals } from '../../src/utils/receiptTemplates.js'
 import DashboardLayout from '../../src/components/dashboard/DashboardLayout.jsx'
 import OverviewTab from '../../src/components/dashboard/Overview.jsx'
 import Celebration from '../../src/components/dashboard/ui/Celebration.jsx'
+import ProductsTab from '../../src/components/dashboard/Products.jsx'
+import ServicesTab from '../../src/components/dashboard/ServicesTab.jsx'
+import { Timestamp } from './shims/firestore.js'
 
 // Every /api call is answered from data.js. Anything unknown gets an empty
 // success rather than a network request: the sandbox never goes online.
@@ -123,8 +126,52 @@ function DashboardPreview() {
   )
 }
 
+// ?preview=products|services[&empty=1][&form=1][&plan=...]: the Products or
+// Services tab in its shell, with working local state, for checking by eye.
+function ListingsPreview() {
+  const params = new URLSearchParams(window.location.search)
+  const isService = params.get('preview') === 'services'
+  const plan = params.get('plan') || 'growth'
+  const store = { ...STORE, plan, hasGrowthFeatures: plan !== 'starter', hasProFeatures: plan === 'pro' || plan === 'premium', hasPremiumFeatures: plan === 'premium', email: 'ada@adaskincare.ng' }
+  const sampleServices = [
+    { id: 's1', name: 'Bridal Makeup (Home Service)', price: 85000, category: 'Makeup', duration: 'Half day', locationType: 'physical', description: 'Full glam for the bride.', bookingRequests: 12, createdAt: products[0].createdAt },
+    { id: 's2', name: 'Skincare Consultation', price: 15000, category: 'Consultations', duration: '45 mins', locationType: 'virtual', description: 'A video call to plan your routine.', bookingRequests: 4, createdAt: products[1].createdAt },
+    { id: 's3', name: 'Facial and Glow Treatment', price: 25000, category: 'Spa', duration: '1 hour', locationType: 'physical', isActive: false, createdAt: products[2].createdAt },
+  ]
+  const [items, setItems] = React.useState(params.get('empty') === '1' ? [] : isService ? sampleServices : products.map((p, i) => ({ ...p, stock: [40, 3, 0, 22, 12, null][i], description: i % 2 ? 'Gentle, everyday formula.' : '' })))
+  const [showForm, setShowForm] = React.useState(params.get('form') === '1')
+  const blank = isService
+    ? { name: '', price: '', description: '', category: '', duration: '', locationType: 'physical', bookingNote: '', imageFiles: [], imagePreviews: [], imageUrls: [] }
+    : { name: '', price: '', description: '', category: '', stock: '', type: 'physical', imageFiles: [], imagePreviews: [], imageUrls: [], variations: [] }
+  const [form, setForm] = React.useState(blank)
+  const [editing, setEditing] = React.useState(null)
+  const [tab, setTab] = React.useState(isService ? 'services' : 'products')
+  const [open, setOpen] = React.useState(false)
+  const reset = () => { setForm(blank); setEditing(null); setShowForm(false) }
+  const common = {
+    plan, maxImagesPerProduct: plan === 'starter' ? 3 : 10, isGrowthOrPro: plan !== 'starter', isPremium: plan === 'premium',
+    limitReached: false, showForm, setShowForm, form, setForm, formError: '', saving: false, loading: params.get('loading') === '1',
+    deleting: null, handleImageChange: noop, handleRemoveExistingImage: noop, handleRemoveNewImage: noop,
+    onGenerateDescription: noop, generatingDesc: false, aiDescError: '',
+    handleSave: async () => { const it = { ...form, id: `n${Date.now()}`, createdAt: Timestamp.now() }; setItems((l) => [it, ...l]); reset(); return it },
+    resetForm: reset, startEdit: (it) => { setEditing(it); setForm({ ...blank, ...it, imageFiles: [], imagePreviews: [] }); setShowForm(true) },
+    handleDelete: async (id) => setItems((l) => l.filter((x) => x.id !== id)), handleDeleteMany: async (ids) => setItems((l) => l.filter((x) => !ids.includes(x.id))),
+    onToggleActive: (it) => setItems((l) => l.map((x) => (x.id === it.id ? { ...x, isActive: x.isActive === false } : x))),
+    storeId: 'demo', storeUrl: 'https://sellapage.com/adaskincare', navigateTo: setTab,
+  }
+  return (
+    <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen}
+      storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro={plan !== 'starter'} isPro={common.isPremium || plan === 'pro'} vendorType="both">
+      {isService
+        ? <ServicesTab {...common} serviceCount={items.length} maxServices={plan === 'starter' ? 10 : 999999} editingService={editing} services={items} />
+        : <ProductsTab {...common} productCount={items.length} maxProducts={plan === 'starter' ? 10 : 999999} editingProduct={editing} products={items} customCategories={[]} onSaveCustomCategory={async () => 'x'} />}
+    </DashboardLayout>
+  )
+}
+
 const shot = new URLSearchParams(window.location.search).get('shot')
-const Shot = new URLSearchParams(window.location.search).get('preview') === 'dashboard' ? DashboardPreview : SHOTS[shot]
+const previewKind = new URLSearchParams(window.location.search).get('preview')
+const Shot = previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <MemoryRouter>

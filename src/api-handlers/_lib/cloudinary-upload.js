@@ -161,3 +161,44 @@ export async function uploadImageData(dataUri, publicId, { folder = '', timeoutM
     return ''
   }
 }
+
+/**
+ * Uploads a finished VIDEO (its bytes) into Cloudinary as a multipart form.
+ *
+ * Bytes, not a URL: the video provider's download links need our API key, so
+ * Cloudinary cannot fetch them itself (tested: a 400). The function downloads
+ * the file with the key and hands Cloudinary the bytes. Same guarantees as the
+ * image helpers: never throws, returns '' on failure, only a res.cloudinary.com url.
+ */
+export async function uploadVideoBytes(buffer, contentType, publicId, { folder = '', timeoutMs = 120000 } = {}) {
+  if (!isCloudinaryConfigured()) return ''
+  if (!buffer?.length || buffer.length > 95 * 1024 * 1024) return ''
+  const timestamp = Math.floor(Date.now() / 1000)
+  const signedParams = {
+    ...(folder ? { folder } : {}),
+    overwrite: 'true',
+    public_id: publicId,
+    timestamp: String(timestamp),
+  }
+  const form = new FormData()
+  for (const [k, v] of Object.entries(signedParams)) form.append(k, v)
+  form.append('api_key', API_KEY)
+  form.append('signature', sign(signedParams))
+  form.append('file', new Blob([buffer], { type: contentType || 'video/mp4' }), 'video.mp4')
+  try {
+    const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
+      method: 'POST', body: form, signal: AbortSignal.timeout(timeoutMs),
+    })
+    if (!resp.ok) {
+      // Cloudinary's error message is safe to log; the request body is not.
+      const msg = await resp.json().then((j) => j?.error?.message || '').catch(() => '')
+      console.warn(`[cloudinary] video upload ${resp.status} for ${publicId}: ${String(msg).slice(0, 160)}`)
+      return ''
+    }
+    const url = String((await resp.json())?.secure_url || '')
+    return /^https:\/\/res\.cloudinary\.com\//.test(url) ? url : ''
+  } catch (err) {
+    console.warn(`[cloudinary] video upload failed for ${publicId}: ${err.message}`)
+    return ''
+  }
+}

@@ -17,22 +17,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Sparkles, X, Plus, Check, Loader2, ExternalLink, Trash2, ImagePlus, Search, Brain, Settings2,
+  Bookmark, X, Plus, Check, Loader2, ExternalLink, Trash2, ImagePlus, Search, Brain, Settings2,
   Paperclip, FileText, FileSpreadsheet, Download, Mic, Square, ArrowUp, Globe, Lightbulb, Image as ImageIcon,
   PieChart, ChevronDown, PanelLeftClose, PanelLeftOpen, Menu, MoreHorizontal, Volume2, VolumeX, Copy, Coins, HelpCircle,
 } from "lucide-react";
 import { auth } from "../../firebase/auth";
 import { uploadSingleImage } from "../../firebase/products";
-import { clampFabPosition, FAB_SIZE } from '../../utils/fabPosition';
+import SellaLogo from "../SellaLogo";
 import { downloadExport } from "../../utils/exportData";
-import { canRecord, startRecording, MAX_RECORD_SECONDS, canSpeak, speak, stopSpeaking } from "../../utils/sellaVoice";
+import { canRecord, startRecording, MAX_RECORD_SECONDS, canSpeak, speak, stopSpeaking, playAudio } from "../../utils/sellaVoice";
+import { GREETINGS, LOCALES, voiceSample } from "./sella/languages";
 import SellaTermsModal from "./SellaTermsModal";
 import { ImportReview, BulkReview, JobCard } from "./sella/ReviewCards";
 import { MemoryPanel, PromptsPanel, SettingsPanel } from "./sella/SellaPanels";
-import { ImageResults } from "./sella/ImageTools";
+import { ImageResults, VideoResult } from "./sella/ImageTools";
 
 const LS_SESSION = (sid) => `sellaai_session_${sid}`;
-const LS_FABPOS = "sellaai_fabpos";
 const LS_MODE = "sellaai_mode";
 const LS_SIDEBAR = "sellaai_sidebar";
 
@@ -74,27 +74,33 @@ const fmtCredits = (n) => (n == null ? "" : Math.floor(Number(n)).toLocaleString
 const money = (n) => `₦${Number(n || 0).toLocaleString("en-NG")}`;
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
+// The greeting mark: Sella's logo on a soft brand glow.
 function Orb({ size = 120, className = "" }) {
   return (
-    <div className={`relative ${className}`} style={{ width: size, height: size }} aria-hidden="true">
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-green-200 via-emerald-400 to-green-600 blur-xl opacity-70 animate-pulse" />
-      <div className="absolute inset-[12%] rounded-full bg-gradient-to-br from-white via-green-200 to-emerald-500 shadow-[inset_-8px_-10px_24px_rgba(5,150,105,0.45),inset_8px_10px_20px_rgba(255,255,255,0.9)]" />
-      <div className="absolute inset-[30%] left-[22%] top-[20%] rounded-full bg-white/70 blur-md" />
+    <div className={`relative flex items-center justify-center ${className}`} style={{ width: size, height: size }} aria-hidden="true">
+      <div className="absolute inset-[6%] rounded-full bg-gradient-to-br from-green-200 via-emerald-300 to-green-500 blur-2xl opacity-60 animate-pulse" />
+      <div className="absolute inset-[10%] rounded-full bg-white shadow-[0_18px_40px_-18px_rgba(5,150,105,0.55)] ring-1 ring-green-100" />
+      <SellaLogo size={Math.round(size * 0.62)} className="relative" />
     </div>
   );
 }
 
+// Sella's avatar beside each reply.
 function SmallOrb() {
   return (
-    <span className="relative w-7 h-7 flex-shrink-0 rounded-full bg-gradient-to-br from-white via-green-200 to-emerald-500 shadow-[inset_-3px_-4px_8px_rgba(5,150,105,0.45)] ring-1 ring-green-200" aria-hidden="true" />
+    <span className="relative w-8 h-8 flex-shrink-0 rounded-full bg-white ring-1 ring-green-100 shadow-sm flex items-center justify-center" aria-hidden="true">
+      <SellaLogo size={24} />
+    </span>
   );
 }
 
-export default function SellaAI({ store }) {
+// open / onClose: the workspace is opened from the "Sella AI" item in the
+// dashboard sidebar (DashboardLayout). It used to float over every screen as a
+// draggable button; nothing floats over the dashboard any more.
+export default function SellaAI({ store, open = false, onClose = () => {} }) {
   const storeId = store?.id;
   const isPremium = store?.hasPremiumFeatures ?? store?.plan === "premium";
 
-  const [open, setOpen] = useState(false);
   const [view, setView] = useState("chat"); // chat | memory | prompts | settings
   const [termsTab, setTermsTab] = useState(null); // null | "terms" | "privacy"
   const [staffAccess, setStaffAccess] = useState(false);
@@ -102,6 +108,20 @@ export default function SellaAI({ store }) {
   const [savingStaff, setSavingStaff] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  // Other screens open Sella with a request already typed, e.g. Import
+  // Products on the Products tab: window.dispatchEvent(new CustomEvent(
+  // "sella:open", { detail: { prompt } })). Nothing is sent until the vendor
+  // presses send.
+  useEffect(() => {
+    const onOpen = (e) => {
+      // DashboardLayout listens for the same event and opens the workspace;
+      // this side only fills in the request.
+      setView("chat");
+      if (e.detail?.prompt) setInput(e.detail.prompt);
+    };
+    window.addEventListener("sella:open", onOpen);
+    return () => window.removeEventListener("sella:open", onOpen);
+  }, []);
   const [sending, setSending] = useState(false);
   const [pending, setPending] = useState(null); // { type, args, summary } awaiting confirm
   const [confirming, setConfirming] = useState(false);
@@ -112,6 +132,9 @@ export default function SellaAI({ store }) {
   const [assistantName, setAssistantName] = useState(store?.sellaAiName || "Sella AI");
   const [renameValue, setRenameValue] = useState(store?.sellaAiName || "Sella AI");
   const [profile, setProfile] = useState({ greetingName: "", businessName: store?.businessName || "", logoUrl: store?.logoUrl || "", email: "" });
+  // This person's language and voice (saved per person on the server), and
+  // whether replies are read by the server's Nigerian voices or the device.
+  const [prefs, setPrefsState] = useState({ language: "en", voice: "female", speechProvider: "device" });
   const [error, setError] = useState("");
   const [mode, setMode] = useState(() => {
     try { return localStorage.getItem(LS_MODE) === "deep" ? "deep" : "auto"; } catch { return "auto"; }
@@ -139,33 +162,12 @@ export default function SellaAI({ store }) {
   const inputRef = useRef(null);
   const recRef = useRef(null);
   const finishMicRef = useRef(null);
-  const dragState = useRef({ dragging: false, moved: false, offX: 0, offY: 0 });
   const pollers = useRef({}); // jobId -> true while polling
   const mounted = useRef(true);
-  const [fabPos, setFabPos] = useState(null);
 
   useEffect(() => () => { mounted.current = false; }, []);
 
-  // ---- restore FAB position + session cursor ----
-  useEffect(() => {
-    try {
-      const p = JSON.parse(localStorage.getItem(LS_FABPOS) || "null");
-      // Clamped on restore: a position saved on a wide desktop would otherwise
-      // put this button far off the right edge of a phone screen.
-      if (p && typeof p.x === "number") setFabPos(clampFabPosition(p));
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    const onResize = () => setFabPos((prev) => (prev ? clampFabPosition(prev) : prev));
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
-    };
-  }, []);
-
+  // ---- session cursor ----
   useEffect(() => {
     if (!storeId) return;
     const saved = localStorage.getItem(LS_SESSION(storeId));
@@ -190,6 +192,7 @@ export default function SellaAI({ store }) {
         logoUrl: d.logoUrl || p.logoUrl,
         email: d.email || p.email,
       }));
+      if (d.language) setPrefsState({ language: d.language, voice: d.voice || "female", speechProvider: d.speechProvider || "device" });
     } catch { /* non-blocking */ }
   }, [storeId]);
 
@@ -246,33 +249,6 @@ export default function SellaAI({ store }) {
     stopSpeaking();
     setSpeakingIdx(null);
   }, [open]);
-
-  // ---- drag handling for the FAB ----
-  const onPointerDown = (e) => {
-    if (open) return;
-    const el = e.currentTarget;
-    const rect = el.getBoundingClientRect();
-    dragState.current = { dragging: true, moved: false, offX: e.clientX - rect.left, offY: e.clientY - rect.top };
-    el.setPointerCapture?.(e.pointerId);
-  };
-  const onPointerMove = (e) => {
-    const ds = dragState.current;
-    if (!ds.dragging) return;
-    ds.moved = true;
-    const size = FAB_SIZE;
-    let x = e.clientX - ds.offX;
-    let y = e.clientY - ds.offY;
-    x = Math.max(8, Math.min(window.innerWidth - size - 8, x));
-    y = Math.max(8, Math.min(window.innerHeight - size - 8, y));
-    setFabPos({ x, y });
-  };
-  const onPointerUp = (e) => {
-    const ds = dragState.current;
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
-    if (ds.dragging && ds.moved && fabPos) localStorage.setItem(LS_FABPOS, JSON.stringify(fabPos));
-    if (ds.dragging && !ds.moved) setOpen(true); // a tap, not a drag
-    dragState.current.dragging = false;
-  };
 
   // Update the last (assistant) message immutably.
   const patchLast = (patch) => setMessages((m) => {
@@ -379,10 +355,38 @@ export default function SellaAI({ store }) {
   };
   const noteAttached = (msg) => setMessages((ms) => [...ms, { role: "assistant", kind: "action-result", ok: true, content: msg }]);
 
+  // Reads text aloud. Nigerian server voices when switched on (they are the
+  // only way Yoruba, Igbo and Hausa can be spoken properly), else the device's
+  // voice closest to the chosen language and gender.
+  const readAloud = async (text, onEnd) => {
+    if (prefs.speechProvider === "spitch") {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch("/api/sella-ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ storeId, action: "speak", text }),
+        });
+        if (res.ok) { playAudio(await res.blob(), { onEnd }); refreshUsage(); return; }
+        const d = await res.json().catch(() => ({}));
+        // 404 means the server voice is off after all: fall through to the device.
+        if (res.status !== 404) { setError(d.error || "I could not read that aloud."); onEnd(); return; }
+      } catch { /* network: fall back to the device voice */ }
+    }
+    speak(text, { onEnd, lang: LOCALES[prefs.language] || "en-NG", gender: prefs.voice });
+  };
   const toggleSpeak = (i, text) => {
     if (speakingIdx === i) { stopSpeaking(); setSpeakingIdx(null); return; }
     setSpeakingIdx(i);
-    speak(text, { onEnd: () => setSpeakingIdx((cur) => (cur === i ? null : cur)) });
+    readAloud(text, () => setSpeakingIdx((cur) => (cur === i ? null : cur)));
+  };
+  const savePrefs = async (next) => {
+    const merged = { ...prefs, ...next };
+    setPrefsState(merged);
+    try {
+      const d = await callSella({ storeId, action: "set-preferences", language: merged.language, voice: merged.voice });
+      setPrefsState({ language: d.language, voice: d.voice, speechProvider: d.speechProvider || merged.speechProvider });
+    } catch (e) { setError(e.data?.error || e.message); }
   };
   const copyText = async (i, text) => {
     try { await navigator.clipboard.writeText(text); setCopiedIdx(i); setTimeout(() => setCopiedIdx(null), 1500); } catch { /* ignore */ }
@@ -401,7 +405,9 @@ export default function SellaAI({ store }) {
         catch { await new Promise((r) => setTimeout(r, 4000)); continue; }
         setMessages((m) => m.map((x) => (x.kind === "job" && x.jobId === jobId ? { ...x, job } : x)));
         if (!job || job.status === "done" || job.status === "failed") { refreshUsage(); break; }
-        await new Promise((r) => setTimeout(r, 1500));
+        // A video is only being CHECKED (the provider does the work), so it is
+        // polled gently; an import is advanced by each poll, so quickly.
+        await new Promise((r) => setTimeout(r, job.type === "video" ? 5000 : 1500));
       }
     } finally {
       delete pollers.current[jobId];
@@ -644,9 +650,6 @@ export default function SellaAI({ store }) {
 
   if (!isPremium || !storeId) return null;
 
-  const fabStyle = fabPos
-    ? { left: fabPos.x, top: fabPos.y, right: "auto", bottom: "auto" }
-    : { right: 20, bottom: 20 };
   const hasDraft = input.trim() || attachments.length;
   const initial = (profile.businessName || assistantName || "S").trim().charAt(0).toUpperCase();
 
@@ -789,7 +792,7 @@ export default function SellaAI({ store }) {
 
       <div className="flex items-center justify-between px-4 py-2">
         <button onClick={() => setView("prompts")} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-gray-700 hover:text-green-700">
-          <Sparkles size={14} className="text-green-500" /> Saved prompts
+          <Bookmark size={14} className="text-green-600" /> Saved prompts
         </button>
         <button onClick={() => fileInputRef.current?.click()} disabled={attachments.length >= MAX_FILES} className="inline-flex items-center gap-1.5 text-[12px] font-medium text-gray-600 px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40">
           <Paperclip size={13} /> Attach file
@@ -832,7 +835,7 @@ export default function SellaAI({ store }) {
     <aside className={`${sidebarMobile ? "flex" : "hidden"} ${sidebarCollapsed ? "md:hidden" : "md:flex"} absolute md:relative inset-y-0 left-0 z-40 md:z-auto w-[272px] flex-shrink-0 flex-col bg-[#f5f8f6] md:bg-transparent p-3 md:pr-2 shadow-2xl md:shadow-none`}>
       <div className="flex items-center justify-between px-1.5 pt-1 pb-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-400 to-green-600 text-white flex items-center justify-center shadow-sm shadow-green-500/30"><Sparkles size={17} /></span>
+          <span className="w-10 h-10 rounded-xl bg-white ring-1 ring-green-100 shadow-sm flex items-center justify-center"><SellaLogo size={30} /></span>
           <span className="text-[17px] font-bold text-gray-900 truncate">{assistantName}</span>
         </div>
         <button onClick={() => { setSidebarMobile(false); if (window.innerWidth >= 768) toggleSidebar(); }} className="p-1.5 rounded-lg text-gray-500 hover:bg-white" aria-label="Hide sidebar">
@@ -858,7 +861,7 @@ export default function SellaAI({ store }) {
 
       <nav className="mt-3 space-y-0.5">
         {navItem("memory", Brain, "Memory")}
-        {navItem("prompts", Sparkles, "Saved prompts")}
+        {navItem("prompts", Bookmark, "Saved prompts")}
         {navItem("settings", Settings2, "Settings")}
       </nav>
 
@@ -894,7 +897,7 @@ export default function SellaAI({ store }) {
           <p className="text-[13px] font-semibold text-gray-900 truncate">{profile.businessName || "Your store"}</p>
           {profile.email && <p className="text-[11.5px] text-gray-500 truncate">{profile.email}</p>}
         </div>
-        <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100" aria-label={`Close ${assistantName}`} title="Close">
+        <button onClick={() => onClose()} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100" aria-label={`Close ${assistantName}`} title="Close">
           <X size={16} />
         </button>
       </div>
@@ -972,6 +975,7 @@ export default function SellaAI({ store }) {
                   {m.thoughtSeconds > 0 && <p className="text-[11.5px] text-green-700/80 mb-1 flex items-center gap-1"><Brain size={12} /> Thought for {m.thoughtSeconds}s</p>}
                   <div className="text-[14px] text-gray-800 leading-relaxed whitespace-pre-wrap break-words">{m.content}</div>
                   {m.streaming && statusLine}
+                  {m.videos?.length > 0 && m.videos.map((v) => <VideoResult key={v.url} url={v.url} shape={v.shape} />)}
                   {m.images?.length > 0 && (
                     <ImageResults images={m.images} storeId={storeId} callSella={callSella} onEdit={editImage} onAttached={noteAttached} />
                   )}
@@ -1003,7 +1007,7 @@ export default function SellaAI({ store }) {
                   )}
                   {!m.streaming && m.content && (
                     <div className="mt-1.5 flex gap-0.5 text-gray-400">
-                      {canSpeak() && (
+                      {(canSpeak() || prefs.speechProvider === "spitch") && (
                         <button onClick={() => toggleSpeak(i, m.content)} className="p-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-700" aria-label={speakingIdx === i ? "Stop reading" : "Read aloud"} title={speakingIdx === i ? "Stop reading" : "Read aloud"}>
                           {speakingIdx === i ? <VolumeX size={14} /> : <Volume2 size={14} />}
                         </button>
@@ -1036,26 +1040,10 @@ export default function SellaAI({ store }) {
 
   return (
     <>
-      {/* Floating action button (movable) - an AI orb, not a help bubble */}
-      {!open && (
-        <button
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          style={fabStyle}
-          className="fixed z-[60] w-[60px] h-[60px] rounded-2xl bg-gradient-to-br from-green-400 to-green-600 text-white shadow-xl shadow-green-500/40 ring-1 ring-white/20 flex items-center justify-center touch-none transition-transform active:scale-95 hover:scale-[1.03]"
-          title={`Ask ${assistantName}`}
-          aria-label={`Open ${assistantName}`}
-        >
-          <span className="absolute inset-0 rounded-2xl bg-green-400/40 blur-md -z-10" />
-          <Sparkles size={26} strokeWidth={2} />
-        </button>
-      )}
-
       {open && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center sm:p-4 lg:p-8">
           {/* soft brand backdrop */}
-          <div className="absolute inset-0 bg-gradient-to-br from-green-100/90 via-white/80 to-emerald-200/80 backdrop-blur-md" onClick={() => setOpen(false)} />
+          <div className="absolute inset-0 bg-gradient-to-br from-green-100/90 via-white/80 to-emerald-200/80 backdrop-blur-md" onClick={() => onClose()} />
 
           <div className="relative flex w-full h-full sm:h-[min(900px,94vh)] max-w-[1280px] sm:rounded-[30px] bg-white/60 sm:p-2.5 sm:ring-1 ring-black/5 shadow-2xl overflow-hidden">
             {sidebarMobile && <div className="md:hidden absolute inset-0 z-30 bg-black/20" onClick={() => setSidebarMobile(false)} />}
@@ -1070,7 +1058,7 @@ export default function SellaAI({ store }) {
                 )}
                 <div className="relative">
                   <button onClick={() => setModeMenu((o) => !o)} className="inline-flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-xl border border-gray-200 bg-white text-[13.5px] font-semibold text-gray-800 hover:bg-gray-50">
-                    <span className="w-6 h-6 rounded-full bg-gradient-to-br from-green-300 to-green-600 text-white flex items-center justify-center"><Sparkles size={12} /></span>
+                    <SellaLogo size={24} />
                     <span className="max-w-[9rem] truncate">{assistantName}</span>
                     {mode === "deep" && <span className="text-[10.5px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5">Deep</span>}
                     <ChevronDown size={14} className="text-gray-400" />
@@ -1078,7 +1066,7 @@ export default function SellaAI({ store }) {
                   {modeMenu && (
                     <div className="absolute left-0 top-full mt-1.5 w-72 rounded-2xl border border-gray-200 bg-white shadow-xl p-1.5 z-30">
                       {[
-                        ["auto", Sparkles, "Standard", "Fast, for everyday questions and tasks."],
+                        ["auto", SellaLogo, "Standard", "Fast, for everyday questions and tasks."],
                         ["deep", Brain, "Deeper Research", "Thinks longer for hard questions. Uses more credits."],
                       ].map(([id, Icon, label, sub]) => (
                         <button key={id} onClick={() => setModePersist(id)} className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl hover:bg-gray-50 text-left">
@@ -1115,7 +1103,7 @@ export default function SellaAI({ store }) {
                   <button onClick={exportChat} disabled={!messages.length} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-[13px] font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40">
                     <Download size={14} /> Export chat
                   </button>
-                  <button onClick={() => setOpen(false)} className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black text-white text-[13px] font-semibold inline-flex items-center gap-1.5" aria-label={`Close ${assistantName}`}>
+                  <button onClick={() => onClose()} className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black text-white text-[13px] font-semibold inline-flex items-center gap-1.5" aria-label={`Close ${assistantName}`}>
                     <X size={14} /> <span className="hidden sm:inline">Close</span>
                   </button>
                 </div>
@@ -1127,9 +1115,9 @@ export default function SellaAI({ store }) {
                   <div className="min-h-full flex flex-col items-center justify-center px-4 sm:px-8 py-8">
                     <Orb size={128} className="mb-6" />
                     <p className="text-[26px] sm:text-[30px] font-semibold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
-                      Hello{profile.greetingName ? `, ${profile.greetingName}` : ""}
+                      {(GREETINGS[prefs.language] || GREETINGS.en).hello}{profile.greetingName ? `, ${profile.greetingName}` : ""}
                     </p>
-                    <h2 className="text-[26px] sm:text-[32px] font-bold text-gray-900 tracking-tight text-center">How can I assist you today?</h2>
+                    <h2 className="text-[26px] sm:text-[32px] font-bold text-gray-900 tracking-tight text-center">{(GREETINGS[prefs.language] || GREETINGS.en).ask}</h2>
                     <div className="w-full max-w-2xl mt-7">{composer}</div>
                     {error && <div className="w-full max-w-2xl mt-3 rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-[13px] text-red-700">{error}</div>}
                     <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
@@ -1179,6 +1167,9 @@ export default function SellaAI({ store }) {
                   savingStaff={savingStaff}
                   toggleStaffAccess={toggleStaffAccess}
                   openTerms={() => setTermsTab("privacy")}
+                  prefs={prefs}
+                  savePrefs={savePrefs}
+                  playSample={(onEnd) => readAloud(voiceSample(prefs.language, prefs.voice, assistantName), onEnd)}
                 />
               )}
 

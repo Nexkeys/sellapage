@@ -126,3 +126,23 @@ export function ImageResults({ images, storeId, callSella, onEdit, onAttached })
     </>
   );
 }
+
+const VIDEO_ASPECT = { story: "aspect-[9/16] max-w-[240px]", landscape: "aspect-video max-w-md", square: "aspect-square max-w-xs" };
+
+/** A finished Sella video: plays inline, with a download button. */
+export function VideoResult({ url, shape = "story" }) {
+  return (
+    <div className={`mt-3 rounded-2xl border border-gray-200 bg-white overflow-hidden ${(VIDEO_ASPECT[shape] || VIDEO_ASPECT.story).split(" ").slice(1).join(" ")}`}>
+      <video
+        src={url}
+        controls
+        playsInline
+        preload="metadata"
+        className={`block w-full bg-black ${(VIDEO_ASPECT[shape] || VIDEO_ASPECT.story).split(" ")[0]}`}
+      />
+      <a href={downloadUrl(url)} className="flex items-center justify-center gap-1.5 py-2 border-t border-gray-100 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 hover:text-green-700">
+        <Download size={13} /> Save video
+      </a>
+    </div>
+  );
+}

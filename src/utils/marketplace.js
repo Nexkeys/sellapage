@@ -227,6 +227,19 @@ export const AVAILABILITY_LABELS = {
   out_of_stock: 'Out of stock',
 }
 
+/**
+ * Sellapage's commission: 5% of the WHOLESALE price (plan decision 5).
+ * The supplier is paid the full wholesale price; this comes out of the
+ * dropshipper's side of the sale (Nex, 2026-09-26; Legal doc A1). Rounded to
+ * the kobo, because Paystack flat split shares are in kobo.
+ */
+export const MARKETPLACE_COMMISSION_RATE = 0.05
+
+export function commissionFor(wholesalePrice) {
+  const w = Number(String(wholesalePrice ?? '').replace(/[,\s₦]/g, '')) || 0
+  return Math.round(w * MARKETPLACE_COMMISSION_RATE * 100) / 100
+}
+
 /** What the import dialog suggests (plan decision J5): the supplier's own retail price. */
 export function suggestedPrice(product) {
   const retail = Number(product?.price) || 0

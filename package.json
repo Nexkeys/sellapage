@@ -45,6 +45,7 @@
     "recharts": "^3.10.1",
     "resend": "^6.12.4",
     "sanitize-html": "2.16.0",
+    "spitch": "^1.49.0",
     "tailwindcss-animate": "^1.0.7",
     "unpdf": "^1.8.1"
   },

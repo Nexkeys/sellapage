@@ -8,7 +8,8 @@
 // dependent on the assistant to stop something the assistant started.
 
 import { useCallback, useEffect, useState } from "react";
-import { Bell, BellOff, Trash2, Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Bell, BellOff, Trash2, Loader2, RefreshCw } from "lucide-react";
+import SellaLogo from "../SellaLogo";
 import { auth } from "../../firebase/auth";
 
 async function callReminders(payload) {
@@ -101,7 +102,7 @@ export default function RemindersTab({ storeId, assistantName = "Sella" }) {
         </p>
         {r.viaAi && (
           <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-            <Sparkles size={11} /> Set by {assistantName}
+            <SellaLogo size={14} /> Set by {assistantName}
           </p>
         )}
       </div>

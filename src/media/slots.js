@@ -82,6 +82,16 @@ export const MEDIA_SLOTS = [
     accepts: 'image',
     tip: 'The still shown on the card. The card itself only appears once HOWTO_VIDEO_URL in src/media/howto.js is set.',
   },
+
+  // ── Products and Services tabs ────────────────────────────────────────
+  // Artwork from the 2026-09-26 Products designs. Each frame falls back to a
+  // plain green panel when its folder is empty, so nothing breaks without it.
+  { name: 'products-hero', where: 'Products and Services tabs, top banner, right side', shape: 'portrait', accepts: 'image', tip: 'Product boxes and a sneaker on a light green background.' },
+  { name: 'products-marketing-phone', where: 'Products tab, "Turn browsing into buying" card', shape: 'portrait', accepts: 'image', tip: 'A phone showing a store.' },
+  { name: 'products-empty-hero', where: 'Products and Services tabs with nothing added yet, top banner', shape: 'landscape', accepts: 'image', tip: 'A phone with a store and an Add Product button.' },
+  { name: 'products-empty-art', where: 'Products and Services tabs with nothing added yet, above "No products added yet"', shape: 'landscape', accepts: 'image', tip: 'A product card with a sneaker and a small plant.' },
+  { name: 'products-first-popper', where: 'Products and Services tabs with nothing added yet, "Good things start" card', shape: 'square', accepts: 'image', tip: 'A small party popper, 3D style.' },
+  { name: 'products-growth-chart', where: 'Products and Services tabs, "Get more with Growth" card', shape: 'square', accepts: 'image', tip: 'Green rising bars with an arrow.' },
 ]
 
 export const SLOT_NAMES = new Set(MEDIA_SLOTS.map((s) => s.name))

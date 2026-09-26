@@ -1052,11 +1052,11 @@ export default function Dashboard() {
   const handleSave = async () => {
     if (!form.name.trim()) {
       setFormError("Product name is required.");
-      return;
+      return false;
     }
     if (!form.price || isNaN(form.price) || Number(form.price) <= 0) {
       setFormError("Please enter a valid price.");
-      return;
+      return false;
     }
     setSaving(true);
     setFormError("");
@@ -1091,12 +1091,14 @@ export default function Dashboard() {
           ),
         );
         resetForm();
+        // The Products screen shows "saved" with a link to the listing.
+        return { ...editingProduct, ...updatedData };
       } else {
         const { limitReached: reached } = await checkProductLimit(store.id);
         if (reached) {
           setFormError(`You've reached the ${maxProducts} product limit.`);
           setSaving(false);
-          return;
+          return false;
         }
         const wasFirstListing = productCount + serviceCount === 0;
         const newProductName = form.name.trim();
@@ -1125,6 +1127,7 @@ export default function Dashboard() {
         setProductCount((c) => c + 1);
         resetForm();
         if (wasFirstListing) celebrateFirstListing("product", newProductName);
+        return newProduct;
       }
     } catch (err) {
       console.error("Failed to save product", err);
@@ -1135,13 +1138,16 @@ export default function Dashboard() {
       } else {
         setFormError("Failed to save product. Please try again.");
       }
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this product? This cannot be undone.")) return;
+  // The Products screen asks in-page first and passes skipConfirm; it also
+  // wants to hear about a failure, so the error is passed on in that case.
+  const handleDelete = async (id, { skipConfirm = false } = {}) => {
+    if (!skipConfirm && !window.confirm("Delete this product? This cannot be undone.")) return;
     setDeleting(id);
     try {
       await deleteProduct(store.id, id);
@@ -1149,14 +1155,33 @@ export default function Dashboard() {
       setProductCount((c) => c - 1);
     } catch (err) {
       console.error("Failed to delete product", err);
+      if (skipConfirm) throw err;
     } finally {
       setDeleting(null);
     }
   };
 
+  // Several at once, from the Products screen's selection bar (confirmed
+  // there). One at a time so a failure part way leaves the list accurate.
+  const handleDeleteManyProducts = async (ids) => {
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await deleteProduct(store.id, id);
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+        setProductCount((c) => c - 1);
+      } catch (err) {
+        console.error("Failed to delete product", id, err);
+        failed++;
+      }
+    }
+    if (failed) throw new Error(`${failed} could not be deleted`);
+  };
+
   const handleToggleActive = async (product) => {
     if (!isGrowthOrPro) return;
-    const newValue = !product.isActive;
+    // Never set means visible, so the first tap must hide it.
+    const newValue = product.isActive === false;
     setProducts((prev) =>
       prev.map((p) => (p.id === product.id ? { ...p, isActive: newValue } : p)),
     );
@@ -1201,7 +1226,7 @@ export default function Dashboard() {
   const handleSaveService = async () => {
     if (!serviceForm.name.trim()) {
       setServiceFormError("Service name is required.");
-      return;
+      return false;
     }
     if (
       !serviceForm.price ||
@@ -1209,7 +1234,7 @@ export default function Dashboard() {
       Number(serviceForm.price) <= 0
     ) {
       setServiceFormError("Please enter a valid price.");
-      return;
+      return false;
     }
     setSavingService(true);
     setServiceFormError("");
@@ -1236,6 +1261,7 @@ export default function Dashboard() {
           ),
         );
         resetServiceForm();
+        return true;
       } else {
         const { limitReached: reached } = await checkProductLimit(store.id);
         if (reached) {
@@ -1243,7 +1269,7 @@ export default function Dashboard() {
             `You've reached the ${maxProducts} listing limit.`,
           );
           setSavingService(false);
-          return;
+          return false;
         }
         const wasFirstListing = productCount + serviceCount === 0;
         const newServiceName = serviceForm.name.trim();
@@ -1264,17 +1290,19 @@ export default function Dashboard() {
         setServiceCount((c) => c + 1);
         resetServiceForm();
         if (wasFirstListing) celebrateFirstListing("service", newServiceName);
+        return true;
       }
     } catch (err) {
       console.error("Failed to save service", err);
       setServiceFormError("Failed to save service. Please try again.");
+      return false;
     } finally {
       setSavingService(false);
     }
   };
 
-  const handleDeleteService = async (id) => {
-    if (!window.confirm("Delete this service? This cannot be undone.")) return;
+  const handleDeleteService = async (id, { skipConfirm = false } = {}) => {
+    if (!skipConfirm && !window.confirm("Delete this service? This cannot be undone.")) return;
     setDeletingService(id);
     try {
       await deleteService(store.id, id);
@@ -1282,14 +1310,30 @@ export default function Dashboard() {
       setServiceCount((c) => c - 1);
     } catch (err) {
       console.error("Failed to delete service", err);
+      if (skipConfirm) throw err;
     } finally {
       setDeletingService(null);
     }
   };
 
+  const handleDeleteManyServices = async (ids) => {
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await deleteService(store.id, id);
+        setServices((prev) => prev.filter((s) => s.id !== id));
+        setServiceCount((c) => c - 1);
+      } catch (err) {
+        console.error("Failed to delete service", id, err);
+        failed++;
+      }
+    }
+    if (failed) throw new Error(`${failed} could not be deleted`);
+  };
+
   const handleToggleServiceActive = async (service) => {
     if (!isGrowthOrPro) return;
-    const newValue = !service.isActive;
+    const newValue = service.isActive === false;
     setServices((prev) =>
       prev.map((s) => (s.id === service.id ? { ...s, isActive: newValue } : s)),
     );
@@ -1927,6 +1971,9 @@ export default function Dashboard() {
           customCategories={customCategories}
           onSaveCustomCategory={handleSaveCustomCategory}
           setForm={setForm}
+          handleDeleteMany={handleDeleteManyProducts}
+          storeUrl={storeUrl}
+          navigateTo={setActiveTab}
         />
       )}
 
@@ -1980,6 +2027,11 @@ export default function Dashboard() {
           startEdit={startEditService}
           handleDelete={handleDeleteService}
           onToggleActive={handleToggleServiceActive}
+          setForm={setServiceForm}
+          handleDeleteMany={handleDeleteManyServices}
+          isPremium={isPremium}
+          storeUrl={storeUrl}
+          navigateTo={setActiveTab}
         />
       )}
 

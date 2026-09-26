@@ -7,7 +7,8 @@
 // vendor's benefit, not as a trust boundary.
 
 import { useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Clapperboard } from "lucide-react";
+import { VideoResult } from "./ImageTools";
 
 const naira = (n) => `₦${Number(n || 0).toLocaleString("en-NG")}`;
 
@@ -174,6 +175,30 @@ export function BulkReview({ pending, confirming, onConfirm, onCancel }) {
 }
 
 export function JobCard({ job }) {
+  if (job?.type === "video") {
+    if (job.status === "done" && job.videoUrl) {
+      return (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="text-[12.5px] font-semibold text-gray-800 inline-flex items-center gap-1.5"><Check size={14} className="text-green-600" /> Your video is ready</p>
+          <VideoResult url={job.videoUrl} shape={job.shape} />
+        </div>
+      );
+    }
+    if (job.status === "failed") {
+      return <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-[13px] text-gray-600">{job.message || "The video could not be made."}</div>;
+    }
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white p-4">
+        <p className="text-[12.5px] font-semibold text-gray-800 inline-flex items-center gap-1.5">
+          <Clapperboard size={14} className="text-green-600 animate-pulse" /> Making your {job.seconds ? `${job.seconds}-second ` : ""}video
+        </p>
+        <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full w-1/3 rounded-full bg-green-500 animate-[pulse_1.6s_ease-in-out_infinite]" />
+        </div>
+        <p className="text-[11px] text-gray-400 mt-2">This usually takes 1 to 3 minutes. You can close this; you will get a notification when it is ready.</p>
+      </div>
+    );
+  }
   const total = job?.total || 0;
   const done = job?.done || 0;
   const finished = job?.status === "done";

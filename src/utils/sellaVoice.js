@@ -118,24 +118,60 @@ export async function startRecording({ onTick } = {}) {
 // ------------------------------------------------------------------ read aloud
 export const canSpeak = () => typeof window !== "undefined" && "speechSynthesis" in window;
 
-function pickVoice() {
+// Device voices rarely say whether they are male or female, so this goes by
+// the names the big platforms use. Edge ships Nigerian English voices
+// (Ezinne, Abeo), which are preferred when present.
+const FEMALE = /female|woman|ezinne|zira|aria|jenny|libby|sonia|hazel|susan|samantha|karen|moira|tessa|victoria|fiona|serena|natasha|clara|emma|amy/i;
+const MALE = /\bmale\b|\bman\b|abeo|david|guy|ryan|george|daniel|alex|fred|oliver|thomas|james|william|brian|arthur|mark/i;
+
+function pickVoice({ lang = "en-NG", gender = "female" } = {}) {
   const voices = window.speechSynthesis.getVoices();
-  return voices.find((v) => /en[-_]NG/i.test(v.lang)) ||
-    voices.find((v) => /en[-_]GB/i.test(v.lang)) ||
-    voices.find((v) => /^en/i.test(v.lang)) || null;
+  const base = String(lang).slice(0, 2).toLowerCase();
+  // Yoruba, Igbo and Hausa voices almost never exist on devices; Nigerian
+  // English is the closest a device can do.
+  const pools = [
+    voices.filter((v) => v.lang.toLowerCase().replace("_", "-") === lang.toLowerCase()),
+    voices.filter((v) => v.lang.toLowerCase().startsWith(base) && base !== "en"),
+    voices.filter((v) => /en[-_]NG/i.test(v.lang)),
+    voices.filter((v) => /en[-_]GB/i.test(v.lang)),
+    voices.filter((v) => /^en/i.test(v.lang)),
+  ];
+  const wantRe = gender === "male" ? MALE : FEMALE;
+  const avoidRe = gender === "male" ? FEMALE : MALE;
+  for (const pool of pools) {
+    if (!pool.length) continue;
+    return pool.find((v) => wantRe.test(v.name)) || pool.find((v) => !avoidRe.test(v.name)) || pool[0];
+  }
+  return null;
 }
 
-export function speak(text, { onEnd } = {}) {
+export function speak(text, { onEnd, lang = "en-NG", gender = "female" } = {}) {
   if (!canSpeak()) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(String(text || "").slice(0, 4000));
-  const v = pickVoice();
+  const v = pickVoice({ lang, gender });
   if (v) { u.voice = v; u.lang = v.lang; }
+  // Nudges an unlabelled default voice toward the chosen gender.
+  if (!v || !(gender === "male" ? MALE : FEMALE).test(v.name)) u.pitch = gender === "male" ? 0.85 : 1.1;
   u.onend = () => onEnd?.();
   u.onerror = () => onEnd?.();
   window.speechSynthesis.speak(u);
 }
 
+// Server voices (Spitch) come back as audio; played through one shared
+// element so starting a new reply always stops the last one.
+let serverAudio = null;
+export function playAudio(blob, { onEnd } = {}) {
+  stopSpeaking();
+  const url = URL.createObjectURL(blob);
+  serverAudio = new Audio(url);
+  const done = () => { URL.revokeObjectURL(url); onEnd?.(); };
+  serverAudio.onended = done;
+  serverAudio.onerror = done;
+  serverAudio.play().catch(done);
+}
+
 export function stopSpeaking() {
   if (canSpeak()) window.speechSynthesis.cancel();
+  if (serverAudio) { serverAudio.pause(); serverAudio = null; }
 }
