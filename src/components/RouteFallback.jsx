@@ -7,6 +7,7 @@
 // the frame briefly and only surface an indicator if the chunk is genuinely
 // taking time (slow network, cold cache, low-end device).
 import { useEffect, useState } from 'react'
+import BrandLoader from './BrandLoader'
 
 export default function RouteFallback({ delay = 200 }) {
   const [visible, setVisible] = useState(false)
@@ -18,21 +19,7 @@ export default function RouteFallback({ delay = 200 }) {
 
   if (!visible) return null
 
-  return (
-    <div
-      className="min-h-screen bg-white flex items-center justify-center"
-      role="status"
-      aria-label="Loading"
-    >
-      <div className="flex items-end gap-1.5" aria-hidden="true">
-        {[0, 140, 280].map((offset) => (
-          <span
-            key={offset}
-            className="w-1.5 h-5 rounded-full bg-brand-500 animate-pulse"
-            style={{ animationDelay: `${offset}ms` }}
-          />
-        ))}
-      </div>
-    </div>
-  )
+  // The branded bag loader (BrandLoader.jsx) replaced three pulsing bars
+  // on 2026-09-26.
+  return <BrandLoader />
 }

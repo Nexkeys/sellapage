@@ -309,6 +309,23 @@ export default async function handler(req, res) {
     }
   }
 
+  // Sella credit top-ups. Handled BEFORE the subscription branch below, which
+  // treats anything unrecognised as a plan payment. grantPurchase checks the
+  // payment against the purchase we issued (our reference, exact amount in
+  // naira) and adds the credits once, however many times this fires. Always
+  // 200 so Paystack does not retry a payment we deliberately rejected.
+  if (transactionType === "sella_credits") {
+    try {
+      const { grantPurchase } = await import("./_lib/sella-topups.js");
+      const r = await grantPurchase(db, data);
+      return res.status(200).send(`Sella credits: ${r.state}`);
+    } catch (err) {
+      console.error("[paystack-webhook] sella credits error:", err);
+      // 500 lets Paystack retry a genuine failure (e.g. Firestore hiccup).
+      return res.status(500).send("Sella credits processing error");
+    }
+  }
+
   // Subscription handling (existing logic)
   const { storeId, plan, billingPeriod = 'monthly' } = data.metadata || {};
 

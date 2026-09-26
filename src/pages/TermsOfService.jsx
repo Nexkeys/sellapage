@@ -4,6 +4,8 @@ import Footer from '../components/Footer'
 import Reveal from '../components/Reveal'
 import SEO from '../components/SEO'
 import { pageSeo } from '../data/seoPages'
+import AgreementText from '../components/legal/AgreementText'
+import { SUPPLIER_AGREEMENT, DROPSHIPPER_AGREEMENT } from '../utils/marketplaceAgreements'
 
 
 const LAST_UPDATED = 'September 2026'
@@ -45,6 +47,15 @@ const sections = [
     ],
   },
   {
+    title: 'Dropshipping Marketplace',
+    content: [
+      'The Dropshipping Marketplace lets approved Pro and Premium stores supply products to other stores, and lets stores sell those products without holding stock. Taking part requires accepting the Marketplace Supplier Agreement or the Marketplace Dropshipper Agreement below, which form part of these terms.',
+      'Sellapage is a platform. It is not the seller, buyer, owner, carrier or guarantor of any marketplace product, and it is not a party to the sale between a store and its customer.',
+      'Payments are processed by Paystack and divided between the supplier, the selling store and Sellapage at the moment of payment. Sellapage does not hold these funds.',
+      'A customer who buys a marketplace product keeps every right the law gives them, including returning damaged, defective or not-as-described goods for a full refund.',
+    ],
+  },
+  {
     title: 'The Free Plan',
     content: [
       'The Starter plan is free forever and available to all eligible users.',
@@ -77,7 +88,9 @@ const sections = [
     content: [
       'Sellapage is a tool to help you sell. We are not responsible for your business results.',
       'We do our best to keep the platform running, but we cannot guarantee 100% uptime.',
-      'We are not liable for any losses you suffer from using or not being able to use Sellapage.',
+      'We are not liable for lost profits, lost sales, lost data or any indirect loss.',
+      'Our total liability to you in any 12 months is limited to the fees you paid us in that period.',
+      'None of this limits liability for fraud, for our gross negligence, or for anything the law does not allow us to limit.',
     ],
   },
   {
@@ -86,6 +99,7 @@ const sections = [
       'We may update these terms as the platform grows.',
       'We will notify you of major changes via email or your dashboard.',
       'Continuing to use Sellapage after changes means you accept the updated terms.',
+      'We may transfer these terms, and our rights and duties under them, to a company that runs Sellapage, including one formed to take over the business. Your rights do not change when we do.',
     ],
   },
 ]
@@ -127,6 +141,17 @@ export default function TermsOfService() {
                   </li>
                 ))}
               </ul>
+            </Reveal>
+          ))}
+
+          {/* Dropshipping Marketplace agreements (utils/marketplaceAgreements.js).
+              Anchored so the accept box and emails can link straight to them. */}
+          {[SUPPLIER_AGREEMENT, DROPSHIPPER_AGREEMENT].map((agreement) => (
+            <Reveal key={agreement.anchor}>
+              <section id={agreement.anchor} className="scroll-mt-24 rounded-2xl border border-gray-100 p-6">
+                <h2 className="font-display font-bold text-gray-900 text-xl mb-1">{agreement.title}</h2>
+                <AgreementText agreement={agreement} />
+              </section>
             </Reveal>
           ))}
 

@@ -16,6 +16,8 @@ import { categoryLabel } from '../../utils/marketplaceCategories'
 import { termsSummary } from '../../utils/supplierTerms'
 import ListingDialog from './ListingDialog'
 import SupplierTermsForm from './SupplierTermsForm'
+import AgreementAccept from './AgreementAccept'
+import { NEW_SUPPLIER_LIMITS } from '../../utils/supplierLimits'
 
 const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('en-NG', { dateStyle: 'medium' }) : '')
 
@@ -54,6 +56,11 @@ export default function SupplierListings({ state, onReload, navigateTo }) {
   const paused = state?.sellBlockedBy === 'plan'
   const readOnly = suspended || paused
   const hasTerms = (state?.termsVersion || 0) > 0
+  // An approved supplier who has not accepted the CURRENT agreement (approved
+  // before it existed, or it changed) can still see and switch off, but not
+  // list or switch on; the server refuses those with agreement_required.
+  const agreed = state?.agreement?.ok === true
+  const limits = state?.limits
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -94,6 +101,25 @@ export default function SupplierListings({ state, onReload, navigateTo }) {
 
   return (
     <div className="space-y-4">
+      {!agreed && !suspended && (
+        <div className="rounded-2xl border border-amber-200 bg-white p-4 sm:p-5">
+          {/* Already approved, so never the "before you apply" wording: this is
+              either a new version, or a supplier approved before the agreement existed. */}
+          <AgreementAccept kind="supplier" updated onAccepted={() => onReload?.()} />
+        </div>
+      )}
+
+      {limits?.limited && !paused && !suspended && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 text-xs leading-relaxed text-gray-600 sm:p-5">
+          <p className="text-sm font-bold text-gray-900">New supplier limits</p>
+          <p className="mt-1">
+            Until you have {NEW_SUPPLIER_LIMITS.graduateAfterDelivered} delivered orders, each order can pay you up to{' '}
+            {naira(NEW_SUPPLIER_LIMITS.maxSupplierShare)} and you can have up to {NEW_SUPPLIER_LIMITS.maxOpenOrders} orders
+            waiting to ship. You have {limits.delivered} delivered so far. They lift automatically after that.
+          </p>
+        </div>
+      )}
+
       {paused && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 sm:p-5">
           <div className="flex items-start gap-3">
@@ -178,7 +204,7 @@ export default function SupplierListings({ state, onReload, navigateTo }) {
             >
               <RefreshCw size={11} />
             </button>
-            {!readOnly && hasTerms && (
+            {!readOnly && hasTerms && agreed && (
               <button
                 type="button"
                 onClick={() => setPicking((v) => !v)}

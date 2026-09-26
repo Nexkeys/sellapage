@@ -36,6 +36,13 @@ import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import {
   supplierStatus, supplierCanSell, listingAvailability, cleanListing, isTrackedStock,
 } from '../utils/marketplace.js'
+import { hasAcceptedAgreement } from '../utils/marketplaceAgreements.js'
+import { supplierLimits, checkListingPrice } from '../utils/supplierLimits.js'
+
+// Anything that puts stock in front of dropshippers needs the CURRENT
+// Marketplace Supplier Agreement. Switching off and unlisting do not: reducing
+// exposure must always be possible, agreement or not.
+const needsAgreement = (action, body) => action === 'save' || (action === 'set-status' && body?.on === true)
 
 const iso = (v) => {
   const d = v?.toDate?.() || (v ? new Date(v) : null)
@@ -127,6 +134,7 @@ export default async function handler(req, res) {
         success: true,
         products: rows,
         canSell: supplierCanSell(store),
+        limits: (() => { const l = supplierLimits(store); return { ...l, open: Number.isFinite(l.open) ? l.open : null } })(),
         termsVersion: Number.isInteger(store.supplierTermsVersion) ? store.supplierTermsVersion : 0,
       })
     }
@@ -156,6 +164,13 @@ export default async function handler(req, res) {
     if (!snap.exists) return res.status(404).json({ error: 'Product not found' })
     const product = snap.data() || {}
 
+    if (needsAgreement(action, body) && !hasAcceptedAgreement(store, 'supplier')) {
+      return res.status(409).json({
+        error: 'agreement_required',
+        message: 'Accept the current Marketplace Supplier Agreement in Supplier Hub before listing or switching products on.',
+      })
+    }
+
     if (action === 'save') {
       // Terms come before the first listing (plan decision J4): a dropshipper
       // must be able to read them before they can add anything.
@@ -169,6 +184,12 @@ export default async function handler(req, res) {
       const cleaned = cleanListing(body, product)
       if (!cleaned.ok) {
         return res.status(400).json({ error: 'invalid_listing', message: 'Please check the highlighted fields.', errors: cleaned.errors })
+      }
+      // New-supplier cap (utils/supplierLimits.js), from this store's own
+      // server-written counters, never from the request.
+      const cap = checkListingPrice(store, cleaned.listing.wholesalePrice)
+      if (!cap.ok) {
+        return res.status(400).json({ error: 'over_limit', message: cap.message, errors: { wholesalePrice: cap.message } })
       }
 
       const now = new Date()

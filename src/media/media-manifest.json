@@ -1,4 +1,46 @@
 {
+  "billing-banner-bag": {
+    "type": "image",
+    "src": "/media/billing-banner-bag/56e44dedc5-lg.webp",
+    "srcSmall": "/media/billing-banner-bag/56e44dedc5-sm.webp",
+    "width": 400,
+    "height": 200
+  },
+  "billing-countdown-art": {
+    "type": "image",
+    "src": "/media/billing-countdown-art/f5073c4503-lg.webp",
+    "srcSmall": "/media/billing-countdown-art/f5073c4503-sm.webp",
+    "width": 600,
+    "height": 320
+  },
+  "billing-script": {
+    "type": "image",
+    "src": "/media/billing-script/2c5db3c46f-lg.webp",
+    "srcSmall": "/media/billing-script/2c5db3c46f-sm.webp",
+    "width": 340,
+    "height": 170
+  },
+  "business-brand-leaves": {
+    "type": "image",
+    "src": "/media/business-brand-leaves/55ce3ae702-lg.webp",
+    "srcSmall": "/media/business-brand-leaves/55ce3ae702-sm.webp",
+    "width": 100,
+    "height": 424
+  },
+  "business-brand-script": {
+    "type": "image",
+    "src": "/media/business-brand-script/d77ed0c1ea-lg.webp",
+    "srcSmall": "/media/business-brand-script/d77ed0c1ea-sm.webp",
+    "width": 240,
+    "height": 104
+  },
+  "business-hero": {
+    "type": "image",
+    "src": "/media/business-hero/083e343c94-lg.webp",
+    "srcSmall": "/media/business-hero/083e343c94-sm.webp",
+    "width": 648,
+    "height": 410
+  },
   "dashboard-banner": {
     "type": "image",
     "src": "/media/dashboard-banner/58d68aa186-lg.webp",

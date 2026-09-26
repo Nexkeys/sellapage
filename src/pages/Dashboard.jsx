@@ -26,7 +26,7 @@ import {
 import { logoutSeller, updateStore, deleteAuthUser } from "../firebase/auth";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { db } from "../firebase/config";
-import { collection, query, where, orderBy, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, writeBatch, doc, limit } from 'firebase/firestore';
 import { addDoc, deleteDoc, getDoc, getDocs, onSnapshot, setDoc, updateDoc } from '../firebase/metered';
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
 import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
@@ -36,45 +36,11 @@ import OtpVerifyModal from "../components/OtpVerifyModal";
 import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
 import { SkeletonDashboard } from "../components/Skeleton";
 
-// Features unlocked at each plan, shown in the post-upgrade welcome modal.
-const PLAN_WELCOME = {
-  growth: {
-    label: "Growth",
-    features: [
-      "Analytics & click tracking (store views, top clicks)",
-      "AI product descriptions - 20 per day",
-      "Custom colours and fonts",
-      "Up to 50 listings + structured multi-item cart",
-      "Stock count management & categories",
-      "Post up to 25 job listings",
-    ],
-  },
-  pro: {
-    label: "Pro",
-    features: [
-      "In-app Paystack checkout + automatic orders",
-      "Payouts & bank settlement",
-      "Customer CRM, verified reviews, discounts & promo codes",
-      "Sendbox & Topship delivery integration",
-      "20 premium store themes + custom domain",
-      "CAC verification, product export, unlimited listings",
-    ],
-  },
-  premium: {
-    label: "Premium",
-    features: [
-      "Sella AI Business Partner (context-aware assistant)",
-      "Google Ads integration",
-      "White-label customer experience",
-      "Unlimited job listings",
-      "Everything in Pro, plus premium positioning",
-    ],
-  },
-};
 
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import OverviewTab from "../components/dashboard/Overview";
 import Celebration from "../components/dashboard/ui/Celebration";
+import { PaymentSuccessModal, PaymentProblemModal, RetentionModal } from "../components/dashboard/billing/PlanMoments";
 import { clearOverviewCache } from "../utils/overviewData";
 import ProductsTab from "../components/dashboard/Products";
 import ServicesTab from "../components/dashboard/ServicesTab";
@@ -211,9 +177,36 @@ export default function Dashboard() {
     if (welcomePlan) {
       const url = new URL(window.location.href)
       url.searchParams.delete('upgraded')
+      url.searchParams.delete('period')
       window.history.replaceState({}, '', url.pathname + (url.search || ''))
     }
   }, [welcomePlan]);
+  const [welcomePeriod] = useState(() => new URLSearchParams(window.location.search).get('period') || '');
+
+  // A plan payment that did not go through (BillingCallback sends
+  // ?payment=failed|cancelled|pending). Read once, then taken off the URL so
+  // a refresh does not show it again.
+  const [paymentProblem, setPaymentProblem] = useState(() => {
+    const q = new URLSearchParams(window.location.search)
+    const kind = q.get('payment')
+    if (!['failed', 'cancelled', 'pending'].includes(kind)) return null
+    const planQ = q.get('plan')
+    return {
+      kind,
+      plan: ['growth', 'pro', 'premium'].includes(planQ) ? planQ : null,
+      period: q.get('period') || 'monthly',
+      reason: (q.get('reason') || '').slice(0, 120),
+    }
+  });
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (!url.searchParams.has('payment')) return
+    ;['payment', 'plan', 'period', 'reason'].forEach((k) => url.searchParams.delete(k))
+    window.history.replaceState({}, '', url.pathname + (url.search || ''))
+  }, []);
+
+  // "We'd hate to see you leave": { mode, plan, endsAt?, since? } while shown.
+  const [retention, setRetention] = useState(null);
   const [showChecklist, setShowChecklist] = useState(false);
   // The first-listing party (components/dashboard/ui/Celebration.jsx):
   // { kind: "product" | "service", name } while it is showing.
@@ -507,6 +500,55 @@ export default function Dashboard() {
     };
     syncStoreOnMount();
   }, []);
+
+  // "We'd hate to see you leave" (billing/PlanMoments.jsx RetentionModal).
+  // At most once a day per store, owners only, never on top of a payment
+  // popup. Two moments:
+  //   - a paid plan or trial with a day or less left (for a plan already in
+  //     grace, a day or less before the grace ends and it drops to Starter)
+  //   - up to three days after the store was moved back to Starter. The plan
+  //     it had comes from the last payment record: one read, only then.
+  useEffect(() => {
+    if (!store?.id || store?._isStaff || welcomePlan || paymentProblem) return;
+    const key = `sellapage_retention_${store.id}_${new Date().toISOString().slice(0, 10)}`;
+    try { if (localStorage.getItem(key)) return; } catch { /* show it */ }
+    const DAY = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const ms = (v) => (v?.toMillis ? v.toMillis() : v ? new Date(v).getTime() : null);
+    const end = ms(store.planEndDate);
+    const grace = ms(store.graceUntil);
+    const paid = ["growth", "pro", "premium"].includes(store.plan);
+    const onTrial = store.trial?.status === "active";
+    if (paid && store.planStatus === "grace" && grace && grace > now && grace - now <= DAY) {
+      setRetention({ mode: "expiring", plan: store.plan, endsAt: grace });
+      return;
+    }
+    if (paid && store.planStatus !== "expired" && store.planStatus !== "grace" && end && end > now && end - now <= DAY) {
+      setRetention({ mode: onTrial ? "trial" : "expiring", plan: store.plan, endsAt: end });
+      return;
+    }
+    if (store.planStatus === "expired" && grace && now >= grace && now - grace <= 3 * DAY) {
+      let cancelled = false;
+      (async () => {
+        try {
+          let prev = store.previousPlan;
+          if (!prev) {
+            const snap = await getDocs(query(collection(db, "stores", store.id, "subscriptions"), orderBy("paidAt", "desc"), limit(1)));
+            prev = snap.docs[0]?.get("plan");
+          }
+          if (!cancelled && ["growth", "pro", "premium"].includes(prev)) {
+            setRetention({ mode: "downgraded", plan: prev, since: new Date(grace) });
+          }
+        } catch { /* no popup is better than a wrong one */ }
+      })();
+      return () => { cancelled = true; };
+    }
+  }, [store?.id, store?._isStaff, store?.plan, store?.planStatus, store?.planEndDate, store?.graceUntil, store?.trial?.status, store?.previousPlan, welcomePlan, paymentProblem]);
+
+  const dismissRetention = () => {
+    try { localStorage.setItem(`sellapage_retention_${store.id}_${new Date().toISOString().slice(0, 10)}`, "1"); } catch { /* shown again tomorrow at worst */ }
+    setRetention(null);
+  };
 
   // Sync store plan state from Firestore after returning from billing callback
   useEffect(() => {
@@ -2105,6 +2147,8 @@ export default function Dashboard() {
           onUpgrade={handleUpgrade}
           upgradeLoading={billingLoading}
           upgradeError={billingError}
+          navigateTo={setActiveTab}
+          initialView={new URLSearchParams(window.location.search).get("view") === "history" ? "history" : "plan"}
         />
       )}
 
@@ -2335,48 +2379,36 @@ export default function Dashboard() {
         </div>
       )}
 
-      {welcomePlan && PLAN_WELCOME[welcomePlan] && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => setWelcomePlan(null)}
-        >
-          <div
-            className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 rounded-t-2xl p-6 text-white text-center">
-              <button
-                onClick={() => setWelcomePlan(null)}
-                className="absolute top-3 right-3 p-1.5 rounded-lg text-white/80 hover:bg-white/20 transition-colors"
-                aria-label="Close"
-              >
-                <XIcon size={18} />
-              </button>
-              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-3">
-                <Sparkles size={26} />
-              </div>
-              <h2 className="text-xl font-extrabold">Welcome to {PLAN_WELCOME[welcomePlan].label}!</h2>
-              <p className="text-green-100 text-sm mt-1">Your plan is active. Here's what you can now do:</p>
-            </div>
-            <div className="p-5 space-y-2.5">
-              {PLAN_WELCOME[welcomePlan].features.map((f, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check size={12} className="text-green-600" />
-                  </span>
-                  <span className="text-sm text-gray-700">{f}</span>
-                </div>
-              ))}
-              <button
-                onClick={() => setWelcomePlan(null)}
-                className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all"
-              >
-                Start exploring
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PaymentSuccessModal
+        open={!!welcomePlan}
+        plan={welcomePlan}
+        period={welcomePeriod}
+        onClose={() => setWelcomePlan(null)}
+        onViewHistory={() => { setWelcomePlan(null); setActiveTab("billing"); }}
+      />
+      <PaymentProblemModal
+        open={!!paymentProblem}
+        kind={paymentProblem?.kind}
+        plan={paymentProblem?.plan}
+        reason={paymentProblem?.reason}
+        retrying={!!billingLoading}
+        onRetry={() => handleUpgrade(paymentProblem.plan, paymentProblem.period)}
+        onMessage={() => { setPaymentProblem(null); setActiveTab("support"); }}
+        onClose={() => setPaymentProblem(null)}
+      />
+      <RetentionModal
+        open={!!retention}
+        mode={retention?.mode}
+        plan={retention?.plan}
+        endsAt={retention?.endsAt}
+        since={retention?.since}
+        renewing={!!billingLoading}
+        onRenew={() => {
+          if (retention?.mode === "trial") { dismissRetention(); setActiveTab("billing"); return; }
+          handleUpgrade(retention.plan, store?.billingPeriod || "monthly");
+        }}
+        onClose={dismissRetention}
+      />
 
       <Celebration
         open={!!celebrate}

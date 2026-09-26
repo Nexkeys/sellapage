@@ -16,6 +16,7 @@
 //   GET  ?action=find-store &q=  store id, slug or email, to add a tester
 //   POST ?action=set-tester { storeId, on } early access on or off
 //   GET  ?action=suppliers &status=  the supplier queue (pending by default)
+//   POST ?action=set-limits { storeId, lifted } lift or restore new-supplier limits
 //   POST ?action=supplier-decision  { storeId, decision, reason } approve /
 //                           reject / suspend / unsuspend, with a notification.
 // Tab `marketplace`: super_admin and operations (Docs/Dropshipping-Marketplace-Plan.md, Part F).
@@ -25,6 +26,8 @@ import { verifyAdmin } from './_lib/verify-admin.js'
 import { applyCors, parseJsonBody } from './_lib/http.js'
 import { notifyStore } from './_lib/notifications.js'
 import { termsSummary } from '../utils/supplierTerms.js'
+import { supplierLimits } from '../utils/supplierLimits.js'
+import { currentAgreementVersion, AGREEMENT_FIELD } from '../utils/marketplaceAgreements.js'
 import { readInterest, roleFromInterest, readiness, supplierStatus, MARKETPLACE_STAGES } from '../utils/marketplace.js'
 import { marketplaceStage, stageOverride, clearStageCache, SETTINGS_DOC } from './_lib/marketplace-gate.js'
 
@@ -115,6 +118,9 @@ function supplierRow(id, s) {
     rejectedAt: iso(s.supplierRejectedAt),
     termsVersion: Number.isInteger(s.supplierTermsVersion) ? s.supplierTermsVersion : 0,
     terms: null,
+    agreementVersion: Number.isInteger(s[AGREEMENT_FIELD.supplier]) ? s[AGREEMENT_FIELD.supplier] : 0,
+    agreementCurrent: currentAgreementVersion('supplier'),
+    limits: (() => { const l = supplierLimits(s); return { limited: l.limited, lifted: l.lifted, corrupt: l.corrupt, delivered: l.delivered, open: Number.isFinite(l.open) ? l.open : null } })(),
   }
 }
 
@@ -384,6 +390,25 @@ export default async function handler(req, res) {
       )
 
       return res.status(200).json({ success: true, storeId, status: patch.supplierStatus })
+    }
+
+    // New-supplier limits (utils/supplierLimits.js). Lifting them early is a
+    // trust decision about money Sellapage may have to refund, so it is
+    // recorded with who made it. Restoring them is always allowed.
+    if (action === 'set-limits' && req.method === 'POST') {
+      let body
+      try { body = parseJsonBody(req) || {} } catch { return res.status(400).json({ error: 'Invalid JSON body' }) }
+      const storeId = String(body.storeId || '').trim()
+      if (!storeId) return res.status(400).json({ error: 'storeId is required' })
+      const ref = db.collection('stores').doc(storeId)
+      const snap = await ref.get()
+      if (!snap.exists) return res.status(404).json({ error: 'Store not found' })
+      const lifted = body.lifted === true
+      await ref.set(
+        { supplierLimitsLifted: lifted, supplierLimitsChangedBy: admin.uid, supplierLimitsChangedAt: new Date() },
+        { merge: true },
+      )
+      return res.status(200).json({ success: true, storeId, lifted })
     }
 
     if (action === 'delete' && req.method === 'POST') {

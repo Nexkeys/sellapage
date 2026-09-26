@@ -99,6 +99,11 @@ export default async function handler(req, res) {
             billingPeriod,
             type: 'subscription',
             app: 'sellapage',
+            // Where Paystack sends a vendor who closes or cancels the payment
+            // page, so the dashboard can say "that did not go through" with a
+            // way to try again, instead of dropping them back on the page
+            // they started from with no word about it.
+            cancel_action: 'https://sellapage.com.ng/billing/callback?status=cancelled&plan=' + plan + '&period=' + billingPeriod,
           },
         }),
       })

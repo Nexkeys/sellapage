@@ -336,7 +336,11 @@ export default function DashboardLayout({
 
   // Sella and the calculator are opened from the sidebar. They used to float
   // over every screen as draggable buttons, covering content and each other.
-  const [sellaOpen, setSellaOpen] = useState(false);
+  // Opens straight away when returning from a Paystack credit purchase
+  // (?sellaCredits=1); SellaAI then shows the payment result on its Billing view.
+  const [sellaOpen, setSellaOpen] = useState(() => {
+    try { return new URLSearchParams(window.location.search).has("sellaCredits"); } catch { return false; }
+  });
   const [calcOpen, setCalcOpen] = useState(false);
   // Other screens open Sella with a request typed in (e.g. Import Products):
   // window.dispatchEvent(new CustomEvent("sella:open", { detail: { prompt } })).

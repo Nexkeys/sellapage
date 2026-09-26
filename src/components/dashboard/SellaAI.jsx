@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bookmark, X, Plus, Check, Loader2, ExternalLink, Trash2, ImagePlus, Search, Brain, Settings2,
+  Bookmark, CreditCard, X, Plus, Check, Loader2, ExternalLink, Trash2, ImagePlus, Search, Brain, Settings2,
   Paperclip, FileText, FileSpreadsheet, Download, Mic, Square, ArrowUp, Globe, Lightbulb, Image as ImageIcon,
   PieChart, ChevronDown, PanelLeftClose, PanelLeftOpen, Menu, MoreHorizontal, Volume2, VolumeX, Copy, Coins, HelpCircle,
 } from "lucide-react";
@@ -31,6 +31,7 @@ import SellaTermsModal from "./SellaTermsModal";
 import { ImportReview, BulkReview, JobCard } from "./sella/ReviewCards";
 import { MemoryPanel, PromptsPanel, SettingsPanel } from "./sella/SellaPanels";
 import { ImageResults, VideoResult } from "./sella/ImageTools";
+import { BillingPanel } from "./sella/BillingPanel";
 
 const LS_SESSION = (sid) => `sellaai_session_${sid}`;
 const LS_MODE = "sellaai_mode";
@@ -101,7 +102,27 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
   const storeId = store?.id;
   const isPremium = store?.hasPremiumFeatures ?? store?.plan === "premium";
 
-  const [view, setView] = useState("chat"); // chat | memory | prompts | settings
+  // Coming back from a Paystack credit purchase: the dashboard URL carries
+  // ?sellaCredits=1&reference=... (DashboardLayout opens Sella for it). Read
+  // once, at first render, so the billing view opens straight away.
+  const [returnRef, setReturnRef] = useState(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      return q.get("sellaCredits") ? (q.get("reference") || q.get("trxref") || "") : "";
+    } catch { return ""; }
+  });
+  const [view, setView] = useState(() => (returnRef ? "billing" : "chat")); // chat | memory | prompts | settings | billing
+  const [creditsOut, setCreditsOut] = useState(false);
+  // Clear the payment reference from the address bar so a refresh does not
+  // re-run the check, and the reference is not left in browser history.
+  useEffect(() => {
+    if (!returnRef) return;
+    try {
+      const url = new URL(window.location.href);
+      ["sellaCredits", "reference", "trxref"].forEach((k) => url.searchParams.delete(k));
+      window.history.replaceState(null, "", url.pathname + (url.search ? url.search : "") + url.hash);
+    } catch { /* ignore */ }
+  }, [returnRef]);
   const [termsTab, setTermsTab] = useState(null); // null | "terms" | "privacy"
   const [staffAccess, setStaffAccess] = useState(false);
   const [isOwner, setIsOwner] = useState(true);
@@ -460,6 +481,7 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
         const data = await res.json().catch(() => ({}));
         dropStreamingPlaceholder();
         if (data.credits) setCredits(data.credits);
+        setCreditsOut(data.creditsExhausted === true);
         setError(res.status === 413
           ? "Those files are too large to send together. Send fewer, or smaller files."
           : data.error || "Something went wrong.");
@@ -862,6 +884,7 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
       <nav className="mt-3 space-y-0.5">
         {navItem("memory", Brain, "Memory")}
         {navItem("prompts", Bookmark, "Saved prompts")}
+        {isOwner && navItem("billing", CreditCard, "Billing")}
         {navItem("settings", Settings2, "Settings")}
       </nav>
 
@@ -1024,7 +1047,7 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
         );
       })}
       {reviewCard}
-      {error && <div className="rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-[13px] text-red-700">{error}</div>}
+      {error && <div className="rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-[13px] text-red-700">{error}{creditsOut && isOwner && <button onClick={() => { setView("billing"); setError(""); setCreditsOut(false); }} className="ml-2 underline underline-offset-2 font-semibold">Buy credits</button>}</div>}
     </div>
   );
 
@@ -1083,7 +1106,7 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
                 </div>
 
                 <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-                  <button onClick={() => setView("settings")} className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-green-50 text-green-800 text-[12px] font-semibold hover:bg-green-100" title="Monthly credits">
+                  <button onClick={() => setView(isOwner ? "billing" : "settings")} className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-green-50 text-green-800 text-[12px] font-semibold hover:bg-green-100" title="Monthly credits">
                     <Coins size={13} /> {credits ? `${fmtCredits(credits.remaining)} credits` : "Credits"}
                   </button>
                   <div className="relative">
@@ -1119,7 +1142,7 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
                     </p>
                     <h2 className="text-[26px] sm:text-[32px] font-bold text-gray-900 tracking-tight text-center">{(GREETINGS[prefs.language] || GREETINGS.en).ask}</h2>
                     <div className="w-full max-w-2xl mt-7">{composer}</div>
-                    {error && <div className="w-full max-w-2xl mt-3 rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-[13px] text-red-700">{error}</div>}
+                    {error && <div className="w-full max-w-2xl mt-3 rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-[13px] text-red-700">{error}{creditsOut && isOwner && <button onClick={() => { setView("billing"); setError(""); setCreditsOut(false); }} className="ml-2 underline underline-offset-2 font-semibold">Buy credits</button>}</div>}
                     <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
                       {SUGGESTIONS.map((s) => (
                         <button key={s.title} onClick={() => send(s.prompt, { web: s.web === true })} className="text-left p-4 rounded-2xl bg-white border border-gray-200 hover:border-green-300 hover:shadow-md hover:shadow-green-500/10 transition-all">
@@ -1145,6 +1168,15 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
               ))}
 
               {view === "memory" && <MemoryPanel storeId={storeId} callSella={callSella} assistantName={assistantName} />}
+              {view === "billing" && (
+                <BillingPanel
+                  storeId={storeId}
+                  assistantName={assistantName}
+                  returnReference={returnRef}
+                  onReturnHandled={() => setReturnRef("")}
+                  onCredits={setCredits}
+                />
+              )}
               {view === "prompts" && (
                 <PromptsPanel
                   storeId={storeId}

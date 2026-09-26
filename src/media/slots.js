@@ -92,6 +92,16 @@ export const MEDIA_SLOTS = [
   { name: 'products-empty-art', where: 'Products and Services tabs with nothing added yet, above "No products added yet"', shape: 'landscape', accepts: 'image', tip: 'A product card with a sneaker and a small plant.' },
   { name: 'products-first-popper', where: 'Products and Services tabs with nothing added yet, "Good things start" card', shape: 'square', accepts: 'image', tip: 'A small party popper, 3D style.' },
   { name: 'products-growth-chart', where: 'Products and Services tabs, "Get more with Growth" card', shape: 'square', accepts: 'image', tip: 'Green rising bars with an arrow.' },
+
+  // ── Billing tab ───────────────────────────────────────────────────────
+  { name: 'billing-countdown-art', where: 'Billing tab, the plan countdown card, right side', shape: 'landscape', accepts: 'image', tip: 'A calendar on a green box, light background.' },
+  { name: 'billing-banner-bag', where: 'Billing tab, "More tools. More growth." banner, left', shape: 'landscape', accepts: 'image', tip: 'A green Sellapage shopping bag with leaves and a rising arrow.' },
+  { name: 'billing-script', where: 'Billing tab, "Built for Nigerian businesses" handwriting, right of the banner', shape: 'landscape', accepts: 'image', tip: 'Green handwriting on a transparent or white background.' },
+
+  // ── Business Page tab ─────────────────────────────────────────────────
+  { name: 'business-hero', where: 'Business Page tab, top banner, right side', shape: 'landscape', accepts: 'image', tip: 'A phone showing a store, with leaves.' },
+  { name: 'business-brand-script', where: 'Business Page tab, "Your brand matters." handwriting in the side card', shape: 'landscape', accepts: 'image', tip: 'Dark green handwriting on a light background.' },
+  { name: 'business-brand-leaves', where: 'Business Page tab, leaves along the right edge of the "Your brand matters" card', shape: 'portrait', accepts: 'image', tip: 'Green leaves, tall and narrow.' },
 ]
 
 export const SLOT_NAMES = new Set(MEDIA_SLOTS.map((s) => s.name))

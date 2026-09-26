@@ -27,6 +27,28 @@ export const PLAN_PRICES = {
   },
 }
 
+// The free plan, as the Pricing page (pages/Pricing.jsx) lists it. Keep the
+// two in step.
+export const STARTER_FEATURES = [
+  '15 total listings (products + services combined)',
+  '3 images per listing',
+  'Basic store page with hero, categories, search',
+  'Your business logo on your store page',
+  'Lead capture enquiry form',
+  'Manual Ledger to log and track orders offline',
+  'Marketing tab: SEO tools and social post kit',
+  'Post up to 5 job listings',
+  'Referral Program: earn cash when referred businesses upgrade',
+]
+
+// One line under each plan's name on the Billing tab.
+export const PLAN_TAGLINES = {
+  starter: 'Everything you need to open your doors, free forever.',
+  growth: 'Scale your store with advanced features and powerful insights.',
+  pro: 'Take payments, run deliveries and manage customers in one place.',
+  premium: 'The full workspace, with an AI business partner by your side.',
+}
+
 export const PLAN_FEATURES = {
   growth: [
     'Everything in Starter',

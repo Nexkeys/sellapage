@@ -127,6 +127,10 @@ export const DATA = {
   'stores/demo/orders': orders,
   'stores/demo/bookings': [],
   'stores/demo/analyticsDaily': analyticsDaily,
+  'stores/demo/subscriptions': Array.from({ length: 13 }).map((_, i) => ({
+    id: `sub${i}`, plan: 'growth', billingPeriod: 'monthly', amount: 500000, currency: 'NGN', status: 'success',
+    paystackRef: `T${(824019733 + i * 7919).toString(36)}`, paidAt: at(i * 30 + 3, 10, 24), planStartDate: at(i * 30 + 3), planEndDate: at(i * 30 - 27),
+  })),
   leads: [
     ['l1', 'Tolu Adebayo', '+234 801 234 5671', 0.2],
     ['l2', 'Grace Okon', '+234 803 555 0192', 1.5],

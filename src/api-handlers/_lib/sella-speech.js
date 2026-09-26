@@ -93,7 +93,9 @@ export async function synthesize({ text, language, voice }) {
     const resp = await fetch('https://api.spitch.app/v1/speech', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.SPITCH_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: clean, language: lang, voice: name, format: 'mp3' }),
+      // Spitch has no ISO code for Nigerian Pidgin (tested: 'pcm' is a 400), and the
+      // language is optional, so Pidgin is sent with only its voice.
+      body: JSON.stringify({ text: clean, ...(lang === 'pcm' ? {} : { language: lang }), voice: name, format: 'mp3' }),
       signal: AbortSignal.timeout(45000),
     })
     if (!resp.ok) {

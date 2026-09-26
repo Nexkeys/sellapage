@@ -4,6 +4,13 @@
 // Last updated: 2026-09-18 (stores create closed, phone-first signup)
 //
 // CHANGE LOG (newest first, so it is obvious what still needs publishing)
+//   2026-09-26  Marketplace agreements and new-supplier limits. Locked
+//               supplierAgreementVersion, dropshipperAgreementVersion,
+//               supplierDeliveredOrders, supplierOpenOrders,
+//               supplierLimitsLifted (+ ChangedBy / ChangedAt) in
+//               verificationFields, and added
+//               `match /marketplaceAgreements/{recordId}`, server only.
+//               SAFE TO PUBLISH ANY TIME: no browser code writes any of them.
 //   2026-09-26  Dropshipping Marketplace, Phase 2 (supplier listings).
 //               stores/{id}/products: `allow write` split into create /
 //               update / delete so the marketplace fields (listing, wholesale
@@ -268,6 +275,17 @@ service cloud.firestore {
         // could rewind this could make dropshippers "have accepted" terms
         // they never saw.
         'supplierTermsVersion', 'supplierTermsUpdatedAt',
+        // Which version of each Marketplace agreement the store accepted.
+        // Listing and importing check it; a writable one is a store "having
+        // accepted" text it never saw. The acceptance records themselves are
+        // in marketplaceAgreements (server only, below).
+        'supplierAgreementVersion', 'dropshipperAgreementVersion',
+        // New-supplier limits (src/utils/supplierLimits.js): the counters
+        // that cap a new supplier's orders, and the admin's decision to lift
+        // them early. A supplier who could write these would lift their own
+        // fraud limits.
+        'supplierDeliveredOrders', 'supplierOpenOrders', 'supplierLimitsLifted',
+        'supplierLimitsChangedBy', 'supplierLimitsChangedAt',
         // Server-only, written ONLY by store-seo.js on a slug change. It holds
         // addresses this store used to own, and the storefront renderer 301s
         // them to the current one. A client that could write it would add
@@ -854,6 +872,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Sella credit purchases (Paystack). Server-only: a purchase marked paid
+    // is what grants credits, so no client may create or edit one.
+    match /sellaCreditPurchases/{reference} {
+      allow read, write: if false;
+    }
+
     // Push device registry. One document per FCM token, id = sha256(token).
     //
     // SERVER ONLY, and that is the whole point of the collection existing.
@@ -933,7 +957,15 @@ service cloud.firestore {
     // versions are the record of what each dropshipper agreed to, so they
     // must never be editable, even by the supplier who wrote them. Read
     // through /api/supplier-application (and the Phase 3 import dialog).
-    match /supplierTerms/{supplierId} {
+// Acceptance records for the Marketplace agreements, one per store, kind
+    // and version, written once by /api/supplier-application (and the Phase 3
+    // import) and never edited. SERVER ONLY: they are the evidence of what a
+    // store agreed to, so nobody, the store included, may change them.
+    match /marketplaceAgreements/{recordId} {
+      allow read, write: if false;
+    }
+
+        match /supplierTerms/{supplierId} {
       allow read, write: if false;
 
       match /versions/{version} {

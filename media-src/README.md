@@ -47,3 +47,9 @@ GitHub). Only the small compressed copies are.
 | `products-empty-art` | Products and Services tabs with nothing added yet, above "No products added yet" | landscape | A product card with a sneaker and a small plant. |
 | `products-first-popper` | Products and Services tabs with nothing added yet, "Good things start" card | square | A small party popper, 3D style. |
 | `products-growth-chart` | Products and Services tabs, "Get more with Growth" card | square | Green rising bars with an arrow. |
+| `billing-countdown-art` | Billing tab, the plan countdown card, right side | landscape | A calendar on a green box, light background. |
+| `billing-banner-bag` | Billing tab, "More tools. More growth." banner, left | landscape | A green Sellapage shopping bag with leaves and a rising arrow. |
+| `billing-script` | Billing tab, "Built for Nigerian businesses" handwriting, right of the banner | landscape | Green handwriting on a transparent or white background. |
+| `business-hero` | Business Page tab, top banner, right side | landscape | A phone showing a store, with leaves. |
+| `business-brand-script` | Business Page tab, "Your brand matters." handwriting in the side card | landscape | Dark green handwriting on a light background. |
+| `business-brand-leaves` | Business Page tab, leaves along the right edge of the "Your brand matters" card | portrait | Green leaves, tall and narrow. |

@@ -24,6 +24,10 @@ import Celebration from '../../src/components/dashboard/ui/Celebration.jsx'
 import ProductsTab from '../../src/components/dashboard/Products.jsx'
 import ServicesTab from '../../src/components/dashboard/ServicesTab.jsx'
 import { Timestamp } from './shims/firestore.js'
+import BillingTab from '../../src/components/dashboard/BillingTab.jsx'
+import { PaymentSuccessModal, PaymentProblemModal, RetentionModal } from '../../src/components/dashboard/billing/PlanMoments.jsx'
+import BrandLoader from '../../src/components/BrandLoader.jsx'
+import OnlineStoreTab from '../../src/components/dashboard/OnlineStoreTab.jsx'
 
 // Every /api call is answered from data.js. Anything unknown gets an empty
 // success rather than a network request: the sandbox never goes online.
@@ -169,9 +173,57 @@ function ListingsPreview() {
   )
 }
 
+// ?preview=billing[&plan=growth|starter][&status=active|grace|expired][&left=hours][&moment=success|failed|cancelled|pending|retain|downgraded]
+function BillingPreview() {
+  const params = new URLSearchParams(window.location.search)
+  const plan = params.get('plan') || 'growth'
+  const status = params.get('status') || 'active'
+  const hoursLeft = Number(params.get('left') || 27 * 24 + 14.5)
+  const end = Timestamp.fromMillis(Date.now() + hoursLeft * 3600 * 1000)
+  const store = { ...STORE, plan: status === 'expired' ? 'starter' : plan, planStatus: status, billingPeriod: 'monthly', email: 'ada@adaskincare.ng',
+    hasGrowthFeatures: plan !== 'starter', hasProFeatures: ['pro', 'premium'].includes(plan), hasPremiumFeatures: plan === 'premium',
+    planEndDate: plan === 'starter' && status !== 'expired' ? null : end, graceUntil: status === 'expired' ? Timestamp.fromMillis(Date.now() - 20 * 3600 * 1000) : Timestamp.fromMillis(end.toMillis() + 2 * 864e5) }
+  const [tab, setTab] = React.useState('billing')
+  const [open, setOpen] = React.useState(false)
+  const moment = params.get('moment')
+  return (
+    <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen}
+      storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro={plan !== 'starter'} isPro={false} vendorType="products">
+      <BillingTab store={store} plan={store.plan} planStatus={status} isPro={['pro', 'premium'].includes(store.plan)} isPremium={store.plan === 'premium'}
+        onUpgrade={noop} upgradeLoading="" upgradeError="" navigateTo={setTab} initialView={params.get('view') || 'plan'} />
+      <PaymentSuccessModal open={moment === 'success'} plan="growth" period="monthly" onClose={noop} onViewHistory={noop} />
+      <PaymentProblemModal open={['failed', 'cancelled', 'pending'].includes(moment)} kind={moment} plan="growth" reason={moment === 'failed' ? 'Insufficient Funds' : ''} onRetry={noop} onMessage={noop} onClose={noop} />
+      <RetentionModal open={moment === 'retain' || moment === 'downgraded'} mode={moment === 'retain' ? 'expiring' : 'downgraded'} plan="growth"
+        endsAt={Date.now() + 14 * 3600 * 1000 + 32 * 60 * 1000} since={new Date(Date.now() - 864e5)} onRenew={noop} onClose={noop} />
+    </DashboardLayout>
+  )
+}
+
+// ?preview=business[&plan=starter|growth|pro][&qr=1][&sub=theme][&nudge=1]
+function BusinessPreview() {
+  const params = new URLSearchParams(window.location.search)
+  const plan = params.get('plan') || 'pro'
+  const [store, setStore] = React.useState(() => ({
+    ...STORE, plan, email: 'ada@adaskincare.ng', logoUrl: '', themeColor: '#16a34a', storeLayout: 'grid',
+    hasGrowthFeatures: plan !== 'starter', hasProFeatures: ['pro', 'premium'].includes(plan), hasPremiumFeatures: plan === 'premium',
+    qrCode: params.get('qr') === '1' ? { url: 'https://sellapage.com/adaskincare', createdAt: new Date().toISOString() } : null,
+  }))
+  const [tab, setTab] = React.useState('online-store')
+  const [open, setOpen] = React.useState(false)
+  const save = async (fields) => setStore((s) => ({ ...s, ...fields }))
+  return (
+    <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen}
+      storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro={plan !== 'starter'} isPro={['pro', 'premium'].includes(plan)} vendorType="products">
+      <OnlineStoreTab store={store} storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro={plan !== 'starter'} isPro={['pro', 'premium'].includes(plan)}
+        navigateTo={setTab} onLogoUpload={noop} logoError="" onColorSave={(c) => save({ themeColor: c })} onLayoutSave={(l) => save({ storeLayout: l })}
+        onThemeSave={(id, meta) => save({ storeTheme: id, themeMetadata: meta })} onStoreSave={save} previewProducts={products.slice(0, 4)} />
+    </DashboardLayout>
+  )
+}
+
 const shot = new URLSearchParams(window.location.search).get('shot')
 const previewKind = new URLSearchParams(window.location.search).get('preview')
-const Shot = previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
+const Shot = previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <MemoryRouter>

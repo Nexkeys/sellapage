@@ -5,6 +5,7 @@
 // Build plan: Docs/Dropshipping-Marketplace-Plan.md.
 
 import { findCategory, findSubcategory } from './marketplaceCategories.js'
+import { checkListingPrice } from './supplierLimits.js'
 
 export const MARKETPLACE_ROLES = ['supply', 'dropship', 'both']
 
@@ -202,7 +203,7 @@ export function supplierCanSell(store) {
  * Checked in this order, so the reason shown is the one the supplier must fix
  * first: the whole account before the single product.
  *
- * @returns {{ available: boolean, reason: null|'unlisted'|'suspended'|'not_approved'|'plan'|'off'|'untracked_stock'|'out_of_stock' }}
+ * @returns {{ available: boolean, reason: null|'unlisted'|'suspended'|'not_approved'|'plan'|'off'|'over_limit'|'untracked_stock'|'out_of_stock' }}
  */
 export function listingAvailability(product, supplierStore) {
   const no = (reason) => ({ available: false, reason })
@@ -212,6 +213,10 @@ export function listingAvailability(product, supplierStore) {
   if (status !== 'approved') return no('not_approved')
   if (!hasPro(supplierStore)) return no('plan')
   if (product.marketplaceStatus !== 'live') return no('off')
+  // New-supplier cap (utils/supplierLimits.js): a listing whose wholesale price
+  // alone is above it cannot be bought even once, so it is not available
+  // anywhere, whatever path read it.
+  if (!checkListingPrice(supplierStore, product.wholesalePrice).ok) return no('over_limit')
   if (!isTrackedStock(product.stock)) return no('untracked_stock')
   if (product.stock <= 0) return no('out_of_stock')
   return { available: true, reason: null }
@@ -223,6 +228,7 @@ export const AVAILABILITY_LABELS = {
   not_approved: 'Paused: supplier not approved',
   plan: 'Paused: upgrade to Pro to regain access',
   off: 'Switched off',
+  over_limit: 'Paused: above the new-supplier limit',
   untracked_stock: 'Paused: set a stock number',
   out_of_stock: 'Out of stock',
 }

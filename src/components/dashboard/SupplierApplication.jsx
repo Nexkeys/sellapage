@@ -17,6 +17,7 @@ import { callMarketplace } from '../../utils/marketplaceApi'
 import { termsSummary } from '../../utils/supplierTerms'
 import SupplierTermsForm from './SupplierTermsForm'
 import SupplierListings from './SupplierListings'
+import AgreementAccept from './AgreementAccept'
 
 const MB = Math.round(SUPPLIER_VIDEO_MAX_BYTES / (1024 * 1024))
 
@@ -153,10 +154,12 @@ export default function SupplierApplication({ navigateTo }) {
   const checks = state?.checks || []
   // The video is part of the checklist from the server, but it is answered by
   // the upload below rather than by another tab, so it is drawn separately.
-  const setupChecks = checks.filter((c) => c.key !== 'video' && c.key !== 'terms')
+  // Answered on this screen (agreement, terms, video), so not drawn as checklist rows.
+  const setupChecks = checks.filter((c) => !['video', 'terms', 'agreement'].includes(c.key))
   const setupDone = setupChecks.every((c) => c.done)
   const hasTerms = (state?.termsVersion || 0) > 0
-  const canSubmit = setupDone && hasTerms && !!videoUrl && !submitting && !uploading
+  const agreed = state?.agreement?.ok === true
+  const canSubmit = setupDone && agreed && hasTerms && !!videoUrl && !submitting && !uploading
 
   const reapplyAt = state?.canReapplyAt ? new Date(state.canReapplyAt) : null
   const waiting = reapplyAt && reapplyAt.getTime() > now
@@ -225,6 +228,17 @@ export default function SupplierApplication({ navigateTo }) {
               </li>
             ))}
           </ul>
+
+          <div className="mt-4 rounded-xl border border-gray-200 p-4">
+            {agreed ? (
+              <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <CheckCircle2 size={16} className="text-green-600" />
+                Marketplace Supplier Agreement accepted (version {state.agreement.accepted})
+              </p>
+            ) : (
+              <AgreementAccept kind="supplier" onAccepted={() => load()} />
+            )}
+          </div>
 
           <div className="mt-4 rounded-xl border border-gray-200 p-4">
             <p className="flex items-center gap-2 text-sm font-semibold text-gray-900">
@@ -322,7 +336,7 @@ export default function SupplierApplication({ navigateTo }) {
           </button>
           {!canSubmit && !submitting && (
             <p className="mt-2 text-xs text-gray-400">
-              {!setupDone || !hasTerms ? 'Finish everything above to send the application.' : 'Upload your video to send the application.'}
+              {!setupDone || !hasTerms || !agreed ? 'Finish everything above to send the application.' : 'Upload your video to send the application.'}
             </p>
           )}
         </div>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle } from 'lucide-react'
+import BrandLoader from '../components/BrandLoader'
 
 /**
  * Where to send the customer after a successful checkout.
@@ -32,6 +33,15 @@ export default function BillingCallback() {
   const [resolved, setResolved] = useState(false)
 
   useEffect(() => {
+    // Paystack's cancel_action (set in billing-initialize.js) lands here with
+    // no reference when the vendor closes the payment page.
+    if (!reference && searchParams.get('status') === 'cancelled') {
+      const q = new URLSearchParams({ tab: 'billing', payment: 'cancelled' })
+      if (searchParams.get('plan')) q.set('plan', searchParams.get('plan'))
+      if (searchParams.get('period')) q.set('period', searchParams.get('period'))
+      navigate(`/dashboard?${q}`, { replace: true })
+      return
+    }
     if (!reference) {
       navigate('/dashboard', { replace: true })
       return
@@ -57,61 +67,56 @@ export default function BillingCallback() {
       }
     }
 
-    // Subscription / plan-upgrade path: read the plan stashed at billing-initialize
-    // time so the dashboard can show a "Welcome to [plan]" modal.
-    let upgradedPlan = null
+    // Subscription / plan-upgrade path. The plan stashed at billing-initialize
+    // time is only a fallback now: in-app browsers (WhatsApp, Instagram) often
+    // lose sessionStorage across the Paystack round trip.
+    let stashedPlan = null
     try {
       const billing = sessionStorage.getItem(`sellapage_billing_${reference}`)
       if (billing) {
-        upgradedPlan = JSON.parse(billing).plan || null
+        stashedPlan = JSON.parse(billing).plan || null
         sessionStorage.removeItem(`sellapage_billing_${reference}`)
       }
     } catch { /* ignore */ }
 
-    setResolved(true)
-    const timer = setTimeout(() => {
-      navigate(upgradedPlan ? `/dashboard?upgraded=${upgradedPlan}` : '/dashboard', { replace: true })
-    }, 4000)
+    // Ask Paystack (through billing-verify.js) whether it really went through,
+    // so a declined card gets "try again" and not "welcome". This page never
+    // changes the plan; the webhook does that on its own.
+    let cancelled = false
+    ;(async () => {
+      let outcome = { status: 'unknown' }
+      try {
+        const r = await fetch(`/api/billing-verify?reference=${encodeURIComponent(reference)}`)
+        if (r.ok) outcome = await r.json()
+      } catch { /* treated as unknown */ }
+      if (cancelled) return
+      const plan = outcome.plan || stashedPlan
+      const period = outcome.billingPeriod || ''
+      let target
+      if (outcome.status === 'failed') {
+        const q = new URLSearchParams({ tab: 'billing', payment: 'failed' })
+        if (plan) q.set('plan', plan)
+        if (period) q.set('period', period)
+        if (outcome.reason) q.set('reason', outcome.reason)
+        target = `/dashboard?${q}`
+      } else if (outcome.status === 'pending') {
+        const q = new URLSearchParams({ tab: 'billing', payment: 'pending' })
+        if (plan) q.set('plan', plan)
+        target = `/dashboard?${q}`
+      } else {
+        // success, or Paystack could not be asked: Paystack only sends people
+        // to this page after a completed payment, so welcome them as before.
+        target = plan ? `/dashboard?upgraded=${plan}${period ? `&period=${period}` : ''}` : '/dashboard'
+      }
+      setResolved(true)
+      setTimeout(() => { if (!cancelled) navigate(target, { replace: true }) }, 900)
+    })()
 
-    return () => clearTimeout(timer)
-  }, [reference, navigate])
+    return () => { cancelled = true }
+  }, [reference, navigate, searchParams])
 
   if (!resolved) {
-    return (
-      <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center px-4">
-        <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
-          <span className="text-2xl font-bold tracking-tight text-gray-900">
-            Sellapage
-          </span>
-          <div className="relative flex items-center justify-center w-16 h-16">
-            <svg
-              className="animate-spin w-16 h-16 text-green-500"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 64 64"
-              aria-hidden="true"
-            >
-              <circle
-                className="opacity-20"
-                cx="32"
-                cy="32"
-                r="28"
-                stroke="currentColor"
-                strokeWidth="6"
-              />
-              <path
-                className="opacity-90"
-                fill="currentColor"
-                d="M32 4a28 28 0 0 1 28 28h-6a22 22 0 0 0-22-22V4z"
-              />
-            </svg>
-          </div>
-          <p className="text-lg font-semibold text-gray-900">
-            Confirming your payment…
-          </p>
-        </div>
-      </div>
-    )
+    return <BrandLoader title="Confirming your payment" lines={['Talking to Paystack...', 'Checking your payment...', 'Please don’t close this tab...']} />
   }
 
   if (checkoutData) {
@@ -167,44 +172,5 @@ export default function BillingCallback() {
     )
   }
 
-  return (
-    <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center px-4">
-      <div className="flex flex-col items-center gap-6 max-w-sm w-full text-center">
-        <span className="text-2xl font-bold tracking-tight text-gray-900">
-          Sellapage
-        </span>
-        <div className="relative flex items-center justify-center w-16 h-16">
-          <svg
-            className="animate-spin w-16 h-16 text-green-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 64 64"
-            aria-hidden="true"
-          >
-            <circle
-              className="opacity-20"
-              cx="32"
-              cy="32"
-              r="28"
-              stroke="currentColor"
-              strokeWidth="6"
-            />
-            <path
-              className="opacity-90"
-              fill="currentColor"
-              d="M32 4a28 28 0 0 1 28 28h-6a22 22 0 0 0-22-22V4z"
-            />
-          </svg>
-        </div>
-        <div className="flex flex-col gap-2">
-          <p className="text-lg font-semibold text-gray-900">
-            Confirming your payment…
-          </p>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            This usually takes just a moment. Please don&apos;t close this tab.
-          </p>
-        </div>
-      </div>
-    </div>
-  )
+  return <BrandLoader title="Payment checked" lines={['Taking you back to your dashboard...']} />
 }

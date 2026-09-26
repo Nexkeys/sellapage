@@ -131,6 +131,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/billing-initialize.js");
         return await handlerFunc(req, res);
       }
+      case "billing-verify": {
+        const { default: handlerFunc } = await import("../src/api-handlers/billing-verify.js");
+        return await handlerFunc(req, res);
+      }
       case "validate-discount": {
         const { default: handlerFunc } = await import("../src/api-handlers/validate-discount.js");
         return await handlerFunc(req, res);
@@ -161,6 +165,10 @@ export default async function handler(req, res) {
       }
       case "reminders-cron": {
         const { default: handlerFunc } = await import("../src/api-handlers/reminders-cron.js");
+        return await handlerFunc(req, res);
+      }
+      case "sella-credits": {
+        const { default: handlerFunc } = await import("../src/api-handlers/sella-credits.js");
         return await handlerFunc(req, res);
       }
       case "export-data": {

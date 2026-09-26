@@ -2,19 +2,13 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { hasOtpPendingHint, setLoginNotice } from '../utils/sessionTracking'
 import { logoutSeller } from '../firebase/auth'
+import BrandLoader from './BrandLoader'
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-brand-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">Loading...</p>
-        </div>
-      </div>
-    )
+    return <BrandLoader lines={['Checking it’s really you...', 'Opening your dashboard...', 'Almost there...']} />
   }
 
   // Checked BEFORE the !user branch, not after.

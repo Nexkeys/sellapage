@@ -37,6 +37,8 @@ import { refuseIfLocked } from './_lib/marketplace-gate.js'
 import { resolveStoreAccess } from './_lib/verify-store-access.js'
 import { readiness, supplierStatus, reapplyAllowedAt, listingAvailability } from '../utils/marketplace.js'
 import { cleanTerms, sameTerms, FIXED_CLAUSE } from '../utils/supplierTerms.js'
+import { hasAcceptedAgreement, currentAgreementVersion, AGREEMENT_FIELD } from '../utils/marketplaceAgreements.js'
+import { supplierLimits } from '../utils/supplierLimits.js'
 
 const termsVersionOf = (store) => (Number.isInteger(store?.supplierTermsVersion) ? store.supplierTermsVersion : 0)
 
@@ -73,6 +75,7 @@ function requirements(store, videoUrl) {
   const items = readiness(store, 'supply', { video: !!videoUrl })
   // Answered on this screen, like the video, so it has no `tab`.
   items.push({ key: 'terms', label: 'Your supplier terms', done: termsVersionOf(store) > 0 })
+  items.push({ key: 'agreement', label: 'Accept the Marketplace Supplier Agreement', done: hasAcceptedAgreement(store, 'supplier') })
   return {
     items: items.map(({ key, label, done, tab }) => ({ key, label, done: !!done, tab: tab || null })),
     ok: items.every((i) => i.done),
@@ -110,12 +113,24 @@ function statusPayload(storeId, store, extra = {}) {
     // A rejected vendor may fix things and apply again, but not in a loop.
     canReapplyAt: reapplyAt ? reapplyAt.toISOString() : null,
     termsVersion: termsVersionOf(store),
+    agreement: {
+      accepted: Number.isInteger(store[AGREEMENT_FIELD.supplier]) ? store[AGREEMENT_FIELD.supplier] : 0,
+      current: currentAgreementVersion('supplier'),
+      ok: hasAcceptedAgreement(store, 'supplier'),
+    },
+    limits: (() => {
+      const l = supplierLimits(store)
+      // Infinity does not survive JSON; a corrupt counter is shown as "full".
+      return { ...l, open: Number.isFinite(l.open) ? l.open : null }
+    })(),
     // Why an approved supplier's listings cannot sell right now, if they
     // cannot: 'plan' drives the "upgrade to regain access" banner. Probed with
     // a stand-in product that is otherwise sellable, so only the account-level
     // reasons can come back.
     sellBlockedBy: status === 'approved'
-      ? listingAvailability({ marketplaceListed: true, marketplaceStatus: 'live', stock: 1 }, store).reason
+      // wholesalePrice 0 so the per-listing price cap never answers for the
+      // whole account (a missing price is read as over the cap, fail closed).
+      ? listingAvailability({ marketplaceListed: true, marketplaceStatus: 'live', stock: 1, wholesalePrice: 0 }, store).reason
       : null,
     ...extra,
   }
@@ -169,6 +184,50 @@ export default async function handler(req, res) {
           fixedClause: FIXED_CLAUSE,
         }),
       )
+    }
+
+    // Clickwrap for the Marketplace Supplier Agreement. The record is the
+    // evidence (Evidence Act 2011 ss.84 and 93; Cybercrimes Act 2015 s.17), so
+    // it is written once per store and version and never edited, and it holds
+    // what a court would ask: which text, when, which account, from where, and
+    // that the bold clauses (FCCPA s.128) were separately acknowledged.
+    if (action === 'accept-agreement' && req.method === 'POST') {
+      if (!memoryRateLimit('agreement-accept', storeId, 20, 3600000)) return tooManyRequests(res)
+      let body
+      try { body = parseJsonBody(req) || {} } catch { return res.status(400).json({ error: 'Invalid JSON body' }) }
+      const current = currentAgreementVersion('supplier')
+      // The browser must say which version it showed. Accepting "whatever is
+      // current" would let a stale tab agree to text the person never saw.
+      if (Number(body.version) !== current) {
+        return res.status(409).json({
+          error: 'agreement_changed',
+          message: 'The agreement has been updated since this page loaded. Please read the new version.',
+          current,
+        })
+      }
+      if (body.readSummary !== true || body.acceptBoldClauses !== true) {
+        return res.status(400).json({ error: 'not_acknowledged', message: 'Please tick both boxes to accept.' })
+      }
+      const recordRef = db.collection('marketplaceAgreements').doc(`${storeId}_supplier_v${current}`)
+      const now = new Date()
+      await db.runTransaction(async (tx) => {
+        const existing = await tx.get(recordRef)
+        if (!existing.exists) {
+          tx.set(recordRef, {
+            storeId,
+            kind: 'supplier',
+            version: current,
+            acceptedAt: now,
+            uid: decoded.uid,
+            ip: String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || null,
+            userAgent: String(req.headers['user-agent'] || '').slice(0, 300),
+            readSummary: true,
+            acknowledgedBoldClauses: true,
+          })
+        }
+        tx.set(db.collection('stores').doc(storeId), { [AGREEMENT_FIELD.supplier]: current }, { merge: true })
+      })
+      return res.status(200).json({ success: true, agreement: { accepted: current, current, ok: true } })
     }
 
     if (action === 'save-terms' && req.method === 'POST') {

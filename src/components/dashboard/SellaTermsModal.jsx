@@ -123,8 +123,11 @@ export default function SellaTermsModal({ open, onClose, initialTab = "terms", a
               <P>
                 {assistantName} uses a monthly allowance of credits, charged by how much work each request takes. A quick
                 question uses little, and reading large files or Deep mode uses more. Unused credits do not carry over to
-                the next month. Do not use {assistantName} to generate unlawful content, to impersonate others, or to attempt
-                to extract data belonging to other stores.
+                the next month. Premium store owners can buy extra credits with Paystack. Prices include 7.5% VAT and the
+                Paystack processing fee, which is paid by you. <B>Bought credits are valid for 12 months from the date of
+                purchase, are used only after your monthly credits run out, and are non-refundable</B>, including when they
+                expire unused or your plan ends. Do not use {assistantName} to generate unlawful content, to impersonate
+                others, or to attempt to extract data belonging to other stores.
               </P>
             </>
           ) : (

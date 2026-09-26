@@ -69,6 +69,20 @@ export default function SupplierApplications({ authHeaders }) {
     return () => clearTimeout(t)
   }, [load])
 
+  // Lift (or restore) the new-supplier limits for one store.
+  const setLimits = async (storeId, lifted) => {
+    setBusyId(storeId)
+    setError('')
+    try {
+      await callAdmin('set-limits', authHeaders, { method: 'POST', body: { storeId, lifted } })
+      await load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const decide = async (storeId, decision, why = '') => {
     setBusyId(storeId)
     setError('')
@@ -177,7 +191,37 @@ export default function SupplierApplications({ authHeaders }) {
                     {CHECK_LABELS[key] || key}
                   </span>
                 ))}
+                <span
+                  className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                    r.agreementVersion === r.agreementCurrent ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                  }`}
+                  title="Marketplace Supplier Agreement version accepted"
+                >
+                  {r.agreementVersion ? `Agreement v${r.agreementVersion}` : 'Agreement not accepted'}
+                </span>
               </div>
+
+              {r.limits && (r.status === 'approved' || r.status === 'suspended') && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-2.5 text-xs text-gray-600">
+                  <span>
+                    {r.limits.lifted
+                      ? 'New-supplier limits lifted by an admin.'
+                      : r.limits.limited
+                        ? `New-supplier limits apply: ${r.limits.delivered} of 10 delivered orders.`
+                        : `Graduated: ${r.limits.delivered} delivered orders.`}
+                    {r.limits.open !== null ? ` ${r.limits.open} waiting to ship.` : ''}
+                    {r.limits.corrupt ? ' Counters look wrong, so they are read as the strictest case.' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={busyId === r.storeId}
+                    onClick={() => setLimits(r.storeId, !r.limits.lifted)}
+                    className="ml-auto rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {r.limits.lifted ? 'Restore limits' : 'Lift limits'}
+                  </button>
+                </div>
+              )}
 
               {r.notes && <p className="mt-2.5 rounded-lg bg-gray-50 p-2.5 text-xs text-gray-600">{r.notes}</p>}
 
