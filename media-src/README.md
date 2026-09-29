@@ -53,3 +53,12 @@ GitHub). Only the small compressed copies are.
 | `business-hero` | Business Page tab, top banner, right side | landscape | A phone showing a store, with leaves. |
 | `business-brand-script` | Business Page tab, "Your brand matters." handwriting in the side card | landscape | Dark green handwriting on a light background. |
 | `business-brand-leaves` | Business Page tab, leaves along the right edge of the "Your brand matters" card | portrait | Green leaves, tall and narrow. |
+| `referral-hero` | Referral tab, top banner, right side | landscape | A megaphone with people cards and "Bring more businesses on board" handwriting. |
+| `referral-wallet` | Referral tab, "Withdrawal details" card | landscape | A green wallet with naira notes. |
+| `referral-script` | Referral tab, "It is easy, fast and rewarding!" handwriting on the bottom banner | landscape | Green handwriting with a curly arrow. |
+| `support-hero` | Support tab, top banner, right side | portrait | A laptop with a chat bubble and "Real people. Real support." handwriting. |
+| `support-script` | Support tab, "Your success matters to us" handwriting at the bottom | landscape | Green handwriting with a small heart. |
+| `explore-hero` | Explore Stores page, top banner, right side | landscape | A phone showing Sellapage stores, with plants and a "Shop Local, Grow Together" card. |
+| `auth-hero` | Sign in and Create Store pages, beside the form on desktop, behind it on phones | landscape | A phone showing a store, with Secure Checkout, Fast Delivery, Analytics and Happy Customers cards around it. |
+| `auth-otp-art` | Code screen (SMS and email codes), left side | landscape | A phone with a Sellapage code notification and a green envelope bubble. |
+| `auth-script` | Code screen, "Almost there!" handwriting under the list | landscape | Green handwriting with a small heart. |

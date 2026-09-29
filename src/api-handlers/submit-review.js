@@ -1,6 +1,6 @@
 //src/api-handlers/submit-review.js/
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { escapeHtml } from './_lib/send-email.js'
 import { sendStoreEmail } from './_lib/store-emails.js'
 import { sendPush } from './_lib/send-push.js'
@@ -103,6 +103,19 @@ export default async function handler(req, res) {
     const avg = reviewCount > 0 ? Number((sum / reviewCount).toFixed(1)) : 0
 
     await parentRef.update({ avgRating: avg, reviewCount })
+
+    // Store-level rating for Explore Stores: a running sum and count, so the
+    // average is one division at read time and never a scan of every review.
+    // Best-effort: a failure here must not lose the customer's review.
+    // scripts/backfill-store-ratings.js set these for reviews made before this.
+    try {
+      await db.collection('stores').doc(storeId).update({
+        ratingSum: FieldValue.increment(numericRating),
+        ratingCount: FieldValue.increment(1),
+      })
+    } catch (err) {
+      console.error('[submit-review] store rating rollup failed', err)
+    }
 
     // Mark order token as used
     await orderDoc.ref.update({ reviewTokenUsed: true, reviewSubmitted: true })

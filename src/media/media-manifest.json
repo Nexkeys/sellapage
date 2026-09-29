@@ -1,4 +1,25 @@
 {
+  "auth-hero": {
+    "type": "image",
+    "src": "/media/auth-hero/3268094f93-lg.webp",
+    "srcSmall": "/media/auth-hero/3268094f93-sm.webp",
+    "width": 520,
+    "height": 382
+  },
+  "auth-otp-art": {
+    "type": "image",
+    "src": "/media/auth-otp-art/663406fef5-lg.webp",
+    "srcSmall": "/media/auth-otp-art/663406fef5-sm.webp",
+    "width": 430,
+    "height": 365
+  },
+  "auth-script": {
+    "type": "image",
+    "src": "/media/auth-script/e6e3c16df8-lg.webp",
+    "srcSmall": "/media/auth-script/e6e3c16df8-sm.webp",
+    "width": 225,
+    "height": 100
+  },
   "billing-banner-bag": {
     "type": "image",
     "src": "/media/billing-banner-bag/56e44dedc5-lg.webp",
@@ -54,6 +75,13 @@
     "srcSmall": "/media/dashboard-howto/3edffb342e-sm.webp",
     "width": 188,
     "height": 200
+  },
+  "explore-hero": {
+    "type": "image",
+    "src": "/media/explore-hero/89524f47fe-lg.webp",
+    "srcSmall": "/media/explore-hero/89524f47fe-sm.webp",
+    "width": 980,
+    "height": 730
   },
   "feature-abandoned": {
     "type": "image",
@@ -187,5 +215,40 @@
     "srcSmall": "/media/products-marketing-phone/2f05d97913-sm.webp",
     "width": 192,
     "height": 252
+  },
+  "referral-hero": {
+    "type": "image",
+    "src": "/media/referral-hero/7e35be2058-lg.webp",
+    "srcSmall": "/media/referral-hero/7e35be2058-sm.webp",
+    "width": 744,
+    "height": 408
+  },
+  "referral-script": {
+    "type": "image",
+    "src": "/media/referral-script/6b77edf720-lg.webp",
+    "srcSmall": "/media/referral-script/6b77edf720-sm.webp",
+    "width": 280,
+    "height": 150
+  },
+  "referral-wallet": {
+    "type": "image",
+    "src": "/media/referral-wallet/bbdd80213b-lg.webp",
+    "srcSmall": "/media/referral-wallet/bbdd80213b-sm.webp",
+    "width": 280,
+    "height": 184
+  },
+  "support-hero": {
+    "type": "image",
+    "src": "/media/support-hero/5b8869025d-lg.webp",
+    "srcSmall": "/media/support-hero/5b8869025d-sm.webp",
+    "width": 550,
+    "height": 556
+  },
+  "support-script": {
+    "type": "image",
+    "src": "/media/support-script/3f260894d5-lg.webp",
+    "srcSmall": "/media/support-script/3f260894d5-sm.webp",
+    "width": 260,
+    "height": 140
   }
 }

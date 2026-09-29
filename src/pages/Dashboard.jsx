@@ -23,23 +23,24 @@ import {
   toggleServiceActive,
   deleteAllStoreServices,
 } from "../firebase/services";
-import { logoutSeller, updateStore, deleteAuthUser } from "../firebase/auth";
+import { logoutSeller, updateStore, deleteAuthUser, auth } from "../firebase/auth";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { db } from "../firebase/config";
 import { collection, query, where, orderBy, writeBatch, doc, limit } from 'firebase/firestore';
 import { addDoc, deleteDoc, getDoc, getDocs, onSnapshot, setDoc, updateDoc } from '../firebase/metered';
 import { initFCM, requestFCMPermission } from "../firebase/messaging";
-import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor } from "../utils/staffDataFetch";
+import { fetchStoreCollectionAsStaff, fetchStoreDocAsStaff, isActingAsStaffFor, writeStoreDocAsStaff } from "../utils/staffDataFetch";
 import { countSales } from "../utils/sales";
 import { normaliseGroups } from "../utils/productOptions";
 import OtpVerifyModal from "../components/OtpVerifyModal";
-import { Bell, Wallet, Sparkles, Check, X as XIcon } from "lucide-react";
+import { Bell, Wallet, Sparkles, X as XIcon } from "lucide-react";
 import { SkeletonDashboard } from "../components/Skeleton";
 
 
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import OverviewTab from "../components/dashboard/Overview";
 import Celebration from "../components/dashboard/ui/Celebration";
+import SetupGuide from "../components/dashboard/SetupGuide";
 import { PaymentSuccessModal, PaymentProblemModal, RetentionModal } from "../components/dashboard/billing/PlanMoments";
 import { clearOverviewCache } from "../utils/overviewData";
 import ProductsTab from "../components/dashboard/Products";
@@ -1079,6 +1080,32 @@ export default function Dashboard() {
     }));
   };
 
+  // Categories tab: move listings into a category (assign, rename, merge).
+  // Writes ONLY the category field. updateProduct/updateService are not used
+  // here on purpose: they rebuild imageUrls from what they are given, so a
+  // category-only call through them would wipe the listing's photos.
+  // One batched write for the owner; staff go through the Admin SDK proxy.
+  const handleSetCategory = async (kind, ids, category) => {
+    if (!store?.id || !ids?.length) return;
+    const col = kind === "services" ? "services" : "products";
+    const name = String(category || "").trim().slice(0, 60);
+    const now = new Date();
+    if (isActingAsStaffFor(store.id)) {
+      for (const id of ids) {
+        await writeStoreDocAsStaff({ type: col, storeId: store.id, op: "update", docId: id, data: { category: name, updatedAt: now.toISOString() } });
+      }
+    } else {
+      for (let i = 0; i < ids.length; i += 450) {
+        const batch = writeBatch(db);
+        ids.slice(i, i + 450).forEach((id) => batch.update(doc(db, "stores", store.id, col, id), { category: name, updatedAt: now }));
+        await batch.commit();
+      }
+    }
+    const patch = (list) => list.map((x) => (ids.includes(x.id) ? { ...x, category: name } : x));
+    if (col === "services") setServices(patch);
+    else setProducts(patch);
+  };
+
   const handleSaveCustomCategory = async (categoryName) => {
     try {
       const id = await saveCustomCategory(store.id, categoryName);
@@ -1396,9 +1423,28 @@ export default function Dashboard() {
     setSettingsError("");
     setSettingsSuccess("");
     try {
+      // A new store link goes through the server, which refuses a name another
+      // store uses (or still redirects from) and keeps the old link redirecting
+      // here. It used to be written straight to the store with no check.
+      const nextSlug = formData.storeName.trim().toLowerCase();
+      if (nextSlug && nextSlug !== (store.storeName || "")) {
+        const token = await auth.currentUser.getIdToken();
+        const r = await fetch(`/api/store-seo?action=change-slug&storeId=${encodeURIComponent(store.id)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ storeId: store.id, storeName: nextSlug }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.success) {
+          setSettingsError(d.message || "That store link could not be saved. Try another one.");
+          return;
+        }
+        setStore((prev) => ({ ...prev, storeName: d.storeName || nextSlug, previousSlugs: d.previousSlugs || prev.previousSlugs }));
+      }
       await updateStore(store.id, {
         businessName: formData.businessName.trim(),
-        storeName: formData.storeName.trim(),
+        ownerName: String(formData.ownerName || "").trim().slice(0, 80),
+        businessCategory: String(formData.businessCategory || "").trim().slice(0, 60),
         whatsappNumber: formData.whatsappNumber.trim(),
         showWhatsApp: formData.showWhatsApp,
         description: formData.description.trim(),
@@ -1866,77 +1912,16 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-              {showChecklist && (() => {
-                const vt = store?.vendorType || "products";
-                const listings = (vt === "services" ? 0 : productCount) + (vt === "products" ? 0 : serviceCount);
-                const steps = [
-                  {
-                    n: 1,
-                    done: listings > 0,
-                    title: vt === "services" ? "Add your first service" : "Add your first product",
-                    body: "A name, a price and a clear photo. That is all it takes.",
-                    go: () => setActiveTab(vt === "services" ? "services" : "products"),
-                  },
-                  {
-                    n: 2,
-                    done: !!store?.logoUrl,
-                    title: "Dress up your Business Page",
-                    body: "Add your logo and cover so buyers trust you on sight.",
-                    go: () => setActiveTab("online-store"),
-                  },
-                  {
-                    n: 3,
-                    done: false,
-                    title: "Start daily growth",
-                    body: "Share your link and work through today's growth tasks.",
-                    go: () => setActiveTab("marketing"),
-                  },
-                ];
-                const doneCount = steps.filter((st) => st.done).length;
-                return (
-                  <div className="rounded-2xl border border-dash-line bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-forest-600">Setup guide</p>
-                        <h2 className="mt-1 font-body text-base font-bold text-dash-ink sm:text-lg">
-                          Let&apos;s get your store selling
-                        </h2>
-                        <p className="mt-0.5 text-xs text-dash-muted">{doneCount} of {steps.length} done</p>
-                      </div>
-                      <button
-                        onClick={dismissChecklist}
-                        className="flex-shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold text-dash-muted transition hover:bg-gray-50 hover:text-dash-ink"
-                      >
-                        Hide
-                      </button>
-                    </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100">
-                      <div className="h-full rounded-full bg-forest-600 transition-all duration-500" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
-                    </div>
-                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                      {steps.map((st) => (
-                        <button
-                          key={st.n}
-                          onClick={st.go}
-                          className={`group flex items-start gap-3 rounded-xl border p-3.5 text-left transition ${
-                            st.done ? "border-forest-100 bg-forest-50/60" : "border-dash-line bg-white hover:border-forest-200 hover:bg-forest-50/40"
-                          }`}
-                        >
-                          <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                            st.done ? "bg-forest text-white" : "bg-gray-100 text-slate-500 group-hover:bg-forest-50 group-hover:text-forest"
-                          }`}>
-                            {st.done ? <Check size={14} strokeWidth={3} /> : st.n}
-                          </span>
-                          <span className="min-w-0">
-                            <span className={`block text-[13px] font-semibold ${st.done ? "text-forest" : "text-dash-ink"}`}>{st.title}</span>
-                            <span className="mt-0.5 block text-xs leading-relaxed text-dash-muted">{st.body}</span>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              {showChecklist && (
+                <SetupGuide
+                  store={store}
+                  vendorType={store?.vendorType || "products"}
+                  listings={((store?.vendorType || "products") === "services" ? 0 : productCount) + ((store?.vendorType || "products") === "products" ? 0 : serviceCount)}
+                  storeUrl={storeUrl}
+                  navigateTo={setActiveTab}
+                  onHide={dismissChecklist}
+                />
+              )}
             </div>
           )}
           <OverviewTab
@@ -2105,6 +2090,8 @@ export default function Dashboard() {
           logoUploading={logoUploading}
           logoError={logoError}
           onWhatsAppToggle={handleWhatsAppToggle}
+          onStoreSave={handleStoreSave}
+          storeUrl={storeUrl}
           navigateTo={setActiveTab}
         />
       )}
@@ -2133,6 +2120,7 @@ export default function Dashboard() {
           submitting={supportSubmitting}
           submitError={supportError}
           submitSuccess={supportSuccess}
+          navigateTo={setActiveTab}
         />
       )}
 
@@ -2222,6 +2210,8 @@ export default function Dashboard() {
           products={products}
           services={services}
           vendorType={store?.vendorType || "products"}
+          onSetCategory={handleSetCategory}
+          customCategories={customCategories}
         />
       )}
       {activeTab === "reviews" && (
@@ -2302,7 +2292,7 @@ export default function Dashboard() {
         />
       )}
       {activeTab === 'referral-program' && (
-        <ReferralTab user={user} store={store} />
+        <ReferralTab user={user} store={store} navigateTo={setActiveTab} />
       )}
       {activeTab === 'job-listings' && (
         <JobListingsTab store={store} />

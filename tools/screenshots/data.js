@@ -127,6 +127,11 @@ export const DATA = {
   'stores/demo/orders': orders,
   'stores/demo/bookings': [],
   'stores/demo/analyticsDaily': analyticsDaily,
+  supportMessages: [
+    { id: 't1', storeId: 'demo', category: 'billing', message: 'Upgraded to Growth but the analytics tab is still locked', status: 'resolved', createdAt: at(2, 9) },
+    { id: 't2', storeId: 'demo', category: 'technical', message: 'Image upload not working on my phone', status: 'in_progress', createdAt: at(0.3, 7) },
+    { id: 't3', storeId: 'demo', category: 'products', message: 'How do I add sizes to my shoes?', status: 'open', createdAt: at(0.1, 6) },
+  ],
   'stores/demo/subscriptions': Array.from({ length: 13 }).map((_, i) => ({
     id: `sub${i}`, plan: 'growth', billingPeriod: 'monthly', amount: 500000, currency: 'NGN', status: 'success',
     paystackRef: `T${(824019733 + i * 7919).toString(36)}`, paidAt: at(i * 30 + 3, 10, 24), planStartDate: at(i * 30 + 3), planEndDate: at(i * 30 - 27),
@@ -174,6 +179,32 @@ const loyalty = [
 
 const sum = (arr, k) => arr.reduce((n, x) => n + x[k], 0)
 
+// Explore Stores cards. Covers and logos are local design crops so the sandbox
+// never calls out; a few stores have no cover or no logo on purpose.
+const COVERS = ['home-showcase/2783c72c15', 'feature-reviews/c4860851f6', 'feature-delivery/83aa3784bf', 'products-hero/161fbd6385', 'business-hero/083e343c94', 'home-app-1/ff59fb211d', 'feature-customers/aab28790da']
+const exploreStores = [
+  ['Luxe Collections', 'Fashion & Clothing', 4.8, 128, 86, true],
+  ['Glow Beauty Hub', 'Beauty & Skincare', 4.9, 256, 120, true],
+  ['TechWorld NG', 'Gadgets & Phones', 4.7, 98, 64, false],
+  ['Home Essentials', 'Home & Living', 4.8, 145, 52, true],
+  ['Chop Life Kitchen', 'Food & Groceries', 4.6, 76, 31, false],
+  ['Kiddies Corner', 'Kids & Baby', 0, 0, 12, false],
+  ['Bouncy Wigs Lagos', 'Hair & Wigs', 4.9, 210, 140, true],
+  ['Fit Fam Gear', 'Sports & Fitness', 4.5, 22, 18, false],
+  ['Vintage Reads', 'Books & Stationery', 5, 9, 44, false],
+  ['Ride Right Autos', 'Vehicles', 4.2, 14, 7, false],
+  ['Precious Stones', 'Jewelry & Accessories', 4.7, 61, 39, true],
+  ['Fix It Pros', 'Services', 4.8, 33, 11, false],
+  ['Wine Cellar Abuja', 'Drinks & Wines', 4.4, 17, 25, false],
+  ['Cool Breeze Appliances', 'Appliances', 0, 0, 9, false],
+].map(([name, category, rating, reviews, listings, verified], i) => ({
+  id: `st${i}`, slug: name.toLowerCase().replace(/[^a-z]+/g, ''), name, category, rating, reviews, listings, verified,
+  vendorType: category === 'Services' ? 'services' : 'products',
+  cover: i % 5 === 4 ? '' : `/media/${COVERS[i % COVERS.length]}-lg.webp`,
+  logo: i % 6 === 5 ? '' : `/media/${COVERS[(i + 3) % COVERS.length]}-sm.webp`,
+  about: `${name} on Sellapage.`, createdAt: Date.now() - i * 86400000,
+}))
+
 export const API = {
   '/api/abandoned-checkout-vendor': {
     success: true, checkouts: abandoned, total: abandoned.length, page: 1, totalPages: 1,
@@ -193,4 +224,33 @@ export const API = {
     },
   },
   '/api/public-config': { storefrontGate: false, storefrontEmailGate: false },
+  '/api/referral-stats': {
+    success: true,
+    stats: { totalClicks: 42, totalSignups: 5, totalPaid: 2, referralAvailable: 150000, referralTotalEarned: 150000, referralWithdrawn: 0 },
+    recentReferrals: [
+      { id: 'rr1', referredUserName: 'Funmi Stores', referredUserEmail: 'funmi.ade@gmail.com', plan: 'pro', rewardAmount: 100000, createdAt: new Date(Date.now() - 2 * 864e5).toISOString() },
+      { id: 'rr2', referredUserName: "Peter's Essentials", referredUserEmail: 'peter@gmail.com', plan: 'growth', rewardAmount: 50000, createdAt: new Date(Date.now() - 6 * 864e5).toISOString() },
+    ],
+  },
+  '/api/referral-withdrawals': { success: true, withdrawals: [] },
+  '/api/get-banks': { success: true, banks: [{ name: 'Access Bank', code: '044' }, { name: 'GTBank', code: '058' }, { name: 'Opay', code: '999992' }] },
+  '/api/explore-stores': { success: true, stores: exploreStores },
+  // Signup checks: a link with "taken" in it is taken; a number ending 0000
+  // is already verified on another store.
+  '/api/signup-phone': (url) => {
+    const action = url.searchParams.get('action')
+    if (action === 'slug') {
+      const slug = url.searchParams.get('slug') || ''
+      return slug.includes('taken') && !/-ng$|store$|^shop-|-hq$/.test(slug)
+        ? { success: true, available: false, error: 'slug_taken', message: 'Another store already uses this name.' }
+        : { success: true, available: true }
+    }
+    if (action === 'check') {
+      return (url.searchParams.get('phone') || '').endsWith('0000')
+        ? { success: true, available: false, error: 'phone_taken', message: 'This number is already verified on another Sellapage store.' }
+        : { success: true, available: true }
+    }
+    if (action === 'send') return { success: true, token: 'demo', destinationMasked: '+234 80* *** 5678', resendAfterSeconds: 60 }
+    return { success: false, message: 'That code is not correct.', remainingAttempts: 2 }
+  },
 }

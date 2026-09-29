@@ -102,6 +102,23 @@ export const MEDIA_SLOTS = [
   { name: 'business-hero', where: 'Business Page tab, top banner, right side', shape: 'landscape', accepts: 'image', tip: 'A phone showing a store, with leaves.' },
   { name: 'business-brand-script', where: 'Business Page tab, "Your brand matters." handwriting in the side card', shape: 'landscape', accepts: 'image', tip: 'Dark green handwriting on a light background.' },
   { name: 'business-brand-leaves', where: 'Business Page tab, leaves along the right edge of the "Your brand matters" card', shape: 'portrait', accepts: 'image', tip: 'Green leaves, tall and narrow.' },
+
+  // ── Referral Program tab ──────────────────────────────────────────────
+  { name: 'referral-hero', where: 'Referral tab, top banner, right side', shape: 'landscape', accepts: 'image', tip: 'A megaphone with people cards and "Bring more businesses on board" handwriting.' },
+  { name: 'referral-wallet', where: 'Referral tab, "Withdrawal details" card', shape: 'landscape', accepts: 'image', tip: 'A green wallet with naira notes.' },
+  { name: 'referral-script', where: 'Referral tab, "It is easy, fast and rewarding!" handwriting on the bottom banner', shape: 'landscape', accepts: 'image', tip: 'Green handwriting with a curly arrow.' },
+
+  // ── Support tab ───────────────────────────────────────────────────────
+  { name: 'support-hero', where: 'Support tab, top banner, right side', shape: 'portrait', accepts: 'image', tip: 'A laptop with a chat bubble and "Real people. Real support." handwriting.' },
+  { name: 'support-script', where: 'Support tab, "Your success matters to us" handwriting at the bottom', shape: 'landscape', accepts: 'image', tip: 'Green handwriting with a small heart.' },
+
+  // ── Explore Stores page ───────────────────────────────────────────────
+  { name: 'explore-hero', where: 'Explore Stores page, top banner, right side', shape: 'landscape', accepts: 'image', tip: 'A phone showing Sellapage stores, with plants and a "Shop Local, Grow Together" card.' },
+
+  // ── Sign in / Create store ────────────────────────────────────────────
+  { name: 'auth-hero', where: 'Sign in and Create Store pages, beside the form on desktop, behind it on phones', shape: 'landscape', accepts: 'image', tip: 'A phone showing a store, with Secure Checkout, Fast Delivery, Analytics and Happy Customers cards around it.' },
+  { name: 'auth-otp-art', where: 'Code screen (SMS and email codes), left side', shape: 'landscape', accepts: 'image', tip: 'A phone with a Sellapage code notification and a green envelope bubble.' },
+  { name: 'auth-script', where: 'Code screen, "Almost there!" handwriting under the list', shape: 'landscape', accepts: 'image', tip: 'Green handwriting with a small heart.' },
 ]
 
 export const SLOT_NAMES = new Set(MEDIA_SLOTS.map((s) => s.name))

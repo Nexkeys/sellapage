@@ -28,13 +28,21 @@ import BillingTab from '../../src/components/dashboard/BillingTab.jsx'
 import { PaymentSuccessModal, PaymentProblemModal, RetentionModal } from '../../src/components/dashboard/billing/PlanMoments.jsx'
 import BrandLoader from '../../src/components/BrandLoader.jsx'
 import OnlineStoreTab from '../../src/components/dashboard/OnlineStoreTab.jsx'
+import CalculatorFAB from '../../src/components/dashboard/CalculatorFAB.jsx'
+import CategoriesTab from '../../src/components/dashboard/CategoriesTab.jsx'
+import ReferralTab from '../../src/components/dashboard/ReferralTab.jsx'
+import SupportTab from '../../src/components/dashboard/SupportTab.jsx'
+import SettingsTab from '../../src/components/dashboard/Settings.jsx'
 
 // Every /api call is answered from data.js. Anything unknown gets an empty
 // success rather than a network request: the sandbox never goes online.
-window.fetch = async (input) => {
+window.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url
-  const pathname = new URL(url, window.location.origin).pathname
-  const body = API[pathname] ?? { success: true }
+  const parsed = new URL(url, window.location.origin)
+  const entry = API[parsed.pathname]
+  // An entry may be a function of the URL and body, for routes that answer
+  // differently per ?action= (signup-phone).
+  const body = typeof entry === 'function' ? entry(parsed, JSON.parse(init?.body || '{}')) : entry ?? { success: true }
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
@@ -221,12 +229,135 @@ function BusinessPreview() {
   )
 }
 
+// ?preview=calc[&act via preview.mjs]: the calculator open on its own.
+function CalcPreview() {
+  try {
+    localStorage.setItem('sellapage_calc_history', JSON.stringify([
+      { id: 5, expr: '2^10', result: '1,024', value: 1024 },
+      { id: 4, expr: 'sin(90)+cos(0)', result: '2', value: 2 },
+      { id: 3, expr: '(45+55)×1.08', result: '108', value: 108 },
+      { id: 2, expr: '850÷5', result: '170', value: 170 },
+      { id: 1, expr: '124×12', result: '1,488', value: 1488 },
+    ]))
+  } catch { /* fine */ }
+  return <main style={{ minHeight: '100vh', background: '#e9eaec' }}><CalculatorFAB open onClose={noop} /></main>
+}
+
+// ?preview=categories: the Categories tab with a few listings missing a category.
+function CategoriesPreview() {
+  const [items, setItems] = React.useState(() => products.map((p, i) => ({ ...p, category: i === 1 || i === 4 ? '' : p.category === 'Serums' || p.category === 'Toners' ? 'Face Care' : p.category })))
+  const [svc, setSvc] = React.useState([
+    { id: 's1', name: 'Bridal Makeup', category: 'Makeup' }, { id: 's2', name: 'Gele Tying', category: 'Makeup' },
+    { id: 's3', name: 'Skincare Consultation', category: 'Consultations' }, { id: 's4', name: 'Facial Treatment', category: '' },
+  ])
+  const [tab, setTab] = React.useState('categories')
+  const [open, setOpen] = React.useState(false)
+  const onSetCategory = async (kind, ids, category) => {
+    const fix = (l) => l.map((x) => (ids.includes(x.id) ? { ...x, category } : x))
+    if (kind === 'services') setSvc(fix); else setItems(fix)
+  }
+  return (
+    <DashboardLayout store={{ ...STORE, plan: 'pro', hasProFeatures: true, hasGrowthFeatures: true }} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen} storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro isPro vendorType="both">
+      <CategoriesTab navigateTo={setTab} products={items} services={svc} vendorType="both" onSetCategory={onSetCategory} customCategories={[]} />
+    </DashboardLayout>
+  )
+}
+
+// ?preview=referral[&code=1]
+function ReferralPreview() {
+  const params = new URLSearchParams(window.location.search)
+  const store = { ...STORE, plan: 'pro', hasProFeatures: true, hasGrowthFeatures: true, referralCode: params.get('code') === '1' ? 'SP-WQU4H6' : null, referralBankVerified: params.get('code') === '1', referralBankName: 'GTBank', referralBankAccountMasked: '******4521', referralBankAccountName: 'ADA OKAFOR' }
+  const [tab, setTab] = React.useState('referral-program')
+  const [open, setOpen] = React.useState(false)
+  return (
+    <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen} storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro isPro vendorType="products">
+      <ReferralTab user={user} store={store} navigateTo={setTab} />
+    </DashboardLayout>
+  )
+}
+
+// ?preview=support
+function SupportPreview() {
+  const store = { ...STORE, plan: 'premium', hasProFeatures: true, hasGrowthFeatures: true, hasPremiumFeatures: true }
+  const [tab, setTab] = React.useState('support')
+  const [open, setOpen] = React.useState(false)
+  const [ok, setOk] = React.useState('')
+  return (
+    <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen} storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro isPro vendorType="products">
+      <SupportTab store={store} plan="premium" isGrowthOrPro onSubmit={() => { setOk(''); setTimeout(() => setOk('Message sent!'), 300) }} submitting={false} submitError="" submitSuccess={ok} navigateTo={setTab} />
+    </DashboardLayout>
+  )
+}
+
+// ?preview=settings
+function SettingsPreview() {
+  const [store, setStore] = React.useState({ ...STORE, plan: 'pro', hasProFeatures: true, hasGrowthFeatures: true, email: 'ada@adaskincare.ng', description: 'Clean, effective skincare made for Nigerian weather. Serums, cleansers and SPF that work.', phoneVerified: true })
+  const [tab, setTab] = React.useState('settings')
+  const [open, setOpen] = React.useState(false)
+  return (
+    <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen} storeUrl="https://sellapage.com/adaskincare" isGrowthOrPro isPro vendorType="products">
+      <SettingsTab store={store} plan="pro" planStatus="active" isGrowthOrPro isPro isPremium={false} onSave={(f) => setStore((s) => ({ ...s, ...f }))} saveLoading={false} saveError="" saveSuccess=""
+        onDeleteAccount={noop} deleteLoading={false} deleteError="" onClearDeleteError={noop} onLogoUpload={noop} logoUploading={false} logoError="" onWhatsAppToggle={noop}
+        onStoreSave={async (f) => setStore((s) => ({ ...s, ...f }))} storeUrl="https://sellapage.com/adaskincare" navigateTo={setTab} />
+    </DashboardLayout>
+  )
+}
+
+// ?preview=explore: the public Explore Stores page.
+const LiveStoresPage = React.lazy(() => import('../../src/pages/LiveStoresPage.jsx'))
+const HelmetProvider = React.lazy(() => import('react-helmet-async').then((m) => ({ default: m.HelmetProvider })))
+const AuthProvider = React.lazy(() => import('../../src/hooks/useAuth.jsx').then((m) => ({ default: m.AuthProvider })))
+function ExplorePreview() {
+  return <React.Suspense fallback={null}><HelmetProvider><AuthProvider><LiveStoresPage /></AuthProvider></HelmetProvider></React.Suspense>
+}
+
+// ?preview=auth&path=/login|/register: the sign-in / create-store page.
+// ?preview=otp[&purpose=login]: the code screen. ?preview=welcome[&variant=back]
+const LoginPage = React.lazy(() => import('../../src/pages/Login.jsx'))
+const OtpScreen = React.lazy(() => import('../../src/components/auth/OtpScreen.jsx'))
+const WelcomeCelebration = React.lazy(() => import('../../src/components/auth/WelcomeCelebration.jsx'))
+function AuthPreview() {
+  return <React.Suspense fallback={null}><LoginPage /></React.Suspense>
+}
+function OtpPreview() {
+  const params = new URLSearchParams(window.location.search)
+  const purpose = params.get('purpose') || 'signup'
+  const verify = async (code) => (code === '123456'
+    ? { ok: true, data: {} }
+    : { ok: false, data: { message: 'That code is not correct.', remainingAttempts: 2 } })
+  return (
+    <main><React.Suspense fallback={null}>
+      <OtpScreen purpose={purpose} title={purpose === 'login' ? "Confirm it's you" : 'Verify your phone'}
+        description={purpose === 'login' ? "We don't recognise this device, so we've emailed you a code." : 'Your store, Chioma Fabrics, is created the moment the code is right.'}
+        initialMasked={purpose === 'login' ? 'f***@gmail.com' : '+234 80* *** 5678'} initialCooldown={58}
+        sendRequest={async () => ({ ok: true, data: { destinationMasked: '+234 80* *** 5678', resendAfterSeconds: 60 } })}
+        verifyRequest={verify} backLabel={purpose === 'login' ? 'Back to sign in' : 'Back to sign up'}
+        stepLabel={purpose === 'login' ? 'One quick check' : 'Step 3 of 3'} onBack={noop} onVerified={noop} />
+    </React.Suspense></main>
+  )
+}
+function WelcomePreview() {
+  const variant = new URLSearchParams(window.location.search).get('variant') || 'new'
+  return <main><React.Suspense fallback={null}><WelcomeCelebration variant={variant} storeName="Chioma Fabrics" storeLink="sellapage.com.ng/chioma-fabrics" onContinue={noop} /></React.Suspense></main>
+}
+
+// ?preview=guide: the Overview setup guide, part way done.
+const SetupGuide = React.lazy(() => import('../../src/components/dashboard/SetupGuide.jsx'))
+function GuidePreview() {
+  try { localStorage.setItem('sellapage_guide_seen_demo', 'listing') } catch { /* sandbox */ }
+  return (
+    <main style={{ maxWidth: 1320, margin: '0 auto', padding: 16 }}><React.Suspense fallback={null}>
+      <SetupGuide store={{ ...STORE, id: 'demo', logoUrl: 'x', description: 'Clean, effective skincare made for Nigerian weather.' }} vendorType="products" listings={4} storeUrl="https://sellapage.com.ng/adaskincare" navigateTo={noop} onHide={noop} />
+    </React.Suspense></main>
+  )
+}
+
 const shot = new URLSearchParams(window.location.search).get('shot')
 const previewKind = new URLSearchParams(window.location.search).get('preview')
-const Shot = previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
+const Shot = previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <MemoryRouter>
+  <MemoryRouter initialEntries={[new URLSearchParams(window.location.search).get('path') || '/']}>
     {/* The dashboard's own content background, so each shot looks like it
         was taken inside the product rather than cut out of it. */}
     <div style={{ background: '#f9fafb', minHeight: '100vh', paddingTop: 8 }} data-shot-ready="1">

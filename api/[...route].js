@@ -131,6 +131,10 @@ export default async function handler(req, res) {
         const { default: handlerFunc } = await import("../src/api-handlers/billing-initialize.js");
         return await handlerFunc(req, res);
       }
+      case "explore-stores": {
+        const { default: handlerFunc } = await import("../src/api-handlers/explore-stores.js");
+        return await handlerFunc(req, res);
+      }
       case "billing-verify": {
         const { default: handlerFunc } = await import("../src/api-handlers/billing-verify.js");
         return await handlerFunc(req, res);

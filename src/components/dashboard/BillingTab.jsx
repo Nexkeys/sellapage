@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   CalendarClock, Crown, TrendingUp, Flame, Check, ArrowRight, CreditCard, CalendarDays, RefreshCw,
   Receipt, ShieldCheck, Lock, Cloud, MessageCircle, Mail, Timer, Smile, Users, ChevronLeft, ChevronRight,
-  Loader2, X, Printer, AlertTriangle, Sparkles, TrendingDown, LayoutGrid, History,
+  Loader2, X, Printer, AlertTriangle, Sparkles, TrendingDown, LayoutGrid, History, ChevronDown,
 } from 'lucide-react'
 import { collection, getCountFromServer, limit, orderBy, query, startAfter } from 'firebase/firestore'
 import { getDocs } from '../../firebase/metered'
@@ -192,6 +192,8 @@ export default function BillingTab({
   const [selectedPeriod, setSelectedPeriod] = useState(store?.billingPeriod || 'monthly')
   const [confirm, setConfirm] = useState(null) // { planId, period }
   const [receipt, setReceipt] = useState(null)
+  // Plan cards show 7 features; "+N more" opens the rest in place.
+  const [openFeatures, setOpenFeatures] = useState({})
   const plansRef = useRef(null)
 
   const isExpired = planStatus === 'expired'
@@ -519,10 +521,28 @@ export default function BillingTab({
                     </p>
                     {selectedPeriod !== 'monthly' && <p className="text-[11px] text-dash-muted">{formatPrice(getMonthlyEquivalent(planId, selectedPeriod))}/mo equivalent</p>}
                     <ul className="mt-4 flex-1 space-y-1.5">
-                      {PLAN_FEATURES[planId].slice(0, 7).map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-[12px] leading-snug text-slate-600"><Check size={13} className="mt-0.5 flex-shrink-0 text-forest-600" />{f}</li>
+                      {PLAN_FEATURES[planId].slice(0, openFeatures[planId] ? undefined : 7).map((f, i) => (
+                        <li
+                          key={f}
+                          className={`flex items-start gap-2 text-[12px] leading-snug text-slate-600 ${i >= 7 ? 'animate-in fade-in slide-in-from-top-1 duration-200' : ''}`}
+                          style={i >= 7 ? { animationDelay: `${(i - 7) * 30}ms`, animationFillMode: 'both' } : undefined}
+                        >
+                          <Check size={13} className="mt-0.5 flex-shrink-0 text-forest-600" />{f}
+                        </li>
                       ))}
-                      {PLAN_FEATURES[planId].length > 7 && <li className="pl-5 text-[11px] text-dash-muted">+ {PLAN_FEATURES[planId].length - 7} more</li>}
+                      {PLAN_FEATURES[planId].length > 7 && (
+                        <li>
+                          <button
+                            type="button"
+                            onClick={() => setOpenFeatures((o) => ({ ...o, [planId]: !o[planId] }))}
+                            aria-expanded={!!openFeatures[planId]}
+                            className="ml-5 inline-flex items-center gap-1 rounded-full bg-forest-50 px-2.5 py-1 text-[11px] font-semibold text-forest-600 transition hover:bg-forest-100"
+                          >
+                            {openFeatures[planId] ? 'Show less' : `+ ${PLAN_FEATURES[planId].length - 7} more features`}
+                            <ChevronDown size={12} className={`transition-transform ${openFeatures[planId] ? 'rotate-180' : ''}`} />
+                          </button>
+                        </li>
+                      )}
                     </ul>
                     <button
                       type="button"

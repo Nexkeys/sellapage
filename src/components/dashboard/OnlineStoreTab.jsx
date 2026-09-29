@@ -17,7 +17,7 @@
 //   - the live preview for every plan, with a phone / desktop switch
 //   - theme cards drawn from each theme's own colours
 import {
-  Copy, Check, ExternalLink, Eye, Palette, Share2, MessageCircle, Lock, LayoutGrid, LayoutList, Rows3,
+  Copy, Check, ExternalLink, Eye, Palette, Share2, MessageCircle, LayoutGrid, LayoutList, Rows3,
   Loader2, UploadCloud, Download, QrCode, Image as ImageIcon, Sparkles, X, Store, Link2, Info, MoreHorizontal,
   Smartphone, Monitor, ShieldCheck, Heart, ArrowRight, Globe, Wand2, BadgeCheck, Megaphone, Settings as SettingsIcon,
   Crown, RotateCcw, FileImage, Phone, Mail, MapPin, Building2, CheckCircle2, Users,
@@ -478,7 +478,9 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
               ? <img src={heroBannerUrl} alt="Your store cover" className="h-full w-full object-cover" />
               : <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-forest-600/60"><ImageIcon size={22} /><span className="text-[11px]">No cover yet</span></div>}
             {coverUploading && <div className="absolute inset-0 flex items-center justify-center gap-2 bg-white/70 text-xs font-semibold text-forest"><Loader2 size={16} className="animate-spin" /> Uploading cover...</div>}
-            {isPro ? (
+            {/* Free on every plan since 2026-09-29: a cover is part of looking
+                like a real business, not a premium extra. */}
+            {(
               <div className="absolute bottom-2 left-2 flex gap-1.5">
                 <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-dash-ink shadow-sm transition hover:bg-white">
                   <ImageIcon size={13} /> {heroBannerUrl ? 'Change Cover' : 'Add Cover'}
@@ -488,11 +490,6 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
                   <button type="button" onClick={removeCover} className="rounded-lg bg-white/95 px-2 py-1.5 text-slate-500 shadow-sm hover:text-red-600" aria-label="Remove cover"><X size={13} /></button>
                 )}
               </div>
-            ) : (
-              <button type="button" onClick={() => navigateTo('billing')} className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/60 text-center backdrop-blur-[1px] transition hover:bg-white/50">
-                <Lock size={16} className="text-forest" />
-                <span className="px-3 text-[11px] font-semibold text-dash-ink">A cover photo is on Pro. Upgrade to add yours.</span>
-              </button>
             )}
           </div>
           {coverError
@@ -638,7 +635,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
         </button>
       </div>
       <UpgradeTeaser title="Want a whole new look?" cta="See Pro themes" onClick={() => navigateTo('billing')}>
-        Pro gives you {themes.length} ready-made store themes, your own colours for everything, a cover photo and custom footer text.
+        Pro gives you {themes.length} ready-made store themes, your own colours for everything and custom footer text.
       </UpgradeTeaser>
     </section>
   ) : (
@@ -648,7 +645,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
       onClick={() => navigateTo('billing')}
       peek={themes.slice(0, 4).map((t) => <div key={t.id} className="h-20 flex-1 overflow-hidden rounded-lg"><ThemeSwatch theme={t} /></div>)}
     >
-      Just upgrade your plan to customise your store, and I promise you, you won&apos;t regret it. Your own colours and layout on Growth; {themes.length} themes, a cover photo and full colour control on Pro.
+      Just upgrade your plan to customise your store, and I promise you, you won&apos;t regret it. Your own colours and layout on Growth; {themes.length} themes and full colour control on Pro.
     </UpgradeTeaser>
   )
 

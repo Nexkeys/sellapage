@@ -4,12 +4,14 @@
 // does not exist yet.
 //
 //   GET/POST ?action=check     { phone }                     is this number free?
+//   GET      ?action=slug&slug= is this store address free? (signup, Settings)
 //   POST     ?action=send      { phone, email, storeName, businessName, recaptchaToken }
 //                              -> { token, destinationMasked, resendAfterSeconds }
 //   POST     ?action=complete  { token, code, email, password, businessName,
 //                                whatsappNumber, storeName, description,
 //                                vendorType, referralCode, sessionId,
-//                                marketplaceInterest? { supply, dropship } }
+//                                marketplaceInterest? { supply, dropship },
+//                                ownerName?, businessCategory? }
 //                              -> { customToken, storeId, referrerId }
 //
 // NOTHING IS CREATED UNTIL THE CODE IS RIGHT. `send` only texts a code; the
@@ -38,6 +40,7 @@ import { checkPhone, takeSmsQuota, PHONE_TAKEN_MESSAGE } from './_lib/phone-clai
 import { maskNgPhone } from '../utils/phone.js'
 import { isReservedSlug } from '../utils/reservedSlugs.js'
 import { cleanInterest, vendorTypeForInterest } from '../utils/marketplace.js'
+import { NIGERIAN_MARKET_CATEGORIES } from '../utils/categories.js'
 
 const CHALLENGES = 'signupChallenges'
 const RESEND_COOLDOWN_MS = 60 * 1000
@@ -128,6 +131,25 @@ export default async function handler(req, res) {
       const result = await checkPhone(db, req.query?.phone ?? body.phone)
       if (!result.ok) return res.status(200).json({ success: true, available: false, error: result.error, message: result.message })
       return res.status(200).json({ success: true, available: true })
+    }
+
+    // -------------------------------------------------------------- slug
+    // "Is this store address free?" while the vendor types their business
+    // name at signup (and their link in Settings). Two indexed reads, a free
+    // in-memory limit, and it only answers yes or no.
+    if (action === 'slug') {
+      if (!memoryRateLimit('signup_slug_check', ip, 120, 10 * 60 * 1000)) return tooManyRequests(res)
+      const slug = clean(req.query?.slug ?? body.slug, 61).toLowerCase()
+      if (!SLUG_RE.test(slug)) {
+        return res.status(200).json({ success: true, available: false, error: 'invalid_slug', message: 'Use at least 3 characters: lowercase letters, numbers and hyphens.' })
+      }
+      if (isReservedSlug(slug)) {
+        return res.status(200).json({ success: true, available: false, error: 'reserved_slug', message: 'That name is reserved. Try adding your city or a word like "store".' })
+      }
+      const taken = await slugTaken(db, slug)
+      return res.status(200).json(taken
+        ? { success: true, available: false, error: 'slug_taken', message: 'Another store already uses this name.' }
+        : { success: true, available: true })
     }
 
     if (req.method !== 'POST') return fail(res, 405, 'method_not_allowed', 'Method not allowed.')
@@ -247,6 +269,11 @@ export default async function handler(req, res) {
       )
       const description = clean(body.description, 1000)
       const whatsappNumber = clean(body.whatsappNumber, 40)
+      // Both optional (the Android app does not send them). The category must
+      // be one of the store categories Explore Stores groups by, or it is dropped.
+      const ownerName = clean(body.ownerName, 80)
+      const categoryLabel = clean(body.businessCategory, 60)
+      const businessCategory = NIGERIAN_MARKET_CATEGORIES.some((c) => c.label === categoryLabel) ? categoryLabel : ''
 
       const phoneCheck = await checkPhone(db, whatsappNumber)
       if (!phoneCheck.ok && phoneCheck.error === 'invalid_phone') return fail(res, 400, 'invalid_phone', phoneCheck.message, { field: 'phone' })
@@ -348,6 +375,8 @@ export default async function handler(req, res) {
             storeName: id.storeName,
             description,
             vendorType,
+            ...(ownerName ? { ownerName } : {}),
+            ...(businessCategory ? { businessCategory } : {}),
             ...(marketplaceInterest.supply || marketplaceInterest.dropship ? { marketplaceInterest } : {}),
             referredBy,
             email: id.email,
