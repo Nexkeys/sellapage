@@ -252,6 +252,8 @@ service cloud.firestore {
         // submit-review.js and scripts/backfill-store-ratings.js; a vendor who
         // could set these would give themselves five stars.
         'ratingSum', 'ratingCount',
+        // Signup attribution ("How did you hear about us?"), set by the server.
+        'heardAbout',
         // Proof that the account's email was confirmed by an emailed OTP.
         // Written only by login-verify.js. The storefront email gate trusts
         // this, so a client that could set it would self-publish an unverified

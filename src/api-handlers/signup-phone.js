@@ -11,7 +11,8 @@
 //                                whatsappNumber, storeName, description,
 //                                vendorType, referralCode, sessionId,
 //                                marketplaceInterest? { supply, dropship },
-//                                ownerName?, businessCategory? }
+//                                ownerName?, businessCategory?,
+//                                heardAbout? { source, detail } }
 //                              -> { customToken, storeId, referrerId }
 //
 // NOTHING IS CREATED UNTIL THE CODE IS RIGHT. `send` only texts a code; the
@@ -41,6 +42,7 @@ import { maskNgPhone } from '../utils/phone.js'
 import { isReservedSlug } from '../utils/reservedSlugs.js'
 import { cleanInterest, vendorTypeForInterest } from '../utils/marketplace.js'
 import { NIGERIAN_MARKET_CATEGORIES } from '../utils/categories.js'
+import { cleanHeardAbout } from '../utils/heardAbout.js'
 
 const CHALLENGES = 'signupChallenges'
 const RESEND_COOLDOWN_MS = 60 * 1000
@@ -274,6 +276,8 @@ export default async function handler(req, res) {
       const ownerName = clean(body.ownerName, 80)
       const categoryLabel = clean(body.businessCategory, 60)
       const businessCategory = NIGERIAN_MARKET_CATEGORIES.some((c) => c.label === categoryLabel) ? categoryLabel : ''
+      // "How did you hear about us?" (optional; only our own ids are kept).
+      const heardAbout = cleanHeardAbout(body.heardAbout)
 
       const phoneCheck = await checkPhone(db, whatsappNumber)
       if (!phoneCheck.ok && phoneCheck.error === 'invalid_phone') return fail(res, 400, 'invalid_phone', phoneCheck.message, { field: 'phone' })
@@ -377,6 +381,7 @@ export default async function handler(req, res) {
             vendorType,
             ...(ownerName ? { ownerName } : {}),
             ...(businessCategory ? { businessCategory } : {}),
+            ...(heardAbout ? { heardAbout: { ...heardAbout, at: nowIso } } : {}),
             ...(marketplaceInterest.supply || marketplaceInterest.dropship ? { marketplaceInterest } : {}),
             referredBy,
             email: id.email,

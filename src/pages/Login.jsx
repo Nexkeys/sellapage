@@ -19,7 +19,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { useEffect, useRef, useState } from 'react'
 import {
   Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ShieldAlert, ArrowRight, ArrowLeft, Mail, Lock, UserRound, Store,
-  Gift, BadgeCheck, Package, Wrench, Layers, Smile, PenLine, Check, KeyRound, Tag, Hand, MailCheck, Info, RotateCcw,
+  Gift, BadgeCheck, Package, Wrench, Layers, Smile, PenLine, Check, KeyRound, Tag, Hand, MailCheck, Info, RotateCcw, Megaphone,
 } from 'lucide-react'
 import { loginSeller, loginWithCustomToken, resetPassword, logoutSeller, auth } from '../firebase/auth'
 import { registerSession, confirmLoginOtp, setOtpPendingHint, clearOtpPendingHint, consumeLoginNotice, getSessionId } from '../utils/sessionTracking'
@@ -28,7 +28,9 @@ import RecaptchaCheckbox from '../components/RecaptchaCheckbox'
 import { isReservedSlug } from '../utils/reservedSlugs'
 import { normaliseNgMobile } from '../utils/phone'
 import { NIGERIAN_MARKET_CATEGORIES } from '../utils/categories'
+import { HEARD_ABOUT_SOURCES, heardAboutSource } from '../utils/heardAbout'
 import AuthShell from '../components/auth/AuthShell'
+import { Field, IconInput, PRIMARY, ErrorBanner, PasswordMeter } from '../components/auth/AuthFields'
 import OtpScreen from '../components/auth/OtpScreen'
 import WelcomeCelebration from '../components/auth/WelcomeCelebration'
 import { slugify, isValidSlug, slugAlternatives, passwordStrength, readSignupDraft, saveSignupDraft, clearSignupDraft } from '../components/auth/authUtils'
@@ -58,6 +60,7 @@ const PHONE_TAKEN = "Sorry boss, this number's already been verified on a Sellap
 const EMPTY_FORM = {
   email: '', password: '', ownerName: '', businessName: '', storeName: '', description: '', businessCategory: '',
   vendorType: 'products', whatsappNumber: '', referralCode: '', marketplaceInterest: { supply: false, dropship: false },
+  heardAbout: '', heardAboutDetail: '',
 }
 const STEPS = [
   { n: 1, title: 'Your business', icon: Store },
@@ -67,56 +70,14 @@ const STEPS = [
 // Which step holds the field a server error names.
 const FIELD_STEP = { businessName: 1, storeName: 1, referralCode: 2, email: 3, password: 3, phone: 3 }
 const FIELD_KEY = { phone: 'whatsappNumber' }
-const STEP_FIELDS = { 1: ['ownerName', 'businessName', 'storeName'], 2: ['businessCategory', 'referralCode'], 3: ['email', 'password', 'whatsappNumber', 'agreed'] }
-const METER = {
-  red: ['bg-red-500', 'text-red-600 bg-red-50'],
-  amber: ['bg-amber-400', 'text-amber-700 bg-amber-50'],
-  green: ['bg-green-500', 'text-green-700 bg-green-50'],
-  forest: ['bg-forest-600', 'text-white bg-forest-600'],
-}
+const STEP_FIELDS = { 1: ['ownerName', 'businessName', 'storeName'], 2: ['businessCategory', 'heardAbout', 'referralCode'], 3: ['email', 'password', 'whatsappNumber', 'agreed'] }
 const HAND_CSS = '@keyframes sp-wave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(16deg)}20%,40%{transform:rotate(-8deg)}}.sp-wave{animation:sp-wave 2.4s ease-in-out 0.4s 2;transform-origin:70% 80%}@media (prefers-reduced-motion: reduce){.sp-wave{animation:none}}'
-
-function Field({ id, label, required, optional, hint, error, children }) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 block text-[13.5px] font-semibold text-dash-ink">
-        {label}{required && <span className="text-red-500"> *</span>}{optional && <span className="font-normal text-dash-muted"> (optional)</span>}
-      </label>
-      {children}
-      {error ? (
-        <p role="alert" className="mt-1.5 flex items-start gap-1.5 text-[12.5px] font-medium leading-snug text-red-600 animate-in fade-in slide-in-from-top-1 duration-200"><AlertCircle size={14} className="mt-px flex-shrink-0" />{error}</p>
-      ) : hint ? <div className="mt-1.5 text-[12px] leading-snug text-dash-muted">{hint}</div> : null}
-    </div>
-  )
-}
-
-function IconInput({ icon: Icon, invalid, right, prefix, inputRef, ...props }) {
-  return (
-    <div className={`flex h-12 items-center overflow-hidden rounded-2xl border bg-white transition focus-within:ring-4 ${invalid ? 'border-red-300 focus-within:border-red-400 focus-within:ring-red-100' : 'border-gray-200 focus-within:border-forest-600 focus-within:ring-forest-600/10'}`}>
-      <span className="flex h-full w-12 flex-shrink-0 items-center justify-center border-r border-gray-100 text-slate-400"><Icon size={17} /></span>
-      {prefix}
-      <input ref={inputRef} {...props} className="h-full min-w-0 flex-1 bg-transparent px-3.5 text-[14.5px] text-dash-ink outline-none placeholder:text-slate-400" />
-      {right}
-    </div>
-  )
-}
 
 const NgFlag = () => (
   <span aria-hidden="true" className="inline-flex h-3.5 w-5 overflow-hidden rounded-[3px] ring-1 ring-black/10">
     <span className="w-1/3 bg-[#008751]" /><span className="w-1/3 bg-white" /><span className="w-1/3 bg-[#008751]" />
   </span>
 )
-
-const PRIMARY = 'inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest-600 px-5 text-[15px] font-semibold text-white shadow-lg shadow-forest/20 transition hover:bg-forest disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none'
-
-function ErrorBanner({ children }) {
-  if (!children) return null
-  return (
-    <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13.5px] leading-snug text-red-700 animate-in fade-in slide-in-from-top-1 duration-200">
-      <AlertCircle size={16} className="mt-0.5 flex-shrink-0" /> <span>{children}</span>
-    </div>
-  )
-}
 
 export default function Login() {
   const navigate = useNavigate()
@@ -132,7 +93,7 @@ export default function Login() {
     if (notice) setError(notice)
   }, [])
 
-  const [mode, setMode] = useState(() => (location.pathname === '/register' || refCode ? 'register' : 'login'))
+  const [mode, setMode] = useState(() => (searchParams.get('forgot') ? 'forgot' : location.pathname === '/register' || refCode ? 'register' : 'login'))
   const [loading, setLoading] = useState(false)
   // Phase 2 login challenge: { reason } while an emailed code is outstanding.
   const [loginOtp, setLoginOtp] = useState(null)
@@ -194,7 +155,8 @@ export default function Login() {
     if (refCode) {
       const code = refCode.trim()
       localStorage.setItem('vendor_referral_code', code)
-      setForm(prev => ({ ...prev, referralCode: code }))
+      // Arrived on a referral link: that is how they heard about us.
+      setForm(prev => ({ ...prev, referralCode: code, heardAbout: prev.heardAbout || 'merchant_referral' }))
       fetch('/api/referral-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -362,6 +324,8 @@ export default function Login() {
     }
     if (n === 2) {
       if (!form.businessCategory) e.businessCategory = 'Pick the category that fits best. You can change it later in Settings.'
+      if (!form.heardAbout) e.heardAbout = 'Tell us how you found us. It helps us reach more businesses like yours.'
+      else if (heardAboutSource(form.heardAbout)?.needsText && form.heardAboutDetail.trim().length < 2) e.heardAbout = 'Tell us where you heard about us.'
     }
     if (n === 3) {
       if (!EMAIL_RE.test(form.email.trim())) e.email = 'Enter a valid email address, e.g. funmi@gmail.com.'
@@ -455,6 +419,7 @@ export default function Login() {
       description: form.description.trim(),
       vendorType: form.vendorType || 'products',
       marketplaceInterest: form.marketplaceInterest,
+      heardAbout: form.heardAbout ? { source: form.heardAbout, detail: form.heardAboutDetail.trim() } : null,
       referralCode: form.referralCode.trim() || localStorage.getItem('vendor_referral_code') || '',
       sessionId: getSessionId(),
     })
@@ -976,6 +941,41 @@ export default function Login() {
                     </select>
                   </div>
                 </Field>
+                <Field id="su-heard" label="How did you hear about us?" required error={errs.heardAbout}>
+                  <div className={`flex h-12 items-center overflow-hidden rounded-2xl border bg-white transition focus-within:ring-4 ${errs.heardAbout && !form.heardAbout ? 'border-red-300 focus-within:ring-red-100' : 'border-gray-200 focus-within:border-forest-600 focus-within:ring-forest-600/10'}`}>
+                    <span className="flex h-full w-12 flex-shrink-0 items-center justify-center border-r border-gray-100 text-slate-400"><Megaphone size={17} /></span>
+                    <select id="su-heard" value={form.heardAbout} aria-invalid={!!errs.heardAbout}
+                      onChange={(e) => { setField('heardAbout', e.target.value); setField('heardAboutDetail', '') }}
+                      className={`h-full min-w-0 flex-1 bg-transparent px-3 text-[14.5px] outline-none ${form.heardAbout ? 'text-dash-ink' : 'text-slate-400'}`}>
+                      <option value="">Choose one</option>
+                      {HEARD_ABOUT_SOURCES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </div>
+                  {heardAboutSource(form.heardAbout)?.details && (
+                    <div className="mt-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <p className="mb-1.5 text-[12px] text-dash-muted">Which one? <span className="text-slate-400">(optional)</span></p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {heardAboutSource(form.heardAbout).details.map((d) => {
+                          const on = form.heardAboutDetail === d
+                          return (
+                            <button key={d} type="button" aria-pressed={on} onClick={() => setField('heardAboutDetail', on ? '' : d)}
+                              className={`rounded-full px-3 py-1.5 text-[12.5px] font-medium transition ${on ? 'bg-forest-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-forest-50 hover:text-forest-600'}`}>
+                              {d}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {heardAboutSource(form.heardAbout)?.needsText && (
+                    <input value={form.heardAboutDetail} onChange={(e) => setField('heardAboutDetail', e.target.value)} maxLength={80} placeholder="e.g. a radio ad, a church event, a flyer"
+                      aria-label="Where did you hear about us?" autoFocus
+                      className="mt-2.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-[14px] text-dash-ink outline-none transition placeholder:text-slate-400 animate-in fade-in duration-200 focus:border-forest-600 focus:ring-4 focus:ring-forest-600/10" />
+                  )}
+                  {form.heardAbout === 'merchant_referral' && !form.referralCode && (
+                    <p className="mt-1.5 text-[12px] text-dash-muted">Got their referral code? Add it below so they get rewarded.</p>
+                  )}
+                </Field>
                 <div>
                   <p className="mb-2 text-[13.5px] font-semibold text-dash-ink">What are you setting up?</p>
                   <div className="grid grid-cols-3 gap-2">
@@ -1033,26 +1033,7 @@ export default function Login() {
                 <Field id="su-password" label="Password" required error={errs.password}>
                   <IconInput icon={Lock} id="su-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.password} onChange={update} placeholder="Create a strong password" maxLength={128} aria-invalid={!!errs.password} invalid={!!errs.password}
                     right={<button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="px-4 text-slate-400 hover:text-slate-600">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>} />
-                  {!strength.empty && (
-                    <div className="mt-2.5 animate-in fade-in duration-200" aria-live="polite">
-                      <div className="flex items-center gap-2.5">
-                        <div className="grid flex-1 grid-cols-4 gap-1.5">
-                          {[0, 1, 2, 3].map((i) => (
-                            <span key={i} className={`h-1.5 rounded-full transition-colors duration-300 ${i <= strength.level ? METER[strength.tone][0] : 'bg-slate-100'}`} />
-                          ))}
-                        </div>
-                        <span key={strength.label} className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-bold animate-in zoom-in-90 duration-200 ${METER[strength.tone][1]}`}>{strength.label}</span>
-                      </div>
-                      <p className="mt-1.5 text-[12px] text-slate-500">{strength.tip}</p>
-                    </div>
-                  )}
-                  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
-                    {[['length', 'At least 8 characters'], ['letter', '1 letter'], ['number', '1 number']].map(([k, label]) => (
-                      <li key={k} className={`flex items-center gap-1 transition-colors ${strength.checks[k] ? 'text-forest-600' : 'text-slate-400'}`}>
-                        <Check size={13} strokeWidth={strength.checks[k] ? 3 : 2} /> {label}
-                      </li>
-                    ))}
-                  </ul>
+                  <PasswordMeter password={form.password} />
                 </Field>
                 <Field id="su-phone" label="Business Contact Number" required error={errs.whatsappNumber && phoneStatus !== 'taken' ? errs.whatsappNumber : null}>
                   <div className={`flex h-12 items-center overflow-hidden rounded-2xl border bg-white transition focus-within:ring-4 ${phoneStatus === 'taken' || errs.whatsappNumber || phoneInvalid ? 'border-red-300 focus-within:ring-red-100' : 'border-gray-200 focus-within:border-forest-600 focus-within:ring-forest-600/10'}`}>

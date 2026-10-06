@@ -52,7 +52,7 @@ export function passwordStrength(pw) {
 }
 
 const DRAFT_KEY = 'sellapage_signup_draft'
-const DRAFT_FIELDS = ['ownerName', 'businessName', 'storeName', 'description', 'businessCategory', 'vendorType', 'email', 'whatsappNumber', 'referralCode', 'marketplaceInterest']
+const DRAFT_FIELDS = ['ownerName', 'businessName', 'storeName', 'description', 'businessCategory', 'vendorType', 'email', 'whatsappNumber', 'referralCode', 'marketplaceInterest', 'heardAbout', 'heardAboutDetail']
 
 export function readSignupDraft() {
   try {

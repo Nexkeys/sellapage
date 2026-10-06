@@ -24,6 +24,7 @@ export const signInWithCustomToken = async () => ({ user: demoUser })
 export const signOut = async () => {}
 export const deleteUser = async () => {}
 export const confirmPasswordReset = async () => {}
+export const verifyPasswordResetCode = async () => 'funmi@gmail.com'
 export const reauthenticateWithCredential = async () => {}
 export const EmailAuthProvider = { credential: () => ({}) }
 

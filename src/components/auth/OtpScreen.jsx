@@ -94,6 +94,13 @@ export default function OtpScreen({
   const inputRef = useRef(null)
   const requestedRef = useRef(false)
   const submittedRef = useRef('')
+  // The "clear the boxes after a wrong code" timer, cancelled the moment the
+  // vendor starts typing again so it cannot wipe their new digits.
+  const clearTimerRef = useRef(0)
+  // Set when the code was right but the step after it failed: retrying then
+  // re-runs that step instead of re-sending a code the server already used.
+  const [finishData, setFinishData] = useState(null)
+  useEffect(() => () => clearTimeout(clearTimerRef.current), [])
 
   const authedFetch = useCallback(async (path, body) => {
     const user = auth.currentUser
@@ -148,16 +155,34 @@ export default function OtpScreen({
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
+  const finish = useCallback(async (data) => {
+    setVerified(true)
+    setVerifying(false)
+    setError('')
+    try {
+      await onVerified?.(data)
+      setFinishData(null)
+    } catch (err) {
+      console.error('[otp] after verify', err)
+      setVerified(false)
+      setFinishData(data)
+      setError('Your code was right, but we could not finish signing you in. Check your connection and tap Try again.')
+    }
+  }, [onVerified])
+
   const submit = useCallback(async (value) => {
+    if (finishData) { finish(finishData); return }
     if (value.length !== 6 || verifying || submittedRef.current === value) return
     submittedRef.current = value
     setVerifying(true)
     setError('')
+    let data
     try {
-      const { ok, data } = verifyRequest
+      const res = verifyRequest
         ? await verifyRequest(value)
         : await authedFetch('/api/otp-verify', { purpose, code: value })
-      if (!ok) {
+      data = res.data
+      if (!res.ok) {
         setError(
           typeof data.remainingAttempts === 'number' && data.remainingAttempts > 0
             ? `${data.message} ${data.remainingAttempts} attempt${data.remainingAttempts === 1 ? '' : 's'} left.`
@@ -165,32 +190,46 @@ export default function OtpScreen({
         )
         setShake((n) => n + 1)
         setVerifying(false)
-        setTimeout(() => { setCode(''); submittedRef.current = ''; inputRef.current?.focus() }, 650)
+        clearTimeout(clearTimerRef.current)
+        clearTimerRef.current = setTimeout(() => { setCode(''); submittedRef.current = ''; inputRef.current?.focus() }, 650)
         return
       }
-      setVerified(true)
-      setVerifying(false)
-      await onVerified?.(data)
     } catch {
       setError('Network error. Please try again.')
       submittedRef.current = ''
       setVerifying(false)
+      return
     }
-  }, [authedFetch, onVerified, purpose, verifyRequest, verifying])
+    // The code was right. What happens next (signing in, setting up the
+    // session) is the page's job; if that fails, `finish` says so and offers
+    // a retry instead of leaving a frozen "You're in" screen.
+    await finish(data)
+  }, [authedFetch, finish, finishData, purpose, verifyRequest, verifying])
 
   // The sixth digit gets its "Sharp!" moment, then the check starts on its own.
   useEffect(() => {
-    if (code.length !== 6 || verifying || verified) return
+    if (code.length !== 6 || verifying || verified || finishData) return
     const t = setTimeout(() => submit(code), 650)
     return () => clearTimeout(t)
   }, [code, submit, verifying, verified])
 
   const onChange = (e) => {
-    if (verifying || verified) return
+    if (verifying || verified || finishData) return
+    clearTimeout(clearTimerRef.current)
+    // Digits only, so a pasted "123 456" or "123-456" still fills all six.
     const next = e.target.value.replace(/\D/g, '').slice(0, 6)
     setCode(next)
     if (next !== code) setError('')
     if (next.length < 6) submittedRef.current = ''
+  }
+  // The boxes always fill left to right, so the cursor lives at the end:
+  // tapping a middle box must not start inserting digits in the middle.
+  const keepCaretAtEnd = (e) => {
+    const el = e.currentTarget
+    const end = el.value.length
+    if (el.selectionStart !== end || el.selectionEnd !== end) {
+      try { el.setSelectionRange(end, end) } catch { /* some inputs refuse; harmless */ }
+    }
   }
 
   const cheer = CHEERS[code.length]
@@ -218,19 +257,19 @@ export default function OtpScreen({
             onBlur={() => setFocused(false)}
             inputMode="numeric"
             autoComplete="one-time-code"
-            pattern="\d{6}"
-            maxLength={6}
+            onSelect={keepCaretAtEnd}
+            onClick={keepCaretAtEnd}
             aria-label="6-digit code"
             aria-describedby="otp-status"
             disabled={verified}
-            className="absolute inset-0 z-[1] h-full w-full cursor-text opacity-0"
+            className="absolute inset-0 z-[1] h-full w-full cursor-text bg-transparent text-[16px] text-transparent caret-transparent opacity-0 outline-none selection:bg-transparent"
           />
           <div key={shake} className={`grid grid-cols-6 gap-2 sm:gap-3 ${shake && status === 'error' ? 'sp-otp-shake' : ''}`}>
             {Array.from({ length: 6 }).map((_, i) => {
               const digit = code[i]
               const active = focused && i === Math.min(code.length, 5) && !verifying && !verified
               const tone = verified ? 'border-forest-600 bg-forest-600 text-white'
-                : status === 'error' ? 'border-red-300 bg-red-50 text-red-600'
+                : status === 'error' && digit ? 'border-red-300 bg-red-50 text-red-600'
                   : digit ? 'border-forest-600/60 bg-forest-50/60 text-dash-ink'
                     : active ? 'border-forest-600 bg-white ring-4 ring-forest-600/10' : 'border-gray-200 bg-white'
               return (
@@ -268,9 +307,9 @@ export default function OtpScreen({
           )}
         </div>
 
-        <button type="submit" disabled={code.length !== 6 || verifying || verified}
+        <button type="submit" disabled={(code.length !== 6 && !finishData) || verifying || verified}
           className="mt-3 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-forest-600 text-[16px] font-semibold text-white shadow-lg shadow-forest/20 transition hover:bg-forest disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none">
-          {verifying ? <><Loader2 size={17} className="animate-spin" /> Checking...</> : <>{verifyLabel} <ArrowRight size={17} /></>}
+          {verifying ? <><Loader2 size={17} className="animate-spin" /> Checking...</> : finishData ? <>Try again <ArrowRight size={17} /></> : <>{verifyLabel} <ArrowRight size={17} /></>}
         </button>
 
         <p className="mt-5 text-center text-[14px] text-slate-500">
