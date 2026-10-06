@@ -117,7 +117,7 @@ function IdleGuard({ idleMs, expiresAt, onTimeout, onKeepAlive }) {
   )
 }
 
-function OpsConsole({ me, session, onSignOut, onRefresh }) {
+function OpsConsole({ me, session, user, onSignOut, onRefresh }) {
   const [stepUp, setStepUp] = useState(null)
   const [toast, setToast] = useState('')
   useEffect(() => {
@@ -134,7 +134,7 @@ function OpsConsole({ me, session, onSignOut, onRefresh }) {
   return (
     <>
       <Suspense fallback={<Loading />}>
-        <Admin ops={{ user: auth.currentUser, staff: me, session, authHeaders: opsHeaders, onSignOut: () => onSignOut('logout') }} />
+        <Admin ops={{ user, staff: me, session, authHeaders: opsHeaders, onSignOut: () => onSignOut('logout') }} />
       </Suspense>
       <StepUpModal open={!!stepUp} onDone={(ok) => { stepUp?.resolve(ok); setStepUp(null) }} />
       <IdleGuard idleMs={session.idleMs} expiresAt={session.expiresAt} onTimeout={(why) => onSignOut(why)} onKeepAlive={onRefresh} />
@@ -149,6 +149,7 @@ export default function OpsApp({ base = '' }) {
   const [me, setMe] = useState(null)
   const [session, setSession] = useState(null)
   const [notice, setNotice] = useState('')
+  const [fbUser, setFbUser] = useState(auth.currentUser)
   const home = base || '/'
 
   useEffect(() => { installOpsFetchGuard() }, [])
@@ -192,15 +193,32 @@ export default function OpsApp({ base = '' }) {
     doSignOut(why, { remote: true })
   }, [loadMe, doSignOut])
 
+  // First answer from Firebase decides whether a saved session can resume;
+  // after that, losing the Firebase user while signed in ends the console.
+  const first = useRef(true)
+  const phaseRef = useRef(phase)
+  useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => {
     const stop = onAuthStateChanged(auth, async (user) => {
-      stop()
-      if (user && getOpsSession() && (await loadMe()) === true) return
-      clearOpsSession()
-      setPhase('out')
+      setFbUser(user)
+      if (first.current) {
+        first.current = false
+        if (user && getOpsSession() && (await loadMe()) === true) return
+        if (!user || !getOpsSession()) clearOpsSession()
+        setPhase('out')
+        return
+      }
+      if (!user && phaseRef.current === 'ready') {
+        clearOpsSession()
+        setMe(null)
+        setSession(null)
+        setNotice('You were signed out in another tab.')
+        setPhase('out')
+        navigate(`${base}/login`, { replace: true })
+      }
     })
     return () => stop()
-  }, [loadMe])
+  }, [loadMe, base, navigate])
 
   const signedIn = async () => {
     setNotice('')
@@ -214,7 +232,8 @@ export default function OpsApp({ base = '' }) {
       <Route path="lost-authenticator" element={<OpsLostAuthenticator base={base} />} />
       <Route path="*" element={
         phase === 'loading' ? <Loading />
-          : phase === 'ready' && me && session ? <OpsConsole me={me} session={session} onSignOut={doSignOut} onRefresh={refresh} />
+          : phase === 'ready' && me && session && fbUser ? <OpsConsole me={me} session={session} user={fbUser} onSignOut={doSignOut} onRefresh={refresh} />
+            : phase === 'ready' ? <Loading />
             : <Navigate to={`${base}/login`} replace />
       } />
     </Routes>

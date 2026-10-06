@@ -585,7 +585,7 @@ export default function Admin({ ops = null } = {}) {
   }, [ops, activeTab]);
 
   useEffect(() => {
-    if (!user || !adminRole) return;
+    if ((!ops && !user) || !adminRole) return;
     const m = {
       health: () => { if (!healthData) fetchHealth(); },
       recovery: () => { fetchRecovery(recFilter); },
@@ -610,7 +610,7 @@ export default function Admin({ ops = null } = {}) {
   }, [user, activeTab, adminRole]);
 
   useEffect(() => {
-    if (!user || !adminRole) return;
+    if ((!ops && !user) || !adminRole) return;
     let i;
     if (activeTab === 'health') {
       i = setInterval(() => { setCountdown(p => { if (p <= 1) { fetchHealth(); return 30; } return p - 1; }); }, 1000);
@@ -633,7 +633,7 @@ export default function Admin({ ops = null } = {}) {
   };
 
   if (roleLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-400" /></div>;
-  if (!user || !adminRole) return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center max-w-sm w-full"><Lock size={24} className="text-red-500 mx-auto mb-4" /><h1 className="font-bold text-gray-900 text-lg mb-2">Access Denied</h1><p className="text-gray-400 text-sm">Contact the Super Admin.</p></div></div>;
+  if ((!ops && !user) || !adminRole) return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center max-w-sm w-full"><Lock size={24} className="text-red-500 mx-auto mb-4" /><h1 className="font-bold text-gray-900 text-lg mb-2">Access Denied</h1><p className="text-gray-400 text-sm">Contact the Super Admin.</p></div></div>;
 
   const at = ADMIN_TABS.filter(t => canOpen(t.id));
   const roleLabel = ops ? (ops.staff.title || (ops.staff.isSuper ? 'Super Admin' : 'Staff')) : getRoleLabel(adminRole);

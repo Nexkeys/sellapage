@@ -14,7 +14,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, ShieldCheck, Smartphone, 
 import { auth } from '../firebase/config'
 import OpsShell from './OpsShell'
 import CodeBoxes from './CodeBoxes'
-import { opsJson, saveOpsSession } from './opsSession'
+import { opsJson, saveOpsSession, getOpsSession } from './opsSession'
 
 export const OPS_PRIMARY = 'inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest-600 px-5 text-[15px] font-semibold text-white shadow-lg shadow-forest/20 transition hover:bg-forest disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none'
 export const OPS_INPUT = 'h-12 w-full rounded-2xl border border-gray-200 bg-white px-4 text-[15px] text-dash-ink outline-none transition placeholder:text-slate-400 focus:border-forest-600 focus:ring-4 focus:ring-forest-600/10'
@@ -197,9 +197,10 @@ export default function OpsSignIn({ base, notice, onSignedIn }) {
   const [error, setError] = useState('')
   const [step, setStep] = useState(null)
 
-  // A half-finished sign-in in another tab must not leave a Firebase user
-  // behind without a session.
-  useEffect(() => { signOut(auth).catch(() => {}) }, [])
+  // A sign-in abandoned half way can leave a Firebase user with no Ops
+  // session; clear only that. A live session (another tab) is left alone,
+  // because signing out is shared by every tab.
+  useEffect(() => { if (!getOpsSession()) signOut(auth).catch(() => {}) }, [])
 
   const submit = async (e) => {
     e.preventDefault()

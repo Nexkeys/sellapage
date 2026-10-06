@@ -238,6 +238,10 @@ export const API = {
   // Signup checks: a link with "taken" in it is taken; a number ending 0000
   // is already verified on another store.
   // Ops console (staff accounts). A small team and a day of activity.
+  '/api/admin-firestore-usage': () => {
+    const m = (used, limit) => ({ used, limit, percent: Math.round((used / limit) * 100), perHour: Math.round(used / 14), projected: Math.round(used * 1.7), willExceed: false })
+    return { success: true, reads: m(18200, 50000), writes: m(4100, 20000), deletes: m(120, 20000), resetsAt: Date.now() + 10 * 3600e3 }
+  },
   '/api/ops-team': (url) => {
     const action = url.searchParams.get('action')
     const H = 3600e3
@@ -279,6 +283,7 @@ export const API = {
     const action = url.searchParams.get('action')
     if (action === 'invite') return { success: true, valid: true, email: 'deola@sellapage.com.ng', name: 'Deola Benedict', title: 'Customer Support Officer', isSuper: false, invitedByName: 'Ben Pascal' }
     if (action === 'password') return { success: true, challengeId: 'c1', next: 'totp', name: 'Ben Pascal' }
+    if (action === 'me') return { success: true, staff: { uid: 's1', name: 'Ernest Uwaoma', title: 'Super Admin/CTO/Founder', email: 'sellapage.ng@gmail.com', status: 'active', isSuper: true, tabs: [], totpEnabled: true, recoveryLeft: 8 }, session: { id: 'x', createdAt: Date.now(), expiresAt: Date.now() + 12 * 3600e3, idleMs: 30 * 60e3, stepUpUntil: Date.now() + 15 * 60e3, device: 'Chrome on Windows' } }
     return { success: true }
   },
   '/api/signup-phone': (url) => {

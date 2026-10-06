@@ -366,6 +366,11 @@ const OpsLostPage = React.lazy(() => import('../../src/ops/OpsLostAuthenticator.
 const TeamAccessPage = React.lazy(() => import('../../src/ops/TeamAccess.jsx'))
 const ActivityLogPage = React.lazy(() => import('../../src/ops/ActivityLog.jsx'))
 const SecondStepsLazy = React.lazy(() => import('../../src/ops/OpsSignIn.jsx').then((m) => ({ default: m.SecondSteps })))
+const OpsAppLazy = React.lazy(() => import('../../src/ops/OpsApp.jsx'))
+function OpsConsolePreview() {
+  try { localStorage.setItem('sellapage_ops_session', JSON.stringify({ token: 'x.y', expiresAt: Date.now() + 3600e3, idleMs: 1800e3 })) } catch { /* sandbox */ }
+  return <React.Suspense fallback={null}><OpsAppLazy base="/ops" /></React.Suspense>
+}
 function OpsPreview() {
   const kind = new URLSearchParams(window.location.search).get('preview')
   const me = { uid: 's1', name: 'Ben Pascal', title: 'CEO', isSuper: true, status: 'active', tabs: [] }
@@ -379,7 +384,7 @@ function OpsPreview() {
 
 const shot = new URLSearchParams(window.location.search).get('shot')
 const previewKind = new URLSearchParams(window.location.search).get('preview')
-const Shot = String(previewKind || '').startsWith('ops-') ? OpsPreview : previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
+const Shot = previewKind === 'ops-console' ? OpsConsolePreview : String(previewKind || '').startsWith('ops-') ? OpsPreview : previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <MemoryRouter initialEntries={[new URLSearchParams(window.location.search).get('path') || '/']}>
