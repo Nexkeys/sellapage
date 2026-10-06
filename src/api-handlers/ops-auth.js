@@ -29,7 +29,7 @@ import { parseJsonBody } from './_lib/http.js'
 import { memoryRateLimit, durableRateLimit, tooManyRequests } from './_lib/rate-limit.js'
 import {
   COL, CHALLENGE_MS, MAX_CODE_ATTEMPTS, MAX_PASSWORD_FAILS, LOCK_MS, STEP_UP_MS,
-  sha256, randomToken, safeEqual, opsConfigured, encrypt, decrypt, newTotpSecret, verifyTotp,
+  sha256, randomToken, safeEqual, opsConfigured, opsKeyStatus, encrypt, decrypt, newTotpSecret, verifyTotp,
   otpauthUri, newRecoveryCodes, normalizeRecovery, isRecoveryShaped, requestIp, requestMeta,
   loadStaff, forgetStaff, publicStaff, createSession, endSession, verifyOpsRequest, writeAudit,
 } from './_lib/ops.js'
@@ -186,7 +186,10 @@ export default async function handler(req, res) {
     }
 
     if (!opsConfigured()) {
-      return fail(res, 503, 'ops_not_configured', 'Ops sign-in is not set up on this server yet (OPS_SECRET_KEY is missing).')
+      const why = opsKeyStatus() === 'too_short'
+        ? 'OPS_SECRET_KEY is set but too short. Use 32 or more random characters, then redeploy.'
+        : 'OPS_SECRET_KEY is not set for this deployment. Add it in Vercel, then redeploy.'
+      return fail(res, 503, 'ops_not_configured', `Ops sign-in is not set up on this server yet. ${why}`)
     }
 
     if (action === 'password' && req.method === 'POST') {

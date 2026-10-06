@@ -58,19 +58,39 @@ export function safeEqual(a, b) {
 }
 
 // ── Encryption of authenticator seeds ──────────────────────────────────────
+// Accepted forms (fixed 2026-10-06, BEFORE any seed was encrypted; never
+// change how a given value maps to a key, or saved authenticators break):
+//   - exactly 32 bytes as hex (64 chars) or base64 (44 chars): used as is;
+//   - any other random string of 32+ characters: SHA-256 of it is the key.
+// Surrounding quotes and spaces (easy to paste into Vercel) are ignored.
+function rawSecret() {
+  return String(process.env.OPS_SECRET_KEY || '').trim().replace(/^(['"])(.*)\1$/, '$2').trim()
+}
+
 function secretKey() {
-  const raw = String(process.env.OPS_SECRET_KEY || '').trim()
-  const buf = /^[0-9a-f]{64}$/i.test(raw) ? Buffer.from(raw, 'hex') : Buffer.from(raw, 'base64')
-  if (buf.length !== 32) {
-    const err = new Error('OPS_SECRET_KEY must be 32 random bytes (base64 or hex).')
+  const raw = rawSecret()
+  if (!raw) {
+    const err = new Error('OPS_SECRET_KEY is not set.')
     err.code = 'ops_not_configured'
+    err.reason = 'missing'
     throw err
   }
-  return buf
+  if (/^[0-9a-f]{64}$/i.test(raw)) return Buffer.from(raw, 'hex')
+  if (/^[A-Za-z0-9+/]{43}=$/.test(raw)) return Buffer.from(raw, 'base64')
+  if (raw.length >= 32) return crypto.createHash('sha256').update(raw, 'utf8').digest()
+  const err = new Error('OPS_SECRET_KEY is too short (needs 32+ random characters).')
+  err.code = 'ops_not_configured'
+  err.reason = 'too_short'
+  throw err
+}
+
+/** 'ok' | 'missing' | 'too_short' (never the value itself). */
+export function opsKeyStatus() {
+  try { secretKey(); return 'ok' } catch (err) { return err.reason || 'missing' }
 }
 
 export function opsConfigured() {
-  try { secretKey(); return true } catch { return false }
+  return opsKeyStatus() === 'ok'
 }
 
 export function encrypt(text) {
