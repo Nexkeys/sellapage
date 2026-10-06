@@ -551,6 +551,13 @@ export default function Login() {
       } catch { /* network only - don't block sign-in on this check */ }
 
       const credential = await loginSeller(form.email, form.password)
+      // Sellapage Ops staff accounts are never store logins (2026-10-06).
+      const claims = (await credential.user.getIdTokenResult().catch(() => null))?.claims || {}
+      if (claims.ops) {
+        await logoutSeller().catch(() => {})
+        setError('This is a Sellapage Ops staff login. Staff sign in at ops.sellapage.com.ng, not here.')
+        return
+      }
       const token = await credential.user.getIdToken()
 
       // Phase 2: registering the session also evaluates device/location risk.

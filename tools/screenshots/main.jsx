@@ -358,9 +358,28 @@ const ResetPasswordPage = React.lazy(() => import('../../src/pages/ResetPassword
 function RecoveryPreview() { return <React.Suspense fallback={null}><AccountRecoveryPage /></React.Suspense> }
 function ResetPreview() { return <React.Suspense fallback={null}><ResetPasswordPage /></React.Suspense> }
 
+// ?preview=ops-login | ops-enroll | ops-join&path=/ops/join%3Ftoken%3Dx | ops-team | ops-activity | ops-lost
+const OpsSignInPage = React.lazy(() => import('../../src/ops/OpsSignIn.jsx'))
+const OpsShellPage = React.lazy(() => import('../../src/ops/OpsShell.jsx'))
+const OpsJoinPage = React.lazy(() => import('../../src/ops/OpsJoin.jsx'))
+const OpsLostPage = React.lazy(() => import('../../src/ops/OpsLostAuthenticator.jsx'))
+const TeamAccessPage = React.lazy(() => import('../../src/ops/TeamAccess.jsx'))
+const ActivityLogPage = React.lazy(() => import('../../src/ops/ActivityLog.jsx'))
+const SecondStepsLazy = React.lazy(() => import('../../src/ops/OpsSignIn.jsx').then((m) => ({ default: m.SecondSteps })))
+function OpsPreview() {
+  const kind = new URLSearchParams(window.location.search).get('preview')
+  const me = { uid: 's1', name: 'Ben Pascal', title: 'CEO', isSuper: true, status: 'active', tabs: [] }
+  const page = kind === 'ops-login' ? <OpsSignInPage base="/ops" onSignedIn={noop} />
+    : kind === 'ops-enroll' ? <OpsShellPage><SecondStepsLazy step={{ next: 'enroll', challengeId: 'c', otpauth: 'otpauth://totp/Sellapage%20Ops:deola%40sellapage.com.ng?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Sellapage%20Ops', secret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP', email: 'deola@sellapage.com.ng' }} onSignedIn={noop} onRestart={noop} /></OpsShellPage>
+      : kind === 'ops-join' ? <OpsJoinPage base="/ops" onSignedIn={noop} />
+        : kind === 'ops-lost' ? <OpsLostPage base="/ops" />
+          : <div style={{ maxWidth: 1240, margin: '0 auto', padding: 16 }}>{kind === 'ops-team' ? <TeamAccessPage me={me} /> : <ActivityLogPage />}</div>
+  return <main><React.Suspense fallback={null}>{page}</React.Suspense></main>
+}
+
 const shot = new URLSearchParams(window.location.search).get('shot')
 const previewKind = new URLSearchParams(window.location.search).get('preview')
-const Shot = previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
+const Shot = String(previewKind || '').startsWith('ops-') ? OpsPreview : previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <MemoryRouter initialEntries={[new URLSearchParams(window.location.search).get('path') || '/']}>

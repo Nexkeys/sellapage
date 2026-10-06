@@ -237,6 +237,50 @@ export const API = {
   '/api/explore-stores': { success: true, stores: exploreStores },
   // Signup checks: a link with "taken" in it is taken; a number ending 0000
   // is already verified on another store.
+  // Ops console (staff accounts). A small team and a day of activity.
+  '/api/ops-team': (url) => {
+    const action = url.searchParams.get('action')
+    const H = 3600e3
+    const team = [
+      { uid: 's1', name: 'Ben Pascal', title: 'CEO', email: 'ben@sellapage.com.ng', status: 'active', isSuper: true, tabs: [], totpEnabled: true, recoveryLeft: 7, lastSeenAt: Date.now() - 60e3 },
+      { uid: 's2', name: 'Frank Kelvin', title: 'CTO', email: 'frank@sellapage.com.ng', status: 'active', isSuper: true, tabs: [], totpEnabled: true, recoveryLeft: 8, lastSeenAt: Date.now() - 3 * H },
+      { uid: 's3', name: 'Deola Benedict', title: 'Customer Support Officer', email: 'deola@sellapage.com.ng', status: 'active', isSuper: false, tabs: ['tickets', 'reports', 'directory'], template: 'support', totpEnabled: true, recoveryLeft: 8, lastSeenAt: Date.now() - 20 * 60e3 },
+      { uid: 's4', name: 'Chidinma Antony', title: 'System Analyst', email: 'chidinma@sellapage.com.ng', status: 'active', isSuper: false, tabs: ['health', 'analytics', 'usage', 'sella-ai', 'ai-describe', 'domains', 'activity'], totpEnabled: true, recoveryLeft: 6, lastSeenAt: Date.now() - 26 * H },
+      { uid: 's5', name: 'Tunde Bakare', title: 'Finance Officer', email: 'tunde@sellapage.com.ng', status: 'paused', isSuper: false, tabs: ['referrals', 'withdrawals', 'revenue'], totpEnabled: true, recoveryLeft: 8, pausedReason: 'On leave until 20 Oct', lastSeenAt: Date.now() - 5 * 24 * H },
+    ]
+    if (action === 'list') return {
+      success: true, me: team[0], staff: team, templates: [],
+      invites: [{ id: 'i1', name: 'Ada Okafor', title: 'Marketing Lead', email: 'ada@sellapage.com.ng', isSuper: false, tabs: ['blog', 'newsletter'], createdAt: Date.now() - 2 * H, createdByName: 'Ben Pascal', expiresAt: Date.now() + 46 * H }],
+      resets: [{ id: 'r1', uid: 's4', name: 'Chidinma Antony', createdAt: Date.now() - 40 * 60e3, device: 'Chrome on Android' }],
+    }
+    if (action === 'activity-people') return { success: true, people: team }
+    if (action === 'sessions') return { success: true, sessions: [
+      { id: 'a', device: 'Chrome on Windows', ip: '102.89.34.10', createdAt: Date.now() - 2 * H, lastSeenAt: Date.now() - 60e3, live: true, current: true },
+      { id: 'b', device: 'Safari on iPhone/iPad', ip: '197.210.54.3', createdAt: Date.now() - 6 * H, lastSeenAt: Date.now() - 4 * H, live: true },
+      { id: 'c', device: 'Chrome on Windows', ip: '102.89.34.10', createdAt: Date.now() - 30 * H, endedAt: Date.now() - 29 * H, endReason: 'idle' },
+    ] }
+    if (action === 'activity') {
+      const row = (mins, uid, name, title, act, summary, extra = {}) => ({ id: `${mins}${act}`, at: Date.now() - mins * 60e3, uid, name, title, action: act, summary, result: 'ok', ip: '102.89.34.10', device: 'Chrome on Windows', ...extra })
+      return { success: true, nextCursor: 'more', rows: [
+        row(2, 's1', 'Ben Pascal', 'CEO', 'ops.updated', 'Deola Benedict: gave Merchants; revoked Store Reports', { tab: 'admins', target: { type: 'staff', id: 's3', label: 'Deola Benedict' }, changes: { before: { name: 'Deola Benedict', title: 'Customer Support Officer', isSuper: false, tabs: ['tickets', 'reports'] }, after: { name: 'Deola Benedict', title: 'Customer Support Officer', isSuper: false, tabs: ['tickets', 'directory'] } } }),
+        row(3, 's1', 'Ben Pascal', 'CEO', 'ops.step_up', 'Confirmed with authenticator'),
+        row(18, 's3', 'Deola Benedict', 'Customer Support Officer', 'tickets.update', 'admin-tickets: update', { tab: 'tickets', target: { type: 'ticketId', id: 'TK-2291', label: '' }, changes: { request: { ticketId: 'TK-2291', status: 'resolved' } } }),
+        row(19, 's3', 'Deola Benedict', 'Customer Support Officer', 'ops.denied', 'admin-revenue refused (tab_not_allowed)', { result: 'denied', tab: 'revenue' }),
+        row(25, 's3', 'Deola Benedict', 'Customer Support Officer', 'ops.login', 'Signed in with authenticator', { device: 'Safari on iPhone/iPad', ip: '197.210.54.3' }),
+        row(40, null, 'de***@sellapage.com.ng', '', 'ops.login_failed', 'Wrong password for de***@sellapage.com.ng', { result: 'failed' }),
+        row(95, 's1', 'Ben Pascal', 'CEO', 'ops.paused', 'Paused Tunde Bakare: On leave until 20 Oct (1 session ended)'),
+        row(26 * 60, 's4', 'Chidinma Antony', 'System Analyst', 'ops.logout', 'Signed out'),
+        row(27 * 60, 's1', 'Ben Pascal', 'CEO', 'ops.invited', 'Invited Ada Okafor (Marketing Lead) with 2 tabs'),
+      ] }
+    }
+    return { success: true }
+  },
+  '/api/ops-auth': (url) => {
+    const action = url.searchParams.get('action')
+    if (action === 'invite') return { success: true, valid: true, email: 'deola@sellapage.com.ng', name: 'Deola Benedict', title: 'Customer Support Officer', isSuper: false, invitedByName: 'Ben Pascal' }
+    if (action === 'password') return { success: true, challengeId: 'c1', next: 'totp', name: 'Ben Pascal' }
+    return { success: true }
+  },
   '/api/signup-phone': (url) => {
     const action = url.searchParams.get('action')
     if (action === 'slug') {

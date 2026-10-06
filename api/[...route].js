@@ -44,8 +44,24 @@ export default async function handler(req, res) {
     // Normalize underscores from frontend requests to hyphens for matching
     const endpoint = rawEndpoint.replace(/_/g, "-");
 
+    // Admin endpoints run inside the Activity Log wrapper (once): every change
+    // is recorded and refusals carry their reason. See _lib/ops-audit.js.
+    if (!req.__auditWrapped && (endpoint.startsWith("admin-") || endpoint === "blog-admin" || endpoint === "platform-reviews-admin" || endpoint === "ops-team")) {
+      req.__auditWrapped = true;
+      const { withAdminAudit } = await import("../src/api-handlers/_lib/ops-audit.js");
+      return await withAdminAudit(req, res, endpoint, () => handler(req, res));
+    }
+
     // Dynamic Imports prevent a single broken handler from crashing the entire app on boot
     switch (endpoint) {
+      case "ops-auth": {
+        const { default: handlerFunc } = await import("../src/api-handlers/ops-auth.js");
+        return await handlerFunc(req, res);
+      }
+      case "ops-team": {
+        const { default: handlerFunc } = await import("../src/api-handlers/ops-team.js");
+        return await handlerFunc(req, res);
+      }
       case "paystack-webhook": {
         const { default: handlerFunc } = await import("../src/api-handlers/paystack-webhook.js");
         return await handlerFunc(req, res);

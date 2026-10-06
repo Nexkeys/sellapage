@@ -5,11 +5,15 @@ import {
   Sparkles, TrendingUp, Users, Package, Clock, ChevronRight,
   Search, Copy, ChevronLeft, Check, AlertCircle, AlertTriangle,
   Shield, Star, FileCheck, Link2, Megaphone, LifeBuoy, BarChart3, KeyRound,
-  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon, MessageSquare, Gift
+  Wallet, Menu, X, ExternalLink, CircleDot, Flag, Briefcase, BookOpen, Bell, Rocket, Mail, Send, Boxes, ImageIcon, MessageSquare, Gift,
+  ScrollText, LogOut
 } from 'lucide-react';
 import SellaLogo from '../components/SellaLogo';
 import { uploadSingleImage } from '../firebase/products';
 import { getAdminRole, canAccessTab, getRoleLabel } from '../utils/adminRoles';
+import { opsCanOpen } from '../utils/opsAccess';
+import TeamAccess from '../ops/TeamAccess';
+import ActivityLog from '../ops/ActivityLog';
 import BlogAdmin from '../components/admin/BlogAdmin';
 import ReviewsAdmin from '../components/admin/ReviewsAdmin';
 import CacRequests from '../components/admin/CacRequests';
@@ -57,7 +61,9 @@ const ADMIN_TABS = [
   { id: 'partners', label: 'Investors & Partners', icon: Rocket, short: 'Partners' },
   { id: 'newsletter', label: 'Newsletter', icon: Mail, short: 'Newsletter' },
   { id: 'recovery', label: 'Account Recovery', icon: KeyRound, short: 'Recovery' },
-  { id: 'admins', label: 'Team', icon: Shield, short: 'Team' },
+  { id: 'admins', label: 'Team & Access', icon: Shield, short: 'Team' },
+  // Ops console only (the old /admin role table has no 'activity').
+  { id: 'activity', label: 'Activity Log', icon: ScrollText, short: 'Activity' },
 ];
 
 // Grouping used only by the mobile nav drawer - purely presentational, does not affect
@@ -70,7 +76,7 @@ const ADMIN_TAB_GROUPS = [
   // 'recovery' belongs here - omitting it hid the tab entirely on mobile while
   // it still rendered on desktop, since the desktop bar iterates ADMIN_TABS but
   // the mobile drawer iterates these groups. Any new tab must be added here too.
-  { label: 'Team', ids: ['admins', 'recovery'] },
+  { label: 'Team', ids: ['admins', 'activity', 'recovery'] },
 ];
 
 const PLAN_N = { premium: 0, pro: 1, growth: 2, starter: 3 };
@@ -84,8 +90,14 @@ const ANN_CTA_PRESETS = [
 
 const PLAN_C = { premium: 'bg-yellow-50 text-yellow-700 border-yellow-200', pro: 'bg-gray-900 text-white border-gray-900', growth: 'bg-green-50 text-green-700 border-green-200', starter: 'bg-gray-100 text-gray-600 border-gray-200' };
 
-export default function Admin() {
-  const { user } = useAuth();
+// `ops` is set when this runs inside the Sellapage Ops console (src/ops/
+// OpsApp.jsx): a staff account with its own session. Tabs then come from that
+// person's list (opsCanOpen) instead of the old role table, and every request
+// carries the Ops session headers. Without `ops` this is the legacy /admin
+// page, unchanged, until it is switched off (VITE_DISABLE_LEGACY_ADMIN).
+export default function Admin({ ops = null } = {}) {
+  const authCtx = useAuth();
+  const user = ops?.user || authCtx?.user;
   const [adminRole, setAdminRole] = useState(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('health');
@@ -98,9 +110,11 @@ export default function Admin() {
   // Called per request rather than cached: getIdToken() transparently refreshes
   // a token that is near its one-hour expiry, so long admin sessions keep working.
   const H = useCallback(async () => {
+    if (ops) return ops.authHeaders();
     const t = await user?.getIdToken();
     return t ? { Authorization: `Bearer ${t}` } : {};
-  }, [user]);
+  }, [user, ops]);
+  const canOpen = useCallback((tabId) => (ops ? opsCanOpen(ops.staff, tabId) : canAccessTab(adminRole, tabId)), [ops, adminRole]);
 
   const [termii, setTermii] = useState(null);
   const [recovery, setRecovery] = useState([]);
@@ -548,12 +562,27 @@ export default function Admin() {
   }, [jobsStatusFilter, fetchJobs, user]);
 
   useEffect(() => {
+    if (ops) {
+      setAdminRole(ops.staff.isSuper ? 'super_admin' : 'staff');
+      setRoleLoading(false);
+      return;
+    }
     if (!user) { setRoleLoading(false); return; }
     getAdminRole(user.uid).then(role => {
       setAdminRole(role); setRoleLoading(false);
       if (role) { const f = ADMIN_TABS.find(t => canAccessTab(role, t.id)); if (f) setActiveTab(f.id); }
     }).catch(() => setRoleLoading(false));
-  }, [user]);
+  }, [user, ops]);
+
+  // Ops: land on the first tab this person has, and move off a tab the
+  // moment it is revoked.
+  useEffect(() => {
+    if (!ops) return;
+    if (!opsCanOpen(ops.staff, activeTab)) {
+      const first = ADMIN_TABS.find((t) => opsCanOpen(ops.staff, t.id));
+      if (first) setActiveTab(first.id);
+    }
+  }, [ops, activeTab]);
 
   useEffect(() => {
     if (!user || !adminRole) return;
@@ -563,7 +592,7 @@ export default function Admin() {
       directory: () => { if (!dirData) fetchDirectory(page, search); },
       referrals: () => { if (!refStats) fetchReferrals(); },
       withdrawals: () => fetchWithdrawals(wdStatusFilter),
-      admins: () => { if (adminList.length === 0) fetchAdmins(); },
+      admins: () => { if (!ops && adminList.length === 0) fetchAdmins(); },
       cac: () => fetchCac(),
       domains: () => fetchDomains(),
       announcements: () => fetchAnnouncements(),
@@ -606,7 +635,8 @@ export default function Admin() {
   if (roleLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-400" /></div>;
   if (!user || !adminRole) return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center max-w-sm w-full"><Lock size={24} className="text-red-500 mx-auto mb-4" /><h1 className="font-bold text-gray-900 text-lg mb-2">Access Denied</h1><p className="text-gray-400 text-sm">Contact the Super Admin.</p></div></div>;
 
-  const at = ADMIN_TABS.filter(t => canAccessTab(adminRole, t.id));
+  const at = ADMIN_TABS.filter(t => canOpen(t.id));
+  const roleLabel = ops ? (ops.staff.title || (ops.staff.isSuper ? 'Super Admin' : 'Staff')) : getRoleLabel(adminRole);
 
   const activeTabMeta = at.find(t => t.id === activeTab);
 
@@ -622,7 +652,7 @@ export default function Admin() {
                 <h1 className="text-base sm:text-xl font-black text-gray-900 tracking-tight truncate">Operations Console</h1>
                 <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                   <Shield size={11} className="text-green-600 flex-shrink-0" />
-                  <p className="text-green-600 text-[10px] font-bold uppercase tracking-wider flex-shrink-0">{getRoleLabel(adminRole)}</p>
+                  <p className="text-green-600 text-[10px] font-bold uppercase tracking-wider flex-shrink-0">{ops ? `${ops.staff.name} · ${roleLabel}` : roleLabel}</p>
                   {activeTabMeta && (
                     <>
                       <span className="text-gray-300 text-[10px] sm:hidden flex-shrink-0">·</span>
@@ -632,6 +662,7 @@ export default function Admin() {
                 </div>
               </div>
             </div>
+            {ops && <button onClick={ops.onSignOut} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-2.5 sm:px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 flex-shrink-0 order-last"><LogOut size={12} /> <span className="hidden sm:inline">Sign out</span></button>}
             {activeTab === 'health' && <button onClick={fetchHealth} disabled={healthLoading} className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 text-white px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0">{healthLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} <span className="hidden sm:inline">Refresh</span></button>}
           </div>
           <div className="hidden sm:flex mt-3 p-1 bg-gray-100 rounded-xl gap-1 overflow-x-auto scrollbar-hide">
@@ -1202,7 +1233,9 @@ export default function Admin() {
         {activeTab === 'email' && <EmailBroadcast authHeaders={H} />}
 
         {/* TEAM */}
-        {activeTab === 'admins' && <div className="space-y-4 animate-in fade-in duration-200">
+        {activeTab === 'admins' && ops && <TeamAccess me={ops.staff} />}
+        {activeTab === 'activity' && ops && <ActivityLog />}
+        {activeTab === 'admins' && !ops && <div className="space-y-4 animate-in fade-in duration-200">
           {adminError&&<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{adminError}</div>}
           <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">Admin Team</h2><div className="flex gap-2"><button onClick={()=>setShowCreateAdmin(!showCreateAdmin)} className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-xl text-xs font-bold">{showCreateAdmin?'Cancel':'+ New Admin'}</button><button onClick={fetchAdmins} disabled={adminLoading} className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-xl text-xs font-bold disabled:bg-gray-200">{adminLoading?<Loader2 size={12} className="animate-spin" />:<RefreshCw size={12} />}</button></div></div>
           {showCreateAdmin&&<div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4 space-y-3"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Create New Admin</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><input type="text" placeholder="Full Name" value={newAdminName} onChange={e=>setNewAdminName(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><input type="email" placeholder="Email" value={newAdminEmail} onChange={e=>setNewAdminEmail(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><input type="password" placeholder="Password (min 6 chars)" value={newAdminPass} onChange={e=>setNewAdminPass(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500" /><select value={newAdminRole} onChange={e=>setNewAdminRole(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"><option value="super_admin">Super Admin</option><option value="finance">Finance</option><option value="support">Support</option><option value="operations">Operations</option><option value="marketing">Marketing</option></select></div><button onClick={createAdmin} disabled={creatingAdmin||!newAdminEmail.trim()||!newAdminPass} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50">{creatingAdmin?'Creating...':'Create Admin'}</button></div>}
@@ -1222,7 +1255,7 @@ export default function Admin() {
               </div>
               <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex-shrink-0" aria-label="Close menu"><X size={18} /></button>
             </div>
-            <p className="px-4 pt-3 text-[10px] font-bold text-green-600 uppercase tracking-wider">{getRoleLabel(adminRole)}</p>
+            <p className="px-4 pt-3 text-[10px] font-bold text-green-600 uppercase tracking-wider">{roleLabel}</p>
             <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
               {ADMIN_TAB_GROUPS.map(group => {
                 const groupTabs = at.filter(t => group.ids.includes(t.id));

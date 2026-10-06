@@ -24,6 +24,7 @@ const AccountRecovery = lazy(() => import('./pages/AccountRecovery'))
 // Authenticated surfaces (the heaviest chunks in the app)
 const Dashboard       = lazy(() => import('./pages/Dashboard'))
 const Admin           = lazy(() => import('./pages/Admin'))
+const OpsApp          = lazy(() => import('./ops/OpsApp'))
 const BillingCallback = lazy(() => import('./pages/BillingCallback'))
 
 // Public storefronts
@@ -58,7 +59,31 @@ const PartnersPage       = lazy(() => import('./pages/PartnersPage'))
 const DropshippingPage   = lazy(() => import('./pages/DropshippingPage'))
 const NotFound           = lazy(() => import('./pages/NotFound'))
 
+// The Sellapage Ops console lives on its own host, ops.sellapage.com.ng, as
+// its own app: no vendor AuthProvider, no store lookups, no marketing pages.
+// On localhost and Vercel preview links it is also reachable at /ops so it
+// can be tried before the DNS record exists.
+const HOST = typeof window !== 'undefined' ? window.location.hostname : ''
+const IS_OPS_HOST = /^ops\./i.test(HOST)
+const OPS_PATH_ALLOWED = import.meta.env.DEV || HOST === 'localhost' || HOST === '127.0.0.1' || HOST.endsWith('.vercel.app')
+// The old /admin page (vendor logins with an admins/{uid} document). Set
+// VITE_DISABLE_LEGACY_ADMIN=true once every staff member uses the Ops console;
+// /admin then shows the normal "page not found".
+const LEGACY_ADMIN = String(import.meta.env.VITE_DISABLE_LEGACY_ADMIN || '').toLowerCase() !== 'true'
+
 export default function App() {
+  if (IS_OPS_HOST) {
+    return (
+      <BrowserRouter>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/*" element={<OpsApp base="" />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    )
+  }
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -114,7 +139,8 @@ export default function App() {
             <Route path="/:storeName/policies" element={<StoreCustomPage pageKey="policies" />} />
             <Route path="/:storeName/track" element={<StoreTrackPage />} />
             <Route path="*"           element={<NotFound />} />
-            <Route path="/admin" element={<Admin />} />
+            {LEGACY_ADMIN && <Route path="/admin" element={<Admin />} />}
+            {OPS_PATH_ALLOWED && <Route path="/ops/*" element={<OpsApp base="/ops" />} />}
           </Routes>
         </Suspense>
       </BrowserRouter>

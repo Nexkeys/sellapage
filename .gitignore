@@ -26,6 +26,9 @@ Docs
 scripts/*
 !scripts/check-*.js
 !scripts/prerender-seo.mjs
+# Break-glass for the Ops console (first super admin, lost authenticators).
+# No secrets in it and it writes no files, so it ships with the repo.
+!scripts/ops-bootstrap.js
 
 
 # Local Vercel folder

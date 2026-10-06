@@ -748,6 +748,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Sellapage Ops console (2026-10-06): staff accounts, sessions, the
+    // Activity Log, invites, sign-in challenges, lockouts and authenticator
+    // reset requests. Server only (Admin SDK); no browser may read or write
+    // them, not even the person they belong to.
+    match /opsStaff/{id} { allow read, write: if false; }
+    match /opsSessions/{id} { allow read, write: if false; }
+    match /opsAudit/{id} { allow read, write: if false; }
+    match /opsInvites/{id} { allow read, write: if false; }
+    match /opsChallenges/{id} { allow read, write: if false; }
+    match /opsLoginGuards/{id} { allow read, write: if false; }
+    match /opsResetRequests/{id} { allow read, write: if false; }
+
     // TIGHTENED 2026-08-09: was `read: if request.auth != null`, which let ANY
     // signed-in vendor read EVERY store's leads (customer PII). The precondition
     // this was waiting on has landed — Dashboard.jsx:543 now queries with

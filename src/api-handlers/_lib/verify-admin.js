@@ -14,6 +14,16 @@
 // This verifies the *human*: a real Firebase ID token, an active admins/{uid}
 // document, and a role that actually grants the tab being used.
 import { getAdminAuth, getAdminDb } from './firebase-admin.js'
+import { verifyOpsRequest } from './ops.js'
+
+// 2026-10-06: the Ops console (ops.sellapage.com.ng) signs in Ops staff accounts
+// with password + authenticator and sends a server session
+// (X-Ops-Session). Those requests are checked by verifyOpsRequest: per-
+// person tabs, live session, sudo mode for risky actions. The old way
+// (a vendor login with an admins/{uid} document, used by /admin) keeps working
+// until ALLOW_LEGACY_ADMIN_PANEL is set to "false" in Vercel, which is the
+// cutover once every staff member has a new account.
+const legacyPanelAllowed = () => String(process.env.ALLOW_LEGACY_ADMIN_PANEL || '').toLowerCase() !== 'false'
 
 // Mirrors TAB_ACCESS in src/utils/adminRoles.js. Keep the two in sync - the
 // client copy decides which tabs render, this copy decides what is permitted.
@@ -96,6 +106,21 @@ const ALLOW_LEGACY_ADMIN_TOKEN = false
 export async function verifyAdmin(req, requiredTab = null) {
   const header = req.headers.authorization || ''
 
+  if (req.headers['x-ops-session']) {
+    const v = await verifyOpsRequest(req, requiredTab)
+    if (!v.ok) {
+      // Read by the router's audit wrapper (_lib/ops-audit.js).
+      req.__opsDenied = { reason: v.reason, uid: v.uid || null, staff: v.staff || null, quiet: v.quiet === true }
+      return null
+    }
+    req.__ops = { uid: v.staff.uid, name: v.staff.name, title: v.staff.title || '', isSuper: v.staff.isSuper === true, sessionId: v.sessionId }
+    // Handlers that keep extra powers for super admins check role ===
+    // 'super_admin'; everyone else is plain 'staff' with their own tabs.
+    return { uid: v.staff.uid, role: v.staff.isSuper ? 'super_admin' : 'staff', staff: true, name: v.staff.name, title: v.staff.title || '' }
+  }
+
+  if (!legacyPanelAllowed()) return null
+
   if (header.startsWith('Bearer ')) {
     let decoded
     try {
@@ -114,6 +139,7 @@ export async function verifyAdmin(req, requiredTab = null) {
     if (!role) return null
     if (requiredTab && !roleGrants(role, requiredTab)) return null
 
+    req.__ops = { uid: decoded.uid, name: data.displayName || data.email || '', title: 'Legacy admin', legacy: true }
     return { uid: decoded.uid, role }
   }
 
