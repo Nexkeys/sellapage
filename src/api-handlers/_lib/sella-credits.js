@@ -35,6 +35,23 @@ export const MIN_CREDITS_DEEP = 5
 
 const round2 = (n) => Math.round(n * 100) / 100
 
+/**
+ * Credits per kind (chat, deep, image...) on a month or day document.
+ *
+ * Until 2026-10-07 these were written as set({ 'byKind.chat': increment },
+ * { merge: true }). set() does not read dots as paths (only update() does),
+ * so Firestore stored top-level fields literally named "byKind.chat", and
+ * every reader of `byKind` saw nothing. New writes use a real nested map;
+ * this folds the old literally-named fields in so no history is lost.
+ */
+export function kindsOf(data) {
+  const out = {}
+  const add = (k, v) => { const n = Number(v); if (k && Number.isFinite(n)) out[k] = round2((out[k] || 0) + n) }
+  for (const [k, v] of Object.entries(data?.byKind || {})) add(k, v)
+  for (const [k, v] of Object.entries(data || {})) if (k.startsWith('byKind.')) add(k.slice(7), v)
+  return out
+}
+
 /** Month key in Lagos time, so the reset lands at midnight WAT on the 1st. */
 export function monthKey(d = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
@@ -111,7 +128,7 @@ export async function getBalance(db, storeId) {
     resetsAt: nextResetIso(),
     nairaPerCredit: NAIRA_PER_CREDIT,
     ...(nextExpiring ? { topupNextExpiry: { credits: nextExpiring.remaining, at: new Date(nextExpiring.expiresAt).toISOString() } } : {}),
-    byKind: m.exists ? (m.data().byKind || {}) : {},
+    byKind: m.exists ? kindsOf(m.data()) : {},
   }
 }
 
@@ -124,11 +141,13 @@ export async function getBalance(db, storeId) {
  *
  * Never throws: a failed charge must not turn a delivered answer into an error.
  */
-export async function charge(db, storeId, { usd = 0, minimum = MIN_CREDITS_PER_TURN, kind = 'chat' } = {}) {
+export async function charge(db, storeId, { usd = 0, minimum = MIN_CREDITS_PER_TURN, kind = 'chat', actor = null } = {}) {
   const credits = Math.max(creditsForUsd(usd), minimum)
+  let fromTopup = 0
   try {
     const r = refs(db, storeId)
     await db.runTransaction(async (tx) => {
+      fromTopup = 0
       const [m, t] = await Promise.all([tx.get(r.month), tx.get(r.topup)])
       const used = m.exists ? Number(m.data().used || 0) : 0
       const includedLeft = Math.max(MONTHLY_CREDITS - used, 0)
@@ -167,16 +186,60 @@ export async function charge(db, storeId, { usd = 0, minimum = MIN_CREDITS_PER_T
         used: round2(used + fromIncluded + Math.max(owed, 0)),
         costUsd: FieldValue.increment(Number(usd) || 0),
         requests: FieldValue.increment(1),
-        [`byKind.${kind}`]: FieldValue.increment(credits),
+        byKind: { [kind]: FieldValue.increment(credits) },
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true })
 
       if (lotsChanged) {
         tx.set(r.topup, { lots: stored, balance: legacy, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
       }
+      fromTopup = round2(credits - fromIncluded - Math.max(owed, 0))
     })
   } catch (err) {
     console.error('[sella-credits] charge failed:', err.message)
+    return credits
   }
+  await logUsage(db, storeId, { credits, usd, kind, actor, fromTopup })
   return credits
+}
+
+// ---------------------------------------------------------------- USAGE LOG
+// One record per charged request, for the Ops console's Sella AI tab (who used
+// it, when, for what, at what cost), the way an AI provider's usage page lists
+// every call. Server only (firestore.rules). Ids sort newest first (inverted
+// time, like opsAudit), so the console pages through it with built-in indexes.
+// Also rolls the credits and cost onto the store's day document
+// (stores/{id}/sellaAiUsage/{Lagos day}) for every kind of request, so daily
+// history is not limited to chat turns.
+//
+// Never throws, and runs after the charge has landed: a failed log line must
+// never undo or fail a request the vendor already received.
+export const USAGE_LOG = 'sellaUsageLog'
+const MAX_TS = 9999999999999
+const lagosDay = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
+export const usageLogId = (ms) => `${String(MAX_TS - ms).padStart(13, '0')}_${Math.random().toString(36).slice(2, 8)}`
+export const usageLogBound = (ms) => String(MAX_TS - ms).padStart(13, '0')
+
+async function logUsage(db, storeId, { credits, usd, kind, actor, fromTopup }) {
+  const at = Date.now()
+  const day = lagosDay(new Date(at))
+  try {
+    await Promise.all([
+      db.collection(USAGE_LOG).doc(usageLogId(at)).set({
+        storeId, at, day, month: day.slice(0, 7), kind,
+        credits: round2(credits), usd: Number(usd) || 0, fromTopup: round2(fromTopup || 0),
+        actorRole: actor?.role || 'owner', actorUid: actor?.uid || null, actorLabel: actor?.label ? String(actor.label).slice(0, 80) : null,
+      }),
+      db.collection('stores').doc(storeId).collection('sellaAiUsage').doc(day).set({
+        date: day,
+        credits: FieldValue.increment(round2(credits)),
+        costUsd: FieldValue.increment(Number(usd) || 0),
+        byKind: { [kind]: FieldValue.increment(round2(credits)) },
+        charged: FieldValue.increment(1),
+        lastAt: at,
+      }, { merge: true }),
+    ])
+  } catch (err) {
+    console.error('[sella-credits] usage log failed:', err.message)
+  }
 }

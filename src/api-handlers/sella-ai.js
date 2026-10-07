@@ -774,7 +774,7 @@ export default async function handler(req, res) {
       const language = LANGUAGES[body.language] ? body.language : prefs.language
       const r = await synthesize({ text, language, voice: prefs.voice })
       if (!r.ok) return res.status(r.unavailable ? 404 : 502).json({ error: r.message })
-      await charge(db, storeId, { usd: r.costUsd, minimum: 0, kind: 'speech' })
+      await charge(db, storeId, { usd: r.costUsd, minimum: 0, kind: 'speech', actor })
       res.setHeader('Content-Type', r.contentType)
       res.setHeader('Cache-Control', 'no-store')
       return res.status(200).send(r.audio)
@@ -796,7 +796,7 @@ export default async function handler(req, res) {
       }
       if (!t.ok) return res.status(400).json({ error: t.message })
       // Voice costs very little; it is charged at real cost with no minimum.
-      await charge(db, storeId, { usd: t.costUsd, minimum: 0, kind: 'voice' })
+      await charge(db, storeId, { usd: t.costUsd, minimum: 0, kind: 'voice', actor })
       if (!t.text) return res.status(200).json({ text: '', empty: true })
       return res.status(200).json({ text: t.text })
     }
@@ -1546,9 +1546,9 @@ export default async function handler(req, res) {
     }
 
     // Charge what the turn REALLY cost. Never throws.
-    const spent = await charge(db, storeId, { usd: costUsd, minimum: minCredits, kind: imageCalls ? 'image' : deep ? 'deep' : hasFiles ? 'files' : 'chat' })
-    usageRef.set({ costUsd: FieldValue.increment(costUsd), credits: FieldValue.increment(spent) }, { merge: true })
-      .catch(() => { /* stats only */ })
+    // charge() also logs the request and adds its credits and cost to today's
+    // usage document (_lib/sella-credits.js logUsage).
+    const spent = await charge(db, storeId, { usd: costUsd, minimum: minCredits, kind: imageCalls ? 'image' : deep ? 'deep' : hasFiles ? 'files' : 'chat', actor })
 
     // Save readable documents with the chat so follow-up questions work
     // without re-uploading. Photos are already stored by URL.

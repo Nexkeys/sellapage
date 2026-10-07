@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Search, Bell, RefreshCw, ChevronDown, Settings, HelpCircle, LogOut, Menu, X, Command, ArrowRight, Camera, Loader2, Check, CornerDownLeft,
+  Search, Bell, RefreshCw, ChevronDown, Settings, HelpCircle, LogOut, Menu, X, Command, ArrowRight, Camera, Loader2, Check, CornerDownLeft, Bot,
 } from 'lucide-react'
 import { OPS_GROUPS } from '../utils/opsAccess'
 import { TabIcon, Avatar } from './opsKit'
@@ -253,7 +253,7 @@ export function ProfileModal({ me, onClose, onSaved }) {
   )
 }
 
-export default function OpsLayout({ me, tabs, activeTab, onTab, attention, system, onRefresh, onSignOut, onHelp, onMeChange, children }) {
+export default function OpsLayout({ me, tabs, activeTab, onTab, attention, system, onRefresh, onSignOut, onHelp, onMeChange, sellaOn = true, onSella, children }) {
   const [drawer, setDrawer] = useState(false)
   const [palette, setPalette] = useState(false)
   const [bell, setBell] = useState(false)
@@ -275,6 +275,7 @@ export default function OpsLayout({ me, tabs, activeTab, onTab, attention, syste
   const sidebar = <SidebarBody me={me} tabs={tabs} activeTab={activeTab} onTab={go} counts={counts} onProfile={() => { setDrawer(false); setProfile(true) }} onHelp={() => { setDrawer(false); onHelp() }} onSignOut={onSignOut} system={system} />
   const actions = [
     { label: 'Take Sella’s tour', hint: 'Every tab you can open, step by step', icon: 'Bot', run: onHelp },
+    { label: sellaOn ? 'Hide Sella' : 'Show Sella', hint: sellaOn ? 'Take the guide off the screen' : 'Bring the guide back', icon: 'Bot', run: () => onSella?.(!sellaOn) },
     { label: 'Your profile', hint: 'Photo, authenticator, recovery codes', icon: 'Shield', run: () => setProfile(true) },
     { label: 'Sign out', hint: 'End this session now', icon: 'KeyRound', run: onSignOut },
   ]
@@ -303,7 +304,12 @@ export default function OpsLayout({ me, tabs, activeTab, onTab, attention, syste
             <span className={`hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1 sm:inline-flex ${env === 'Production' ? 'bg-forest-50 text-forest-700 ring-forest-100' : 'bg-amber-50 text-amber-700 ring-amber-100'}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${env === 'Production' ? 'bg-green-500' : 'bg-amber-500'}`} /> {env}
             </span>
-            <div className="relative ml-auto">
+            <button type="button" onClick={() => onSella?.(!sellaOn)} aria-pressed={sellaOn} title={sellaOn ? 'Sella the guide is on. Tap to hide her.' : 'Sella the guide is hidden. Tap to bring her back.'} aria-label={sellaOn ? 'Hide Sella the guide' : 'Show Sella the guide'}
+              className={`relative ml-auto rounded-xl p-2.5 transition ${sellaOn ? 'bg-forest-50 text-forest-700 hover:bg-forest-100' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}>
+              <Bot size={19} />
+              <span className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-white ${sellaOn ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+            </button>
+            <div className="relative">
               <button type="button" onClick={() => setBell((v) => !v)} className="relative rounded-xl p-2.5 text-slate-600 hover:bg-slate-100" aria-label={`Needs attention: ${attention?.total || 0}`}>
                 <Bell size={19} />
                 {attention?.total > 0 && <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9.5px] font-bold text-white">{attention.total > 99 ? '99+' : attention.total}</span>}
@@ -336,6 +342,8 @@ export default function OpsLayout({ me, tabs, activeTab, onTab, attention, syste
                 <div className="absolute right-0 top-12 z-50 w-56 rounded-2xl bg-white p-1.5 shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-150">
                   <button type="button" onClick={() => { setProfile(true); setMenu(false) }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] text-dash-ink hover:bg-slate-50"><Settings size={15} /> Your profile</button>
                   <button type="button" onClick={() => { onHelp(); setMenu(false) }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] text-dash-ink hover:bg-slate-50"><HelpCircle size={15} /> Sella&apos;s tour</button>
+                  <button type="button" onClick={() => { onSella?.(!sellaOn); setMenu(false) }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] text-dash-ink hover:bg-slate-50"><Bot size={15} /> {sellaOn ? 'Hide Sella' : 'Show Sella'}</button>
+
                   <button type="button" onClick={onSignOut} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] text-red-600 hover:bg-red-50"><LogOut size={15} /> Sign out</button>
                 </div>
               )}

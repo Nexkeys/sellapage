@@ -73,3 +73,12 @@ export function sendAccessChangedEmail({ to, name, what }) {
       + p('If you think this is a mistake, speak to a super admin.'),
   ), { sender: 'noreply' })
 }
+
+/** A short security notice (account locked, recovery code used, new codes). */
+export function sendSecurityAlertEmail({ to, name, subject, heading, lines = [] }) {
+  if (!to) return Promise.resolve(false)
+  return sendEmail(to, subject, frame(
+    escapeHtml(heading),
+    p(`Hi ${escapeHtml(name || 'there')},`) + lines.map((l) => p(escapeHtml(l))).join(''),
+  ), { sender: 'noreply' })
+}

@@ -66,7 +66,7 @@ export default function QuotaClock() {
 
   return (
     <div className="space-y-4">
-      <section className="grid gap-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1c1305] via-[#3b2405] to-[#7c3f06] p-5 text-amber-50 sm:p-7 lg:grid-cols-[auto_1fr] lg:items-center">
+      <section className="grid grid-cols-1 gap-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1c1305] via-[#3b2405] to-[#7c3f06] p-5 text-amber-50 sm:p-7 lg:grid-cols-[auto_1fr] lg:items-center">
         <Ring value={elapsedPct} size={168} stroke={12} color="#fbbf24" track="rgba(255,255,255,0.12)">
           <div className="text-center"><p className="font-mono text-[26px] font-bold tabular-nums tracking-tight">{hh}:{mm}<span className="text-[16px] opacity-70">:{ss}</span></p><p className="text-[11px] text-amber-100/70">until the reset</p></div>
         </Ring>
@@ -93,7 +93,7 @@ export default function QuotaClock() {
       {live && (data.reads?.willExceed || data.reads?.percent >= 80) && <Notice tone="error">Today is on track to run out of reads. When reads run out, stores stop loading, not just Ops.</Notice>}
       {live && data.spiking && <Notice tone="warn">Reads spiked in the last hour: {Number(data.lastHourReads).toLocaleString()}, more than double the day&apos;s average.</Notice>}
 
-      <section className="grid gap-3 md:grid-cols-3">
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {LIMITS.map((l) => {
           const I = l.icon
           const m = live ? data[l.id] : null
@@ -112,7 +112,7 @@ export default function QuotaClock() {
       <section className="rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <p className="flex items-center gap-2 text-[15px] font-bold text-dash-ink"><Database size={17} className="text-forest-600" /> What Ops costs in reads</p>
         <p className="mt-0.5 text-[12.5px] text-dash-muted">Opening these screens again and again on a busy day is what eats the quota.</p>
-        <ul className="mt-4 grid gap-2 md:grid-cols-2">
+        <ul className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
           {COSTS.map(([t, d]) => (
             <li key={t} className="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
               <AlertTriangle size={15} className="mt-0.5 flex-shrink-0 text-amber-500" />

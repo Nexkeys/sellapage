@@ -111,7 +111,7 @@ function StoreDrawer({ s, onClose, onChanged, notify }) {
         </div>
         <Notice tone="error" onClose={() => setErr('')}>{err}</Notice>
         {mode === 'verify' ? <VerifyForm s={s} onCancel={() => setMode('')} onDone={(m) => { notify?.(m); onChanged() }} /> : (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {!s.cacVerified && <Btn icon={<BadgeCheck size={15} />} onClick={() => setMode('verify')}>Verify by hand</Btn>}
             {!s.cacVerified && s.cacRetryCount > 0 && <Btn tone="soft" icon={<RotateCcw size={15} />} busy={busy === 'retry'} onClick={moreTries}>Give 3 more tries</Btn>}
             <Btn tone="danger-soft" icon={<XCircle size={15} />} busy={busy === 'reject'} onClick={reject}>{s.cacVerified ? 'Remove badge' : 'Reject'}</Btn>
@@ -139,7 +139,7 @@ function Verifications({ notify }) {
 
   return (
     <div className="space-y-4">
-      <section className="grid gap-4 rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] md:grid-cols-[auto_1fr] md:items-center">
+      <section className="grid grid-cols-1 gap-4 rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] md:grid-cols-[auto_1fr] md:items-center">
         <div className="flex items-center gap-4">
           <Ring value={pct} size={104} stroke={10}><div className="text-center"><p className="font-display text-[24px] font-extrabold text-dash-ink">{stats ? `${pct}%` : '-'}</p><p className="text-[10.5px] text-dash-muted">verified</p></div></Ring>
           <div className="md:hidden"><p className="text-[13px] font-bold text-dash-ink">{stats?.verified ?? '-'} of {stats?.total ?? '-'} stores</p><p className="text-[12px] text-dash-muted">carry the CAC badge</p></div>
@@ -169,11 +169,11 @@ function Verifications({ notify }) {
       </div>
       <Notice tone="error">{error}</Notice>
 
-      {loading && !data ? <div className="grid gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
+      {loading && !data ? <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
         : rows.length === 0 ? <Empty icon={<FileCheck size={22} />} title={filter === 'needs_help' ? 'Nobody is stuck' : 'Nothing here'} sub={filter === 'needs_help' ? 'Stores that use all 3 automatic tries show up here to be checked by hand.' : 'Pick another filter or search.'} />
           : (
             <>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {rows.map((s) => {
                   const st = stateOf(s)
                   return (

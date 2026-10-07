@@ -128,7 +128,89 @@ async function readSales(db) {
   }
 }
 
+const PAID_PLANS = new Set(['growth', 'pro', 'premium'])
+const PERIOD_MONTHS = { monthly: 1, quarterly: 3, biannual: 6, annual: 12 }
+const MAX_LEDGER = 5000
+const ms = (v) => toDate(v)?.getTime() || 0
+function paidNow(d, now) {
+  const plan = String(d.plan || '').toLowerCase()
+  if (!PAID_PLANS.has(plan) || d.planStatus === 'expired') return false
+  const end = ms(d.planEndDate)
+  if (!end) return true
+  return now <= (ms(d.graceUntil) || end + 2 * 24 * 60 * 60 * 1000)
+}
+
+let incomeCache = { at: 0, data: null }
+async function readIncome(db, fresh) {
+  if (!fresh && incomeCache.data && Date.now() - incomeCache.at < 60 * 1000) return incomeCache.data
+  const now = Date.now()
+  const [subsSnap, packsSnap, ordersSnap, storesSnap] = await Promise.all([
+    db.collectionGroup('subscriptions').select('amount', 'status', 'paidAt', 'plan', 'billingPeriod', 'planEndDate', 'paystackRef').limit(MAX_SUBSCRIPTIONS).get(),
+    db.collection('sellaCreditPurchases').where('status', '==', 'paid').limit(MAX_SUBSCRIPTIONS).get(),
+    db.collectionGroup('orders').select('shipmentBooked', 'topshipShipmentId', 'platformServiceCharge', 'bookingTimestamp', 'createdAt', 'courierName', 'provider').limit(MAX_ORDERS).get(),
+    db.collection('stores').select('businessName', 'storeName', 'plan', 'planStatus', 'planEndDate', 'graceUntil', 'billingPeriod').get(),
+  ])
+
+  const events = []
+  const latestSub = {}
+  subsSnap.docs.forEach((doc) => {
+    const d = doc.data()
+    if (d.status && d.status !== 'success') return
+    const storeId = storeIdFromPath(doc.ref.path)
+    const at = ms(d.paidAt)
+    const amount = num(d.amount) / 100
+    const plan = String(d.plan || 'unknown').toLowerCase()
+    const period = d.billingPeriod || 'monthly'
+    events.push({ id: `p_${doc.id}`, kind: 'plan', at, amount, storeId, plan, period, ref: d.paystackRef || '' })
+    if (!latestSub[storeId] || at > latestSub[storeId].at) latestSub[storeId] = { at, amount, plan, period }
+  })
+  packsSnap.docs.forEach((doc) => {
+    const d = doc.data()
+    events.push({ id: `c_${doc.id}`, kind: 'credits', at: ms(d.paidAt) || ms(d.createdAt), amount: num(d.price) + num(d.vat), vat: num(d.vat), storeId: d.storeId || '', pack: d.packName || '', credits: num(d.credits), ref: doc.id })
+  })
+  ordersSnap.docs.forEach((doc) => {
+    const d = doc.data()
+    if (!(d.shipmentBooked === true || (d.topshipShipmentId && String(d.topshipShipmentId).trim()))) return
+    events.push({ id: `d_${doc.id}`, kind: 'delivery', at: ms(d.bookingTimestamp) || ms(d.createdAt), amount: num(d.platformServiceCharge) || SHIPMENT_SERVICE_CHARGE, storeId: storeIdFromPath(doc.ref.path), courier: d.courierName || (d.provider === 'topship' ? 'Topship' : 'Sendbox'), ref: doc.id })
+  })
+  events.sort((a, b) => b.at - a.at)
+
+  // Paying right now, and what that is worth a month.
+  const names = {}
+  let mrr = 0
+  let paying = 0
+  let manual = 0
+  const payingByPlan = { growth: 0, pro: 0, premium: 0 }
+  storesSnap.docs.forEach((doc) => {
+    const d = doc.data()
+    names[doc.id] = d.businessName || d.storeName || 'Unnamed store'
+    if (!paidNow(d, now)) return
+    paying += 1
+    const plan = String(d.plan).toLowerCase()
+    payingByPlan[plan] = (payingByPlan[plan] || 0) + 1
+    const last = latestSub[doc.id]
+    if (last && last.amount > 0) mrr += last.amount / (PERIOD_MONTHS[last.period] || 1)
+    else manual += 1
+  })
+  const firstPay = {}
+  events.forEach((e) => { if (e.kind === 'plan' && (!firstPay[e.storeId] || e.at < firstPay[e.storeId])) firstPay[e.storeId] = e.at })
+
+  const used = new Set(events.slice(0, MAX_LEDGER).map((e) => e.storeId))
+  const data = {
+    events: events.slice(0, MAX_LEDGER),
+    truncated: events.length > MAX_LEDGER || ordersSnap.size >= MAX_ORDERS || subsSnap.size >= MAX_SUBSCRIPTIONS,
+    names: Object.fromEntries([...used].filter(Boolean).map((id) => [id, names[id] || 'A store that no longer exists'])),
+    firstPaidAt: firstPay,
+    recurring: { mrr: Math.round(mrr), arr: Math.round(mrr * 12), paying, manual, payingByPlan, arppu: paying - manual > 0 ? Math.round(mrr / (paying - manual)) : 0 },
+    serviceCharge: SHIPMENT_SERVICE_CHARGE,
+    builtAt: now,
+  }
+  incomeCache = { at: Date.now(), data }
+  return data
+}
+
 export default async function handler(req, res) {
+
   applyCorsOrigin(req, res)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
@@ -250,6 +332,24 @@ export default async function handler(req, res) {
           truncated,
         },
       })
+    }
+
+    /**
+     * Every naira Sellapage itself earned, as one ledger, for the Revenue
+     * tab's charts (day, week, month or year) and its payments table:
+     *   plan      stores/{id}/subscriptions, Paystack amount in kobo
+     *   credits   sellaCreditPurchases marked paid: pack price plus VAT, which
+     *             is what Sellapage receives (the vendor pays Paystack's fee)
+     *   delivery  the service charge on each delivery booked through Sellapage
+     * Dropshipping: the 5% commission rate exists (utils/marketplace.js) but
+     * no order flow collects it yet, so it has no rows.
+     * Plus MRR: each store paying right now, at the monthly equivalent of its
+     * latest plan payment. Grouping happens in the browser, so changing the
+     * range or the grouping never costs another read. Cached for a minute.
+     */
+    if (action === 'income') {
+      const data = await readIncome(db, req.query.fresh === '1')
+      return res.status(200).json({ success: true, ...data })
     }
 
     if (action === 'transactions') {

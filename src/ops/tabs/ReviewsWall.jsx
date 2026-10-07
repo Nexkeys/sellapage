@@ -5,7 +5,7 @@
 // best to feature them. The prompt switch decides whether vendors are asked
 // for a review at all (/api/platform-reviews-admin).
 import { useEffect, useState } from 'react'
-import { Star, Check, EyeOff, Sparkles, Trash2, Film, Heart, Quote } from 'lucide-react'
+import { Star, Check, EyeOff, Sparkles, Trash2, Film, Heart, Quote, Store } from 'lucide-react'
 import { useOpsData } from '../opsKit'
 import { opsJson } from '../opsSession'
 import { initials, avatarTone } from '../opsUi'
@@ -81,37 +81,43 @@ export default function ReviewsWall({ notify }) {
       </div>
       <Notice tone="error" onClose={() => setErr('')}>{err || error}</Notice>
 
-      {loading && !data ? <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">{[180, 240, 200, 260, 190, 220].map((h, i) => <div key={i} className="mb-4 animate-pulse break-inside-avoid rounded-3xl bg-white ring-1 ring-dash-line" style={{ height: h }} />)}</div>
+      {/* A grid, not CSS columns: columns split a card's corner badge into
+          the next column, which left a stray "Featured" pill under a card. */}
+      {loading && !data ? <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">{[180, 240, 200, 260, 190, 220].map((h, i) => <div key={i} className="animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" style={{ height: h }} />)}</div>
         : rows.length === 0 ? <Empty icon={<Quote size={22} />} title={status === 'pending' ? 'No reviews waiting' : 'Nothing here'} sub="When vendors review Sellapage from their dashboard, the reviews wait here first." />
           : (
             <>
-              <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
-                {rows.map((r) => {
+              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {rows.map((r, i) => {
                   const [label, tone] = TONE[r.status] || TONE.pending
+                  const who = r.authorName || r.storeName || 'Anonymous'
+                  const store = r.storeName && r.storeName !== who ? r.storeName : ''
                   return (
-                    <article key={r.id} className={`relative mb-4 break-inside-avoid rounded-3xl border bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${r.featured ? 'border-amber-200 ring-2 ring-amber-100' : 'border-dash-line'}`}>
-                      {r.featured && <span className="absolute -top-2.5 right-5 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-0.5 text-[10.5px] font-bold text-amber-950 shadow-sm"><Sparkles size={11} /> Featured</span>}
-                      <Quote size={22} className="text-forest-100" />
-                      <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-dash-ink">{r.reviewText || r.message || ''}</p>
+                    <article key={r.id} style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }} className={`flex min-w-0 flex-col rounded-3xl border bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] animate-in fade-in slide-in-from-bottom-1 fill-mode-both ${r.featured ? 'border-amber-200 ring-2 ring-amber-100' : 'border-dash-line'}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <Stars n={Number(r.rating) || 0} />
+                        {r.featured && <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-0.5 text-[10.5px] font-bold text-amber-950"><Sparkles size={11} /> Featured</span>}
+                      </div>
+                      <p className="mt-3 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-dash-ink">{r.reviewText || r.message || ''}</p>
                       {(r.images?.length > 0 || r.videos?.length > 0) && (
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {(r.images || []).map((u) => <button key={u} type="button" onClick={() => setImg(u)} className="h-16 w-16 overflow-hidden rounded-xl ring-1 ring-dash-line"><img src={u} alt="" loading="lazy" className="h-full w-full object-cover" /></button>)}
+                          {(r.images || []).map((u) => <button key={u} type="button" onClick={() => setImg(u)} className="h-16 w-16 overflow-hidden rounded-xl ring-1 ring-dash-line transition hover:ring-forest-200" aria-label="Open photo"><img src={u} alt="" loading="lazy" className="h-full w-full object-cover" /></button>)}
                           {(r.videos || []).map((u) => <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="flex h-16 w-16 items-center justify-center rounded-xl bg-slate-900 text-white" aria-label="Play video"><Film size={18} /></a>)}
                         </div>
                       )}
                       <div className="mt-4 flex items-center gap-3">
-                        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${avatarTone(r.id)}`}>{initials(r.authorName || r.storeName)}</span>
-                        <div className="min-w-0 flex-1"><p className="truncate text-[13px] font-semibold text-dash-ink">{r.authorName || 'Anonymous'}</p><p className="truncate text-[11.5px] text-slate-500">{r.storeName}</p></div>
-                        <Stars n={Number(r.rating) || 0} />
-                      </div>
-                      <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-dash-line pt-3">
+                        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${avatarTone(r.id)}`}>{initials(who)}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-semibold text-dash-ink">{who}</p>
+                          <p className="flex items-center gap-1 truncate text-[11.5px] text-slate-500">{store && <><Store size={11} className="flex-shrink-0" />{store} · </>}{timeAgo(r.createdAt)}</p>
+                        </div>
                         <Pill tone={tone} dot>{label}</Pill>
-                        <span className="text-[11px] text-slate-400">{timeAgo(r.createdAt)}</span>
-                        <span className="flex-1" />
+                      </div>
+                      <div className="mt-4 flex items-center gap-1.5 border-t border-dash-line pt-3">
                         {r.status !== 'approved' && <Btn size="sm" icon={<Check size={13} />} busy={busy === `${r.id}:moderate`} onClick={() => call(r, 'moderate', { status: 'approved' }, 'Approved. It is on the wall.')}>Approve</Btn>}
                         {r.status !== 'rejected' && <Btn size="sm" tone="soft" icon={<EyeOff size={13} />} busy={busy === `${r.id}:moderate`} onClick={() => call(r, 'moderate', { status: 'rejected' }, 'Hidden.')}>Hide</Btn>}
                         {r.status === 'approved' && <Btn size="sm" tone="soft" icon={<Sparkles size={13} className={r.featured ? 'fill-amber-400 text-amber-500' : ''} />} busy={busy === `${r.id}:toggle-featured`} onClick={() => call(r, 'toggle-featured', { featured: !r.featured }, r.featured ? 'No longer featured.' : 'Featured.')}>{r.featured ? 'Unfeature' : 'Feature'}</Btn>}
-                        <button type="button" onClick={() => remove(r)} className="rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Delete review"><Trash2 size={15} /></button>
+                        <button type="button" onClick={() => remove(r)} className="ml-auto flex-shrink-0 rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Delete review" title="Delete review"><Trash2 size={15} /></button>
                       </div>
                     </article>
                   )

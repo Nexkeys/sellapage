@@ -18,6 +18,7 @@ const DENY_SUMMARY = {
   step_up_required: (t) => `Asked to confirm with the authenticator before a sensitive action in ${t}`,
   session_idle: () => 'Used a session that had timed out (idle)',
   session_expired: () => 'Used a session that had passed 12 hours',
+  session_moved: () => 'Used a session from a different browser or device than the one that signed in (session ended)',
   staff_paused: () => 'Tried to work while paused',
   staff_deleted: () => 'Tried to work after being removed',
 }
@@ -41,7 +42,7 @@ const ENDPOINT_TAB = {
 // each handler checks (admin-referrals.js, admin-health.js).
 function tabForRequest(endpoint, action) {
   if (endpoint === 'admin-referrals') return action === 'withdrawals' || action === 'process-withdrawal' ? 'withdrawals' : 'referrals'
-  if (endpoint === 'admin-health') return action === 'directory' || action === 'verify_payout' ? 'directory' : 'health'
+  if (endpoint === 'admin-health') return action === 'directory' || action === 'verify_payout' || action === 'merchant' ? 'directory' : 'health'
   return ENDPOINT_TAB[endpoint] || null
 }
 
@@ -51,6 +52,7 @@ const DENY_MESSAGES = {
   session_idle: 'You were signed out after 30 minutes without activity.',
   session_expired: 'Your 12-hour session has ended. Sign in again.',
   session_ended: 'Your session has ended. Sign in again.',
+  session_moved: 'For your safety this session was ended: it was used from a different browser. Sign in again.',
   staff_paused: 'Your access is paused. Speak to a super admin.',
   staff_deleted: 'Your access has been removed.',
 }

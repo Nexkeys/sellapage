@@ -64,7 +64,7 @@ export default function GrowthDashboard({ can, onTab, refreshKey }) {
         <button type="button" onClick={() => setDefs((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-600 ring-1 ring-dash-line hover:bg-slate-50"><Info size={13} /> How we count</button>
       </div>
       {defs && (
-        <div className="grid gap-2 rounded-3xl bg-slate-900 p-5 text-[12.5px] leading-relaxed text-slate-200 sm:grid-cols-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="grid grid-cols-1 gap-2 rounded-3xl bg-slate-900 p-5 text-[12.5px] leading-relaxed text-slate-200 sm:grid-cols-2 animate-in fade-in slide-in-from-top-2 duration-200">
           <p><strong className="text-white">Complete:</strong> products, a logo and a description of 20+ characters.</p>
           <p><strong className="text-white">Shared:</strong> copied or shared their link (counted from 6 Oct 2026), or 5+ visits for older stores.</p>
           <p><strong className="text-white">First customer:</strong> at least one enquiry, order or booking.</p>
@@ -113,7 +113,7 @@ export default function GrowthDashboard({ can, onTab, refreshKey }) {
       {/* segments */}
       <div>
         <h3 className="mb-3 text-[15px] font-bold text-dash-ink">Merchant segments <span className="font-normal text-slate-500">from the reactivation plan</span></h3>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {g.segments.map((s) => {
             const st = SEG_STYLE[s.id]
             const share = k.merchants ? Math.round((s.n / k.merchants) * 100) : 0
@@ -137,7 +137,7 @@ export default function GrowthDashboard({ can, onTab, refreshKey }) {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card title="Channels by quality" sub="Sign-ups (bars) and the share that activated (line), from &quot;How did you hear about us?&quot;.">
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -183,7 +183,7 @@ export default function GrowthDashboard({ can, onTab, refreshKey }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card title="Sign-ups, last 90 days" sub={`${g.signups.reduce((n, d) => n + d.n, 0)} new merchants.`}>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -223,7 +223,7 @@ export default function GrowthDashboard({ can, onTab, refreshKey }) {
       </div>
 
       <Card title="Categories" sub="Where merchants come from by business type, and how many activate.">
-        <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
           {g.categories.map((c) => (
             <div key={c.label}>
               <div className="mb-1 flex justify-between text-[12.5px]"><span className="text-slate-600">{c.label}</span><span className="font-semibold text-dash-ink">{c.signups} <span className="font-normal text-slate-400">· {c.signups ? Math.round((c.activated / c.signups) * 100) : 0}% active</span></span></div>

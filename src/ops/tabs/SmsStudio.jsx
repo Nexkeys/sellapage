@@ -7,17 +7,19 @@
 //   - write with the cost and page count worked out as you type, and a phone
 //     preview of exactly what lands (the server builds the preview)
 //   - test on your own number, then send (asks for the authenticator code)
+//   - how the texts did: activity by day, sent to tapped, campaigns side by
+//     side, and when vendors tap (SmsInsights.jsx)
 //   - drafts, sent campaigns, every message with Termii's delivery verdict,
 //     and the numbers that opted out
 // Promotional SMS cannot be delivered between 8pm and 8am (utils/smsWindow.js).
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageSquare, Wallet, Send, MousePointerClick, Ban, Link2, Save, Users, Copy, Trash2, Pencil, RefreshCw, Smartphone, AlertTriangle, FileText, ListChecks, CheckCircle2 } from 'lucide-react'
 import { sendWindow } from '../../utils/smsWindow'
 import { opsJson } from '../opsSession'
 import { useOpsData } from '../opsKit'
 import { Segmented, Chips, Pager, SearchBox, Pill, Empty, Notice, Btn, useConfirm, useDebounced, timeAgo, fmtDateTime } from './kit'
+import SmsInsights from './SmsInsights'
 
-const SmsChart = lazy(() => import('../../components/admin/SmsChart'))
 const PLANS = ['free', 'starter', 'growth', 'pro', 'premium']
 const EMPTY = { id: '', name: '', body: '', linkUrl: '', includeLink: false, filters: {} }
 const OUTCOME = { delivered: ['Delivered', 'green'], dnd: ['Blocked by DND', 'amber'], failed: ['Not delivered', 'red'], pending: ['Waiting for report', 'slate'] }
@@ -234,8 +236,6 @@ export default function SmsStudio({ notify }) {
         ))}
       </section>
 
-      {(data?.series || []).length > 0 && <Suspense fallback={<div className="h-56 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />}><div className="overflow-hidden rounded-3xl border border-dash-line bg-white p-2"><SmsChart series={data.series} /></div></Suspense>}
-
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="space-y-4 rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div className="flex items-center justify-between gap-2"><p className="flex items-center gap-2 text-[15px] font-bold text-dash-ink"><MessageSquare size={17} className="text-forest-600" />{draft.id ? 'Editing a campaign' : 'New campaign'}</p>{(draft.id || draft.body) && <button type="button" onClick={() => setDraft(EMPTY)} className="text-[12.5px] font-semibold text-slate-500 hover:text-dash-ink">Start over</button>}</div>
@@ -248,7 +248,7 @@ export default function SmsStudio({ notify }) {
             </div>
           </div>
           <input value={draft.linkUrl} onChange={(e) => setDraft((p) => ({ ...p, linkUrl: e.target.value, includeLink: Boolean(e.target.value) }))} inputMode="url" placeholder="Where the link goes: https://www.sellapage.com.ng/dashboard" className={INPUT} />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-slate-50 p-3.5 ring-1 ring-slate-100">
               <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Length</p>
               <p className="mt-1 text-[14px] font-bold text-dash-ink">{quote?.characters ?? 0} characters · {quote?.pages ?? 0} page{quote?.pages === 1 ? '' : 's'}</p>
@@ -281,6 +281,8 @@ export default function SmsStudio({ notify }) {
         <section className="xl:sticky xl:top-24 xl:self-start"><p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-dash-muted"><Smartphone size={14} /> On a vendor&apos;s phone</p><Phone sender={config?.senderId} text={quote?.preview} /></section>
       </div>
 
+      <SmsInsights data={data} />
+
       <Segmented value={view} onChange={setView} options={[
         { id: 'drafts', label: 'Drafts', icon: <Pencil size={14} />, count: drafts.length },
         { id: 'sent', label: 'Sent', icon: <CheckCircle2 size={14} />, count: sent.length },
@@ -289,7 +291,7 @@ export default function SmsStudio({ notify }) {
       ]} className="max-w-full overflow-x-auto" />
 
       {view === 'drafts' && (drafts.length === 0 ? <Empty icon={<Pencil size={22} />} title="No drafts" sub="Saved campaigns wait here until they are sent." /> : (
-        <ul className="grid gap-3 md:grid-cols-2">{drafts.map((c) => (
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">{drafts.map((c) => (
           <li key={c.id} className="flex flex-col rounded-3xl border border-dash-line bg-white p-4">
             <p className="truncate text-[14px] font-bold text-dash-ink">{c.name || 'Untitled'}</p>
             <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-[12.5px] text-slate-600">{c.body}</p>

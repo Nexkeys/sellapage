@@ -4,6 +4,7 @@ import { verifyAdmin } from './_lib/verify-admin.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 import { meter, flushUsage } from './_lib/usage-meter.js'
+import { buildMerchantProfile, forgetMerchantProfile, paidNow, ms } from './_lib/merchant-profile.js'
 
 
 if (!getApps().length) {
@@ -80,7 +81,7 @@ export default async function handler(req, res) {
     // The merchant directory and payout-account approval are the Merchants
     // tab, not System Health. Checking them against 'health' locked anyone
     // given Merchants (operations, marketing) out of the list.
-    const tab = action === 'directory' || action === 'verify_payout' ? 'directory' : 'health';
+    const tab = action === 'directory' || action === 'verify_payout' || action === 'merchant' ? 'directory' : 'health';
     const admin = await verifyAdmin(req, tab);
     if (!admin) return res.status(403).json({ error: 'Forbidden' });
 
@@ -98,11 +99,28 @@ export default async function handler(req, res) {
         // The directory this admin is looking at just became wrong. Per
         // instance, which is why the client should refetch with ?fresh=1.
         clearDirectoryCache();
+        forgetMerchantProfile(storeId);
 
         return res.status(200).json({ success: true, storeId, payoutsVerified: !!verified });
       } catch (err) {
         console.error('verify_payout error:', err);
         return res.status(500).json({ error: 'Failed to update payoutsVerified' });
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // MODE: MERCHANT (one store, everything: _lib/merchant-profile.js)
+    // ---------------------------------------------------------------------------
+    if (action === 'merchant') {
+      const storeId = String(queryParams.storeId || '').trim();
+      if (!storeId || storeId.includes('/')) return res.status(400).json({ error: 'Missing storeId' });
+      try {
+        const profile = await buildMerchantProfile(adminDb, storeId, { fresh: queryParams.fresh === '1' });
+        if (!profile) return res.status(404).json({ error: 'not_found', message: 'That store no longer exists.' });
+        return res.status(200).json({ success: true, ...profile });
+      } catch (err) {
+        console.error('Merchant profile error:', err);
+        return res.status(500).json({ error: 'Failed to load this merchant' });
       }
     }
 
@@ -156,6 +174,42 @@ export default async function handler(req, res) {
         // Apply payoutFilter if provided: show only stores with a subaccount and payoutsVerified === false
         if (queryParams.payoutFilter === 'unverified') {
           filteredStores = filteredStores.filter((s) => s.subaccountCode && (s.payoutsVerified === false || !s.payoutsVerified));
+        } else if (queryParams.payoutFilter === 'verified') {
+          filteredStores = filteredStores.filter((s) => s.subaccountCode && s.payoutsVerified === true);
+        } else if (queryParams.payoutFilter === 'none') {
+          filteredStores = filteredStores.filter((s) => !s.subaccountCode);
+        }
+
+        // The rest of the filters (Merchants tab "Filters"). Every one is
+        // optional and they combine.
+        const nowMs = Date.now();
+        const planOf = (s) => String(s.plan || 'starter').toLowerCase();
+        const plan = String(queryParams.plan || '');
+        if (plan === 'paid') filteredStores = filteredStores.filter((s) => paidNow(s, nowMs));
+        else if (plan === 'free') filteredStores = filteredStores.filter((s) => !paidNow(s, nowMs));
+        else if (plan === 'ended') filteredStores = filteredStores.filter((s) => ['growth', 'pro', 'premium'].includes(planOf(s)) && !paidNow(s, nowMs));
+        else if (['growth', 'pro', 'premium'].includes(plan)) filteredStores = filteredStores.filter((s) => planOf(s) === plan && paidNow(s, nowMs));
+        const source = String(queryParams.source || '');
+        if (source === 'referred') filteredStores = filteredStores.filter((s) => !!s.referredBy);
+        else if (source === 'direct') filteredStores = filteredStores.filter((s) => !s.referredBy);
+        else if (source) filteredStores = filteredStores.filter((s) => s.heardAbout?.source === source);
+        const joinedDays = Number(queryParams.joined) || 0;
+        if (joinedDays > 0) {
+          const since = nowMs - joinedDays * 24 * 60 * 60 * 1000;
+          filteredStores = filteredStores.filter((s) => (joinedMs(s) || 0) >= since);
+        }
+        if (queryParams.cac === 'yes') filteredStores = filteredStores.filter((s) => s.cacVerified === true);
+        if (queryParams.kind === 'products' || queryParams.kind === 'services') {
+          filteredStores = filteredStores.filter((s) => (s.vendorType || 'products') === queryParams.kind || s.vendorType === 'both');
+        }
+        if (queryParams.sort === 'oldest') filteredStores.sort((a, b) => (joinedMs(a) ?? Infinity) - (joinedMs(b) ?? Infinity));
+        else if (queryParams.sort === 'name') {
+          const nm = (s) => String(s.businessName || s.storeName || '').toLowerCase();
+          filteredStores.sort((a, b) => nm(a).localeCompare(nm(b)));
+        } else if (queryParams.sort === 'plan_end') {
+          // Paid plans ending soonest first: who to remind about renewal.
+          filteredStores = filteredStores.filter((s) => paidNow(s, nowMs) && ms(s.planEndDate));
+          filteredStores.sort((a, b) => ms(a.planEndDate) - ms(b.planEndDate));
         }
 
         const totalResults = filteredStores.length;
@@ -168,7 +222,7 @@ export default async function handler(req, res) {
 
         // Resolve each referrer's store name + referral code for the "Source"
         // column instead of exposing the raw referredBy store ID.
-        const referrerIds = [...new Set(paginatedChunk.map((s) => s.referredBy).filter(Boolean))];
+        const referrerIds = [...new Set(paginatedChunk.map((s) => s.referredBy).filter(Boolean).map(String))];
         const referrerMap = {};
         if (referrerIds.length) {
           const referrerDocs = await Promise.all(
@@ -178,7 +232,8 @@ export default async function handler(req, res) {
             if (doc.exists) {
               const d = doc.data();
               referrerMap[doc.id] = {
-                storeName: d.storeName || d.handle || '',
+                // What people call the store, not its link.
+                storeName: d.businessName || d.storeName || d.handle || '',
                 referralCode: d.referralCode || '',
               };
             }
@@ -208,10 +263,34 @@ export default async function handler(req, res) {
               }
             };
 
-            const [leadCount, productCount, serviceCount] = await Promise.all([
-              countSub('leads'),
+            // Leads are one shared collection tagged with the store, not a
+            // subcollection: counting stores/{id}/leads always gave 0.
+            const countLeads = async () => {
+              try {
+                const snap = await adminDb.collection('leads').where('storeId', '==', store.id).count().get();
+                return snap.data().count;
+              } catch (err) {
+                console.error(`Failed to count leads for store ${store.id}`, err);
+                return 0;
+              }
+            };
+            // The dashboard heartbeat bumps a session every 45 seconds, so the
+            // newest one says when they were last there. One read per row.
+            const lastSeen = async () => {
+              try {
+                const snap = await adminDb.collection('stores').doc(store.id).collection('sessions').orderBy('lastActiveAt', 'desc').limit(3).get();
+                const live = snap.docs.map((d) => d.data()).filter((x) => x.revoked !== true);
+                return live.length ? ms(live[0].lastActiveAt) : 0;
+              } catch {
+                return 0;
+              }
+            };
+
+            const [leadCount, productCount, serviceCount, lastActiveAt] = await Promise.all([
+              countLeads(),
               countSub('products'),
               countSub('services'),
+              lastSeen(),
             ]);
 
             const isPremium = store.plan === 'premium';
@@ -252,7 +331,12 @@ export default async function handler(req, res) {
               isManualOverride,
               isPlanExpired,
               leadCount,
+              lastActiveAt: lastActiveAt || null,
+              online: !!lastActiveAt && Date.now() - lastActiveAt <= 2 * 60 * 1000,
+              paidNow: paidNow(store, Date.now()),
+              heardAboutSource: store.heardAbout?.source || '',
               // What this merchant actually has live, split the way the
+
               // dashboard splits it: products and services are different things.
               listings: {
                 products: productCount,

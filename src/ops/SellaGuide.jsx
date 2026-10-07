@@ -8,7 +8,12 @@
 //                 itself, right after someone's first welcome)
 // Everything comes from utils/opsAccess.js, so a tab added there is in the
 // guide the moment it ships. No AI, no cost: it never sends anything anywhere.
-import { useEffect, useMemo, useState } from 'react'
+//
+// She can be dragged anywhere on the screen (so she never sits on top of
+// something you need), and hidden with her X. The robot button in the top bar
+// brings her back. Where she sits and whether she is on is remembered per
+// person in this browser.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ArrowRight, ArrowLeft, Check, Compass, ListChecks, Lightbulb, Mail } from 'lucide-react'
 import SellaBot from './SellaBot'
@@ -88,13 +93,80 @@ function Tour({ me, tabs, onOpenTab, onDone }) {
   )
 }
 
-export default function SellaGuide({ me, tabs, activeTab, onOpenTab, tourOpen, onTourDone }) {
+const BOT = 66 // the floating button, in px (54px robot plus padding)
+const MARGIN = 8
+const clampPos = (pos) => {
+  const w = window.innerWidth
+  const h = window.innerHeight
+  return {
+    right: Math.min(Math.max(MARGIN, pos.right), Math.max(MARGIN, w - BOT - MARGIN)),
+    bottom: Math.min(Math.max(MARGIN, pos.bottom), Math.max(MARGIN, h - BOT - MARGIN)),
+  }
+}
+
+export default function SellaGuide({ me, tabs, activeTab, onOpenTab, tourOpen, onTourDone, visible = true, onHide }) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('access')
   const [tour, setTour] = useState(false)
   const [hello, setHello] = useState(false)
+  const posKey = `sp_ops_sella_pos_${me?.uid || 'x'}`
+  const [pos, setPos] = useState(() => {
+    try { const v = JSON.parse(localStorage.getItem(posKey) || 'null'); if (v && Number.isFinite(v.right) && Number.isFinite(v.bottom)) return clampPos(v) } catch { /* fine */ }
+    return window.innerWidth < 640 ? { right: 12, bottom: 12 } : { right: 20, bottom: 20 }
+  })
+  const [dragging, setDragging] = useState(false)
+  const drag = useRef(null)
   const first = (me?.name || '').split(' ')[0]
   const here = opsTab(activeTab)
+
+  // Stay on screen when the window shrinks (a phone turned, a window resized).
+  useEffect(() => {
+    const fit = () => setPos((p) => clampPos(p))
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
+
+  // A press that moves more than a few pixels is a drag; anything else is a tap.
+  const onPointerDown = (e) => {
+    if (e.button != null && e.button !== 0) return
+    drag.current = { x: e.clientX, y: e.clientY, right: pos.right, bottom: pos.bottom, moved: false, id: e.pointerId }
+    try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch { /* no live pointer (some browsers, tests) */ }
+  }
+  const onPointerMove = (e) => {
+    const d = drag.current
+    if (!d) return
+    const dx = e.clientX - d.x
+    const dy = e.clientY - d.y
+    if (!d.moved && Math.hypot(dx, dy) < 6) return
+    if (!d.moved) { d.moved = true; setDragging(true); setHello(false); setOpen(false) }
+    setPos(clampPos({ right: d.right - dx, bottom: d.bottom - dy }))
+  }
+  const finish = useCallback((e, cancelled = false) => {
+    const d = drag.current
+    drag.current = null
+    if (!d) return
+    try { e.currentTarget.releasePointerCapture?.(d.id) } catch { /* already released */ }
+    if (d.moved) {
+      setDragging(false)
+      setPos((p) => { try { localStorage.setItem(posKey, JSON.stringify(p)) } catch { /* fine */ } return p })
+    } else if (!cancelled) {
+      setOpen((v) => !v)
+      setHello(false)
+    }
+  }, [posKey])
+  const onKey = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen((v) => !v); setHello(false) } }
+
+  // The panel opens on whichever side of her has room.
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const lowerHalf = pos.bottom < vh / 2
+  const rightHalf = pos.right < vw / 2
+  const phone = vw < 640
+  const panelStyle = {
+    ...(lowerHalf ? { bottom: pos.bottom + BOT + 10 } : { top: vh - pos.bottom + 10 }),
+    ...(phone ? {} : rightHalf ? { right: Math.max(12, pos.right) } : { left: Math.max(12, vw - pos.right - BOT) }),
+    maxHeight: lowerHalf ? `min(72vh, calc(100dvh - ${pos.bottom + BOT + 24}px))` : `min(72vh, calc(100dvh - ${vh - pos.bottom + 24}px))`,
+  }
 
   // A hello bubble once per browser session.
   useEffect(() => {
@@ -111,20 +183,30 @@ export default function SellaGuide({ me, tabs, activeTab, onOpenTab, tourOpen, o
 
   return (
     <>
-      <div className="fixed bottom-3 right-3 z-[95] flex flex-col items-end sm:bottom-5 sm:right-5">
-        {hello && !open && (
-          <button type="button" onClick={() => { setOpen(true); setHello(false) }} className="mb-2 max-w-[220px] rounded-2xl rounded-br-md bg-white px-4 py-2.5 text-left text-[13px] text-slate-700 shadow-xl ring-1 ring-black/5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            Hi {first}! Need a hand? I know every tab you can open.
-          </button>
-        )}
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={open ? 'Close Sella' : 'Ask Sella for help'}
-          className="group rounded-full bg-white/90 p-1.5 shadow-[0_12px_32px_-10px_rgba(3,78,34,0.55)] ring-1 ring-forest-100 backdrop-blur transition hover:scale-105">
-          <SellaBot size={54} wave={hello || !open} />
-        </button>
-      </div>
+      {visible && (
+        <div className="fixed z-[95]" style={{ right: pos.right, bottom: pos.bottom }}>
+          {hello && !open && !dragging && (
+            <button type="button" onClick={() => { setOpen(true); setHello(false) }} className={`absolute bottom-full mb-2 w-[230px] rounded-2xl bg-white px-4 py-2.5 text-left text-[13px] text-slate-700 shadow-xl ring-1 ring-black/5 animate-in fade-in slide-in-from-bottom-2 duration-300 ${rightHalf ? 'right-0 rounded-br-md' : 'left-0 rounded-bl-md'}`}>
+              Hi {first}! Need a hand? I know every tab you can open. Drag me anywhere.
+            </button>
+          )}
+          <div className="group relative">
+            <button type="button" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(e) => finish(e)} onPointerCancel={(e) => finish(e, true)} onKeyDown={onKey}
+              aria-expanded={open} aria-label={open ? 'Close Sella' : 'Ask Sella for help. Drag to move her.'}
+              className={`touch-none select-none rounded-full bg-white/90 p-1.5 shadow-[0_12px_32px_-10px_rgba(3,78,34,0.55)] ring-1 ring-forest-100 backdrop-blur transition ${dragging ? 'scale-110 cursor-grabbing shadow-2xl' : 'cursor-grab hover:scale-105'}`}>
+              <SellaBot size={54} wave={!dragging && (hello || !open)} />
+            </button>
+            <button type="button" onClick={() => { setOpen(false); setHello(false); onHide?.() }} aria-label="Hide Sella" title="Hide Sella. Bring her back with the robot button in the top bar."
+              className="absolute -left-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white shadow-md ring-2 ring-white transition hover:bg-red-600 sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100">
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
 
-      {open && (
-        <div className="fixed inset-x-3 bottom-24 z-[96] flex max-h-[72vh] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-bottom-3 duration-200 sm:inset-x-auto sm:right-5 sm:w-[380px]" role="dialog" aria-label="Sella, your guide">
+      {open && visible && (
+        <div style={panelStyle} className="fixed inset-x-3 z-[96] flex flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-200 sm:inset-x-auto sm:w-[380px]" role="dialog" aria-label="Sella, your guide">
+
           <div className="flex flex-shrink-0 items-center gap-3 bg-gradient-to-br from-[#034e22] to-[#0b6b35] px-5 py-4 text-white">
             <SellaBot size={40} wave={false} />
             <div className="min-w-0 flex-1">

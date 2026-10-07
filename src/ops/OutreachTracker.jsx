@@ -190,7 +190,7 @@ function ProspectModal({ onClose, onSaved }) {
       <form onSubmit={submit} className="w-full max-w-lg rounded-t-[28px] bg-white p-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:rounded-[28px]">
         <div className="flex items-start justify-between"><div><h2 className="font-display text-lg font-extrabold text-dash-ink">Add a prospect</h2><p className="text-[12.5px] text-dash-muted">Someone who sells online but is not on Sellapage yet. We&apos;ll spot them when they sign up.</p></div><button type="button" onClick={onClose} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Close"><X size={18} /></button></div>
         {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[12.5px] text-red-700">{error}</p>}
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           <input value={f.name} onChange={set('name')} placeholder="Their name" className={input} />
           <input value={f.business} onChange={set('business')} placeholder="Business name" className={input} />
           <input value={f.phone} onChange={set('phone')} placeholder="Phone / WhatsApp" className={input} inputMode="tel" />
@@ -239,7 +239,7 @@ export default function OutreachTracker({ me }) {
   return (
     <div className="space-y-5">
       {/* the pipeline at a glance */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] xl:items-start">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] xl:items-start">
         <Card className="bg-gradient-to-br from-white to-[#f1faf4]">
           {!s ? <Shimmer className="h-28" /> : (
             <div className="flex flex-wrap items-center gap-5">
@@ -290,7 +290,7 @@ export default function OutreachTracker({ me }) {
         </div>
       </div>
 
-      {list.loading && !list.data ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map((i) => <Shimmer key={i} className="h-60" />)}</div> : list.data?.total === 0 && !filters.q && !filters.angle && !filters.kind && !filters.mine ? (
+      {list.loading && !list.data ? <div className="grid grid-cols-1 gap-3 md:grid-cols-3">{[0, 1, 2].map((i) => <Shimmer key={i} className="h-60" />)}</div> : list.data?.total === 0 && !filters.q && !filters.angle && !filters.kind && !filters.mine ? (
         <div className="flex flex-col items-center rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-forest-50 text-forest-600"><Target size={24} /></span>
           <p className="mt-4 text-[15px] font-bold text-dash-ink">Your outreach board is empty</p>

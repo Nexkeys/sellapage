@@ -43,6 +43,7 @@ const ENDED = {
   session_idle: 'You were signed out after 30 minutes without activity.',
   session_expired: 'Your 12-hour session ended. Sign in again.',
   session_ended: 'Your session was ended. Sign in again.',
+  session_moved: 'For your safety this session was ended: it was used from a different browser. Sign in again.',
   staff_paused: 'Your access is paused for now. Speak to a super admin.',
   staff_deleted: 'Your access has been removed.',
   idle: 'You were signed out after 30 minutes without activity.',
@@ -161,6 +162,15 @@ function OpsConsole({ me, session, user, onSignOut, onRefresh, onMePatch }) {
   const [welcome, setWelcome] = useState(!me.welcomedAt)
   const [tour, setTour] = useState(false)
   const [away, setAway] = useState(null)
+  // Sella the guide can be hidden; the robot button in the top bar brings her
+  // back. Remembered per person in this browser.
+  const sellaKey = `sp_ops_sella_on_${me.uid}`
+  const [sellaOn, setSellaOnState] = useState(() => { try { return localStorage.getItem(sellaKey) !== 'off' } catch { return true } })
+  const setSellaOn = useCallback((on) => {
+    setSellaOnState(on)
+    try { localStorage.setItem(sellaKey, on ? 'on' : 'off') } catch { /* fine */ }
+    setToast(on ? 'Sella is back. Drag her anywhere on the screen.' : 'Sella is hidden. Bring her back with the robot button at the top.')
+  }, [sellaKey])
 
   useEffect(() => {
     setOpsFetchHandlers({
@@ -227,7 +237,7 @@ function OpsConsole({ me, session, user, onSignOut, onRefresh, onMePatch }) {
       <OpsLayout
         me={me} tabs={tabs} activeTab={activeTab} onTab={setActiveTab} attention={attention} system={system}
         onRefresh={() => { setRefreshKey((k) => k + 1); onRefresh() }} onSignOut={() => onSignOut('logout')} onHelp={() => setTour(true)}
-        onMeChange={onMePatch}
+        onMeChange={onMePatch} sellaOn={sellaOn} onSella={setSellaOn}
       >
         <OpsBoundary key={activeTab} label={tabs.find((t) => t.id === activeTab)?.label}>
           {OWN_VIEWS.has(activeTab) ? views[activeTab]
@@ -235,7 +245,8 @@ function OpsConsole({ me, session, user, onSignOut, onRefresh, onMePatch }) {
               : <div key={refreshKey}>{embeddedAdmin}</div>}
         </OpsBoundary>
       </OpsLayout>
-      {!welcome && <SellaGuide me={me} tabs={tabs} activeTab={activeTab} onOpenTab={setActiveTab} tourOpen={tour} onTourDone={() => setTour(false)} />}
+      {!welcome && <SellaGuide me={me} tabs={tabs} activeTab={activeTab} onOpenTab={setActiveTab} tourOpen={tour} onTourDone={() => setTour(false)} visible={sellaOn} onHide={() => setSellaOn(false)} />}
+
       {welcome && <WelcomeFlow me={me} onDone={finishWelcome} />}
       {away && <WelcomeBack me={me} away={away} onOpenTab={setActiveTab} onClose={() => setAway(null)} />}
       <StepUpModal open={!!stepUp} onDone={(ok) => { stepUp?.resolve(ok); setStepUp(null) }} />

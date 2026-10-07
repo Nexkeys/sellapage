@@ -39,6 +39,24 @@ const clean = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n)
 const fail = (res, status, error, message) => res.status(status).json({ success: false, error, message })
 const tabNames = (ids) => ids.map((id) => opsTab(id)?.label || id).join(', ')
 
+// Two current team members (or open invites) may not share a full name: the
+// Activity Log, menus and alerts name people, and two "Ada Obi"s would read
+// the same. Compared without case or extra spaces. Removed staff do not
+// count, and neither does an invite to the same email (a resend replaces it).
+const normName = (n) => String(n || '').toLowerCase().replace(/\s+/g, ' ').trim()
+async function nameTaken(db, name, { exceptUid = null, exceptEmail = null } = {}) {
+  const n = normName(name)
+  const [staff, invites] = await Promise.all([
+    db.collection(COL.staff).get(),
+    db.collection(COL.invites).where('usedAt', '==', null).limit(100).get(),
+  ])
+  const s = staff.docs.find((d) => d.id !== exceptUid && d.get('status') !== 'deleted' && normName(d.get('name')) === n)
+  if (s) return { name: s.get('name'), email: s.get('email') }
+  const i = invites.docs.find((d) => !d.get('cancelledAt') && d.get('email') !== exceptEmail && Date.now() < Number(d.get('expiresAt') || 0) && normName(d.get('name')) === n)
+  return i ? { name: i.get('name'), email: i.get('email') } : null
+}
+const nameTakenMessage = (t) => `${t.name} (${t.email}) already has that name. Add a surname or a middle initial so everyone can tell them apart.`
+
 async function activeSuperCount(db) {
   const snap = await db.collection(COL.staff).where('isSuper', '==', true).where('status', '==', 'active').get()
   return snap.size
@@ -159,6 +177,8 @@ export default async function handler(req, res) {
       if (!EMAIL_RE.test(email)) return fail(res, 400, 'email', 'Enter a valid email address.')
       if (!isSuper && tabs.length === 0) return fail(res, 400, 'tabs', 'Tick at least one tab, or make them a super admin.')
       if (isSuper && !me.isSuper) return fail(res, 403, 'super_only', 'Only a super admin can invite a super admin.')
+      const taken = await nameTaken(db, name, { exceptEmail: email })
+      if (taken) return fail(res, 409, 'name_taken', nameTakenMessage(taken))
       if (!me.isSuper) {
         const extra = tabs.filter((t) => !me.tabs?.includes(t))
         if (extra.length) return fail(res, 403, 'beyond_own', `You can only give tabs you have yourself. Not yours: ${tabNames(extra)}.`)
@@ -227,6 +247,10 @@ export default async function handler(req, res) {
       if (body.tabs !== undefined) after.tabs = cleanTabs(body.tabs)
       if (after.isSuper) after.tabs = []
       if (after.name.length < 2) return fail(res, 400, 'name', 'Enter their full name.')
+      if (normName(after.name) !== normName(before.name)) {
+        const taken = await nameTaken(db, after.name, { exceptUid: target.uid })
+        if (taken) return fail(res, 409, 'name_taken', nameTakenMessage(taken))
+      }
       if (!after.isSuper && after.tabs.length === 0) return fail(res, 400, 'tabs', 'Leave at least one tab, or pause them instead.')
       if (!me.isSuper) {
         const extra = after.tabs.filter((t) => !before.tabs.includes(t) && !me.tabs?.includes(t))

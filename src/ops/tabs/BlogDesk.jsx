@@ -161,11 +161,11 @@ export default function BlogDesk({ me, notify }) {
           <Btn icon={<Plus size={15} />} onClick={() => setEditing({ id: null })}>New post</Btn>
         </div>
         <Notice tone="error" onClose={() => setErr('')}>{err || error}</Notice>
-        {loading && !data ? <div className="grid gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className={`animate-pulse rounded-3xl bg-white ring-1 ring-dash-line ${i === 0 ? 'h-72 md:col-span-2' : 'h-72'}`} />)}</div>
+        {loading && !data ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className={`animate-pulse rounded-3xl bg-white ring-1 ring-dash-line ${i === 0 ? 'h-72 md:col-span-2' : 'h-72'}`} />)}</div>
           : posts.length === 0 ? <Empty icon={<BookOpen size={22} />} title="No posts here" sub="Write the first one." action={<Btn icon={<Plus size={15} />} onClick={() => setEditing({ id: null })}>New post</Btn>} />
             : (
               <>
-                <div className="grid gap-4 md:grid-cols-2">{pg.rows.map((p, i) => <PostCard key={p.id} p={p} big={i === 0 && pg.page === 1} onEdit={(x) => setEditing({ id: x.id })} onComments={setComments} onDelete={remove} />)}</div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{pg.rows.map((p, i) => <PostCard key={p.id} p={p} big={i === 0 && pg.page === 1} onEdit={(x) => setEditing({ id: x.id })} onComments={setComments} onDelete={remove} />)}</div>
                 <Pager page={pg.page} pages={pg.pages} total={pg.total} perPage={9} onPage={pg.setPage} />
               </>
             )}

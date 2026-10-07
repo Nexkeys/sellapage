@@ -246,7 +246,7 @@ function Access({ notify }) {
         <p className="text-[15px] font-bold text-dash-ink">Who can use the marketplace</p>
         {data?.lockedByEnv && <Notice tone="warn" className="mt-3">The DROPSHIPPING_STAGE setting in Vercel is set, so it decides the stage. Remove it there to switch here.</Notice>}
         {!loading && data && !data.canSetStage && <p className="mt-1 text-[12.5px] text-dash-muted">Only a super admin can move the stage.</p>}
-        <ol className="relative mt-5 grid gap-3 md:grid-cols-3">
+        <ol className="relative mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
           {STAGES.map((s, i) => {
             const I = s.icon
             const here = i === idx

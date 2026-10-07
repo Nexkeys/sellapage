@@ -58,7 +58,7 @@ export default function NewsletterList({ notify }) {
 
   return (
     <div className="space-y-4">
-      <section className="grid gap-4 rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:grid-cols-[260px_minmax(0,1fr)] lg:items-center">
+      <section className="grid grid-cols-1 gap-4 rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:grid-cols-[260px_minmax(0,1fr)] lg:items-center">
         <div className="flex items-center gap-4">
           <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-forest-600 to-emerald-400 text-white shadow-lg shadow-forest/20"><Mail size={28} /></span>
           <div><p className="font-display text-[34px] font-extrabold leading-none tabular-nums text-dash-ink">{counts.all == null ? '-' : <CountUp value={counts.all} />}</p><p className="mt-1 text-[12.5px] text-dash-muted">people on the list</p></div>
@@ -80,7 +80,7 @@ export default function NewsletterList({ notify }) {
 
       <section className="rounded-3xl border border-dash-line bg-white p-2 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-3">
         {loading && !data ? <div className="h-64 animate-pulse rounded-2xl bg-slate-50" /> : items.length === 0 ? <Empty icon={<Users size={22} />} title={search ? 'No email matches that' : 'Nobody has subscribed yet'} className="border-none" /> : (
-          <ul className="grid gap-1 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-1 md:grid-cols-2">
             {items.map((r) => (
               <li key={r.id} className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-slate-50">
                 <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-forest-50 text-[12px] font-bold uppercase text-forest-700">{r.email.slice(0, 1)}</span>

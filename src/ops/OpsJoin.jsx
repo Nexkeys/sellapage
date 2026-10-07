@@ -100,6 +100,7 @@ export default function OpsJoin({ base, onSignedIn }) {
             <li key={label} className={`flex items-center gap-1.5 ${ok ? 'text-forest-600' : 'text-slate-400'}`}><Check size={13} strokeWidth={ok ? 3 : 2} /> {label}</li>
           ))}
         </ul>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">Not your name or email. We also check, without sending your password anywhere, that it has not appeared in a known data breach.</p>
         <button type="submit" disabled={!ready || busy} className={`${OPS_PRIMARY} mt-6`}>
           {busy ? <><Loader2 size={16} className="animate-spin" /> Creating your account...</> : <>Create my account <ArrowRight size={16} /></>}
         </button>

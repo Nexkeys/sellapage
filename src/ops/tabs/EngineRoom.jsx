@@ -27,7 +27,7 @@ function LogRow({ l }) {
         <ChevronDown size={15} className={`hidden text-slate-400 transition md:block ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="grid gap-3 bg-slate-50/70 px-4 py-3 text-[12.5px] text-slate-600 sm:grid-cols-2 animate-in fade-in">
+        <div className="grid grid-cols-1 gap-3 bg-slate-50/70 px-4 py-3 text-[12.5px] text-slate-600 sm:grid-cols-2 animate-in fade-in">
           <p><span className="text-slate-400">When:</span> {fmtDateTime(l.createdAt || l.createdAtMs)}</p>
           <p><span className="text-slate-400">Key:</span> {l.keyLabel || '-'} {l.keyHint ? `(${l.keyHint})` : ''}</p>
           <p><span className="text-slate-400">Tokens:</span> {l.totalTokens.toLocaleString()}</p>
@@ -77,7 +77,7 @@ export default function EngineRoom() {
   return (
     <div className="space-y-4">
       <Notice tone="error">{error}</Notice>
-      <section className="grid gap-4 rounded-3xl bg-[#07131f] p-5 text-white sm:p-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
+      <section className="grid grid-cols-1 gap-4 rounded-3xl bg-[#07131f] p-5 text-white sm:p-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
         <div className="flex items-center gap-5">
           <Ring value={rate} size={128} stroke={11} color={rate >= 90 ? '#34d399' : rate >= 70 ? '#fbbf24' : '#f87171'} track="rgba(255,255,255,0.1)">
             <div className="text-center"><p className="font-display text-[28px] font-extrabold leading-none">{s ? `${rate}%` : '-'}</p><p className="mt-1 text-[10.5px] text-sky-100/70">delivered</p></div>
@@ -111,7 +111,7 @@ export default function EngineRoom() {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <section className="rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <p className="flex items-center gap-2 text-[14px] font-bold text-dash-ink"><KeyRound size={16} className="text-sky-600" /> API keys</p>
           <ul className="mt-3 space-y-3">

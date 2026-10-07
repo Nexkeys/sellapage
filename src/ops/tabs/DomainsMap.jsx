@@ -49,7 +49,7 @@ export default function DomainsMap() {
 
   return (
     <div className="space-y-4">
-      <section className="grid gap-5 rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:grid-cols-[auto_1fr] sm:items-center">
+      <section className="grid grid-cols-1 gap-5 rounded-3xl border border-dash-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:grid-cols-[auto_1fr] sm:items-center">
         <div className="relative mx-auto h-[132px] w-[132px]">
           <Donut parts={parts} />
           <div className="absolute inset-0 flex flex-col items-center justify-center"><p className="font-display text-[28px] font-extrabold leading-none text-dash-ink">{stats?.total ?? '-'}</p><p className="text-[11px] text-dash-muted">domains</p></div>
@@ -77,11 +77,11 @@ export default function DomainsMap() {
       </div>
       <Notice tone="error">{error}</Notice>
 
-      {loading && !data ? <div className="grid gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
+      {loading && !data ? <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
         : rows.length === 0 ? <Empty icon={<Globe size={22} />} title={all.length ? 'No domain matches' : 'No custom domains yet'} sub={all.length ? 'Try another filter.' : 'When a store connects its own address from Online Store, it shows up here.'} />
           : (
             <>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {pg.rows.map((s) => {
                   const st = STATE[s.domainStatus] || STATE.pending
                   return (

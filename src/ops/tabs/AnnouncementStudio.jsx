@@ -111,12 +111,12 @@ export default function AnnouncementStudio({ notify }) {
             <p className="flex items-center gap-2 text-[15px] font-bold text-dash-ink"><Megaphone size={17} className="text-forest-600" /> New announcement</p>
             <Segmented value={a.displayMode} onChange={(v) => setA((p) => ({ ...p, displayMode: v }))} options={[{ id: 'banner', label: 'Bar', icon: <PanelTop size={14} /> }, { id: 'modal', label: 'Pop-up', icon: <Maximize2 size={14} /> }]} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
             <input value={a.title} onChange={set('title')} maxLength={120} placeholder="Title" className={INPUT} />
             <div className="flex gap-1.5">{Object.entries(TYPES).map(([id, t]) => { const I = t.icon; return <button key={id} type="button" onClick={() => setA((p) => ({ ...p, type: id }))} className={`inline-flex items-center gap-1.5 rounded-2xl px-3 text-[12.5px] font-semibold ring-1 ${a.type === id ? 'bg-dash-ink text-white ring-dash-ink' : 'bg-white text-slate-600 ring-dash-line'}`}><I size={14} />{t.label}</button> })}</div>
           </div>
           <textarea value={a.message} onChange={set('message')} rows={3} maxLength={500} placeholder="Message" className={`${INPUT} resize-none`} />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block"><span className="text-[12px] font-semibold text-slate-700">Button text</span>
               <input value={a.ctaLabel} onChange={set('ctaLabel')} list="ops-ann-cta" placeholder="Learn More" className={`${INPUT} mt-1`} />
               <datalist id="ops-ann-cta">{CTA.map((c) => <option key={c} value={c} />)}</datalist></label>
@@ -148,11 +148,11 @@ export default function AnnouncementStudio({ notify }) {
       <section className="space-y-3">
         <div className="flex items-center justify-between"><p className="text-[15px] font-bold text-dash-ink">Posted</p><Pill tone={live ? 'green' : 'slate'} dot>{live} switched on</Pill></div>
         <Notice tone="error">{error}</Notice>
-        {loading && !data ? <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
+        {loading && !data ? <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
           : list.length === 0 ? <Empty icon={<Megaphone size={22} />} title="Nothing posted yet" />
             : (
               <>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {pg.rows.map((x) => {
                     const t = TYPES[x.type] || TYPES.info
                     return (

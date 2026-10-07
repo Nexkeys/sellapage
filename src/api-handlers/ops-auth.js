@@ -35,7 +35,7 @@ import {
   otpauthUri, newRecoveryCodes, normalizeRecovery, isRecoveryShaped, requestIp, requestMeta,
   loadStaff, forgetStaff, publicStaff, createSession, endSession, verifyOpsRequest, writeAudit,
 } from './_lib/ops.js'
-import { sendLoginCodeEmail, sendNewDeviceEmail, sendResetRequestedEmail } from './_lib/ops-mail.js'
+import { sendLoginCodeEmail, sendNewDeviceEmail, sendResetRequestedEmail, sendSecurityAlertEmail } from './_lib/ops-mail.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const BAD_LOGIN = 'Email or password is incorrect.'
@@ -44,6 +44,44 @@ const maskEmail = (e) => {
   return d ? `${n.slice(0, 2)}***@${d}` : ''
 }
 const fail = (res, status, error, message, extra = {}) => res.status(status).json({ success: false, error, message, ...extra })
+
+/**
+ * Has this password appeared in a known data breach? Uses the Pwned Passwords
+ * range API (k-anonymity): only the first 5 characters of the password's
+ * SHA-1 leave the server, never the password or its full hash. A breached
+ * password is the first thing attackers try, whatever its length.
+ * Fails open (returns false) on any network problem: a slow third party must
+ * not stop someone accepting their invite.
+ */
+async function breachedPassword(password) {
+  try {
+    const hash = crypto.createHash('sha1').update(String(password)).digest('hex').toUpperCase()
+    const r = await fetch(`https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`, {
+      headers: { 'Add-Padding': 'true', 'User-Agent': 'Sellapage-Ops' },
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!r.ok) return false
+    const text = await r.text()
+    const suffix = hash.slice(5)
+    return text.split('\n').some((line) => {
+      const [s, count] = line.trim().split(':')
+      return s === suffix && Number(count) > 0
+    })
+  } catch {
+    return false
+  }
+}
+
+/** A password built from the person's own name or email is the first guess. */
+function personalPassword(password, { email, name }) {
+  const p = String(password).toLowerCase()
+  const bits = [String(email || '').split('@')[0], ...String(name || '').split(/\s+/)]
+    .map((x) => x.toLowerCase().replace(/[^a-z0-9]/g, ''))
+    .filter((x) => x.length >= 4)
+  return bits.some((b) => p.includes(b))
+}
+
+const when = () => new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })
 
 async function checkPassword(email, password) {
   const key = process.env.FIREBASE_WEB_API_KEY || process.env.VITE_FIREBASE_API_KEY
@@ -61,6 +99,8 @@ async function checkPassword(email, password) {
 const sixDigits = () => String(crypto.randomInt(0, 1000000)).padStart(6, '0')
 const codeHash = (challengeId, code) => sha256(`${challengeId}:${code}`)
 
+// `device` ties a sign-in to the browser that started it: a challenge id
+// taken to another browser half way through cannot be finished there.
 async function newChallenge(db, staff, stage, extra = {}) {
   const id = randomToken(18)
   const now = Date.now()
@@ -218,6 +258,12 @@ export default async function handler(req, res) {
       await db.collection(COL.staff).doc(staff.uid).update({ recoveryHashes: recovery.hashes, totpLastStep: t.step, recoveryIssuedAt: Date.now() })
       forgetStaff(staff.uid)
       await writeAudit(db, { uid: staff.uid, name: staff.name, title: staff.title, action: 'ops.recovery_codes_new', sessionId: v.sessionId, req, summary: 'Made a new set of 8 recovery codes (the old ones stopped working)' })
+      const meta = requestMeta(req)
+      await sendSecurityAlertEmail({
+        to: staff.email, name: staff.name, subject: 'New recovery codes for your Ops account',
+        heading: 'Your recovery codes were replaced',
+        lines: [`A new set of 8 recovery codes was made from ${meta.device}, IP ${meta.ip}, ${when()}. Your old codes no longer work.`, 'If this was not you, tell a super admin now.'],
+      }).catch(() => {})
       return res.status(200).json({ success: true, recoveryCodes: recovery.codes, recoveryLeft: recovery.codes.length })
     }
 
@@ -269,7 +315,22 @@ export default async function handler(req, res) {
           uid: staff?.uid || null, name: staff?.name || maskEmail(email), action: 'ops.login_failed', result: 'failed', req,
           summary: !check.ok ? `Wrong password for ${maskEmail(email)}${locked ? ' (locked for 15 minutes)' : ''}` : `Not a staff account: ${maskEmail(email)}`,
         })
-        if (locked) return fail(res, 429, 'locked', 'Too many wrong attempts. This account is locked for 15 minutes.')
+        if (locked) {
+          // Tell the person whose account it is: someone may be guessing.
+          try {
+            const user = await getAdminAuth().getUserByEmail(email)
+            const owner = await loadStaff(db, user.uid, { fresh: true })
+            if (owner && owner.status !== 'deleted') {
+              const meta = requestMeta(req)
+              await sendSecurityAlertEmail({
+                to: owner.email, name: owner.name, subject: 'Your Sellapage Ops account was locked',
+                heading: 'Someone kept typing the wrong password',
+                lines: [`Your Ops account was locked for 15 minutes after ${MAX_PASSWORD_FAILS} wrong passwords in a row.`, `Last try: ${meta.device}, IP ${meta.ip}, ${when()}.`, 'If this was not you, someone may know your email. Tell a super admin and change your password.'],
+              })
+            }
+          } catch { /* not a staff account, or the email could not be sent */ }
+          return fail(res, 429, 'locked', 'Too many wrong attempts. This account is locked for 15 minutes.')
+        }
         const left = MAX_PASSWORD_FAILS - failures
         return fail(res, 401, 'bad_login', `${BAD_LOGIN}${left <= 2 ? ` ${left} attempt${left === 1 ? '' : 's'} left before a 15-minute lock.` : ''}`)
       }
@@ -281,14 +342,15 @@ export default async function handler(req, res) {
       }
       if (staff.status !== 'active') return fail(res, 401, 'bad_login', BAD_LOGIN)
 
+      const device = requestMeta(req).device
       if (staff.totpEnabled && staff.totpSecretEnc) {
-        const challengeId = await newChallenge(db, staff, 'totp')
+        const challengeId = await newChallenge(db, staff, 'totp', { device })
         return res.status(200).json({ success: true, challengeId, next: 'totp', name: staff.name })
       }
       // No authenticator yet (first sign-in after a reset, or a bootstrap
       // account): prove the inbox first, so a stolen password alone cannot
       // enrol the thief's phone.
-      const challengeId = await newChallenge(db, staff, 'email', { emailSends: 0 })
+      const challengeId = await newChallenge(db, staff, 'email', { emailSends: 0, device })
       await sendEmailStage(db, staff, challengeId)
       return res.status(200).json({ success: true, challengeId, next: 'email', emailMasked: maskEmail(staff.email), name: staff.name })
     }
@@ -298,6 +360,7 @@ export default async function handler(req, res) {
       const snap = await ref.get()
       if (!snap.exists || snap.get('stage') !== 'email' || Date.now() > snap.get('expiresAt')) return fail(res, 400, 'expired', 'This sign-in took too long. Start again.')
       const c = snap.data()
+      if (c.device && c.device !== requestMeta(req).device) return fail(res, 400, 'expired', 'This sign-in was started in another browser. Start again here.')
       if ((c.emailSends || 0) >= 3) return fail(res, 429, 'too_many', 'You have asked for 3 codes. Start the sign-in again.')
       if (Date.now() - (c.emailSentAt || 0) < 60 * 1000) return fail(res, 429, 'cooldown', 'Wait a minute before asking for another code.')
       const staff = await loadStaff(db, c.uid, { fresh: true })
@@ -313,6 +376,11 @@ export default async function handler(req, res) {
       const c = snap.data()
       if (Date.now() > c.expiresAt) { await ref.delete(); return fail(res, 400, 'expired', 'This sign-in took too long. Start again.') }
       if ((c.attempts || 0) >= MAX_CODE_ATTEMPTS) { await ref.delete(); return fail(res, 429, 'too_many', 'Too many wrong codes. Start the sign-in again.') }
+      if (c.device && c.device !== requestMeta(req).device) {
+        await ref.delete()
+        await writeAudit(db, { uid: c.uid, name: '', action: 'ops.login_failed', result: 'denied', req, summary: `A sign-in started on ${c.device} was continued from ${requestMeta(req).device}` })
+        return fail(res, 400, 'expired', 'This sign-in was started in another browser. Start again here.')
+      }
 
       const staff = await loadStaff(db, c.uid, { fresh: true })
       if (!staff || staff.status !== 'active') { await ref.delete(); return fail(res, 403, 'not_active', 'This account cannot sign in right now. Speak to a super admin.') }
@@ -353,6 +421,12 @@ export default async function handler(req, res) {
         await ref.delete()
         if (ok.via === 'recovery') {
           await writeAudit(db, { uid: staff.uid, name: staff.name, title: staff.title, action: 'ops.recovery_code_used', req, summary: `Used a recovery code (${ok.left} left)` })
+          const meta = requestMeta(req)
+          await sendSecurityAlertEmail({
+            to: staff.email, name: staff.name, subject: 'A recovery code was used on your Ops account',
+            heading: 'You signed in with a recovery code',
+            lines: [`A recovery code was used instead of your authenticator: ${meta.device}, IP ${meta.ip}, ${when()}.`, `${ok.left} recovery code${ok.left === 1 ? '' : 's'} left. Make a new set any time in Your profile.`, 'If this was not you, tell a super admin now so they can pause your access.'],
+          }).catch(() => {})
         }
         return res.status(200).json(await finishLogin(db, staff, req, { via: ok.via === 'recovery' ? 'a recovery code' : 'authenticator' }))
       }
@@ -372,6 +446,13 @@ export default async function handler(req, res) {
       if (Date.now() > inv.expiresAt) return fail(res, 400, 'expired', 'This invite has expired. Ask for a new one.')
       if (password.length < 10 || !/[a-z]/i.test(password) || !/\d/.test(password)) {
         return fail(res, 400, 'weak_password', 'Use at least 10 characters with a letter and a number.')
+      }
+      if (password.length > 128) return fail(res, 400, 'weak_password', 'Use at most 128 characters.')
+      if (personalPassword(password, { email: inv.email, name: inv.name })) {
+        return fail(res, 400, 'weak_password', 'Do not use your name or email in your password. Pick something nobody could guess from them.')
+      }
+      if (await breachedPassword(password)) {
+        return fail(res, 400, 'breached_password', 'This password has appeared in a data breach somewhere online, so attackers already try it. Choose a different one.')
       }
 
       const auth = getAdminAuth()
@@ -405,7 +486,8 @@ export default async function handler(req, res) {
 
       // The link itself proved the inbox, so go straight to the authenticator.
       const secret = newTotpSecret()
-      const challengeId = await newChallenge(db, staff, 'enroll', { pendingSecretEnc: encrypt(secret) })
+      const challengeId = await newChallenge(db, staff, 'enroll', { pendingSecretEnc: encrypt(secret), device: requestMeta(req).device })
+
       return res.status(200).json({ success: true, challengeId, ...enrollPayload(staff, secret) })
     }
 

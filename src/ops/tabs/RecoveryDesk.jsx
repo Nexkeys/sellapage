@@ -142,12 +142,12 @@ export default function RecoveryDesk({ notify }) {
       <Notice tone="error" onClose={() => setError('')}>{error || loadError}</Notice>
 
       {loading && !data ? (
-        <div className="grid gap-4 lg:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-64 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-64 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
       ) : rows.length === 0 ? (
         <Empty icon={<ShieldCheck size={22} />} title={filter === 'pending' ? 'Nobody is locked out' : 'Nothing here'} sub={filter === 'pending' ? 'New recovery requests from the sign-in page land here.' : 'Pick another filter.'} />
       ) : (
         <>
-          <div className="grid gap-4 lg:grid-cols-2">{pg.rows.map((r) => <Card key={r.id} r={r} busy={busy} onDecide={decide} />)}</div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">{pg.rows.map((r) => <Card key={r.id} r={r} busy={busy} onDecide={decide} />)}</div>
           <Pager page={pg.page} pages={pg.pages} total={pg.total} perPage={8} onPage={pg.setPage} />
         </>
       )}

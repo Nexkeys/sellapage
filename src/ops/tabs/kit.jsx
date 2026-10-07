@@ -140,10 +140,10 @@ export function Chips({ value, onChange, options, tone = 'dark', size = 'md', cl
 /** Two to four big choices side by side (a segmented control). */
 export function Segmented({ value, onChange, options, className = '' }) {
   return (
-    <div className={`inline-flex rounded-2xl bg-slate-100 p-1 ${className}`} role="tablist">
+    <div className={`inline-flex max-w-full overflow-x-auto rounded-2xl bg-slate-100 p-1 [scrollbar-width:none] ${className}`} role="tablist">
       {options.map((o) => (
         <button key={o.id} type="button" role="tab" aria-selected={value === o.id} onClick={() => onChange(o.id)}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12.5px] font-semibold transition ${value === o.id ? 'bg-white text-dash-ink shadow-sm' : 'text-slate-500 hover:text-dash-ink'}`}>
+          className={`inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-[12.5px] font-semibold transition ${value === o.id ? 'bg-white text-dash-ink shadow-sm' : 'text-slate-500 hover:text-dash-ink'}`}>
           {o.icon}{o.label}
           {o.count != null && <span className="rounded-full bg-slate-200/70 px-1.5 text-[10.5px] tabular-nums text-slate-600">{o.count}</span>}
         </button>
@@ -235,7 +235,9 @@ export function Btn({ tone = 'primary', size = 'md', busy = false, icon, childre
 }
 
 /** Copies on click; falls back to selecting the text when the browser says no. */
-export function CopyText({ text, label, className = '' }) {
+// `wrap` lets a long value (an account name) run onto a second line instead
+// of being cut off.
+export function CopyText({ text, label, className = '', wrap = false }) {
   const [done, setDone] = useState(false)
   const ref = useRef(null)
   const copy = async () => {
@@ -244,8 +246,8 @@ export function CopyText({ text, label, className = '' }) {
     }
   }
   return (
-    <button type="button" onClick={copy} className={`group inline-flex min-w-0 items-center gap-1.5 text-left ${className}`} title="Copy">
-      <span ref={ref} className="truncate">{label ?? text}</span>
+    <button type="button" onClick={copy} className={`group inline-flex min-w-0 max-w-full ${wrap ? 'items-start' : 'items-center'} gap-1.5 text-left ${className}`} title="Copy">
+      <span ref={ref} className={wrap ? 'min-w-0 break-words' : 'truncate'}>{label ?? text}</span>
       {done ? <Check size={13} className="flex-shrink-0 text-emerald-600" /> : <Copy size={13} className="flex-shrink-0 text-slate-400 group-hover:text-forest-600" />}
     </button>
   )
@@ -283,7 +285,7 @@ export function Drawer({ open, onClose, title: heading, sub, children, footer, w
   return createPortal(
     <div className="fixed inset-0 z-[120] font-body" role="dialog" aria-modal="true" aria-label={typeof heading === 'string' ? heading : 'Details'}>
       <button type="button" className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px] animate-in fade-in duration-200" onClick={onClose} aria-label="Close" />
-      <aside className={`absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-[28px] bg-white shadow-2xl animate-in slide-in-from-bottom duration-300 sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-full sm:rounded-none sm:rounded-l-[28px] sm:slide-in-from-bottom-0 sm:slide-in-from-right ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}>
+      <aside className={`absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-[28px] bg-white shadow-2xl animate-in slide-in-from-bottom duration-300 sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-full sm:rounded-none sm:rounded-l-[28px] sm:slide-in-from-bottom-0 sm:slide-in-from-right ${wide === 'xl' ? 'sm:max-w-[min(1000px,94vw)]' : wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}>
         <div className="mx-auto mt-2.5 h-1.5 w-10 flex-shrink-0 rounded-full bg-slate-200 sm:hidden" />
         <header className="flex flex-shrink-0 items-start gap-3 border-b border-dash-line px-5 py-4">
           <div className="min-w-0 flex-1">

@@ -137,21 +137,37 @@ export default async function handler(req, res) {
         }
       })
 
-      // Sends and clicks per day, for the chart.
+      // Sends, deliveries, spend and taps per Lagos day, plus the hour of the
+      // day and the day of the week people tap, for the SMS insights charts.
+      const lagos = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23', weekday: 'short' })
+      const parts = (ms) => Object.fromEntries(lagos.formatToParts(new Date(ms)).map((x) => [x.type, x.value]))
+      const dayOf = (ms) => { const x = parts(ms); return `${x.year}-${x.month}-${x.day}` }
+      const blank = (date) => ({ date, sent: 0, clicks: 0, delivered: 0, dnd: 0, spend: 0, campaigns: 0 })
       const byDay = {}
+      const byHour = Array.from({ length: 24 }, (_, h) => ({ hour: h, clicks: 0 }))
+      const byWeekday = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
       campaigns.forEach((c) => {
         if (c.status !== 'sent' || !c.sentAt) return
-        const key = c.sentAt.slice(0, 10)
-        const row = (byDay[key] ||= { date: key, sent: 0, clicks: 0 })
+        const key = dayOf(new Date(c.sentAt).getTime())
+        const row = (byDay[key] ||= blank(key))
         row.sent += c.sent
+        row.delivered += c.delivered
+        row.dnd += c.dndBlocked
+        row.spend += c.cost
+        row.campaigns += 1
       })
       clicksSnap.docs.forEach((doc) => {
         const at = doc.data().atMs
         if (!at) return
-        const key = new Date(at).toISOString().slice(0, 10)
-        const row = (byDay[key] ||= { date: key, sent: 0, clicks: 0 })
+        const x = parts(at)
+        const key = `${x.year}-${x.month}-${x.day}`
+        const row = (byDay[key] ||= blank(key))
         row.clicks += 1
+        const h = Number(x.hour) % 24
+        if (byHour[h]) byHour[h].clicks += 1
+        if (byWeekday[x.weekday] !== undefined) byWeekday[x.weekday] += 1
       })
+      Object.values(byDay).forEach((r) => { r.spend = Math.round(r.spend * 100) / 100 })
 
       const sentCampaigns = campaigns.filter((c) => c.status === 'sent')
       const totals = {
@@ -187,6 +203,9 @@ export default async function handler(req, res) {
         campaigns,
         totals,
         series: Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date)),
+        byHour,
+        byWeekday: Object.entries(byWeekday).map(([day, clicks]) => ({ day, clicks })),
+        clicksCapped: clicksSnap.size >= 2000,
       })
     }
 

@@ -101,7 +101,7 @@ export default function PushStudio({ notify }) {
             <input value={t} onChange={(e) => setT(e.target.value.slice(0, TITLE_MAX))} placeholder="New: book delivery from your phone" className={`${INPUT} mt-1`} /></label>
           <label className="block"><span className="flex justify-between text-[12px] font-semibold text-slate-700"><span>Message</span><span className={b.length > BODY_MAX - 30 ? 'text-amber-600' : 'text-slate-400'}>{b.length}/{BODY_MAX}</span></span>
             <textarea value={b} onChange={(e) => setB(e.target.value.slice(0, BODY_MAX))} rows={3} placeholder="Tap to see what is new in your dashboard." className={`${INPUT} mt-1 resize-none`} /></label>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block"><span className="text-[12px] font-semibold text-slate-700">A tap opens</span>
               <select value={target} onChange={(e) => setTarget(e.target.value)} className={`${INPUT} mt-1`}>{ROUTES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
             <div><span className="text-[12px] font-semibold text-slate-700">Image (optional)</span>
@@ -136,7 +136,7 @@ export default function PushStudio({ notify }) {
               <>
                 <ol className="space-y-2.5">
                   {pg.rows.map((x) => (
-                    <li key={x.id} className="grid gap-3 rounded-3xl border border-dash-line bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] md:grid-cols-[minmax(0,1fr)_240px] md:items-center">
+                    <li key={x.id} className="grid grid-cols-1 gap-3 rounded-3xl border border-dash-line bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] md:grid-cols-[minmax(0,1fr)_240px] md:items-center">
                       <div className="flex min-w-0 gap-3">
                         {x.imageUrl ? <img src={x.imageUrl} alt="" loading="lazy" className="h-12 w-12 flex-shrink-0 rounded-xl object-cover" /> : <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-forest-50 text-forest-600"><Bell size={18} /></span>}
                         <div className="min-w-0"><p className="truncate text-[14px] font-bold text-dash-ink">{x.title}</p><p className="line-clamp-2 text-[12.5px] text-slate-600">{x.body}</p>

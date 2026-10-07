@@ -320,6 +320,16 @@ export async function verifyOpsRequest(req, requiredTab = null) {
   if (s.endedAt) return { ok: false, reason: 'session_ended', uid: s.uid, quiet: true, endReason: s.endReason }
 
   const now = Date.now()
+  // A session belongs to the browser it was created in. The same session
+  // token arriving from a different browser or system (copied out of one
+  // machine and replayed on another) ends the session. Compared by the
+  // "Chrome on Windows" label, not the raw user agent, so a browser updating
+  // itself mid-session does not sign anyone out.
+  if (s.device && deviceLabel(req.headers?.['user-agent']) !== s.device) {
+    await ref.update({ endedAt: now, endReason: 'device_changed' }).catch(() => {})
+    return { ok: false, reason: 'session_moved', uid: s.uid }
+  }
+
   if (now > s.expiresAt) {
     await ref.update({ endedAt: now, endReason: 'expired' }).catch(() => {})
     return { ok: false, reason: 'session_expired', uid: s.uid }

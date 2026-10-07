@@ -77,11 +77,11 @@ export default function JobsBoard({ notify }) {
       </div>
       <Notice tone="error" onClose={() => setErr('')}>{err || error}</Notice>
 
-      {loading && !data ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="h-72 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
+      {loading && !data ? <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="h-72 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
         : jobs.length === 0 ? <Empty icon={<Briefcase size={22} />} title={filter === 'pending' ? 'No jobs waiting' : 'Nothing here'} sub="Jobs vendors post from their dashboard wait here before going live." />
           : (
             <>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{pg.rows.map((j) => <JobCard key={j.id} j={j} onOpen={setOpen} />)}</div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{pg.rows.map((j) => <JobCard key={j.id} j={j} onOpen={setOpen} />)}</div>
               <Pager page={pg.page} pages={pg.pages} total={pg.total} perPage={9} onPage={pg.setPage} />
             </>
           )}

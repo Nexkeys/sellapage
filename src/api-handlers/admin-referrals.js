@@ -10,6 +10,138 @@ import { verifyAdmin } from './_lib/verify-admin.js'
 const PAYOUT_ACTIONS = new Set(['withdrawals', 'process-withdrawal'])
 const referralsTabFor = (action) => (PAYOUT_ACTIONS.has(String(action || '')) ? 'withdrawals' : 'referrals')
 
+// ── The referral network, from the stores themselves ─────────────────────────
+// A store that signed up with a code carries `referredBy` (the referrer's store
+// id) from the moment it is created (signup-phone.js). referralRewards only
+// exist once a referred store PAYS, so building the network from rewards hid
+// every referred store still on the free plan. Stats and the leaderboard now
+// come from `referredBy`; rewards and withdrawals add the money.
+//
+// One read per store (only the fields below), shared by stats and referrers
+// for a minute per instance: the tab asks for both at once.
+const PAID_PLANS = new Set(['growth', 'pro', 'premium'])
+const ms = (v) => {
+  if (!v) return 0
+  if (typeof v === 'number') return v
+  if (typeof v.toMillis === 'function') return v.toMillis()
+  if (v._seconds) return v._seconds * 1000
+  const t = new Date(v).getTime()
+  return Number.isFinite(t) ? t : 0
+}
+function paidNow(d, now) {
+  const plan = String(d.plan || '').toLowerCase()
+  if (!PAID_PLANS.has(plan) || d.planStatus === 'expired') return false
+  const end = ms(d.planEndDate)
+  if (!end) return true
+  return now <= (ms(d.graceUntil) || end + 2 * 24 * 60 * 60 * 1000)
+}
+let networkCache = { at: 0, data: null }
+async function readNetwork(db, fresh = false) {
+  if (!fresh && networkCache.data && Date.now() - networkCache.at < 60 * 1000) return networkCache.data
+  const [storesSnap, rewardsSnap, withdrawalsSnap] = await Promise.all([
+    db.collection('stores').select('referredBy', 'referralCode', 'businessName', 'storeName', 'plan', 'planStatus', 'planEndDate', 'graceUntil',
+      'createdAt', 'email', 'whatsappNumber', 'referralAvailable', 'referralTotalEarned', 'referralCreditedToReferrer').get(),
+    db.collection('referralRewards').get(),
+    db.collection('withdrawal_requests').get(),
+  ])
+  const now = Date.now()
+  const stores = new Map(storesSnap.docs.map((d) => [d.id, d.data()]))
+  const groups = new Map()
+  const group = (id) => {
+    if (!groups.has(id)) groups.set(id, { referrerId: id, referred: [], totalEarned: 0, rewards: 0, pendingPayoutAmount: 0, paidOutAmount: 0 })
+    return groups.get(id)
+  }
+  let referredTotal = 0
+  let referredPaying = 0
+  let referredEverPaid = 0
+  const planNow = { growth: 0, pro: 0, premium: 0 }
+  for (const [id, d] of stores) {
+    if (!d.referredBy) continue
+    referredTotal += 1
+    const paying = paidNow(d, now)
+    const plan = String(d.plan || 'starter').toLowerCase()
+    if (paying) { referredPaying += 1; if (planNow[plan] !== undefined) planNow[plan] += 1 }
+    if (Number(d.referralCreditedToReferrer) > 0) referredEverPaid += 1
+    group(String(d.referredBy)).referred.push({
+      storeId: id, storeName: d.businessName || d.storeName || 'Unnamed store', slug: d.storeName || '',
+      plan, paying, everPaid: Number(d.referralCreditedToReferrer) > 0, createdAt: ms(d.createdAt) || null, rewardAmount: 0,
+    })
+  }
+  const rewardsByReferred = {}
+  let totalRewardsEarned = 0
+  const rewardPlans = { growth: 0, pro: 0, premium: 0 }
+  rewardsSnap.docs.forEach((doc) => {
+    const r = doc.data()
+    const refId = r.referrerId || r.referrerUserId
+    totalRewardsEarned += r.rewardAmount || 0
+    if (rewardPlans[r.plan] !== undefined) rewardPlans[r.plan] += 1
+    if (!refId) return
+    const g = group(String(refId))
+    g.totalEarned += r.rewardAmount || 0
+    g.rewards += 1
+    if (r.referredUserId) rewardsByReferred[r.referredUserId] = (rewardsByReferred[r.referredUserId] || 0) + (r.rewardAmount || 0)
+  })
+  let pendingWithdrawals = 0
+  let totalPendingPayoutAmount = 0
+  let totalPaidOut = 0
+  let completedWithdrawals = 0
+  withdrawalsSnap.docs.forEach((doc) => {
+    const w = doc.data()
+    if (w.status === 'pending') { pendingWithdrawals += 1; totalPendingPayoutAmount += w.amount || 0 }
+    if (w.status === 'completed') { completedWithdrawals += 1; totalPaidOut += w.amount || 0 }
+    if (!w.userId || !groups.has(String(w.userId))) return
+    const g = groups.get(String(w.userId))
+    if (w.status === 'pending') g.pendingPayoutAmount += w.amount || 0
+    if (w.status === 'completed') g.paidOutAmount += w.amount || 0
+  })
+  const referrers = [...groups.values()].filter((g) => g.referred.length || g.rewards).map((g) => {
+    const s = stores.get(g.referrerId) || {}
+    g.referred.forEach((v) => { v.rewardAmount = rewardsByReferred[v.storeId] || 0 })
+    g.referred.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    return {
+      referrerId: g.referrerId,
+      storeName: s.businessName || s.storeName || 'A store that no longer exists',
+      slug: s.storeName || '',
+      referralCode: s.referralCode || '',
+      email: s.email || '',
+      whatsappNumber: s.whatsappNumber || '',
+      plan: String(s.plan || 'starter').toLowerCase(),
+      totalReferrals: g.referred.length,
+      paying: g.referred.filter((v) => v.paying).length,
+      free: g.referred.filter((v) => !v.paying).length,
+      totalEarned: g.totalEarned,
+      availableBalance: s.referralAvailable || 0,
+      pendingPayoutAmount: g.pendingPayoutAmount,
+      paidOutAmount: g.paidOutAmount,
+      lastReferralAt: g.referred[0]?.createdAt || null,
+      referredVendors: g.referred,
+    }
+  })
+  const data = {
+    referrers,
+    stats: {
+      // Every store that signed up with a code, free or paying.
+      totalReferrals: referredTotal,
+      referredPaying,
+      referredFree: referredTotal - referredPaying,
+      referredEverPaid,
+      conversionRate: referredTotal ? Math.round((referredEverPaid / referredTotal) * 1000) / 10 : 0,
+      referrers: referrers.length,
+      totalRewardsEarned,
+      totalPaidOut,
+      totalPendingPayoutAmount,
+      pendingWithdrawals,
+      completedWithdrawals,
+      // Plans the referred stores are paying for right now.
+      planBreakdown: planNow,
+      // Kept for anything that read the old meaning (rewards per plan).
+      rewardPlanBreakdown: rewardPlans,
+    },
+  }
+  networkCache = { at: Date.now(), data }
+  return data
+}
+
 export default async function handler(req, res) {
   const action = req.query.action || 'list'
   const admin = await verifyAdmin(req, referralsTabFor(action))
@@ -20,184 +152,30 @@ export default async function handler(req, res) {
     const db = getAdminDb()
 
     if (action === 'stats') {
-      const rewardsSnap = await db.collection('referralRewards').get()
-      const withdrawalsSnap = await db.collection('withdrawal_requests').get()
-
-      // Legacy fields kept for any records predating the "available" reward
-      // model (rewards are now created immediately-available, never 'paid'
-      // or 'pending' on the referralRewards doc itself). Real payout truth
-      // lives on withdrawal_requests below.
-      let totalRewardsPaid = 0
-      let totalPending = 0
-      let totalRewardsEarned = 0
-      const planBreakdown = { growth: 0, pro: 0, premium: 0 }
-
-      const referrerTotals = {}
-      rewardsSnap.docs.forEach(doc => {
-        const d = doc.data()
-        totalRewardsEarned += d.rewardAmount || 0
-        if (d.status === 'paid') totalRewardsPaid += d.rewardAmount || 0
-        if (d.status === 'pending') totalPending += d.rewardAmount || 0
-        if (planBreakdown[d.plan] !== undefined) planBreakdown[d.plan]++
-        const refId = d.referrerId || d.referrerUserId
-        if (refId) {
-          if (!referrerTotals[refId]) referrerTotals[refId] = { totalEarned: 0, totalReferrals: 0 }
-          referrerTotals[refId].totalEarned += d.rewardAmount || 0
-          referrerTotals[refId].totalReferrals++
-        }
-      })
-
-      let highestEarner = null
-      let maxEarned = 0
-      for (const [refId, data] of Object.entries(referrerTotals)) {
-        if (data.totalEarned > maxEarned) {
-          maxEarned = data.totalEarned
-          highestEarner = { refId, ...data }
-        }
-      }
-      if (highestEarner) {
-        try {
-          const storeSnap = await db.collection('stores').doc(highestEarner.refId).get()
-          if (storeSnap.exists) {
-            const sd = storeSnap.data()
-            highestEarner.storeName = sd.storeName || sd.handle || ''
-            highestEarner.whatsappNumber = sd.whatsappNumber || ''
-            highestEarner.email = sd.email || sd.ownerEmail || ''
-          }
-        } catch {}
-        highestEarner.totalEarnedFormatted = `NGN ${(highestEarner.totalEarned / 100).toLocaleString()}`
-      }
-
-      let pendingWithdrawals = 0
-      let completedWithdrawals = 0
-      let totalWithdrawalAmount = 0
-      let totalPaidOut = 0
-      let totalPendingPayoutAmount = 0
-
-      withdrawalsSnap.docs.forEach(doc => {
-        const d = doc.data()
-        if (d.status === 'pending') {
-          pendingWithdrawals++
-          totalWithdrawalAmount += d.amount || 0
-          totalPendingPayoutAmount += d.amount || 0
-        }
-        if (d.status === 'completed') {
-          completedWithdrawals++
-          totalPaidOut += d.amount || 0
-        }
-      })
-
-      return res.status(200).json({
-        success: true,
-        stats: {
-          totalReferrals: rewardsSnap.size,
-          totalRewardsEarned,
-          totalRewardsPaid,
-          totalPending,
-          totalPaidOut,
-          totalPendingPayoutAmount,
-          pendingWithdrawals,
-          completedWithdrawals,
-          totalWithdrawalAmount,
-          planBreakdown,
-          highestEarner,
-        },
-      })
+      const net = await readNetwork(db, req.query.fresh === '1')
+      return res.status(200).json({ success: true, stats: net.stats })
     }
 
     if (action === 'referrers') {
-      const page = parseInt(req.query.page) || 1
-      const limit = parseInt(req.query.limit) || 10
-
-      const rewardsSnap = await db.collection('referralRewards').get()
-      const withdrawalsSnap = await db.collection('withdrawal_requests').get()
-
-      const referrerGroups = {}
-      rewardsSnap.docs.forEach(doc => {
-        const d = doc.data()
-        const refId = d.referrerId || d.referrerUserId
-        if (!refId) return
-        if (!referrerGroups[refId]) {
-          referrerGroups[refId] = { referrerId: refId, totalReferrals: 0, totalEarned: 0, referredVendors: [] }
-        }
-        referrerGroups[refId].totalReferrals++
-        referrerGroups[refId].totalEarned += d.rewardAmount || 0
-        referrerGroups[refId].referredVendors.push({
-          referredUserId: d.referredUserId || null,
-          plan: d.plan || '',
-          rewardAmount: d.rewardAmount || 0,
-          status: d.status || '',
-          createdAt: d.createdAt?.toDate?.()?.toISOString() || d.createdAt || null,
-        })
-      })
-
-      const withdrawalTotals = {}
-      withdrawalsSnap.docs.forEach(doc => {
-        const d = doc.data()
-        if (!d.userId) return
-        if (!withdrawalTotals[d.userId]) withdrawalTotals[d.userId] = { pendingPayoutAmount: 0, paidOutAmount: 0 }
-        if (d.status === 'pending') withdrawalTotals[d.userId].pendingPayoutAmount += d.amount || 0
-        if (d.status === 'completed') withdrawalTotals[d.userId].paidOutAmount += d.amount || 0
-      })
-
-      const allReferrers = Object.values(referrerGroups)
-        .map(r => ({
-          ...r,
-          pendingPayoutAmount: withdrawalTotals[r.referrerId]?.pendingPayoutAmount || 0,
-          paidOutAmount: withdrawalTotals[r.referrerId]?.paidOutAmount || 0,
-        }))
-        .sort((a, b) => b.totalEarned - a.totalEarned)
-
-      const total = allReferrers.length
+      const page = Math.max(1, parseInt(req.query.page) || 1)
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50)
+      const net = await readNetwork(db, req.query.fresh === '1')
+      const q = String(req.query.search || '').trim().toLowerCase()
+      const show = String(req.query.show || 'all')
+      let rows = net.referrers
+      if (q) rows = rows.filter((r) => [r.storeName, r.slug, r.referralCode, r.email].some((v) => String(v || '').toLowerCase().includes(q)))
+      if (show === 'paying') rows = rows.filter((r) => r.paying > 0)
+      else if (show === 'free_only') rows = rows.filter((r) => r.paying === 0)
+      const sort = String(req.query.sort || 'referred')
+      const by = {
+        referred: (a, b) => b.totalReferrals - a.totalReferrals || b.paying - a.paying || b.totalEarned - a.totalEarned,
+        paying: (a, b) => b.paying - a.paying || b.totalReferrals - a.totalReferrals,
+        earned: (a, b) => b.totalEarned - a.totalEarned || b.totalReferrals - a.totalReferrals,
+        recent: (a, b) => (b.lastReferralAt || 0) - (a.lastReferralAt || 0),
+      }[sort] || ((a, b) => b.totalReferrals - a.totalReferrals)
+      rows = rows.slice().sort(by)
       const offset = (page - 1) * limit
-      const pageReferrers = allReferrers.slice(offset, offset + limit)
-
-      const storeIds = new Set()
-      pageReferrers.forEach(r => {
-        storeIds.add(r.referrerId)
-        r.referredVendors.forEach(v => { if (v.referredUserId) storeIds.add(v.referredUserId) })
-      })
-
-      const storeMap = {}
-      if (storeIds.size) {
-        const storeDocs = await Promise.all(
-          [...storeIds].map(id => db.collection('stores').doc(id).get())
-        )
-        storeDocs.forEach(doc => {
-          if (doc.exists) {
-            const d = doc.data()
-            storeMap[doc.id] = {
-              storeName: d.storeName || d.handle || '',
-              referralCode: d.referralCode || '',
-              email: d.email || d.ownerEmail || '',
-              whatsappNumber: d.whatsappNumber || '',
-              referralAvailable: d.referralAvailable || 0,
-            }
-          }
-        })
-      }
-
-      const enrichedReferrers = pageReferrers.map(r => ({
-        referrerId: r.referrerId,
-        storeName: storeMap[r.referrerId]?.storeName || 'Unknown',
-        referralCode: storeMap[r.referrerId]?.referralCode || '',
-        email: storeMap[r.referrerId]?.email || '',
-        whatsappNumber: storeMap[r.referrerId]?.whatsappNumber || '',
-        totalReferrals: r.totalReferrals,
-        totalEarned: r.totalEarned,
-        availableBalance: storeMap[r.referrerId]?.referralAvailable || 0,
-        pendingPayoutAmount: r.pendingPayoutAmount,
-        paidOutAmount: r.paidOutAmount,
-        referredVendors: r.referredVendors.map(v => ({
-          storeName: v.referredUserId ? (storeMap[v.referredUserId]?.storeName || 'Unknown') : 'Unknown',
-          plan: v.plan,
-          rewardAmount: v.rewardAmount,
-          status: v.status,
-          createdAt: v.createdAt,
-        })).sort((a, b) => (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0)),
-      }))
-
-      return res.status(200).json({ success: true, referrers: enrichedReferrers, page, limit, total })
+      return res.status(200).json({ success: true, referrers: rows.slice(offset, offset + limit), page, limit, total: rows.length })
     }
 
     if (action === 'rewards') {
@@ -387,6 +365,7 @@ export default async function handler(req, res) {
 
       await withdrawalRef.update({ emailSent })
 
+      networkCache = { at: 0, data: null }
       return res.status(200).json({ success: true, message: `Withdrawal ${status}`, emailSent })
     }
 

@@ -897,6 +897,11 @@ service cloud.firestore {
     match /sellaCreditPurchases/{reference} {
       allow read, write: if false;
     }
+    // One record per charged Sella request (who, when, what, credits, cost),
+    // for the Ops console's Sella AI tab. Server only (_lib/sella-credits.js).
+    match /sellaUsageLog/{id} {
+      allow read, write: if false;
+    }
 
     // Push device registry. One document per FCM token, id = sha256(token).
     //

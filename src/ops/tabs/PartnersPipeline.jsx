@@ -8,10 +8,10 @@
 import { useEffect, useState } from 'react'
 import { Rocket, MessageCircle, Mail, ExternalLink, Trash2, Save, Building, BarChart3 } from 'lucide-react'
 import { useOpsData } from '../opsKit'
-import { opsJson, opsHeaders } from '../opsSession'
+import { opsJson } from '../opsSession'
 import { initials, avatarTone } from '../opsUi'
 import { ENQUIRY_STATUSES, INTEREST_OPTIONS, INVESTOR_TYPES, TICKET_SIZES, SOURCES, labelFor } from '../../utils/partnerEnquiry'
-import PartnersTractionEditor from '../../components/admin/PartnersTractionEditor'
+import PartnersFigures from './PartnersFigures'
 import { Segmented, Chips, Pager, Pill, Empty, Notice, Btn, Drawer, Field, useConfirm, timeAgo, fmtDateTime, waLink } from './kit'
 
 const PER_PAGE = 10
@@ -113,11 +113,11 @@ function Enquiries({ me, notify }) {
         <Chips size="sm" tone="green" value={interest} onChange={setInterest} options={[{ id: 'all', label: 'Every kind', count: ic.all }, ...INTEREST_OPTIONS.map((o) => ({ id: o.id, label: o.label, count: ic[o.id] }))]} className="lg:ml-auto" />
       </div>
       <Notice tone="error">{error}</Notice>
-      {loading && !data ? <div className="grid gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-32 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
+      {loading && !data ? <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-32 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
         : items.length === 0 ? <Empty icon={<Rocket size={22} />} title="No enquiries here" sub="Investors and partners who write in from the Partners page show up here." />
           : (
             <>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {items.map((e) => {
                   const [tone] = STAGE[e.status] || STAGE.closed
                   return (
@@ -149,18 +149,12 @@ function Enquiries({ me, notify }) {
   )
 }
 
-export default function PartnersPipeline({ me, notify }) {
+export default function PartnersPipeline({ me, can, notify }) {
   const [view, setView] = useState('enquiries')
   return (
     <div className="space-y-4">
       <Segmented value={view} onChange={setView} options={[{ id: 'enquiries', label: 'Enquiries', icon: <Rocket size={15} /> }, { id: 'figures', label: 'Partners page figures', icon: <BarChart3 size={15} /> }]} />
-      {view === 'enquiries' ? <Enquiries me={me} notify={notify} /> : (
-        <section className="rounded-3xl border border-dash-line bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-6">
-          <p className="mb-1 text-[15px] font-bold text-dash-ink">Traction on the Partners page</p>
-          <p className="mb-4 text-[12.5px] text-dash-muted">The numbers investors see on sellapage.com.ng/partners.</p>
-          <PartnersTractionEditor authHeaders={opsHeaders} />
-        </section>
-      )}
+      {view === 'enquiries' ? <Enquiries me={me} notify={notify} /> : <PartnersFigures can={can} />}
     </div>
   )
 }

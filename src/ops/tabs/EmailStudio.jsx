@@ -242,7 +242,7 @@ export default function EmailStudio({ notify }) {
             {draft.lastScheduleNote && !isScheduled && <Notice tone="warn">Last schedule: {draft.lastScheduleNote}</Notice>}
 
             <div className={step === 'content' ? 'space-y-3' : 'hidden'}>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="block text-[12px] font-semibold text-slate-700">Name (only the team sees it)<input className={`${INPUT} mt-1`} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
                 <label className="block text-[12px] font-semibold text-slate-700">Send from<select className={`${INPUT} mt-1`} value={draft.sender} onChange={(e) => setDraft({ ...draft, sender: e.target.value })}>{SENDERS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select></label>
                 <label className="block text-[12px] font-semibold text-slate-700 md:col-span-2">Subject line<input className={`${INPUT} mt-1`} value={draft.subject} maxLength={200} placeholder="e.g. New: sell on your own domain" onChange={(e) => setDraft({ ...draft, subject: e.target.value })} /></label>
@@ -277,7 +277,7 @@ export default function EmailStudio({ notify }) {
                   <div><p className="mb-1.5 text-[12px] font-semibold text-slate-700">Plans <span className="font-normal text-slate-400">(none picked means every plan)</span></p>
                     <div className="flex flex-wrap gap-1.5">{PLANS.map((p) => <button key={p} type="button" onClick={() => togglePlan(p)} className={`rounded-full px-3 py-1.5 text-[12px] font-semibold capitalize ring-1 ${draft.audience.plans.includes(p) ? 'bg-dash-ink text-white ring-dash-ink' : 'bg-white text-slate-600 ring-dash-line'}`}>{p}</button>)}</div>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <label className="block text-[12px] font-semibold text-slate-700">Sells<select className={`${INPUT} mt-1`} value={draft.audience.vendorType} onChange={(e) => setAudience({ vendorType: e.target.value })}><option value="">Anything</option><option value="products">Products</option><option value="services">Services</option><option value="both">Both</option></select></label>
                     <label className="flex items-center gap-2 text-[13px] text-slate-700 md:mt-6"><input type="checkbox" checked={draft.audience.includeStaff} onChange={(e) => setAudience({ includeStaff: e.target.checked })} className="h-4 w-4 accent-[#1d4ed8]" /> Include store staff accounts</label>
                     <label className="flex items-center gap-2 text-[13px] text-slate-700 md:mt-6"><input type="checkbox" checked={draft.audience.activeOnly} onChange={(e) => setAudience({ activeOnly: e.target.checked })} className="h-4 w-4 accent-[#1d4ed8]" /> Live stores only</label>

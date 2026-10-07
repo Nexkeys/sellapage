@@ -110,7 +110,7 @@ export default function PlatformPulse({ attention, onTab, can, refreshKey }) {
   return (
     <div className="space-y-5">
       {/* health + alert */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <Card className="bg-gradient-to-br from-white to-[#f1faf4]">
           {loadingCore ? <Shimmer className="h-24" /> : (
             <div className="group flex items-center gap-5">
@@ -158,7 +158,7 @@ export default function PlatformPulse({ attention, onTab, can, refreshKey }) {
         </ul>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {/* services */}
         <Card title="System Services & Infrastructure" sub="Core platform services and their real-time status.">
           <div className="grid grid-cols-2 gap-2.5">
@@ -174,7 +174,7 @@ export default function PlatformPulse({ attention, onTab, can, refreshKey }) {
             ))}
           </div>
           <p className="mb-2 mt-5 text-[13px] font-semibold text-dash-ink">Service Details</p>
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             <div className="rounded-2xl border border-dash-line p-3">
               <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-dash-ink"><Cloud size={14} className="text-forest-600" /> Cloud Storage</p>
               {cloud ? [['Storage', cloud.storagePercent, `${cloud.storageUsedGB.toFixed(2)}/${cloud.storageLimitGB.toFixed(0)} GB`], ['Bandwidth', cloud.bandwidthPercent, `${(cloud.bandwidthUsedBytes / 1024 ** 3).toFixed(2)} GB`]].map(([l, p, txt]) => (
@@ -251,7 +251,7 @@ export default function PlatformPulse({ attention, onTab, can, refreshKey }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,1fr)]">
         {/* metrics */}
         <Card title="Platform Metrics" sub="Key figures at a glance." right={
           <div className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold">

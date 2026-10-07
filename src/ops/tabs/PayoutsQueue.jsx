@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react'
 import { Banknote, CheckCircle2, XCircle, Landmark, Hourglass, Wallet, ArrowDownToLine } from 'lucide-react'
 import { useOpsData } from '../opsKit'
 import { opsJson } from '../opsSession'
-import { Chips, Pager, Pill, Empty, Notice, Btn, CopyText, CountUp, useClientPages, useConfirm, timeAgo, fmtDateTime, toMs, nairaKobo } from './kit'
+import { Chips, Pager, Pill, Empty, Notice, Btn, CopyText, CountUp, SearchBox, useClientPages, useConfirm, timeAgo, fmtDateTime, toMs, nairaKobo } from './kit'
 
 const TONE = { pending: 'amber', processing: 'amber', completed: 'green', rejected: 'red' }
 const LABEL = { pending: 'Waiting', processing: 'Processing', completed: 'Paid', rejected: 'Rejected' }
@@ -31,14 +31,17 @@ function Slip({ w, busy, onPay, onReject }) {
 
         <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-3.5">
           <p className="flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-500"><Landmark size={13} /> {w.bankName || 'Bank not given'}</p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {/* Stacked, not side by side: a full Nigerian account name (three
+              names) does not fit half a card, and a cut-off name is the one
+              thing the person paying must be able to read. */}
+          <div className="mt-2.5 space-y-2.5">
             <div className="min-w-0">
               <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-400">Account number</p>
-              {w.bankAccount ? <CopyText text={w.bankAccount} className="mt-0.5 font-mono text-[15px] font-bold tracking-wider text-dash-ink" /> : <p className="mt-0.5 text-slate-400">-</p>}
+              {w.bankAccount ? <CopyText text={w.bankAccount} className="mt-0.5 font-mono text-[16px] font-bold tracking-wider text-dash-ink" /> : <p className="mt-0.5 text-slate-400">-</p>}
             </div>
             <div className="min-w-0">
               <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-400">Account name</p>
-              {w.bankAccountName ? <CopyText text={w.bankAccountName} className="mt-0.5 text-[13.5px] font-semibold text-dash-ink" /> : <p className="mt-0.5 text-slate-400">-</p>}
+              {w.bankAccountName ? <CopyText wrap text={w.bankAccountName} className="mt-0.5 text-[13.5px] font-semibold leading-snug text-dash-ink" /> : <p className="mt-0.5 text-slate-400">-</p>}
             </div>
           </div>
         </div>
@@ -59,6 +62,7 @@ function Slip({ w, busy, onPay, onReject }) {
 
 export default function PayoutsQueue({ notify }) {
   const [filter, setFilter] = useState('pending')
+  const [q, setQ] = useState('')
   const [nonce, setNonce] = useState(0)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
@@ -67,7 +71,14 @@ export default function PayoutsQueue({ notify }) {
   // above never change with the filter.
   const { data, loading, error: loadError } = useOpsData(`/api/admin-referrals?action=withdrawals&status=all&limit=200&n=${nonce}`)
   const all = useMemo(() => data?.withdrawals || [], [data])
-  const rows = useMemo(() => (filter === 'all' ? all : all.filter((w) => (filter === 'pending' ? w.status === 'pending' || w.status === 'processing' : w.status === filter))), [all, filter])
+  const rows = useMemo(() => {
+    const byStatus = filter === 'all' ? all : all.filter((w) => (filter === 'pending' ? w.status === 'pending' || w.status === 'processing' : w.status === filter))
+    const needle = q.trim().toLowerCase()
+    if (!needle) return byStatus
+    const digits = needle.replace(/\D/g, '')
+    return byStatus.filter((w) => [w.storeName, w.bankName, w.bankAccountName].some((v) => String(v || '').toLowerCase().includes(needle))
+      || (digits.length >= 3 && String(w.bankAccount || '').includes(digits)))
+  }, [all, filter, q])
   const pg = useClientPages(rows, 8)
 
   const sums = useMemo(() => {
@@ -121,7 +132,7 @@ export default function PayoutsQueue({ notify }) {
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#023a19] via-[#034e22] to-[#0b6b35] p-5 text-white sm:p-6">
         <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute -bottom-24 right-24 h-56 w-56 rounded-full bg-emerald-300/10" />
-        <div className="relative grid gap-4 sm:grid-cols-3">
+        <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-3">
           {tiles.map((t) => (
             <div key={t.label} className="rounded-2xl bg-white/[0.07] p-4 ring-1 ring-white/10 backdrop-blur">
               <p className="flex items-center gap-2 text-[12px] font-semibold text-green-100/80">{t.icon}{t.label}</p>
@@ -132,21 +143,25 @@ export default function PayoutsQueue({ notify }) {
         </div>
       </section>
 
-      <Chips value={filter} onChange={setFilter} options={[
-        { id: 'pending', label: 'Waiting', count: sums.waitingN, dot: 'bg-amber-500' },
-        { id: 'completed', label: 'Paid', count: sums.paidN, dot: 'bg-emerald-500' },
-        { id: 'rejected', label: 'Rejected', count: sums.rejectedN, dot: 'bg-red-500' },
-        { id: 'all', label: 'All', count: all.length },
-      ]} />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Chips value={filter} onChange={setFilter} options={[
+          { id: 'pending', label: 'Waiting', count: sums.waitingN, dot: 'bg-amber-500' },
+          { id: 'completed', label: 'Paid', count: sums.paidN, dot: 'bg-emerald-500' },
+          { id: 'rejected', label: 'Rejected', count: sums.rejectedN, dot: 'bg-red-500' },
+          { id: 'all', label: 'All', count: all.length },
+        ]} />
+        <SearchBox value={q} onChange={setQ} placeholder="Store, bank, account name or number" className="lg:w-80" />
+      </div>
       <Notice tone="error" onClose={() => setError('')}>{error || loadError}</Notice>
 
       {loading && !data ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="h-72 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="h-72 animate-pulse rounded-3xl bg-white ring-1 ring-dash-line" />)}</div>
       ) : rows.length === 0 ? (
-        <Empty icon={<Banknote size={22} />} title={filter === 'pending' ? 'No one is waiting for money' : 'Nothing here'} sub={filter === 'pending' ? 'Withdrawal requests from the Referrals tab land here.' : 'Pick another filter.'} />
+        <Empty icon={<Banknote size={22} />} title={q ? 'Nothing matches that search' : filter === 'pending' ? 'No one is waiting for money' : 'Nothing here'} sub={q ? 'Try the store name, the bank, or part of the account number.' : filter === 'pending' ? 'Withdrawal requests from the Referrals tab land here.' : 'Pick another filter.'} />
+
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{pg.rows.map((w) => <Slip key={w.id} w={w} busy={busy} onPay={pay} onReject={reject} />)}</div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{pg.rows.map((w) => <Slip key={w.id} w={w} busy={busy} onPay={pay} onReject={reject} />)}</div>
           <Pager page={pg.page} pages={pg.pages} total={pg.total} perPage={8} onPage={pg.setPage} />
         </>
       )}
