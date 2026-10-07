@@ -132,6 +132,15 @@ const suppliers = [
 ]
 
 export const OPS_MOCKS = {
+  // Sign-in: 000000 = the attempt took too long; 111111 = set-up done (recovery codes).
+  '/api/ops-auth': (url, body) => {
+    const action = url.searchParams.get('action')
+    if (action === 'verify' && body.code === '000000') return { success: false, error: 'expired', message: 'This sign-in took too long. Start again.' }
+    if (action === 'verify' && body.code === '111111') return { success: true, customToken: 'demo', session: 'x.y', expiresAt: Date.now() + 3600e3, idleMs: 1800e3, recoveryCodes: ['ab3d-ef7h', 'k2mn-pq4r', 'st5v-wx6z', 'a7cd-e2gh', 'jk3m-n4pq', 'rs6t-uv7w', 'xy2a-bc3d', 'ef4g-hi5j'] }
+    if (action === 'verify') return { success: false, error: 'wrong_code', message: 'That code is not right. 4 attempts left.' }
+    if (action === 'recovery-codes') return { success: true, recoveryLeft: 8, recoveryCodes: ['mn2p-qr3s', 'tu4v-wx5y', 'za6b-cd7e', 'fg2h-ij3k', 'lm4n-op5q', 'rs6t-uv7w', 'xy2z-ab3c', 'de4f-gh5i'] }
+    return undefined
+  },
   '/api/blog-admin': (url) => {
     const action = url.searchParams.get('action')
     if (action === 'list-categories') return { success: true, categories: [{ id: 'guides', name: 'Guides' }, { id: 'growth', name: 'Growth' }, { id: 'payments', name: 'Payments' }] }

@@ -12,6 +12,8 @@
 //   GET  ?action=me             (session) -> the signed-in staff member + session timers
 //   POST ?action=step-up        (session) { code }             -> "sudo mode" for 15 minutes
 //   POST ?action=logout         (session)
+//   POST ?action=recovery-codes (session) { code }  authenticator code -> 8 new
+//                               recovery codes, shown once; the old ones stop working
 //
 // The password is checked HERE, against Firebase Auth's REST API, not in the
 // browser, so failed attempts are counted and locked out (5 tries, then 15
@@ -28,7 +30,7 @@ import { getAdminAuth, getAdminDb } from './_lib/firebase-admin.js'
 import { parseJsonBody } from './_lib/http.js'
 import { memoryRateLimit, durableRateLimit, tooManyRequests } from './_lib/rate-limit.js'
 import {
-  COL, CHALLENGE_MS, MAX_CODE_ATTEMPTS, MAX_PASSWORD_FAILS, LOCK_MS, STEP_UP_MS,
+  COL, CHALLENGE_MS, ENROLL_MS, MAX_CODE_ATTEMPTS, MAX_PASSWORD_FAILS, LOCK_MS, STEP_UP_MS,
   sha256, randomToken, safeEqual, opsConfigured, opsKeyStatus, encrypt, decrypt, newTotpSecret, verifyTotp,
   otpauthUri, newRecoveryCodes, normalizeRecovery, isRecoveryShaped, requestIp, requestMeta,
   loadStaff, forgetStaff, publicStaff, createSession, endSession, verifyOpsRequest, writeAudit,
@@ -63,7 +65,7 @@ async function newChallenge(db, staff, stage, extra = {}) {
   const id = randomToken(18)
   const now = Date.now()
   await db.collection(COL.challenges).doc(id).set({
-    uid: staff.uid, stage, attempts: 0, createdAt: now, expiresAt: now + CHALLENGE_MS, ...extra,
+    uid: staff.uid, stage, attempts: 0, createdAt: now, expiresAt: now + (stage === 'enroll' ? ENROLL_MS : CHALLENGE_MS), ...extra,
   })
   return id
 }
@@ -196,6 +198,29 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, stepUpUntil: now + STEP_UP_MS })
     }
 
+    // A fresh set of recovery codes, for someone who used or lost theirs.
+    // The old codes are stored only as hashes, so they can never be shown
+    // again; this replaces them. Needs the authenticator code itself (not a
+    // recovery code), because whoever holds this screen gets new keys.
+    if (action === 'recovery-codes' && req.method === 'POST') {
+      const v = await verifyOpsRequest(req, null)
+      if (!v.ok) return fail(res, 401, v.reason, 'Your session has ended. Sign in again.')
+      if (!memoryRateLimit('ops_new_codes', v.sessionId, 5, 10 * 60 * 1000)) return tooManyRequests(res, 'Too many tries. Wait a few minutes.')
+      const staff = await loadStaff(db, v.staff.uid, { fresh: true })
+      const code = String(body.code || '').replace(/\D/g, '')
+      if (!staff?.totpSecretEnc || code.length !== 6) return fail(res, 400, 'wrong_code', 'Type the 6-digit code from your authenticator app.')
+      const t = verifyTotp(decrypt(staff.totpSecretEnc), code, staff.totpLastStep || 0)
+      if (!t.ok) {
+        await writeAudit(db, { uid: staff.uid, name: staff.name, title: staff.title, action: 'ops.step_up_failed', result: 'failed', sessionId: v.sessionId, req, summary: 'Wrong code while making new recovery codes' })
+        return fail(res, 400, 'wrong_code', 'That code is not right. Use the code showing now in your authenticator.')
+      }
+      const recovery = newRecoveryCodes()
+      await db.collection(COL.staff).doc(staff.uid).update({ recoveryHashes: recovery.hashes, totpLastStep: t.step, recoveryIssuedAt: Date.now() })
+      forgetStaff(staff.uid)
+      await writeAudit(db, { uid: staff.uid, name: staff.name, title: staff.title, action: 'ops.recovery_codes_new', sessionId: v.sessionId, req, summary: 'Made a new set of 8 recovery codes (the old ones stopped working)' })
+      return res.status(200).json({ success: true, recoveryCodes: recovery.codes, recoveryLeft: recovery.codes.length })
+    }
+
     // ── public steps ──────────────────────────────────────────────────────
     if (!memoryRateLimit('ops_auth_ip', ip, 40, 10 * 60 * 1000)) return tooManyRequests(res)
 
@@ -305,14 +330,14 @@ export default async function handler(req, res) {
       if (c.stage === 'email') {
         if (!c.emailCodeHash || !safeEqual(c.emailCodeHash, codeHash(ref.id, code.replace(/\D/g, '')))) return wrong('That code is not right.')
         const secret = newTotpSecret()
-        await ref.update({ stage: 'enroll', pendingSecretEnc: encrypt(secret), attempts: 0, expiresAt: Date.now() + CHALLENGE_MS, emailCodeHash: null })
+        await ref.update({ stage: 'enroll', pendingSecretEnc: encrypt(secret), attempts: 0, expiresAt: Date.now() + ENROLL_MS, emailCodeHash: null })
         return res.status(200).json({ success: true, challengeId: ref.id, ...enrollPayload(staff, secret) })
       }
 
       if (c.stage === 'enroll') {
         const secret = decrypt(c.pendingSecretEnc)
-        const t = verifyTotp(secret, code)
-        if (!t.ok) return wrong('That code does not match. Make sure you scanned the new QR code.')
+        const t = verifyTotp(secret, code, 0, Date.now(), 2)
+        if (!t.ok) return wrong('That code does not match. Use the code showing now in your app for Sellapage Ops (it changes every 30 seconds).')
         const recovery = newRecoveryCodes()
         await db.collection(COL.staff).doc(staff.uid).update({
           totpSecretEnc: c.pendingSecretEnc, totpEnabled: true, totpLastStep: t.step, enrolledAt: Date.now(), recoveryHashes: recovery.hashes,

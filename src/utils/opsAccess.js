@@ -179,6 +179,7 @@ export const ACTIVITY_LABELS = {
   'ops.step_up_failed': 'Wrong authenticator code',
   'ops.enrolled': 'Set up authenticator',
   'ops.recovery_code_used': 'Used a recovery code',
+  'ops.recovery_codes_new': 'Made new recovery codes',
   'ops.invited': 'Invited a staff member',
   'ops.invite_resent': 'Resent an invite',
   'ops.invite_cancelled': 'Cancelled an invite',

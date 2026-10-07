@@ -182,7 +182,7 @@ function DoorParty({ me, onDone }) {
     <div className="wf-anim fixed inset-0 overflow-hidden bg-[radial-gradient(ellipse_at_center,#14532d_0%,#052e1b_55%,#01140c_100%)]">
       <Confetti on={party} />
       {/* the doorway */}
-      <div className="absolute left-1/2 top-[14%] h-[min(60vh,460px,92vw)] w-[min(38vh,290px,58vw)] -translate-x-1/2 sm:left-1/2" style={{ perspective: '1200px' }}>
+      <div className="absolute left-[57%] top-[12%] h-[min(58vh,460px,84vw)] w-[min(38vh,290px,52vw)] -translate-x-1/2 sm:left-1/2 sm:top-[14%]" style={{ perspective: '1200px' }}>
         <div className="absolute -inset-3 rounded-t-[48%] border-[10px] border-[#3b2a1a] bg-[#2a1d12] shadow-2xl" />
         <div className="absolute inset-0 overflow-hidden rounded-t-[46%] bg-[radial-gradient(ellipse_at_50%_70%,#fff8e1_0%,#ffd98a_45%,#f59e0b_100%)]" style={{ animation: 'wf-light 10s ease-out forwards' }}>
           {/* someone walking in */}

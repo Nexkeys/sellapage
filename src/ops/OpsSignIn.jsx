@@ -7,10 +7,10 @@
 // then recovery codes (only right after enrolling), then the console.
 // `SecondSteps` is shared with the invite screen.
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { signInWithCustomToken, signOut } from 'firebase/auth'
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, ShieldCheck, Smartphone, Copy, Check, KeyRound, AlertCircle, Download } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, ShieldCheck, Smartphone, Copy, Check, KeyRound, AlertCircle, Download, RotateCcw, Clock } from 'lucide-react'
 import { auth } from '../firebase/config'
 import OpsShell from './OpsShell'
 import CodeBoxes from './CodeBoxes'
@@ -38,7 +38,7 @@ async function completeSignIn(data) {
   saveOpsSession({ token: data.session, expiresAt: data.expiresAt, idleMs: data.idleMs })
 }
 
-function RecoveryCodes({ codes, onDone }) {
+export function RecoveryCodes({ codes, onDone, busy = false, doneLabel = 'Open the console', note = 'If you lose your phone, each of these lets you in once instead of the authenticator code. You will not see them again.' }) {
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
   const text = `Sellapage Ops recovery codes\nEach works once. Keep them somewhere safe and offline.\n\n${codes.join('\n')}\n`
@@ -54,8 +54,8 @@ function RecoveryCodes({ codes, onDone }) {
     <div className="animate-in fade-in duration-300">
       <StepIcon icon={KeyRound} />
       <h1 className="mt-4 font-display text-[26px] font-extrabold tracking-tight text-dash-ink">Save your recovery codes</h1>
-      <p className="mt-1.5 text-[14px] leading-relaxed text-slate-600">If you lose your phone, each of these lets you in once instead of the authenticator code. You will not see them again.</p>
-      <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-4 font-mono text-[15px] tracking-wider text-dash-ink ring-1 ring-slate-100">
+      <p className="mt-1.5 text-[14px] leading-relaxed text-slate-600">{note}</p>
+      <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-3 font-mono text-[14px] tracking-wider text-dash-ink ring-1 ring-slate-100 sm:p-4 sm:text-[15px]">
         {codes.map((c) => <span key={c} className="rounded-lg bg-white px-3 py-1.5 text-center ring-1 ring-slate-100">{c}</span>)}
       </div>
       <div className="mt-3 flex gap-2">
@@ -71,7 +71,7 @@ function RecoveryCodes({ codes, onDone }) {
         <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0b6b35]" />
         I have saved these codes somewhere safe (not in my email).
       </label>
-      <button type="button" disabled={!saved} onClick={onDone} className={`${OPS_PRIMARY} mt-5`}>Open the console <ArrowRight size={16} /></button>
+      <button type="button" disabled={!saved || busy} onClick={onDone} className={`${OPS_PRIMARY} mt-5`}>{busy ? <><Loader2 size={16} className="animate-spin" /> Opening...</> : <>{doneLabel} <ArrowRight size={16} /></>}</button>
     </div>
   )
 }
@@ -92,7 +92,16 @@ export function SecondSteps({ step: initial, onSignedIn, onRestart }) {
   const [final, setFinal] = useState(null)
   const [resent, setResent] = useState(false)
   const [keyCopied, setKeyCopied] = useState(false)
+  // A sign-in that cannot go on (took too long, too many wrong codes): it
+  // stays on screen until the person presses Start again. Nothing moves by
+  // itself; an automatic restart here used to fire after a later code had
+  // already worked, reload the page and skip the recovery codes.
+  const [dead, setDead] = useState('')
+  const [opening, setOpening] = useState(false)
   const boxes = useRef(null)
+  const inFlight = useRef(false)
+  const alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
 
   useEffect(() => {
     if (step.next !== 'enroll' || !step.otpauth) return
@@ -101,31 +110,60 @@ export function SecondSteps({ step: initial, onSignedIn, onRestart }) {
 
   const submit = async (value = code) => {
     const v = String(value || '').trim()
-    if (busy || (!useRecovery && v.length !== 6) || (useRecovery && v.replace(/[^a-z0-9]/gi, '').length !== 8)) return
+    // A ref, not state: the boxes auto-submit on the sixth digit and Enter can
+    // land in the same moment; only one request may be in flight.
+    if (inFlight.current || dead || (!useRecovery && v.length !== 6) || (useRecovery && v.replace(/[^a-z0-9]/gi, '').length !== 8)) return
+    inFlight.current = true
     setBusy(true)
     setError('')
     const { ok, data } = await opsJson('/api/ops-auth?action=verify', { method: 'POST', body: { challengeId: step.challengeId, code: v }, headers: false })
+    inFlight.current = false
+    if (!alive.current) return
     setBusy(false)
     if (!ok) {
-      setError(data.message || 'That code is not right.')
-      setShake((n) => n + 1)
       setCode('')
-      if (data.error === 'expired' || data.error === 'too_many' || data.error === 'not_active') setTimeout(onRestart, 1800)
+      setShake((n) => n + 1)
+      if (data.error === 'expired' || data.error === 'too_many' || data.error === 'not_active' || data.error === 'invalid') {
+        setDead(data.message || 'This sign-in cannot continue. Start again.')
+        return
+      }
+      setError(data.message || 'That code is not right.')
       setTimeout(() => boxes.current?.focus(), 50)
       return
     }
     if (data.customToken) {
+      // First set-up: show the recovery codes and sign in only when the
+      // person says they saved them, so nothing (a refresh, another tab) can
+      // jump past this screen.
+      if (data.recoveryCodes) { setRecoveryCodes(data.recoveryCodes); setFinal(data); return }
       try {
         await completeSignIn(data)
       } catch {
         setError('Your code was right, but signing in failed. Check your connection and start again.')
         return
       }
-      if (data.recoveryCodes) { setRecoveryCodes(data.recoveryCodes); setFinal(data) } else onSignedIn(data)
+      if ((await onSignedIn(data)) === false && alive.current) setDead('Signed in, but the console did not open. Start again.')
       return
     }
     setCode('')
     setStep({ ...step, ...data })
+  }
+
+  const openConsole = async () => {
+    setOpening(true)
+    try {
+      await completeSignIn(final)
+    } catch {
+      setOpening(false)
+      setRecoveryCodes(null)
+      setDead('Your authenticator is set up, but signing in failed. Check your connection, then sign in with your email, password and the code in your app.')
+      return
+    }
+    if ((await onSignedIn(final)) === false && alive.current) {
+      setOpening(false)
+      setRecoveryCodes(null)
+      setDead('Your authenticator is set up, but this page was left open too long and the session ended. Sign in with your email, password and the code in your app. Make sure you kept the recovery codes.')
+    }
   }
 
   const resend = async () => {
@@ -133,7 +171,19 @@ export function SecondSteps({ step: initial, onSignedIn, onRestart }) {
     if (ok) { setResent(true); setTimeout(() => setResent(false), 4000) } else setError(data.message || 'Could not send another code.')
   }
 
-  if (recoveryCodes) return <RecoveryCodes codes={recoveryCodes} onDone={() => onSignedIn(final)} />
+  if (recoveryCodes) return <RecoveryCodes codes={recoveryCodes} busy={opening} onDone={openConsole} />
+
+  if (dead) {
+    return (
+      <div className="animate-in fade-in duration-300" role="alert">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 ring-1 ring-amber-100"><Clock size={22} /></span>
+        <h1 className="mt-4 font-display text-[26px] font-extrabold tracking-tight text-dash-ink">Let&apos;s start that again</h1>
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-600">{dead}</p>
+        {step.next === 'enroll' && !final && <p className="mt-2 text-[13px] leading-relaxed text-slate-500">If you already scanned a QR code, delete that Sellapage Ops entry from your authenticator app first: a new one comes next.</p>}
+        <button type="button" onClick={onRestart} className={`${OPS_PRIMARY} mt-6`}><RotateCcw size={16} /> Start again</button>
+      </div>
+    )
+  }
 
   const title = step.next === 'email' ? 'Check your email' : step.next === 'enroll' ? 'Set up your authenticator' : 'Enter your authenticator code'
   return (
@@ -189,8 +239,10 @@ export function SecondSteps({ step: initial, onSignedIn, onRestart }) {
   )
 }
 
-export default function OpsSignIn({ base, notice, onSignedIn }) {
-  const [email, setEmail] = useState('')
+export default function OpsSignIn({ base, notice: noticeProp, onSignedIn }) {
+  const location = useLocation()
+  const notice = noticeProp || location.state?.notice || ''
+  const [email, setEmail] = useState(location.state?.email || '')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [busy, setBusy] = useState(false)

@@ -6,7 +6,7 @@
 // inbox. Staff accounts are never store logins (ops-auth.js refuses an email
 // that already has one).
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, ArrowRight, Eye, EyeOff, Crown, AlertCircle, PartyPopper, Check } from 'lucide-react'
 import OpsShell from './OpsShell'
 import { SecondSteps, OpsError, OPS_PRIMARY, OPS_INPUT } from './OpsSignIn'
@@ -21,6 +21,7 @@ const REASONS = {
 
 export default function OpsJoin({ base, onSignedIn }) {
   const [params] = useSearchParams()
+  const navigate = useNavigate()
   const token = params.get('token') || ''
   const [invite, setInvite] = useState(null)
   const [password, setPassword] = useState('')
@@ -59,7 +60,9 @@ export default function OpsJoin({ base, onSignedIn }) {
 
   let body
   if (step) {
-    body = <SecondSteps step={step} onSignedIn={onSignedIn} onRestart={() => { window.location.href = `${base}/login` }} />
+    // The account and password exist by now, so starting again is a normal
+    // sign-in (password, email code, authenticator). No page reload.
+    body = <SecondSteps step={step} onSignedIn={onSignedIn} onRestart={() => navigate(`${base}/login`, { replace: true, state: { email: invite?.email || '', notice: 'Your account is ready. Sign in with your email and the password you just chose to finish setting up your authenticator.' } })} />
   } else if (!invite) {
     body = <div className="flex flex-col items-center py-10" role="status"><Loader2 className="animate-spin text-forest-600" /><p className="mt-3 text-[14px] text-slate-600">Checking your invite...</p></div>
   } else if (!invite.valid) {

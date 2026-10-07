@@ -322,9 +322,14 @@ export default function OpsApp({ base = '' }) {
     return () => stop()
   }, [loadMe, base, navigate])
 
+  // Returns whether the console opened, so a sign-in screen can say so when
+  // it did not (a session that went idle while recovery codes were open).
   const signedIn = async () => {
     setNotice('')
-    if ((await loadMe()) === true) navigate(home, { replace: true })
+    if ((await loadMe()) === true) { navigate(home, { replace: true }); return true }
+    await signOut(auth).catch(() => {})
+    clearOpsSession()
+    return false
   }
 
   return (

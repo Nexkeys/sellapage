@@ -17,6 +17,8 @@ import { OPS_GROUPS } from '../utils/opsAccess'
 import { TabIcon, Avatar } from './opsKit'
 import { opsJson } from './opsSession'
 import { uploadSingleImage } from '../firebase/products'
+import CodeBoxes from './CodeBoxes'
+import { RecoveryCodes } from './OpsSignIn'
 
 const roleLine = (me) => me?.title || (me?.isSuper ? 'Super Admin' : 'Staff')
 
@@ -140,6 +142,62 @@ function CommandPalette({ tabs, actions, onTab, onClose }) {
   )
 }
 
+// Recovery codes are kept only as hashes, so the old ones can never be shown
+// again. This makes a fresh set (the old ones stop working), after the
+// authenticator code, and shows it once (ops-auth.js recovery-codes).
+function RecoverySection({ me, onSaved }) {
+  const [mode, setMode] = useState('idle')
+  const [code, setCode] = useState('')
+  const [codes, setCodes] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [shake, setShake] = useState(0)
+  const left = me?.recoveryLeft ?? 0
+  const submit = async (v = code) => {
+    if (busy || String(v).length !== 6) return
+    setBusy(true)
+    setError('')
+    const { ok, data } = await opsJson('/api/ops-auth?action=recovery-codes', { method: 'POST', body: { code: v } })
+    setBusy(false)
+    if (!ok) { setError(data.message || 'That code is not right.'); setCode(''); setShake((n) => n + 1); return }
+    setCodes(data.recoveryCodes)
+    setMode('show')
+    onSaved({ recoveryLeft: data.recoveryLeft })
+  }
+  if (mode === 'show' && codes) {
+    return (
+      <div className="mt-5 rounded-2xl p-4 ring-1 ring-dash-line">
+        <RecoveryCodes codes={codes} doneLabel="Done" onDone={() => { setCodes(null); setCode(''); setMode('idle') }}
+          note="These replace your old recovery codes, which no longer work. Each lets you in once if you lose your phone. You will not see them again." />
+      </div>
+    )
+  }
+  return (
+    <section className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[13.5px] font-bold text-dash-ink">Recovery codes</p>
+          <p className="text-[12.5px] text-slate-500">{left} of 8 left. Each lets you in once without your phone.</p>
+        </div>
+        {mode === 'idle' && <button type="button" onClick={() => { setMode('confirm'); setError('') }} className="flex-shrink-0 rounded-xl bg-white px-3 py-2 text-[12.5px] font-semibold text-forest-700 ring-1 ring-forest-200 hover:bg-forest-50">Make new codes</button>}
+      </div>
+      <div className="mt-2.5 flex gap-1">{Array.from({ length: 8 }).map((_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i < left ? 'bg-forest-600' : 'bg-slate-200'}`} />)}</div>
+      {left <= 2 && mode === 'idle' && <p className="mt-2.5 text-[12px] font-semibold text-amber-700">Running low. Make new codes and keep them somewhere safe.</p>}
+      {mode === 'confirm' && (
+        <div className="mt-4 animate-in fade-in slide-in-from-top-1">
+          <p className="mb-2 text-[12.5px] text-slate-600">Old codes cannot be shown again, for your safety. Type the code from your authenticator app to make a new set. The old ones stop working.</p>
+          {error && <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-[12.5px] text-red-700">{error}</p>}
+          <CodeBoxes key={shake} value={code} onChange={setCode} onComplete={(v) => submit(v)} disabled={busy} error={!!error} />
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={() => submit()} disabled={busy || code.length !== 6} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-forest-600 py-2.5 text-[13px] font-semibold text-white hover:bg-forest disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : null} Make new codes</button>
+            <button type="button" onClick={() => { setMode('idle'); setCode(''); setError('') }} className="rounded-xl px-4 py-2.5 text-[13px] font-semibold text-slate-600 hover:bg-white">Cancel</button>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
 export function ProfileModal({ me, onClose, onSaved }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -166,8 +224,8 @@ export function ProfileModal({ me, onClose, onSaved }) {
     }
   }
   return createPortal(
-    <div className="fixed inset-0 z-[135] flex items-end justify-center bg-slate-900/45 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label="Your profile">
-      <div className="w-full max-w-md overflow-hidden rounded-t-[28px] bg-white shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[135] flex items-end justify-center bg-slate-900/45 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="Your profile">
+      <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[28px] bg-white shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
         <div className="relative h-24 bg-gradient-to-r from-[#034e22] via-[#0b6b35] to-[#16a34a]">
           <button type="button" onClick={onClose} className="absolute right-3 top-3 rounded-full p-1.5 text-white/80 hover:bg-white/10" aria-label="Close"><X size={18} /></button>
         </div>
@@ -185,10 +243,8 @@ export function ProfileModal({ me, onClose, onSaved }) {
           <p className="text-[13px] font-medium text-forest-700">{roleLine(me)}{me?.isSuper ? ' · Super admin' : ''}</p>
           <p className="text-[12.5px] text-dash-muted">{me?.email}</p>
           {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[12.5px] text-red-700">{error}</p>}
-          <dl className="mt-5 grid grid-cols-2 gap-3 text-[12.5px]">
-            <div className="rounded-2xl bg-slate-50 p-3"><dt className="text-slate-500">Authenticator</dt><dd className="mt-0.5 flex items-center gap-1 font-semibold text-dash-ink"><Check size={13} className="text-forest-600" /> On</dd></div>
-            <div className="rounded-2xl bg-slate-50 p-3"><dt className="text-slate-500">Recovery codes left</dt><dd className="mt-0.5 font-semibold text-dash-ink">{me?.recoveryLeft ?? '-'}</dd></div>
-          </dl>
+          <p className="mt-4 flex items-center gap-1.5 text-[12.5px] font-semibold text-forest-700"><Check size={14} /> Authenticator app is on</p>
+          <RecoverySection me={me} onSaved={onSaved} />
           <p className="mt-4 text-[12px] text-slate-500">Your name and job title are set by a super admin in Team &amp; Access. Your photo shows across Ops: the sidebar, Team &amp; Access and the Activity Log.</p>
         </div>
       </div>
@@ -216,7 +272,7 @@ export default function OpsLayout({ me, tabs, activeTab, onTab, attention, syste
   useEffect(() => { setDrawer(false) }, [activeTab])
 
   const go = (id) => { onTab(id); setBell(false); setMenu(false) }
-  const sidebar = <SidebarBody me={me} tabs={tabs} activeTab={activeTab} onTab={go} counts={counts} onProfile={() => setProfile(true)} onHelp={onHelp} onSignOut={onSignOut} system={system} />
+  const sidebar = <SidebarBody me={me} tabs={tabs} activeTab={activeTab} onTab={go} counts={counts} onProfile={() => { setDrawer(false); setProfile(true) }} onHelp={() => { setDrawer(false); onHelp() }} onSignOut={onSignOut} system={system} />
   const actions = [
     { label: 'Take Sella’s tour', hint: 'Every tab you can open, step by step', icon: 'Bot', run: onHelp },
     { label: 'Your profile', hint: 'Photo, authenticator, recovery codes', icon: 'Shield', run: () => setProfile(true) },
@@ -229,7 +285,10 @@ export default function OpsLayout({ me, tabs, activeTab, onTab, attention, syste
       {drawer && (
         <div className="fixed inset-0 z-[80] lg:hidden">
           <button type="button" className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]" onClick={() => setDrawer(false)} aria-label="Close menu" />
-          <aside className="absolute inset-y-0 left-0 w-[86vw] max-w-[300px] bg-[linear-gradient(180deg,#034e22_0%,#023d1b_55%,#01290f_100%)] shadow-2xl animate-in slide-in-from-left-6 duration-200">{sidebar}</aside>
+          <aside className="absolute inset-y-0 left-0 w-[86vw] max-w-[300px] bg-[linear-gradient(180deg,#034e22_0%,#023d1b_55%,#01290f_100%)] shadow-2xl animate-in slide-in-from-left-6 duration-200">
+            <button type="button" onClick={() => setDrawer(false)} className="absolute right-3 top-3.5 z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-white/15 transition hover:bg-white/20" aria-label="Close menu"><X size={18} /></button>
+            {sidebar}
+          </aside>
         </div>
       )}
 

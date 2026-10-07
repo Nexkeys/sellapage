@@ -41,6 +41,9 @@ export const IDLE_MS = 30 * 60 * 1000
 export const ABSOLUTE_MS = 12 * 60 * 60 * 1000
 export const STEP_UP_MS = 15 * 60 * 1000
 export const CHALLENGE_MS = 10 * 60 * 1000
+// Setting up an authenticator for the first time (installing the app,
+// scanning, finding the account) can take longer than signing in.
+export const ENROLL_MS = 30 * 60 * 1000
 export const INVITE_MS = 48 * 60 * 60 * 1000
 export const MAX_CODE_ATTEMPTS = 5
 export const MAX_PASSWORD_FAILS = 5
@@ -155,15 +158,16 @@ export function hotp(secretBuf, counter, digits = 6) {
 }
 
 /**
- * Accepts the current 30s step and one either side (clock drift), but never a
- * step at or before `lastStep`, so a code cannot be replayed.
+ * Accepts the current 30s step and `drift` either side (clock drift, or a code
+ * typed just as it changed), but never a step at or before `lastStep`, so a
+ * code cannot be replayed. Sign-in uses 1; first set-up uses 2.
  */
-export function verifyTotp(secretB32, code, lastStep = 0, now = Date.now()) {
+export function verifyTotp(secretB32, code, lastStep = 0, now = Date.now(), drift = 1) {
   const c = String(code || '').replace(/\D/g, '')
   if (c.length !== 6) return { ok: false }
   const secret = base32Decode(secretB32)
   const step = Math.floor(now / 1000 / 30)
-  for (const d of [-1, 0, 1]) {
+  for (let d = -drift; d <= drift; d++) {
     const s = step + d
     if (s <= lastStep) continue
     if (safeEqual(hotp(secret, s), c)) return { ok: true, step: s }
