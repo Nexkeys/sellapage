@@ -759,6 +759,8 @@ service cloud.firestore {
     match /opsChallenges/{id} { allow read, write: if false; }
     match /opsLoginGuards/{id} { allow read, write: if false; }
     match /opsResetRequests/{id} { allow read, write: if false; }
+    // Outreach Tracker contacts and prospects (names, phones, notes).
+    match /opsOutreach/{id} { allow read, write: if false; }
 
     // TIGHTENED 2026-08-09: was `read: if request.auth != null`, which let ANY
     // signed-in vendor read EVERY store's leads (customer PII). The precondition

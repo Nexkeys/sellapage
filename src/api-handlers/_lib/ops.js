@@ -244,6 +244,10 @@ export function publicStaff(s) {
     lastSeenAt: s.lastSeenAt || null,
     pausedReason: s.pausedReason || '',
     statusChangedAt: s.statusChangedAt || null,
+    photoUrl: s.photoUrl || '',
+    welcomeStyle: s.welcomeStyle || 'team',
+    welcomedAt: s.welcomedAt || null,
+    previousSeenAt: s.previousSeenAt || null,
   }
 }
 

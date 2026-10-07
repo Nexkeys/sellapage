@@ -34,6 +34,15 @@ const ENDPOINT_TAB = {
   'admin-reports': 'reports', 'admin-jobs': 'jobs', 'blog-admin': 'blog', 'platform-reviews-admin': 'reviews',
   'admin-partners': 'partners', 'admin-newsletter': 'newsletter', 'admin-marketplace': 'marketplace', 'admin-flags': 'health',
   'admin-termii': 'health', 'admin-manage': 'admins',
+  'ops-outreach': 'outreach', 'ops-insights': 'growth',
+}
+
+// Endpoints that serve two tabs, told apart by ?action=. Must match the tab
+// each handler checks (admin-referrals.js, admin-health.js).
+function tabForRequest(endpoint, action) {
+  if (endpoint === 'admin-referrals') return action === 'withdrawals' || action === 'process-withdrawal' ? 'withdrawals' : 'referrals'
+  if (endpoint === 'admin-health') return action === 'directory' || action === 'verify_payout' ? 'directory' : 'health'
+  return ENDPOINT_TAB[endpoint] || null
 }
 
 const DENY_MESSAGES = {
@@ -83,7 +92,7 @@ export async function withAdminAudit(req, res, endpoint, run) {
     const staff = req.__ops
     const db = getAdminDb()
     const action = String(req.query?.action || '')
-    const tab = ENDPOINT_TAB[endpoint] || null
+    const tab = tabForRequest(endpoint, action)
 
     if (denied && !denied.quiet && denied.reason !== 'no_session') {
       await writeAudit(db, {

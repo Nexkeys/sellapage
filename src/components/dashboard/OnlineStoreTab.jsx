@@ -30,6 +30,7 @@ import { uploadSingleImage } from '../../firebase/products'
 import ThemeLivePreview from './ThemeLivePreview'
 import MediaSlot from '../../media/MediaSlot'
 import { hasMedia } from '../../media/hasMedia'
+import { trackStoreShare } from '../../utils/storeShare'
 
 const getInitialThemeId = (store) => store?.storeTheme || 'classic-default'
 const card = 'rounded-2xl border border-dash-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]'
@@ -99,6 +100,7 @@ function ShareNudge({ open, store, url, onClose }) {
   if (!open) return null
   const msg = `Shop from ${store?.businessName || 'my store'}: ${url}`
   const copy = async () => {
+    trackStoreShare(store?.id, 'copy')
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200) } catch { /* shown on screen */ }
   }
   return createPortal(
@@ -118,14 +120,14 @@ function ShareNudge({ open, store, url, onClose }) {
           <h3 id="sn-title" className="mt-1 font-display text-xl font-extrabold leading-snug text-dash-ink text-balance">Now you&apos;ve added your logo, don&apos;t you think it&apos;s time to share your store link around?</h3>
           <p className="mt-2 text-sm text-dash-muted">Your store looks like a proper brand now. Put it where your customers already are.</p>
           <div className="mt-5 grid gap-2">
-            <a href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95">
+            <a href={`https://wa.me/?text=${encodeURIComponent(msg)}`} onClick={() => trackStoreShare(store?.id, 'whatsapp')} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95">
               <MessageCircle size={16} /> Share on WhatsApp
             </a>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={copy} className={`inline-flex items-center justify-center gap-1.5 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition ${copied ? 'border-forest bg-forest-50 text-forest' : 'border-dash-line text-dash-ink hover:bg-gray-50'}`}>
                 {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? 'Copied' : 'Copy link'}
               </button>
-              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(msg)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dash-line px-3 py-2.5 text-sm font-semibold text-dash-ink transition hover:bg-gray-50">
+              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(msg)}`} onClick={() => trackStoreShare(store?.id, 'x')} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dash-line px-3 py-2.5 text-sm font-semibold text-dash-ink transition hover:bg-gray-50">
                 <Share2 size={15} /> Post on X
               </a>
             </div>
@@ -239,6 +241,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
 
   // ── Actions ─────────────────────────────────────────────────────────────
   const copy = async () => {
+    trackStoreShare(store?.id, 'copy')
     try { await navigator.clipboard.writeText(url) } catch { /* the link is on screen */ }
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
@@ -342,6 +345,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
   }
 
   const downloadQr = () => {
+    trackStoreShare(store?.id, 'qr')
     const a = document.createElement('a')
     a.href = qrDataUrl
     a.download = `${store?.storeName || 'store'}-qr-code.png`
@@ -352,6 +356,7 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
   // link, ready for a shop counter, a flyer or a WhatsApp status.
   const downloadPoster = async () => {
     if (!qrDataUrl) return
+    trackStoreShare(store?.id, 'poster')
     setPosterBusy(true)
     try {
       const canvas = document.createElement('canvas')
@@ -431,10 +436,10 @@ export default function OnlineStoreTab({ store, storeUrl, isGrowthOrPro, isPro, 
         </button>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-        <a href={`https://wa.me/?text=${encodeURIComponent(`Shop from ${store?.businessName || 'my store'}: ${url}`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-xs font-semibold text-white transition hover:brightness-95">
+        <a href={`https://wa.me/?text=${encodeURIComponent(`Shop from ${store?.businessName || 'my store'}: ${url}`)}`} onClick={() => trackStoreShare(store?.id, 'whatsapp')} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-xs font-semibold text-white transition hover:brightness-95">
           <MessageCircle size={14} /> WhatsApp
         </a>
-        <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my store: ${url}`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-sky-600">
+        <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my store: ${url}`)}`} onClick={() => trackStoreShare(store?.id, 'x')} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-sky-600">
           <Share2 size={14} /> Twitter / X
         </a>
         <a href={url} target="_blank" rel="noopener noreferrer" className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-dash-line px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-gray-50 sm:col-span-1">

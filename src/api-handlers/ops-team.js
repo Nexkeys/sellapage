@@ -31,7 +31,7 @@ import {
   COL, INVITE_MS, sha256, randomToken, loadStaff, forgetStaff, publicStaff, endAllSessions, endSession,
   verifyOpsRequest, writeAudit, auditIdBound, IDLE_MS,
 } from './_lib/ops.js'
-import { cleanTabs, ROLE_TEMPLATES, opsTab } from '../utils/opsAccess.js'
+import { cleanTabs, ROLE_TEMPLATES, opsTab, cleanWelcomeStyle } from '../utils/opsAccess.js'
 import { sendInviteEmail, sendAccessChangedEmail, sendResetApprovedEmail } from './_lib/ops-mail.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
         staff: staffSnap.docs.map((d) => publicStaff({ uid: d.id, ...d.data() })),
         invites: invSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
           .filter((i) => !i.cancelledAt)
-          .map((i) => ({ id: i.id, email: i.email, name: i.name, title: i.title, isSuper: i.isSuper === true, tabs: i.tabs || [], createdAt: i.createdAt, createdByName: i.createdByName, expiresAt: i.expiresAt, expired: now > i.expiresAt })),
+          .map((i) => ({ id: i.id, email: i.email, name: i.name, title: i.title, isSuper: i.isSuper === true, tabs: i.tabs || [], welcomeStyle: i.welcomeStyle || 'team', createdAt: i.createdAt, createdByName: i.createdByName, expiresAt: i.expiresAt, expired: now > i.expiresAt })),
         resets: resetSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
         templates: ROLE_TEMPLATES,
       })
@@ -179,8 +179,9 @@ export default async function handler(req, res) {
       const token = randomToken(32)
       const now = Date.now()
       const template = ROLE_TEMPLATES.some((t) => t.id === body.template) ? body.template : ''
+      const welcomeStyle = cleanWelcomeStyle(body.welcomeStyle)
       await db.collection(COL.invites).doc(sha256(token)).set({
-        email, name, title, isSuper, tabs, template, createdAt: now, expiresAt: now + INVITE_MS,
+        email, name, title, isSuper, tabs, template, welcomeStyle, createdAt: now, expiresAt: now + INVITE_MS,
         createdBy: me.uid, createdByName: me.name, usedAt: null, cancelledAt: null,
       })
       const sent = await sendInviteEmail({ to: email, name, title, invitedBy: me.name || 'A super admin', token, isSuper })
@@ -233,6 +234,7 @@ export default async function handler(req, res) {
       }
       const update = { ...after, updatedAt: Date.now(), updatedBy: me.uid }
       if (body.template !== undefined) update.template = ROLE_TEMPLATES.some((t) => t.id === body.template) ? body.template : ''
+      if (body.welcomeStyle !== undefined) update.welcomeStyle = cleanWelcomeStyle(body.welcomeStyle)
       await db.collection(COL.staff).doc(target.uid).update(update)
       forgetStaff(target.uid)
 

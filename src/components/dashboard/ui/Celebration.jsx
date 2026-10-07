@@ -14,8 +14,9 @@ import { useEffect, useRef, useState } from 'react'
 import useConfetti from './useConfetti'
 import { createPortal } from 'react-dom'
 import { PartyPopper, Store, Link2, Check, Plus, X } from 'lucide-react'
+import { trackStoreShare } from '../../../utils/storeShare'
 
-export default function Celebration({ open, kind = 'product', name, storeUrl, onGoToBusinessPage, onAddAnother, onClose }) {
+export default function Celebration({ open, kind = 'product', name, storeUrl, storeId, onGoToBusinessPage, onAddAnother, onClose }) {
   const canvasRef = useRef(null)
   const [copied, setCopied] = useState(false)
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -31,6 +32,7 @@ export default function Celebration({ open, kind = 'product', name, storeUrl, on
   if (!open) return null
 
   const copy = async () => {
+    trackStoreShare(storeId, 'celebration')
     try {
       await navigator.clipboard.writeText(storeUrl)
       setCopied(true)

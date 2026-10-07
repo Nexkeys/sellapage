@@ -3,6 +3,21 @@ import { verifyAdmin } from './_lib/verify-admin.js'
 import { notifyStore } from './_lib/notifications.js'
 import { applyCors as applyCorsOrigin } from './_lib/http.js'
 
+// The vendor flow (verify-cac.js) stores dates as ISO strings, older admin
+// writes stored Firestore Timestamps. Read both.
+const iso = (v) => {
+  if (!v) return null
+  if (typeof v === 'string') return v
+  const d = v?.toDate?.() || (v instanceof Date ? v : null)
+  return d && !Number.isNaN(d.getTime()) ? d.toISOString() : null
+}
+
+// Vendors get 3 paid attempts at Prembly (verify-cac.js, cacRetryCount); after
+// that the vendor screen tells them to contact support. Those stores are the
+// ones that need a person here.
+const MAX_ATTEMPTS = 3
+const needsHelp = (s) => !s.cacVerified && s.cacRetryCount >= MAX_ATTEMPTS
+
 export default async function handler(req, res) {
   applyCorsOrigin(req, res)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token')
@@ -33,21 +48,48 @@ export default async function handler(req, res) {
             cacStatus: d.cacStatus || 'not_submitted',
             cacVerified: d.cacVerified || false,
             cacAttempts: d.cacAttempts || 0,
-            cacVerifiedAt: d.cacVerifiedAt?.toDate?.()?.toISOString() || null,
-            cacRejectedAt: d.cacRejectedAt?.toDate?.()?.toISOString() || null,
+            // The counter the vendor screen actually uses (verify-cac.js).
+            cacRetryCount: Number(d.cacRetryCount) || 0,
+            cacLastRetryAt: iso(d.cacLastRetryAt),
+            cacBusinessName: d.cacBusinessName || '',
+            cacRcNumber: d.cacRcNumber || '',
+            cacRegistrationDate: d.cacRegistrationDate || '',
+            cacManual: d.cacManual === true,
+            cacVerifiedAt: iso(d.cacVerifiedAt),
+            cacRejectedAt: iso(d.cacRejectedAt),
             cacRejectionReason: d.cacRejectionReason || '',
             cacDocType: d.cacDocType || '',
+            businessName: d.businessName || '',
+            email: d.email || d.ownerEmail || '',
+            whatsappNumber: d.whatsappNumber || '',
+            plan: d.plan || 'starter',
           }
         })
+
+      // Counted before the status filter, so the tiles do not change when a
+      // filter is picked.
+      const everyone = stores.slice()
+      stores = stores
         .filter(s => {
           if (statusFilter === 'all') return true
           if (statusFilter === 'verified') return s.cacVerified === true
+          if (statusFilter === 'needs_help') return needsHelp(s)
           if (statusFilter === 'not_submitted') return s.cacStatus === 'not_submitted' || s.cacStatus === 'pending'
           return s.cacStatus === statusFilter
         })
+      const search = String(req.query.search || '').trim().toLowerCase()
+      if (search) {
+        stores = stores.filter((s) => [s.storeName, s.handle, s.businessName, s.cacBusinessName, s.cacRcNumber, s.email]
+          .some((v) => String(v || '').toLowerCase().includes(search)))
+      }
+      stores = stores
         .sort((a, b) => {
-          const order = { pending: 0, submitted: 1, verified: 2, rejected: 3, not_submitted: 4 }
-          return (order[a.cacStatus] ?? 5) - (order[b.cacStatus] ?? 5)
+          // People who ran out of tries first, then anything waiting, then
+          // verified stores (the vendor flow saves the company's status,
+          // e.g. "active", so cacVerified decides that, not cacStatus).
+          const rank = (s) => (needsHelp(s) ? 0 : s.cacStatus === 'pending' || s.cacStatus === 'submitted' ? 1
+            : s.cacVerified ? 2 : s.cacStatus === 'rejected' ? 3 : s.cacRetryCount > 0 ? 4 : 5)
+          return rank(a) - rank(b) || String(b.cacLastRetryAt || '').localeCompare(String(a.cacLastRetryAt || ''))
         })
 
       const total = stores.length
@@ -55,11 +97,13 @@ export default async function handler(req, res) {
       const paged = stores.slice(offset, offset + limit)
 
       const stats = {
-        total: stores.length,
-        verified: stores.filter(s => s.cacVerified).length,
-        pending: stores.filter(s => s.cacStatus === 'pending' || s.cacStatus === 'submitted').length,
-        rejected: stores.filter(s => s.cacStatus === 'rejected').length,
-        notSubmitted: stores.filter(s => s.cacStatus === 'not_submitted').length,
+        total: everyone.length,
+        verified: everyone.filter(s => s.cacVerified).length,
+        pending: everyone.filter(s => s.cacStatus === 'pending' || s.cacStatus === 'submitted').length,
+        rejected: everyone.filter(s => s.cacStatus === 'rejected').length,
+        notSubmitted: everyone.filter(s => s.cacStatus === 'not_submitted').length,
+        needsHelp: everyone.filter(needsHelp).length,
+        tried: everyone.filter(s => !s.cacVerified && s.cacRetryCount > 0).length,
       }
 
       return res.status(200).json({ success: true, stores: paged, stats, page, limit, total })
@@ -135,9 +179,23 @@ export default async function handler(req, res) {
 
       const updateData = { cacStatus: status }
       if (status === 'verified') {
+        // A manual check by a person (the vendor ran out of automatic tries,
+        // or Prembly was down). The registered name and RC/BN number are
+        // what the vendor's CAC screen shows, so they are kept when given.
+        const rcNumber = String(body.rcNumber || '').trim().toUpperCase().replace(/^(RC|BN|IT|LP|LLP)/, '').replace(/\s+/g, '')
+        const businessName = String(body.businessName || '').trim().slice(0, 160)
+        if (rcNumber && !/^\d{1,12}$/.test(rcNumber)) {
+          return res.status(400).json({ error: 'The RC or BN number should be digits, for example RC1234567.' })
+        }
         updateData.cacVerified = true
-        updateData.cacVerifiedAt = new Date()
+        // ISO string, the same as the vendor flow, so the vendor's CAC tab
+        // can show "Verified on ..." (a Timestamp there read as Invalid Date).
+        updateData.cacVerifiedAt = new Date().toISOString()
         updateData.cacRejectionReason = ''
+        updateData.cacManual = true
+        updateData.cacVerifiedBy = admin.uid
+        if (rcNumber) updateData.cacRcNumber = rcNumber
+        if (businessName) updateData.cacBusinessName = businessName
       } else if (status === 'rejected') {
         updateData.cacVerified = false
         updateData.cacRejectedAt = new Date()
@@ -183,11 +241,14 @@ export default async function handler(req, res) {
       const { storeId } = body
       if (!storeId) return res.status(400).json({ error: 'Missing storeId' })
 
+      // cacRetryCount is the counter the vendor screen reads (verify-cac.js).
+      // Resetting only cacAttempts, as this used to, gave nobody another try.
       await db.collection('stores').doc(storeId).update({
         cacStatus: 'not_submitted',
         cacVerified: false,
         cacRejectionReason: '',
         cacAttempts: 0,
+        cacRetryCount: 0,
       })
       return res.status(200).json({ success: true, message: 'CAC verification reset' })
     }

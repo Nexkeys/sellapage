@@ -88,7 +88,10 @@ async function finishLogin(db, staff, req, { recoveryCodes = null, via = 'authen
   const deviceKey = sha256(`${meta.device}|${meta.ip.split('.').slice(0, 3).join('.')}`).slice(0, 24)
   const known = Array.isArray(staff.knownDevices) ? staff.knownDevices : []
   const isNew = known.length > 0 && !known.includes(deviceKey)
+  // Remember when they were last here, for "while you were away".
+  const previousSeenAt = staff.lastSeenAt || staff.lastLoginAt || null
   await db.collection(COL.staff).doc(staff.uid).update({
+    previousSeenAt,
     lastLoginAt: Date.now(),
     lastSeenAt: Date.now(),
     knownDevices: [deviceKey, ...known.filter((k) => k !== deviceKey)].slice(0, 10),
@@ -110,7 +113,7 @@ async function finishLogin(db, staff, req, { recoveryCodes = null, via = 'authen
     session: session.token,
     expiresAt: session.expiresAt,
     idleMs: session.idleMs,
-    staff: publicStaff({ ...staff, recoveryHashes: recoveryCodes ? recoveryCodes.hashes : staff.recoveryHashes }),
+    staff: publicStaff({ ...staff, previousSeenAt, recoveryHashes: recoveryCodes ? recoveryCodes.hashes : staff.recoveryHashes }),
     ...(recoveryCodes ? { recoveryCodes: recoveryCodes.codes } : {}),
   }
 }
@@ -150,6 +153,29 @@ export default async function handler(req, res) {
       if (v.ok) {
         await endSession(db, v.sessionId, 'logout', v.staff.uid)
         await writeAudit(db, { uid: v.staff.uid, name: v.staff.name, title: v.staff.title, action: 'ops.logout', sessionId: v.sessionId, req, summary: 'Signed out' })
+      }
+      return res.status(200).json({ success: true })
+    }
+
+    if (action === 'profile' && req.method === 'POST') {
+      const v = await verifyOpsRequest(req, null)
+      if (!v.ok) return fail(res, 401, v.reason, 'Your session has ended. Sign in again.')
+      const url = String(body.photoUrl || '').trim()
+      // Only our own image host, so a profile photo can never point anywhere else.
+      if (url && !/^https:\/\/res\.cloudinary\.com\/[^\s"'<>]+$/.test(url)) return fail(res, 400, 'bad_url', 'That image could not be used. Upload it again.')
+      await db.collection(COL.staff).doc(v.staff.uid).update({ photoUrl: url.slice(0, 500), updatedAt: Date.now() })
+      forgetStaff(v.staff.uid)
+      await writeAudit(db, { uid: v.staff.uid, name: v.staff.name, title: v.staff.title, action: 'ops.profile_updated', sessionId: v.sessionId, req, summary: url ? 'Changed their profile photo' : 'Removed their profile photo' })
+      return res.status(200).json({ success: true, photoUrl: url })
+    }
+
+    if (action === 'welcomed' && req.method === 'POST') {
+      const v = await verifyOpsRequest(req, null)
+      if (!v.ok) return fail(res, 401, v.reason, 'Your session has ended. Sign in again.')
+      if (!v.staff.welcomedAt) {
+        await db.collection(COL.staff).doc(v.staff.uid).update({ welcomedAt: Date.now() })
+        forgetStaff(v.staff.uid)
+        await writeAudit(db, { uid: v.staff.uid, name: v.staff.name, title: v.staff.title, action: 'ops.welcomed', sessionId: v.sessionId, req, summary: 'Finished their welcome and tour' })
       }
       return res.status(200).json({ success: true })
     }
@@ -344,6 +370,7 @@ export default async function handler(req, res) {
       const staff = {
         uid: user.uid, name: inv.name, title: inv.title || '', email: inv.email, status: 'active',
         isSuper: inv.isSuper === true, tabs: inv.isSuper ? [] : inv.tabs || [], template: inv.template || '',
+        welcomeStyle: inv.welcomeStyle || 'team', welcomedAt: null,
         totpEnabled: false, createdAt: now, createdBy: inv.createdBy || null, createdByName: inv.createdByName || '', inviteId: ref.id,
         statusChangedAt: now,
       }

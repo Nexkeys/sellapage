@@ -3,11 +3,18 @@ import { sendEmail } from './_lib/send-email.js'
 import { FieldValue } from 'firebase-admin/firestore'
 import { verifyAdmin } from './_lib/verify-admin.js'
 
+// The payout queue lives in this file but is its own tab ("Payouts"). Checking
+// it against 'referrals' meant someone given only Payouts could not open it,
+// someone given only Referrals could approve money, and approving a payout
+// never asked for the authenticator code (sudo mode is keyed by tab).
+const PAYOUT_ACTIONS = new Set(['withdrawals', 'process-withdrawal'])
+const referralsTabFor = (action) => (PAYOUT_ACTIONS.has(String(action || '')) ? 'withdrawals' : 'referrals')
+
 export default async function handler(req, res) {
-  const admin = await verifyAdmin(req, 'referrals')
+  const action = req.query.action || 'list'
+  const admin = await verifyAdmin(req, referralsTabFor(action))
   if (!admin) return res.status(403).json({ error: 'Forbidden' })
 
-  const action = req.query.action || 'list'
 
   try {
     const db = getAdminDb()

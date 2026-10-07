@@ -8,6 +8,7 @@ import ReactDOM from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import '../../src/index.css'
 import { STORE, DATA, API } from './data.js'
+import { OPS_MOCKS } from './opsMocks.js'
 
 import CustomersTab from '../../src/components/dashboard/CustomersTab.jsx'
 import DiscountsTab from '../../src/components/dashboard/DiscountsTab.jsx'
@@ -39,10 +40,13 @@ import SettingsTab from '../../src/components/dashboard/Settings.jsx'
 window.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input.url
   const parsed = new URL(url, window.location.origin)
+  const sent = JSON.parse(init?.body || '{}')
+  // Ops tab mocks first (tools/screenshots/opsMocks.js); undefined falls through.
+  const ops = OPS_MOCKS[parsed.pathname]?.(parsed, sent)
   const entry = API[parsed.pathname]
   // An entry may be a function of the URL and body, for routes that answer
   // differently per ?action= (signup-phone).
-  const body = typeof entry === 'function' ? entry(parsed, JSON.parse(init?.body || '{}')) : entry ?? { success: true }
+  const body = ops !== undefined ? ops : typeof entry === 'function' ? entry(parsed, sent) : entry ?? { success: true }
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
@@ -367,6 +371,12 @@ const TeamAccessPage = React.lazy(() => import('../../src/ops/TeamAccess.jsx'))
 const ActivityLogPage = React.lazy(() => import('../../src/ops/ActivityLog.jsx'))
 const SecondStepsLazy = React.lazy(() => import('../../src/ops/OpsSignIn.jsx').then((m) => ({ default: m.SecondSteps })))
 const OpsAppLazy = React.lazy(() => import('../../src/ops/OpsApp.jsx'))
+const WelcomeFlowLazy = React.lazy(() => import('../../src/ops/WelcomeFlow.jsx'))
+function OpsWelcomePreview() {
+  const style = new URLSearchParams(window.location.search).get('style') || 'ceo'
+  const me = { uid: 's9', name: style === 'ceo' ? 'Adaeze Nwosu' : style === 'leadership' ? 'Frank Kelvin' : 'Deola Benedict', title: style === 'ceo' ? 'Chief Executive Officer' : style === 'leadership' ? 'CTO' : 'Customer Support Officer', welcomeStyle: style }
+  return <main><React.Suspense fallback={null}><WelcomeFlowLazy me={me} onDone={noop} /></React.Suspense></main>
+}
 function OpsConsolePreview() {
   try { localStorage.setItem('sellapage_ops_session', JSON.stringify({ token: 'x.y', expiresAt: Date.now() + 3600e3, idleMs: 1800e3 })) } catch { /* sandbox */ }
   return <React.Suspense fallback={null}><OpsAppLazy base="/ops" /></React.Suspense>
@@ -384,7 +394,7 @@ function OpsPreview() {
 
 const shot = new URLSearchParams(window.location.search).get('shot')
 const previewKind = new URLSearchParams(window.location.search).get('preview')
-const Shot = previewKind === 'ops-console' ? OpsConsolePreview : String(previewKind || '').startsWith('ops-') ? OpsPreview : previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
+const Shot = previewKind === 'ops-welcome' ? OpsWelcomePreview : previewKind === 'ops-console' ? OpsConsolePreview : String(previewKind || '').startsWith('ops-') ? OpsPreview : previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <MemoryRouter initialEntries={[new URLSearchParams(window.location.search).get('path') || '/']}>

@@ -13,7 +13,7 @@
 //   - warns 2 minutes before the 30-minute idle sign-out, then signs out,
 //   - signs out at once if the server ends the session (paused, removed,
 //     ended by an admin, expired), and says why on the sign-in screen.
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { ShieldCheck, Loader2, X, TimerReset } from 'lucide-react'
@@ -24,8 +24,20 @@ import OpsLostAuthenticator from './OpsLostAuthenticator'
 import CodeBoxes from './CodeBoxes'
 import { OPS_PRIMARY, OPS_INPUT, OpsError } from './OpsSignIn'
 import { getOpsSession, clearOpsSession, opsHeaders, opsJson, installOpsFetchGuard, setOpsFetchHandlers } from './opsSession'
+import { OPS_TABS, opsCanOpen } from '../utils/opsAccess'
+import OpsLayout from './OpsLayout'
+import PlatformPulse from './PlatformPulse'
+import OutreachTracker from './OutreachTracker'
+import TeamAccess from './TeamAccess'
+import ActivityLog from './ActivityLog'
+import SellaGuide from './SellaGuide'
+import WelcomeFlow, { WelcomeBack } from './WelcomeFlow'
+import { OpsBoundary } from './opsKit'
+import { TAB_VIEWS } from './tabs'
 
 const Admin = lazy(() => import('../pages/Admin'))
+// Charts (recharts) load only when Growth & Activation opens.
+const GrowthDashboard = lazy(() => import('./GrowthDashboard'))
 
 const ENDED = {
   session_idle: 'You were signed out after 30 minutes without activity.',
@@ -62,7 +74,7 @@ function StepUpModal({ open, onDone }) {
     setCode('')
   }
   return (
-    <div className="fixed inset-0 z-[130] flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="stepup-title">
+    <div className="fixed inset-0 z-[155] flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="stepup-title">
       <div className="w-full max-w-sm rounded-t-3xl bg-white p-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:rounded-3xl">
         <div className="flex items-start justify-between">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest-50 text-forest-600"><ShieldCheck size={20} /></span>
@@ -107,7 +119,7 @@ function IdleGuard({ idleMs, expiresAt, onTimeout, onKeepAlive }) {
   const hard = expiresAt - Date.now() <= left + 1000
   const secs = Math.ceil(left / 1000)
   return (
-    <div className="fixed inset-x-0 bottom-4 z-[125] flex justify-center px-4" role="alert">
+    <div className="fixed inset-x-0 bottom-4 z-[146] flex justify-center px-4" role="alert">
       <div className="flex w-full max-w-md items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-2xl animate-in slide-in-from-bottom-3 duration-200">
         <TimerReset size={20} className="flex-shrink-0 text-amber-300" />
         <p className="flex-1 text-[13px] leading-snug">{hard ? `Your 12-hour session ends in ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}. Save your work.` : `Still there? For safety you'll be signed out in ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}.`}</p>
@@ -117,9 +129,39 @@ function IdleGuard({ idleMs, expiresAt, onTimeout, onKeepAlive }) {
   )
 }
 
-function OpsConsole({ me, session, user, onSignOut, onRefresh }) {
+// The tabs with a screen of their own in the console. Everything else in
+// OPS_TABS is drawn by the original admin page (pages/Admin.jsx), embedded.
+const OWN_VIEWS = new Set(['health', 'growth', 'outreach', 'admins', 'activity'])
+
+// A tab redesigned for the console (src/ops/tabs). Each one loads on its own,
+// so opening Tickets never downloads the SMS composer.
+function TabView({ id, ...props }) {
+  const View = TAB_VIEWS[id]
+  return <Suspense fallback={<Loading />}><View {...props} /></Suspense>
+}
+
+function OpsConsole({ me, session, user, onSignOut, onRefresh, onMePatch }) {
   const [stepUp, setStepUp] = useState(null)
   const [toast, setToast] = useState('')
+  const tabs = useMemo(() => OPS_TABS.filter((t) => opsCanOpen(me, t.id)), [me])
+  const can = useCallback((id) => opsCanOpen(me, id), [me])
+  const fromHash = () => {
+    const h = window.location.hash.replace('#', '')
+    return tabs.some((t) => t.id === h) ? h : (tabs.find((t) => t.id === 'health') || tabs[0])?.id
+  }
+  const [activeTab, setActiveTabState] = useState(fromHash)
+  const setActiveTab = useCallback((id) => {
+    setActiveTabState(id)
+    try { window.history.replaceState(null, '', `#${id}`) } catch { /* fine */ }
+    window.scrollTo({ top: 0 })
+  }, [])
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [attention, setAttention] = useState(null)
+  const [system, setSystem] = useState({ ok: null, note: 'Checking services' })
+  const [welcome, setWelcome] = useState(!me.welcomedAt)
+  const [tour, setTour] = useState(false)
+  const [away, setAway] = useState(null)
+
   useEffect(() => {
     setOpsFetchHandlers({
       onStepUp: () => new Promise((resolve) => setStepUp({ resolve })),
@@ -130,15 +172,75 @@ function OpsConsole({ me, session, user, onSignOut, onRefresh }) {
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 5000); return () => clearTimeout(t) }, [toast])
   // Re-read who I am every 2 minutes: a tab revoked elsewhere disappears.
   useEffect(() => { const t = setInterval(onRefresh, 2 * 60 * 1000); return () => clearInterval(t) }, [onRefresh])
+  // A tab taken away mid-session: move to one they still have.
+  useEffect(() => { if (activeTab && !tabs.some((t) => t.id === activeTab)) setActiveTab(tabs[0]?.id) }, [tabs, activeTab, setActiveTab])
+
+  // What is waiting, for the bell, the sidebar counts and Platform Pulse.
+  const loadAttention = useCallback(async () => {
+    const { ok, data } = await opsJson('/api/ops-insights?action=attention')
+    if (ok) setAttention(data)
+  }, [])
+  useEffect(() => { loadAttention(); const t = setInterval(loadAttention, 90 * 1000); return () => clearInterval(t) }, [loadAttention, refreshKey])
+
+  // The sidebar's status light: real service checks for people who can see them.
+  useEffect(() => {
+    if (!can('health')) { setSystem({ ok: true, note: 'Signed in securely' }); return }
+    let alive = true
+    opsJson('/api/admin-health?action=health').then(({ ok, data }) => {
+      if (!alive) return
+      const up = ok && data.platform && data.cloudinary && data.vercel
+      setSystem({ ok: !!up, note: up ? 'All systems operational' : 'A service needs a look' })
+    })
+    return () => { alive = false }
+  }, [can, refreshKey])
+
+  // "Welcome back": once per session, after the very first welcome is done.
+  useEffect(() => {
+    if (welcome || !me.welcomedAt) return
+    const key = `sp_ops_wb_${session.id}`
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1') } catch { /* fine */ }
+    opsJson('/api/ops-insights?action=away').then(({ ok, data }) => setAway(ok ? data : { total: 0, items: [] }))
+  }, [welcome, me.welcomedAt, session.id])
+
+  const finishWelcome = async () => {
+    setWelcome(false)
+    setTour(true)
+    await opsJson('/api/ops-auth?action=welcomed', { method: 'POST' })
+    onMePatch({ welcomedAt: Date.now() })
+  }
+
+  const embeddedAdmin = (
+    <Suspense fallback={<Loading />}>
+      <Admin ops={{ user, staff: me, session, authHeaders: opsHeaders, onSignOut: () => onSignOut('logout'), embedded: true, activeTab, setActiveTab }} />
+    </Suspense>
+  )
+  const views = {
+    health: <PlatformPulse attention={attention} onTab={setActiveTab} can={can} refreshKey={refreshKey} />,
+    growth: <Suspense fallback={<Loading />}><GrowthDashboard can={can} onTab={setActiveTab} refreshKey={refreshKey} /></Suspense>,
+    outreach: <OutreachTracker me={me} key={refreshKey} />,
+    admins: <TeamAccess me={me} key={refreshKey} />,
+    activity: <ActivityLog key={refreshKey} />,
+  }
 
   return (
     <>
-      <Suspense fallback={<Loading />}>
-        <Admin ops={{ user, staff: me, session, authHeaders: opsHeaders, onSignOut: () => onSignOut('logout') }} />
-      </Suspense>
+      <OpsLayout
+        me={me} tabs={tabs} activeTab={activeTab} onTab={setActiveTab} attention={attention} system={system}
+        onRefresh={() => { setRefreshKey((k) => k + 1); onRefresh() }} onSignOut={() => onSignOut('logout')} onHelp={() => setTour(true)}
+        onMeChange={onMePatch}
+      >
+        <OpsBoundary key={activeTab} label={tabs.find((t) => t.id === activeTab)?.label}>
+          {OWN_VIEWS.has(activeTab) ? views[activeTab]
+            : TAB_VIEWS[activeTab] ? <TabView id={activeTab} key={refreshKey} me={me} can={can} onTab={setActiveTab} notify={setToast} />
+              : <div key={refreshKey}>{embeddedAdmin}</div>}
+        </OpsBoundary>
+      </OpsLayout>
+      {!welcome && <SellaGuide me={me} tabs={tabs} activeTab={activeTab} onOpenTab={setActiveTab} tourOpen={tour} onTourDone={() => setTour(false)} />}
+      {welcome && <WelcomeFlow me={me} onDone={finishWelcome} />}
+      {away && <WelcomeBack me={me} away={away} onOpenTab={setActiveTab} onClose={() => setAway(null)} />}
       <StepUpModal open={!!stepUp} onDone={(ok) => { stepUp?.resolve(ok); setStepUp(null) }} />
       <IdleGuard idleMs={session.idleMs} expiresAt={session.expiresAt} onTimeout={(why) => onSignOut(why)} onKeepAlive={onRefresh} />
-      {toast && <div className="fixed left-1/2 top-4 z-[126] -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-2.5 text-[13px] text-white shadow-xl animate-in fade-in slide-in-from-top-2">{toast}</div>}
+      {toast && <div className="fixed left-1/2 top-4 z-[147] -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-2.5 text-[13px] text-white shadow-xl animate-in fade-in slide-in-from-top-2">{toast}</div>}
     </>
   )
 }
@@ -232,7 +334,7 @@ export default function OpsApp({ base = '' }) {
       <Route path="lost-authenticator" element={<OpsLostAuthenticator base={base} />} />
       <Route path="*" element={
         phase === 'loading' ? <Loading />
-          : phase === 'ready' && me && session && fbUser ? <OpsConsole me={me} session={session} user={fbUser} onSignOut={doSignOut} onRefresh={refresh} />
+          : phase === 'ready' && me && session && fbUser ? <OpsConsole me={me} session={session} user={fbUser} onSignOut={doSignOut} onRefresh={refresh} onMePatch={(patch) => setMe((m) => ({ ...m, ...patch }))} />
             : phase === 'ready' ? <Loading />
             : <Navigate to={`${base}/login`} replace />
       } />

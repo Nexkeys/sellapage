@@ -23,6 +23,7 @@ import { hasMedia } from '../../../media/hasMedia'
 import { Skeleton } from '../../Skeleton'
 import ExportMenu from '../ExportMenu'
 import MarketplaceListButton from '../MarketplaceListButton'
+import { trackStoreShare } from '../../../utils/storeShare'
 import {
   naira, nairaShort, stockInfo, optionCount, isHidden, listingLink, PRICE_BANDS, SORTS, sortListings,
 } from './listingUtils'
@@ -432,6 +433,7 @@ export default function ListingsPage({
 
   // ── Actions ─────────────────────────────────────────────────────────────
   const copy = async (link) => {
+    trackStoreShare(storeId, 'product')
     try {
       await navigator.clipboard.writeText(link)
       setToast({ text: 'Link copied. Paste it in a chat or on your status.' })

@@ -100,7 +100,12 @@ export default function Admin({ ops = null } = {}) {
   const user = ops?.user || authCtx?.user;
   const [adminRole, setAdminRole] = useState(null);
   const [roleLoading, setRoleLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('health');
+  // Inside the Ops console the shell (src/ops/OpsLayout.jsx) owns the menu and
+  // the current tab; this page then only draws the tab's content.
+  const embedded = !!ops?.embedded;
+  const [ownTab, setOwnTab] = useState('health');
+  const activeTab = embedded ? ops.activeTab : ownTab;
+  const setActiveTab = embedded ? ops.setActiveTab : setOwnTab;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Admin endpoints authenticate the *person* now - a Firebase ID token plus an
   // active admins/{uid} document, checked server-side by _lib/verify-admin.js.
@@ -641,8 +646,9 @@ export default function Admin({ ops = null } = {}) {
   const activeTabMeta = at.find(t => t.id === activeTab);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4">
+    <div className={embedded ? '' : 'min-h-screen bg-gray-50'}>
+      <div className={embedded ? 'space-y-4' : 'max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4'}>
+        {!embedded && <>
         {/* Header */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between gap-2.5">
@@ -669,6 +675,7 @@ export default function Admin({ ops = null } = {}) {
             {at.map(tab => { const I = tab.icon; return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTab === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><I size={14} /> <span className="hidden lg:inline">{tab.label}</span><span className="lg:hidden">{tab.short}</span></button>; })}
           </div>
         </div>
+        </>}
 
         {/* ACCOUNT RECOVERY - super_admin only. Approving grants account-takeover
             capability, so identity must be verified out-of-band first. */}
@@ -1244,7 +1251,7 @@ export default function Admin({ ops = null } = {}) {
       </div>
 
       {/* Mobile Nav Drawer */}
-      {mobileMenuOpen && (
+      {!embedded && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 sm:hidden">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
           <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-white shadow-2xl flex flex-col">

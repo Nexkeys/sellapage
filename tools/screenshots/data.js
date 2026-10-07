@@ -238,6 +238,70 @@ export const API = {
   // Signup checks: a link with "taken" in it is taken; a number ending 0000
   // is already verified on another store.
   // Ops console (staff accounts). A small team and a day of activity.
+  '/api/admin-health': () => ({
+    success: true,
+    platform: { totalStores: 148, growthStores: 4, proStores: 3, premiumStores: 3, totalProducts: 231 },
+    cloudinary: { storageUsedGB: 0.43, storageLimitGB: 25, storagePercent: 2, bandwidthUsedBytes: 0.81 * 1024 ** 3, bandwidthPercent: 3 },
+    vercel: { status: 'deployed', region: 'iad1', environment: 'production', recentDeployments: [{ state: 'READY', commitMessage: 'admin-phase-2', branch: 'main' }, { state: 'READY', commitMessage: 'new admin-changes', branch: 'main' }] },
+    ai: { totalAiGenerations: 412, today: 9, storesUsed: 37 },
+  }),
+  '/api/admin-termii': () => ({ success: true, configured: true, balance: 1450, currency: 'NGN', lowBalance: true, lowBalanceThreshold: 2000, senderIds: { totalElements: 2 } }),
+  '/api/ops-insights': (url) => {
+    const action = url.searchParams.get('action')
+    const day = (i) => new Date(Date.now() - i * 864e5).toISOString().slice(0, 10)
+    const wave = (n, base, amp) => Array.from({ length: n }, (_, i) => ({ day: day(n - 1 - i), n: Math.max(0, Math.round(base + amp * Math.sin(i / 3) + (i % 5 === 0 ? 2 : 0))) }))
+    if (action === 'attention') return { success: true, total: 9, items: [
+      { tab: 'domains', title: 'Custom domains', count: 1, detail: '1 not working yet' },
+      { tab: 'cac', title: 'CAC registration requests', count: 2, detail: '2 new' },
+      { tab: 'marketplace', title: 'Supplier applications', count: 3, detail: '3 to decide' },
+      { tab: 'tickets', title: 'Support tickets', count: 2, detail: '2 open' },
+      { tab: 'withdrawals', title: 'Payout requests', count: 1, detail: '1 waiting to be paid' },
+    ] }
+    if (action === 'away') return { success: true, total: 14, since: Date.now() - 2 * 864e5, items: [
+      { tab: 'directory', count: 6, label: '6 new stores signed up' }, { tab: 'tickets', count: 2, label: '2 new support tickets' },
+      { tab: 'cac', count: 1, label: '1 new CAC request' }, { tab: 'activity', count: 5, label: '5 changes by the team' },
+    ], team: [{ at: Date.now() - 3600e3, name: 'Deola Benedict', summary: 'Support Tickets: update (ticketId TK-2291)', tab: 'tickets' }, { at: Date.now() - 7200e3, name: 'Frank Kelvin', summary: 'Approved a supplier', tab: 'marketplace' }] }
+    if (action === 'pulse') return { success: true,
+      totals: { stores: 148, paying: 8, premium: 3, products: 231, active30: 41, active7: 19, newThisWeek: 6, interactions30: 57, revenue30: 85500 },
+      series: { signups: wave(30, 2, 1.6), active: wave(30, 6, 3) },
+      feed: [
+        { at: Date.now() - 2 * 60e3, kind: 'store', title: 'New merchant registered', detail: 'Fashion Hub' },
+        { at: Date.now() - 12 * 60e3, kind: 'team', title: 'SMS Campaigns: save (campaignId Product Launch)', detail: 'Ada Okafor, Marketing Lead' },
+        { at: Date.now() - 24 * 60e3, kind: 'store', title: 'New merchant registered', detail: 'Techpro Gadgets' },
+        { at: Date.now() - 37 * 60e3, kind: 'team', title: 'CAC Verification: update (storeId techpro)', detail: 'Frank Kelvin, CTO' },
+        { at: Date.now() - 3600e3, kind: 'store', title: 'New merchant registered', detail: 'Mama Put Kitchen' },
+      ] }
+    if (action === 'growth') {
+      const ch = (id, label, signups, a) => ({ id, label, signups, products: 0, activationRate: a, productRate: Math.min(100, a + 30), paidRate: Math.round(a / 4) })
+      return { success: true, builtAt: Date.now() - 4 * 60e3,
+        kpis: { merchants: 148, activationRate: 14.2, activated: 21, timeToActivationDays: 6.5, wam: 19, mam: 41, retention30: 31.4, retentionBase: 121, completionRate: 38.5, setUpRate: 61.5, shareRate: 33.1, sharedTracked: 9, firstInteractionRate: 22.3, leads30: 38, orders30: 14, bookings30: 5, storesWithInteraction: 33, paid: 8, paidConversion: 5.4, revenue30: 85500, revenuePerActive: 2085 },
+        funnel: [{ id: 'registered', label: 'Signed up', n: 148, any: 148 }, { id: 'products', label: 'Added products', n: 84, any: 84 }, { id: 'complete', label: 'Store complete', n: 57, any: 57 }, { id: 'shared', label: 'Shared the store', n: 36, any: 49 }, { id: 'interaction', label: 'First enquiry or order', n: 21, any: 33 }, { id: 'returning', label: 'Came back again', n: 17, any: 66 }],
+        segments: [
+          { id: 'active', label: 'Active', about: 'Signed in during the last 30 days and has products.', n: 34 },
+          { id: 'went_quiet', label: 'Went quiet', about: 'Was set up or had customers, but no sign-in for 30+ days.', n: 29 },
+          { id: 'shared_no_activity', label: 'Shared, no customers yet', about: 'Shared the store but no enquiry, order or booking yet.', n: 11 },
+          { id: 'complete_not_shared', label: 'Has products, never shared', about: 'Products are in, but the store link was never shared.', n: 10 },
+          { id: 'no_products', label: 'Set up, no products', about: 'Has a logo or description but no products or services.', n: 27 },
+          { id: 'not_set_up', label: 'Signed up, nothing set up', about: 'No logo, no description and no products yet.', n: 37 },
+        ],
+        channels: [ch('unknown', 'Not asked (signed up before Oct 2026)', 121, 12), ch('social', 'Social media', 11, 18), ch('merchant_referral', 'A merchant referred me', 7, 43), ch('google', 'Google search', 5, 20), ch('word_of_mouth', 'Word of mouth', 3, 33), ch('ai', 'An AI assistant', 1, 0)],
+        cohorts: Array.from({ length: 12 }, (_, i) => ({ week: day((11 - i) * 7), signups: 6 + ((i * 7) % 9), products: 40 + ((i * 13) % 30), shared: 20 + ((i * 11) % 25), activated: 8 + ((i * 5) % 14) })),
+        signups: wave(90, 1.6, 1.4),
+        revenueByMonth: { '2026-05': 22500, '2026-06': 37500, '2026-07': 41000, '2026-08': 52500, '2026-09': 70000, '2026-10': 15000 },
+        categories: [{ label: 'Fashion & Clothing', signups: 38, activated: 7 }, { label: 'Beauty & Skincare', signups: 22, activated: 5 }, { label: 'Food & Groceries', signups: 17, activated: 3 }, { label: 'Not chosen', signups: 41, activated: 3 }, { label: 'Gadgets & Phones', signups: 12, activated: 2 }, { label: 'Hair & Wigs', signups: 9, activated: 1 }] }
+    }
+    if (action === 'segment') return { success: true, total: 37, page: 1, limit: 20, rows: Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, name: ['Bisi Bakes', 'Chioma Fabrics', 'Glow Beauty', 'Mama Put', 'TechPro', 'Kiddies Corner', 'Wig World', 'Fit Fam'][i], slug: 'store', owner: 'Owner', phone: '0803 123 4567', products: i % 3, shared: i % 2 === 0, shareCount: i % 2 ? 0 : 2, visits: i * 3, leads: i % 2, orders: 0, createdAt: Date.now() - i * 864e5 * 4, lastActiveAt: Date.now() - i * 864e5 * 9, paid: i === 1, plan: 'pro' })) }
+    return { success: true }
+  },
+  '/api/ops-outreach': (url) => {
+    const action = url.searchParams.get('action')
+    const mk = (i, status, kind, extra = {}) => ({ id: `o${i}`, kind, status, name: ['Bisi Ade', 'Chioma Okafor', 'Tunde Bello', 'Ngozi Eze', 'Femi Ojo', 'Amaka Obi', 'Segun Ade', 'Zainab Musa'][i], business: ['Bisi Bakes', 'Chioma Fabrics', 'Bello Gadgets', 'Ngozi Naturals', 'Femi Shoes', 'Amaka Kitchen', 'Segun Prints', 'Zee Hair'][i], phone: '08031234567', channel: ['whatsapp', 'instagram', 'call'][i % 3], angle: ['reactivation', 'storefront', 'orders', 'presence'][i % 4], notes: i % 2 ? [{ at: Date.now() - 3600e3, byName: 'Tolu', text: 'Asked how delivery works, follow up Friday' }] : [], createdAt: Date.now() - i * 864e5, createdByName: 'Tolu', updatedAt: Date.now() - i * 3600e3, contactedAt: status === 'to_contact' ? null : Date.now() - i * 864e5, outcome: { signedUp: kind === 'prospect' && i % 2 === 0, returned: i % 3 === 0, completed: i === 3, shared: i === 3, interaction: i === 4 }, ...extra })
+    const rows = [mk(0, 'to_contact', 'merchant'), mk(1, 'to_contact', 'prospect'), mk(2, 'contacted', 'merchant'), mk(3, 'interested', 'merchant'), mk(4, 'responded', 'merchant'), mk(5, 'no_answer', 'prospect'), mk(6, 'contacted', 'prospect'), mk(7, 'not_interested', 'merchant')]
+    if (action === 'stats') return { success: true, totals: { onBoard: 8, toContact: 2, contacted: 6, responded: 3, interested: 1, returned: 2, signedUp: 1, completed: 1, shared: 1, interaction: 1 },
+      byAngle: [{ id: 'reactivation', contacted: 3, responded: 2, returned: 2, signedUp: 0, completed: 1, shared: 1, interaction: 0 }, { id: 'storefront', contacted: 2, responded: 1, returned: 0, signedUp: 1, completed: 0, shared: 0, interaction: 0 }, { id: 'orders', contacted: 1, responded: 0, returned: 0, signedUp: 0, completed: 0, shared: 0, interaction: 1 }],
+      byChannel: [{ id: 'whatsapp', contacted: 3, responded: 2 }, { id: 'instagram', contacted: 2, responded: 1 }, { id: 'call', contacted: 1, responded: 0 }], weeks: [], people: [] }
+    return { success: true, total: rows.length, page: 1, limit: 50, counts: { to_contact: 2, contacted: 2, no_answer: 1, responded: 1, interested: 1, not_interested: 1 }, rows }
+  },
   '/api/admin-firestore-usage': () => {
     const m = (used, limit) => ({ used, limit, percent: Math.round((used / limit) * 100), perHour: Math.round(used / 14), projected: Math.round(used * 1.7), willExceed: false })
     return { success: true, reads: m(18200, 50000), writes: m(4100, 20000), deletes: m(120, 20000), resetsAt: Date.now() + 10 * 3600e3 }
@@ -283,7 +347,7 @@ export const API = {
     const action = url.searchParams.get('action')
     if (action === 'invite') return { success: true, valid: true, email: 'deola@sellapage.com.ng', name: 'Deola Benedict', title: 'Customer Support Officer', isSuper: false, invitedByName: 'Ben Pascal' }
     if (action === 'password') return { success: true, challengeId: 'c1', next: 'totp', name: 'Ben Pascal' }
-    if (action === 'me') return { success: true, staff: { uid: 's1', name: 'Ernest Uwaoma', title: 'Super Admin/CTO/Founder', email: 'sellapage.ng@gmail.com', status: 'active', isSuper: true, tabs: [], totpEnabled: true, recoveryLeft: 8 }, session: { id: 'x', createdAt: Date.now(), expiresAt: Date.now() + 12 * 3600e3, idleMs: 30 * 60e3, stepUpUntil: Date.now() + 15 * 60e3, device: 'Chrome on Windows' } }
+    if (action === 'me') return { success: true, staff: { uid: 's1', name: 'Ernest Uwaoma', title: 'Super Admin/CTO/Founder', email: 'sellapage.ng@gmail.com', status: 'active', isSuper: true, tabs: [], totpEnabled: true, recoveryLeft: 8, welcomedAt: Date.now() - 864e5, welcomeStyle: 'team' }, session: { id: 'x', createdAt: Date.now(), expiresAt: Date.now() + 12 * 3600e3, idleMs: 30 * 60e3, stepUpUntil: Date.now() + 15 * 60e3, device: 'Chrome on Windows' } }
     return { success: true }
   },
   '/api/signup-phone': (url) => {

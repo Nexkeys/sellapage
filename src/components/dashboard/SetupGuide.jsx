@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Package, Wrench, ImageIcon, ImagePlus, PenLine, ShieldCheck, Share2, Copy, ArrowRight, Sparkles, PartyPopper, X } from 'lucide-react'
 import useConfetti from './ui/useConfetti'
+import { trackStoreShare } from '../../utils/storeShare'
 
 const read = (k) => { try { return localStorage.getItem(k) } catch { return null } }
 const write = (k, v) => { try { localStorage.setItem(k, v) } catch { /* storage blocked */ } }
@@ -128,6 +129,7 @@ export default function SetupGuide({ store, vendorType = 'products', listings = 
   }, [party])
 
   const markShared = () => {
+    trackStoreShare(store?.id, 'guide')
     write(`sellapage_guide_shared_${id}`, '1')
     setShared(true)
   }

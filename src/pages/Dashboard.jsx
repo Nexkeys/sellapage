@@ -40,6 +40,7 @@ import { SkeletonDashboard } from "../components/Skeleton";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import OverviewTab from "../components/dashboard/Overview";
 import Celebration from "../components/dashboard/ui/Celebration";
+import { trackStoreShare } from "../utils/storeShare";
 import SetupGuide from "../components/dashboard/SetupGuide";
 import { PaymentSuccessModal, PaymentProblemModal, RetentionModal } from "../components/dashboard/billing/PlanMoments";
 import { clearOverviewCache } from "../utils/overviewData";
@@ -849,6 +850,7 @@ export default function Dashboard() {
 
   const copyLink = () => {
     navigator.clipboard.writeText(storeUrl);
+    trackStoreShare(store?.id, "copy");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -2405,6 +2407,7 @@ export default function Dashboard() {
         kind={celebrate?.kind}
         name={celebrate?.name}
         storeUrl={storeUrl}
+        storeId={store?.id}
         onClose={() => setCelebrate(null)}
         onGoToBusinessPage={() => { setCelebrate(null); setActiveTab("online-store"); }}
         onAddAnother={() => {

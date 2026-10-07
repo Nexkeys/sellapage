@@ -55,7 +55,7 @@ export default async function handler(req, res) {
       await ref.update({
         status,
         moderatedAt: new Date().toISOString(),
-        moderatedBy: req.headers['x-admin-uid'] || 'admin',
+        moderatedBy: admin.uid,
       })
       return res.status(200).json({ success: true })
     }

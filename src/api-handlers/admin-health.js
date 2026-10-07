@@ -74,11 +74,15 @@ export default async function handler(req, res) {
     // diagnostics (BACKEND_ENV_MISSING / FRONTEND_HEADER_MISSING /
     // TOKEN_MISMATCH) which were useful while debugging but told an attacker
     // exactly how far their guess got. One generic response now.
-    const admin = await verifyAdmin(req, 'health');
-    if (!admin) return res.status(403).json({ error: 'Forbidden' });
-
     const queryParams = req.query || {};
     const action = queryParams.action || 'health';
+
+    // The merchant directory and payout-account approval are the Merchants
+    // tab, not System Health. Checking them against 'health' locked anyone
+    // given Merchants (operations, marketing) out of the list.
+    const tab = action === 'directory' || action === 'verify_payout' ? 'directory' : 'health';
+    const admin = await verifyAdmin(req, tab);
+    if (!admin) return res.status(403).json({ error: 'Forbidden' });
 
     // Handle admin action: verify_payout (POST)
     if (req.method === 'POST' && action === 'verify_payout') {
@@ -136,10 +140,16 @@ export default async function handler(req, res) {
         });
 
         if (search) {
+          // Name, link, email or phone. Phones are compared as digits with
+          // the leading 0 or 234 dropped, so "0803 123 4567", "+2348031234567"
+          // and "8031234567" all find the same store.
+          const digits = (v) => String(v || '').replace(/\D/g, '').replace(/^(234|0)/, '');
+          const searchDigits = digits(search);
           filteredStores = filteredStores.filter((s) => {
-            const sName = (s.storeName || '').toLowerCase();
-            const handle = (s.handle || '').toLowerCase();
-            return sName.includes(search) || handle.includes(search);
+            const text = [s.storeName, s.handle, s.businessName, s.email, s.ownerEmail]
+              .map((v) => String(v || '').toLowerCase());
+            if (text.some((v) => v.includes(search))) return true;
+            return searchDigits.length >= 6 && digits(s.whatsappNumber).includes(searchDigits);
           });
         }
 

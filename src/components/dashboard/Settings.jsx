@@ -28,6 +28,7 @@ import { NIGERIAN_MARKET_CATEGORIES } from '../../utils/categories'
 import { uploadSingleImage } from '../../firebase/products'
 import { resetPassword } from '../../firebase/auth'
 import useConfetti from './ui/useConfetti'
+import { trackStoreShare } from '../../utils/storeShare'
 
 const card = 'rounded-2xl border border-dash-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]'
 const input = 'w-full rounded-xl border border-dash-line bg-white px-4 py-2.5 text-sm text-dash-ink outline-none transition placeholder:text-slate-400 focus:border-forest-200 focus:ring-4 focus:ring-forest-50'
@@ -224,6 +225,7 @@ export default function SettingsTab({
   }
 
   const copyLink = async () => {
+    trackStoreShare(store?.id, 'settings')
     try { await navigator.clipboard.writeText(storeUrl) } catch { /* shown */ }
     setToast({ text: 'Store link copied. Go share it!' })
   }

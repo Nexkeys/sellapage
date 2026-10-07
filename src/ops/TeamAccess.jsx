@@ -11,8 +11,9 @@ import {
   Search, X, Loader2, Check, AlertTriangle, RefreshCw, KeyRound, ChevronLeft, ChevronRight, Lock, Send, Users,
 } from 'lucide-react'
 import { opsJson } from './opsSession'
-import { OPS_TABS, OPS_GROUPS, ROLE_TEMPLATES, opsTab } from '../utils/opsAccess'
-import { initials, avatarTone, ago } from './opsUi'
+import { OPS_TABS, OPS_GROUPS, ROLE_TEMPLATES, WELCOME_STYLES, opsTab } from '../utils/opsAccess'
+import { Avatar } from './opsKit'
+import { ago } from './opsUi'
 
 const PER_PAGE = 8
 const TITLE_SUGGESTIONS = ['CEO', 'CTO', 'COO', 'Customer Support Officer', 'System Analyst', 'Finance Officer', 'Operations Manager', 'Marketing Lead', 'Growth Associate', 'Compliance Officer']
@@ -70,6 +71,7 @@ function AccessForm({ me, person, onClose, onSaved }) {
   const [isSuper, setIsSuper] = useState(person?.isSuper === true)
   const [tabs, setTabs] = useState(new Set(person?.tabs || []))
   const [template, setTemplate] = useState(person?.template || '')
+  const [welcomeStyle, setWelcomeStyle] = useState(person?.welcomeStyle || 'team')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmRisky, setConfirmRisky] = useState(null)
@@ -89,8 +91,8 @@ function AccessForm({ me, person, onClose, onSaved }) {
     if ((newlyRisky.length || (isSuper && !person?.isSuper)) && !confirmed) { setConfirmRisky({ tabs: newlyRisky, superNew: isSuper && !person?.isSuper }); return }
     setBusy(true)
     const body = editing
-      ? { uid: person.uid, name: name.trim(), title: title.trim(), tabs: [...tabs], template, ...(me.isSuper ? { isSuper } : {}) }
-      : { name: name.trim(), title: title.trim(), email: email.trim(), tabs: [...tabs], template, isSuper }
+      ? { uid: person.uid, name: name.trim(), title: title.trim(), tabs: [...tabs], template, welcomeStyle, ...(me.isSuper ? { isSuper } : {}) }
+      : { name: name.trim(), title: title.trim(), email: email.trim(), tabs: [...tabs], template, welcomeStyle, isSuper }
     const { ok, data } = await opsJson(`/api/ops-team?action=${editing ? 'update' : 'invite'}`, { method: 'POST', body })
     setBusy(false)
     setConfirmRisky(null)
@@ -118,6 +120,21 @@ function AccessForm({ me, person, onClose, onSaved }) {
         <label className="mt-3 block"><span className="mb-1 block text-[12.5px] font-semibold text-dash-ink">Work email</span>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="deola@sellapage.com.ng" className="h-11 w-full rounded-xl border border-gray-200 px-3 text-[14px] outline-none focus:border-forest-600 focus:ring-4 focus:ring-forest-600/10" />
           <span className="mt-1 block text-[11.5px] text-dash-muted">Must not be an email that already runs a Sellapage store.</span></label>
+      )}
+
+      {(!editing || !person.welcomedAt) && (
+        <div className="mt-4">
+          <p className="mb-2 text-[12.5px] font-semibold text-dash-ink">Their first welcome <span className="font-normal text-dash-muted">(shown once, when they first open Ops)</span></p>
+          <div className="grid grid-cols-3 gap-2">
+            {WELCOME_STYLES.map((w) => (
+              <button key={w.id} type="button" onClick={() => setWelcomeStyle(w.id)} aria-pressed={welcomeStyle === w.id}
+                className={`rounded-2xl p-3 text-left ring-1 transition ${welcomeStyle === w.id ? (w.id === 'ceo' ? 'bg-amber-50 ring-amber-300' : 'bg-forest-50 ring-forest-300') : 'bg-white ring-dash-line hover:bg-slate-50'}`}>
+                <span className="block text-[13px] font-bold text-dash-ink">{w.label}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">{w.about}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {me.isSuper && (
@@ -336,7 +353,7 @@ export default function TeamAccess({ me }) {
             return (
               <article key={p.uid} className={`flex flex-col rounded-2xl bg-white p-4 ring-1 transition hover:shadow-md ${p.status === 'deleted' ? 'opacity-70 ring-dash-line' : 'ring-dash-line'}`}>
                 <div className="flex items-start gap-3">
-                  <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${avatarTone(p.uid)}`}>{initials(p.name)}</span>
+                  <Avatar person={p} size={44} />
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-1.5 text-[14.5px] font-bold text-dash-ink">
                       {p.name}

@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
     // Admin endpoints run inside the Activity Log wrapper (once): every change
     // is recorded and refusals carry their reason. See _lib/ops-audit.js.
-    if (!req.__auditWrapped && (endpoint.startsWith("admin-") || endpoint === "blog-admin" || endpoint === "platform-reviews-admin" || endpoint === "ops-team")) {
+    if (!req.__auditWrapped && (endpoint.startsWith("admin-") || endpoint === "blog-admin" || endpoint === "platform-reviews-admin" || endpoint === "ops-team" || endpoint === "ops-insights" || endpoint === "ops-outreach")) {
       req.__auditWrapped = true;
       const { withAdminAudit } = await import("../src/api-handlers/_lib/ops-audit.js");
       return await withAdminAudit(req, res, endpoint, () => handler(req, res));
@@ -60,6 +60,14 @@ export default async function handler(req, res) {
       }
       case "ops-team": {
         const { default: handlerFunc } = await import("../src/api-handlers/ops-team.js");
+        return await handlerFunc(req, res);
+      }
+      case "ops-insights": {
+        const { default: handlerFunc } = await import("../src/api-handlers/ops-insights.js");
+        return await handlerFunc(req, res);
+      }
+      case "ops-outreach": {
+        const { default: handlerFunc } = await import("../src/api-handlers/ops-outreach.js");
         return await handlerFunc(req, res);
       }
       case "paystack-webhook": {
