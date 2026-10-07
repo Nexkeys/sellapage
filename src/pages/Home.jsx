@@ -1,870 +1,409 @@
-//src/pages/Home.jsx/
-import { useNavigate } from 'react-router-dom'
+// src/pages/Home.jsx
+//
+// The public homepage, redesigned 2026-10-07 from Nex's mockup. The hero video
+// was removed at his request. Every claim on this page is true today:
+//   - figures come live from Ops (TractionStats), never from the mockup
+//   - testimonials are real, approved reviews from the Reviews wall
+//   - trust badges are facts from the About page (CAC BN 9689086; Paystack,
+//     which holds the CBN licence; Firebase encryption; the Android app)
+//   - no "#1", no iOS badge (there is no iPhone app), no "24/7 support"
+// Photos come from media-src (home-hero-scene, home-hero-phone, home-mission,
+// home-categories, home-cta); an empty folder shows a designed fallback.
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
-  ShoppingBag, ShoppingCart, MessageCircle, Zap, ChevronDown, Check, X,
-  Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
-  Star, BarChart2, Palette, Settings, Lock, Sparkles, Gift,
-  Grid, Users, Truck, CreditCard, Tag, Download, Globe, Shield,
-  Briefcase, BookOpen, Receipt,
+  ShoppingBag, ShoppingCart, MessageCircle, Zap, ChevronDown, Check, Store, Package, Share2, TrendingUp, Smartphone, ArrowRight,
+  Star, BarChart2, Palette, Sparkles, Gift, Grid, Users, Truck, CreditCard, Tag, Download, Globe, Shield, Briefcase, BookOpen,
+  PlayCircle, ShieldCheck, Lock, BadgeCheck, MapPin, Headphones, Shirt, Gem, Sofa, UtensilsCrossed, Heart, Bot,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import PlayStoreBadge from '../components/PlayStoreBadge'
 import MediaSlot from '../media/MediaSlot'
-import { hasMedia } from '../media/hasMedia'
-
-// Pictures appear in the "What Sellapage does" grid only once EVERY card has
-// one. A grid that is half screenshots and half small icons has rows of
-// different heights and looks unfinished, which is worse than all icons. Fill
-// the remaining media-src/feature-* folders and the grid switches over by
-// itself; empty one and it switches back.
-const FEATURE_CARD_SLOTS = [
-  'feature-store-page', 'feature-products', 'feature-payments', 'feature-delivery',
-  'feature-customers', 'feature-reviews', 'feature-discounts', 'feature-analytics',
-  'feature-receipts', 'feature-loyalty', 'feature-abandoned',
-]
-const FEATURE_CARDS_READY = FEATURE_CARD_SLOTS.every(hasMedia)
 import Reveal from '../components/Reveal'
 import { useAuth } from '../hooks/useAuth'
 import SEO from '../components/SEO'
 import { pageSeo } from '../data/seoPages'
+import { Eyebrow, Script, Leaf, TractionStats, ReviewsCarousel, useApprovedReviews } from '../components/marketing/kit'
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const steps = [
-  {
-    number: '01',
-    title: 'Tell us about your business',
-    description: 'Add what you sell or offer, whether products, services, prices, photos, contact details, delivery options, and payment preferences.',
-  },
-  {
-    number: '02',
-    title: 'Your page goes live instantly',
-    description: 'Your clean, professional business page is ready. You get a unique link you can share anywhere online.',
-  },
-  {
-    number: '03',
-    title: 'Share and start getting customers',
-    description: 'Drop the link in your social bios, messages, ads, flyers, or direct conversations. Customers browse, order, pay, and reach you.',
-  },
+  { number: '01', title: 'Tell us about your business', description: 'Add what you sell or offer: products, services, prices, photos, contact details, delivery options and payment preferences.' },
+  { number: '02', title: 'Your page goes live instantly', description: 'Your clean, professional business page is ready, with a unique link you can share anywhere online.' },
+  { number: '03', title: 'Share and start getting customers', description: 'Drop the link in your bios, messages, ads, flyers or chats. Customers browse, order, pay and reach you.' },
+]
+
+// The eight in the design; each opens the plan comparison that says which plan has it.
+const CORE = [
+  { icon: Store, title: 'Online store', sub: 'A store page in minutes, no coding.' },
+  { icon: CreditCard, title: 'Payments', sub: 'Card, bank transfer and USSD through Paystack.' },
+  { icon: Truck, title: 'Delivery', sub: 'Sendbox and Topship rates, booking and tracking.' },
+  { icon: Users, title: 'CRM and customers', sub: 'Profiles, spend and orders for every customer.' },
+  { icon: Star, title: 'Reviews and ratings', sub: 'Build trust with verified buyer reviews.' },
+  { icon: Tag, title: 'Discounts and promos', sub: 'Codes with limits and expiry dates.' },
+  { icon: BarChart2, title: 'Analytics', sub: 'Views, clicks, orders and your best sellers.' },
+  { icon: Bot, title: 'Sella AI', sub: 'An assistant that knows your whole store.' },
 ]
 
 const features = [
-  {
-    icon: Smartphone,
-    title: 'Sharp on Every Phone',
-    description: 'Whether you sell clothes, offer a service, or run a food business, your page loads clean and fast on every phone.',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Customers Order in One Flow',
-    description: 'Every product or service has a clear action path. Customers can order, leave details, and move into your customer workflow without confusion.',
-  },
-  {
-    icon: Package,
-    title: 'Customers See Everything Before Messaging',
-    description: 'Show your items or services with photos, prices, and descriptions. Customers know what to expect before they reach out.',
-  },
-  {
-    icon: Share2,
-    title: 'One Link That Works Everywhere',
-    description: 'Your Sellapage link works on WhatsApp status, Instagram bio, Twitter, Telegram, flyers - anywhere you promote yourself.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Never Lose an Interested Customer',
-    description: "When someone browses but doesn't reach out immediately, they can drop their contact details. You follow up and close the sale.",
-  },
-  {
-    icon: Zap,
-    title: 'Live the Same Day You Sign Up',
-    description: 'No technical setup. No waiting. Create your account, add your products or services, and share your link all in the same session.',
-  },
-  {
-    icon: ShoppingCart,
-    title: 'Structured Cart (Growth+)',
-    description: 'Customers can add multiple items to a cart and send one clean order with their details, notes, and preferred next step.',
-  },
-  {
-    icon: Package,
-    title: 'Stock Count Management',
-    description: 'Vendors can set precise stock levels. Out-of-stock products automatically sort to the bottom of the store page.',
-  },
-  {
-    icon: Grid,
-    title: 'Categories & Search',
-    description: 'Organize offers with categories so customers can filter and search items on the live page.',
-  },
-  {
-    icon: Sparkles,
-    title: 'AI Product Descriptions (Growth+)',
-    description: 'Generate a sharp, ready-to-publish product or service description in seconds. Tap one button and AI writes it for you.',
-  },
-  {
-    icon: Palette,
-    title: '20 Premium Store Themes (Pro)',
-    description: 'Pick from 20 professionally designed store themes. Each one changes your fonts, colours, layout, and card style completely.',
-  },
-  {
-    icon: ShoppingBag,
-    title: 'In-App Paystack Checkout (Pro+)',
-    description: 'Accept card, bank transfer, and USSD payments directly on your store. Orders create automatically in your dashboard.',
-  },
-  {
-    icon: Truck,
-    title: 'Sendbox & Topship Delivery Integration (Pro+)',
-    description: 'Show live delivery rates at checkout, book shipments, and share tracking links with customers from your dashboard.',
-  },
-  {
-    icon: CreditCard,
-    title: 'Payouts & Bank Settlement (Pro+)',
-    description: 'Connect your bank via Paystack subaccount. View earnings KPIs, transaction history, and get paid on your schedule.',
-  },
-  {
-    icon: Users,
-    title: 'Customer CRM (Pro+)',
-    description: 'Auto-built from confirmed orders. Expandable profiles, WhatsApp direct links, sort by spend, orders, or recency.',
-  },
-  {
-    icon: Star,
-    title: 'Verified Reviews (Pro+)',
-    description: 'Buyers leave star ratings and reviews after delivery. Aggregate scores show on product and service cards.',
-  },
-  {
-    icon: Tag,
-    title: 'Discounts & Promo Codes (Pro+)',
-    description: 'Create percentage or flat discounts, set usage limits and expiry dates. Applied automatically at checkout.',
-  },
-  {
-    icon: Download,
-    title: 'Product Export (Pro+)',
-    description: 'Export your catalogue to PDF, CSV, Excel, and downloadable files for offline records or marketing.',
-  },
-  {
-    icon: Globe,
-    title: 'Custom Domain (Pro+)',
-    description: 'Use your own domain (yourbrand.com) for a fully branded store experience.',
-  },
-  {
-    icon: Shield,
-    title: 'CAC Verification (Pro+)',
-    description: 'Verify your business with Corporate Affairs Commission for added trust and credibility.',
-  },
-  {
-    icon: Briefcase,
-    title: 'Job Listings (All Plans)',
-    description: 'Post job openings from your dashboard on any plan. Approved listings go live on the public Sellapage Jobs board.',
-  },
-  {
-    icon: BookOpen,
-    title: 'Sellapage Blog',
-    description: 'Guides, tips, and stories to help you sell more - read and comment on the public blog.',
-  },
-  {
-    icon: Gift,
-    title: 'Referral Program (All Plans)',
-    description: 'Share your referral code and earn cash when the businesses you refer upgrade to a paid plan.',
-  },
-  // Moved in from the old "Commerce Tools" section when the two were merged
-  // (2026-09-26). Everything else it listed was already here.
-  { icon: BarChart2, title: 'Advanced Analytics', description: 'Track store views, clicks, engagement rate, top-performing products and services from one dashboard.' },
-  { icon: MessageCircle, title: 'Business Messaging', description: 'Automate order confirmations and customer support from the same commerce flow.' },
-  { icon: Sparkles, title: 'AI Business Partner (Premium)', description: 'A context-aware assistant that reads your whole dashboard and helps you run your business, hands-free.' },
-  { icon: BarChart2, title: 'Google Ads Integration (Premium)', description: 'Run and track Google Ads campaigns yourself, or let Sellapage manage them for you.' },
+  { icon: Smartphone, title: 'Sharp on every phone', description: 'Your page loads clean and fast on every phone, whatever you sell.' },
+  { icon: MessageCircle, title: 'Customers order in one flow', description: 'Every product or service has a clear action path, from order to your dashboard.' },
+  { icon: Package, title: 'Customers see everything first', description: 'Photos, prices and descriptions, so buyers know what to expect before they message.' },
+  { icon: Share2, title: 'One link that works everywhere', description: 'WhatsApp status, Instagram bio, X, Telegram, flyers: anywhere you promote yourself.' },
+  { icon: TrendingUp, title: 'Never lose an interested customer', description: 'Browsers can leave their details so you can follow up and close the sale.' },
+  { icon: Zap, title: 'Live the same day', description: 'Create your account, add what you sell and share your link in one session.' },
+  { icon: ShoppingCart, title: 'Structured cart (Growth and up)', description: 'Customers add several items and send one clean order with their details.' },
+  { icon: Package, title: 'Stock counts', description: 'Set stock levels; sold-out items sort to the bottom by themselves.' },
+  { icon: Grid, title: 'Categories and search', description: 'Customers filter and search what you sell on your live page.' },
+  { icon: Sparkles, title: 'AI descriptions (Growth and up)', description: 'A ready-to-publish description for a product or service in seconds.' },
+  { icon: Palette, title: '20 premium themes (Pro)', description: 'Each one changes fonts, colours, layout and card style completely.' },
+  { icon: ShoppingBag, title: 'In-app Paystack checkout (Pro and up)', description: 'Card, transfer and USSD on your store. Orders create themselves in your dashboard.' },
+  { icon: Truck, title: 'Sendbox and Topship delivery (Pro and up)', description: 'Live rates at checkout, shipment booking and tracking links.' },
+  { icon: CreditCard, title: 'Payouts to your bank (Pro and up)', description: 'Paystack settles sales straight to your account; Sellapage takes no cut.' },
+  { icon: Users, title: 'Customer CRM (Pro and up)', description: 'Built from confirmed orders, with WhatsApp links and spend, order and recency sorting.' },
+  { icon: Star, title: 'Verified reviews (Pro and up)', description: 'Buyers rate after delivery; scores show on your product and service cards.' },
+  { icon: Tag, title: 'Discounts and promo codes (Pro and up)', description: 'Percentage or flat discounts with usage limits and expiry dates.' },
+  { icon: Download, title: 'Product export (Pro and up)', description: 'Your catalogue as PDF, CSV or Excel.' },
+  { icon: Globe, title: 'Custom domain (Pro and up)', description: 'Use your own domain for a fully branded store.' },
+  { icon: Shield, title: 'CAC verification (Pro and up)', description: 'Show customers your business is registered.' },
+  { icon: Briefcase, title: 'Job listings (all plans)', description: 'Post openings that go live on the public Sellapage Jobs board.' },
+  { icon: BookOpen, title: 'Sellapage blog', description: 'Guides and stories to help you sell more.' },
+  { icon: Gift, title: 'Referral programme (all plans)', description: 'Earn when businesses you refer upgrade to a paid plan.' },
+  { icon: BarChart2, title: 'Analytics', description: 'Store views, clicks and your top products and services.' },
+  { icon: Sparkles, title: 'Sella AI (Premium)', description: 'An assistant that reads your dashboard and helps you run your business.' },
+  { icon: BarChart2, title: 'Google Ads (Premium)', description: 'Run and track Google Ads campaigns, or let Sellapage manage them.' },
 ]
 
-const testimonials = [
-  {
-    name: 'Stephen Promise',
-    role: 'Fashion Seller, Lagos',
-    avatar: '/avatar-1.png',
-    text: "Before Sellapage, I was losing customers because they'd message and I'd forget to reply. Now they click my link, see everything, and order directly. My sales are up.",
-  },
-  {
-    name: 'Emeka Nwosu',
-    role: 'Car Dealer, Abuja',
-    avatar: '/avatar-2.png',
-    text: "I used to screenshot my menu and send it one by one. Now I send one link. Customers see everything, place their orders, and I get a clean WhatsApp message. Much easier.",
-  },
-  {
-    name: 'Peter Bron',
-    role: 'Wine & Spirits, Lagos',
-    avatar: '/avatar-3.png',
-    text: 'My customers used to ask the same questions over and over. Now they see all the details on my page. Orders come in clean and clear. Worth every kobo.',
-  },
+// Real store categories (utils/categories.js); each opens Explore filtered to it.
+const CATEGORIES = [
+  { icon: Shirt, label: 'Fashion', cat: 'Fashion & Clothing' },
+  { icon: Sparkles, label: 'Beauty', cat: 'Beauty & Skincare' },
+  { icon: Smartphone, label: 'Phones', cat: 'Gadgets & Phones' },
+  { icon: Sofa, label: 'Home', cat: 'Home & Living' },
+  { icon: Briefcase, label: 'Services', cat: 'Services' },
+  { icon: UtensilsCrossed, label: 'Food', cat: 'Food & Groceries' },
+  { icon: Gem, label: 'Jewellery', cat: 'Jewelry & Accessories' },
+]
+
+const MISSION_POINTS = [
+  { icon: MapPin, title: 'Built for Nigeria', sub: 'Naira prices, WhatsApp, local delivery.' },
+  { icon: Zap, title: 'Simple to use', sub: 'Get started in minutes.' },
+  { icon: ShieldCheck, title: 'Secure and reliable', sub: 'Payments through Paystack.' },
+  { icon: Headphones, title: 'Real support', sub: 'Real people answer, by email and in your dashboard.' },
+]
+
+const TRUST = [
+  { icon: BadgeCheck, title: 'CAC registered', sub: 'BN 9689086' },
+  { icon: ShieldCheck, title: 'Paystack payments', sub: 'CBN licensed' },
+  { icon: Lock, title: 'Encrypted data', sub: 'Google Firebase' },
 ]
 
 const faqs = [
-  {
-    q: 'Do my customers need to download anything?',
-    a: 'No. Your store is a regular web page customers just tap your link. No app, no account, no friction at all.',
-  },
-  {
-    q: 'How does the order work?',
-    a: 'Customers browse your store, choose a product or service, and send a structured order with the important details already included. You confirm from your workflow.',
-  },
-  {
-    q: 'Can I update my products after I create the store?',
-    a: 'Yes. Your dashboard lets you add, edit, or remove products anytime. Changes go live on your store instantly.',
-  },
-  {
-    q: "What if I'm not good with technology?",
-    a: "Sellapage is built for everyday business owners, not technical teams. If you can upload photos and fill a simple form, you can run your store here.",
-  },
-  {
-    q: 'How do I share my page with customers?',
-    a: "You get a link like sellapage.com.ng/yourbrandname. Paste it in your social bio, WhatsApp status, campaign posts, or send it directly to anyone.",
-  },
-  {
-    q: 'Is it really free right now?',
-    a: 'Yes - the Starter plan is permanently free. Paid plans are also available: Growth at ₦5,000/month, Pro at ₦12,000/month and Premium at ₦25,000 with more features as you grow.',
-  },
+  { q: 'Do my customers need to download anything?', a: 'No. Your store is a regular web page customers just tap your link. No app, no account, no friction at all.' },
+  { q: 'How does the order work?', a: 'Customers browse your store, choose a product or service, and send a structured order with the important details already included. You confirm from your workflow.' },
+  { q: 'Can I update my products after I create the store?', a: 'Yes. Your dashboard lets you add, edit, or remove products anytime. Changes go live on your store instantly.' },
+  { q: "What if I'm not good with technology?", a: 'Sellapage is built for everyday business owners, not technical teams. If you can upload photos and fill a simple form, you can run your store here.' },
+  { q: 'How do I share my page with customers?', a: 'You get a link like sellapage.com.ng/yourbrandname. Paste it in your social bio, WhatsApp status, campaign posts, or send it directly to anyone.' },
+  { q: 'Is it really free right now?', a: 'Yes - the Starter plan is permanently free. Paid plans are also available: Growth at ₦5,000/month, Pro at ₦12,000/month and Premium at ₦25,000 with more features as you grow.' },
 ]
 
-// A `plans` array used to sit here, unrendered. Home links out to /pricing for
-// plan details, and src/utils/billingPlans.js is the one place prices live, so
-// a second hardcoded copy here could only ever drift out of date. Removed
-// rather than kept as a comment that says "unused".
+// ─── Pieces ──────────────────────────────────────────────────────────────────
 
-const trustBadges = [
-  { icon: Zap, label: 'No Coding Required', sub: 'Set up in minutes' },
-  { icon: Smartphone, label: 'Mobile-First', sub: 'Looks sharp on any phone' },
-  { icon: BarChart2, label: 'Sell Products & Services', sub: 'Physical goods, digital, bookings' },
-  { icon: MessageCircle, label: 'Structured Orders', sub: 'Customers order clearly' },
-  { icon: Lock, label: 'Always Online', sub: 'Your store never sleeps' },
-]
+function HeroArt() {
+  return (
+    <div className="relative mx-auto h-[340px] w-full max-w-[640px] sm:h-[460px] lg:h-[520px]">
+      <div className="absolute inset-0 overflow-hidden rounded-[36px] bg-gradient-to-br from-forest-100 via-forest-50 to-white shadow-xl shadow-forest-900/5">
+        <MediaSlot name="home-hero-scene" alt="A Nigerian shop owner managing her orders on her phone" priority className="h-full w-full object-cover"
+          fallback={(
+            <div className="relative h-full w-full">
+              <Leaf className="absolute -left-6 bottom-0 h-56 w-40 -rotate-12" tone="text-forest-100" />
+              <Leaf className="absolute right-6 top-6 h-40 w-28 rotate-[30deg]" tone="text-forest-200/60" />
+              <div className="absolute bottom-10 left-8 hidden grid-cols-2 gap-3 sm:grid">
+                {[ShoppingBag, Headphones, Shirt, Package].map((I, i) => <span key={i} className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/80 text-forest-600 shadow-lg shadow-forest-900/5 backdrop-blur animate-float" style={{ animationDelay: `${i * 0.4}s` }}><I size={26} /></span>)}
+              </div>
+            </div>
+          )} />
+      </div>
+      <MediaSlot name="home-hero-phone" alt="A Sellapage store on a phone" priority
+        className="absolute bottom-0 right-2 z-10 h-[94%] w-auto max-w-[56%] object-contain mix-blend-multiply animate-float sm:right-6"
+        fallback={<img src="/Herosection-mobilephone.png" alt="A Sellapage store on a phone" className="absolute bottom-0 right-2 z-10 h-[94%] w-auto max-w-[56%] object-contain mix-blend-multiply animate-float sm:right-6" />} />
+      {/* Product illustrations, not figures about Sellapage. */}
+      <div className="absolute left-3 top-5 z-20 flex items-center gap-2.5 rounded-2xl bg-white px-3.5 py-2.5 shadow-xl shadow-gray-300/40 animate-float-delayed sm:left-6 sm:top-8">
+        <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-forest-600 opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-forest-600" /></span>
+        <span><span className="block text-[12.5px] font-bold leading-tight text-gray-900">New order!</span><span className="block text-[11px] text-gray-500">Paid with Paystack</span></span>
+      </div>
+      <div className="absolute bottom-6 left-3 z-20 hidden rotate-[-4deg] rounded-2xl border border-forest-100 bg-white/95 px-4 py-3 shadow-xl shadow-gray-300/40 sm:left-6 sm:block">
+        <Script className="text-[22px] leading-[1.05]">Sell online<br />securely, grow<br />faster <Heart className="inline h-4 w-4 align-[-1px]" strokeWidth={2.6} /></Script>
+      </div>
+    </div>
+  )
+}
 
-const stats = [
-  { value: 'No code', label: 'Nothing To Install' },
-  { value: '₦0', label: 'To Get Started' },
-  { value: '< 2 min', label: 'To Go Live' },
-  { value: '24/7', label: 'Always Online' },
-]
-
-
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const { user } = useAuth()
   const navigate = useNavigate()
-
+  const reviews = useApprovedReviews(12)
+  const [allFeatures, setAllFeatures] = useState(false)
   const handleCTA = () => navigate(user ? '/dashboard' : '/login')
+  const toHowItWorks = () => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   return (
-    <div className="min-h-screen bg-white font-body text-gray-900 antialiased">
-      <SEO {...pageSeo("/")} url="/" />
+    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900 antialiased">
+      <SEO {...pageSeo('/')} url="/" />
       <Navbar />
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section id="home" className="relative overflow-hidden bg-white pt-16 pb-0 sm:pt-20 lg:pt-24">
-        {/* subtle green blob top-right */}
-        <div className="pointer-events-none absolute -top-32 -right-32 w-[520px] h-[520px] rounded-full bg-brand-50 opacity-60 blur-3xl" />
-        <div className="pointer-events-none absolute top-1/2 -left-40 w-[340px] h-[340px] rounded-full bg-brand-100 opacity-40 blur-3xl" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
-
-            {/* Left */}
-            <div className="max-w-2xl py-8 sm:py-10 lg:py-16">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-600 mb-4">
-                For Nigerian Business Owners and Service Providers
-              </p>
-
-              <h1 className="font-display text-[2rem] sm:text-[2.6rem] lg:text-[3.2rem] font-extrabold leading-[1.1] tracking-tight text-gray-950 mb-5 max-w-xl">
-                Run Your Entire Business from One Dashboard. <br className="hidden sm:block" />
-              </h1>
-
-              <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-7 max-w-lg">
-                Set up a professional store page for your products or services. Accept payments, manage delivery, track customers in your CRM, run discounts, collect reviews, and grow with analytics - all from one dashboard.
-                <br></br> 
-                <br></br>
-                Share one link anywhere - Instagram, Facebook, TikTok, WhatsApp, Twitter, flyers, or DMs - and let customers browse, order, pay, and reach you directly. 
-                <br></br>
-                <br></br>
-                No coding. No stress.
-              </p>
-
-              <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-7">
-                <button
-                  onClick={handleCTA}
-                  className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-sm px-6 py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-brand-200/60"
-                >
-                  Create Your Free Store
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <PlayStoreBadge className="justify-center sm:justify-start" />
-              </div>
-
-              {/* Social proof row */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <div className="flex -space-x-2.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <img
-                      key={n}
-                      src={`/avatar-${n}.png`}
-                      alt={`User avatar ${n}`}
-                      width={32}
-                      height={32}
-                      loading="lazy"
-                      className="w-8 h-8 rounded-full border-2 border-white object-cover"
-                    />
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                  <span className="text-sm font-semibold text-gray-700 ml-1">5.0</span>
-                  <span className="text-sm text-gray-400 ml-1">Trusted by Nigerian businesses</span>
-                </div>
-              </div>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section id="home" className="relative overflow-hidden bg-gradient-to-b from-forest-50/80 via-white to-white pb-12 pt-24 sm:pt-28">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:px-8">
+          <Reveal>
+            <Eyebrow>E-commerce platform for Nigerian businesses</Eyebrow>
+            <h1 className="mt-4 text-balance font-display text-[2.5rem] font-extrabold leading-[1.02] tracking-tight text-gray-950 sm:text-[3.2rem] lg:text-[3.6rem]">
+              Sell More.<br />Grow Faster.<br /><span className="text-forest-600">All from One Platform.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-gray-600 sm:text-base">
+              Sellapage gives Nigerian businesses everything they need to sell, manage and grow in one place: online stores, payments, delivery and customer management.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button type="button" onClick={handleCTA} className="group inline-flex items-center justify-center gap-2 rounded-xl bg-forest-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-forest-600/25 transition hover:bg-forest">
+                Create your free store <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
+              </button>
+              <button type="button" onClick={toHowItWorks} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-gray-800 ring-1 ring-gray-200 transition hover:bg-gray-50">
+                <PlayCircle size={18} className="text-forest-600" /> See how it works
+              </button>
             </div>
-
-            {/* Right - hero images */}
-              <div className="relative flex justify-center items-end lg:items-center lg:justify-end h-[280px] sm:h-[420px] lg:h-[540px]">
-              {/* Main laptop */}
-              {/* media-src/home-hero-main. Empty folder = this original image. */}
-              <MediaSlot
-                name="home-hero-main"
-                alt="Sellapage dashboard on laptop"
-                priority
-                className="relative z-10 w-[88%] sm:w-[78%] lg:w-full max-w-[600px] object-contain drop-shadow-2xl"
-                fallback={
-                  <img
-                    src="/Herosection-mainlaptop.png"
-                    alt="Sellapage dashboard on laptop"
-                    width={620}
-                    height={420}
-                    loading="eager"
-                    className="relative z-10 w-[88%] sm:w-[78%] lg:w-full max-w-[600px] object-contain drop-shadow-2xl"
-                  />
-                }
-              />
-              {/* Phone overlay */}
-              {/* media-src/home-hero-phone. A phone screen recording goes here. */}
-              <MediaSlot
-                name="home-hero-phone"
-                alt="Sellapage store on mobile phone"
-                priority
-                className="absolute bottom-0 right-0 lg:-right-4 z-20 w-[28%] sm:w-[24%] lg:w-[30%] max-w-[180px] object-contain drop-shadow-xl animate-float"
-                fallback={
-                  <img
-                    src="/Herosection-mobilephone.png"
-                    alt="Sellapage store on mobile phone"
-                    width={160}
-                    height={280}
-                    loading="eager"
-                    className="absolute bottom-0 right-0 lg:-right-4 z-20 w-[28%] sm:w-[24%] lg:w-[30%] max-w-[180px] object-contain drop-shadow-xl animate-float"
-                  />
-                }
-              />
-              {/* Floating badge - New Order */}
-              <div className="absolute top-8 left-4 sm:left-0 z-30 flex items-center gap-2 bg-white rounded-2xl shadow-xl shadow-gray-200/70 px-3 py-2 border border-gray-100 animate-float-delayed">
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-gray-900 leading-tight">New Order!</p>
-                  <p className="text-[10px] text-gray-400 leading-tight">structured order</p>
-                </div>
-              </div>
+            <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+              {TRUST.map((t, i) => (
+                <Reveal key={t.title} delay={150 + i * 80} className="flex min-w-0 items-center gap-2">
+                  <t.icon size={20} className="flex-shrink-0 text-forest-600" />
+                  <span className="min-w-0"><span className="block text-[12px] font-bold leading-tight text-gray-800">{t.title}</span><span className="block truncate text-[11px] text-gray-500">{t.sub}</span></span>
+                </Reveal>
+              ))}
+              <Reveal delay={390} className="flex items-center"><PlayStoreBadge className="origin-left scale-90" /></Reveal>
             </div>
-          </div>
+          </Reveal>
+          <Reveal direction="left" delay={120} className="relative">
+            <Script className="absolute -top-10 left-1/3 z-30 hidden rotate-[-6deg] text-[22px] leading-[1.05] lg:block">From your phone<br />to new customers</Script>
+            <HeroArt />
+          </Reveal>
         </div>
+      </section>
 
-        {/* ── Trust badges strip ── */}
-        <div className="mt-8 sm:mt-12 border-t border-gray-100 bg-gray-50/70">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-3">
-              {trustBadges.map((b) => (
-                <div key={b.label} className="flex items-center gap-2.5 min-w-0">
-                  <b.icon className="w-5 h-5 text-brand-600 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-gray-800 leading-tight font-display">{b.label}</p>
-                    <p className="text-[11px] text-gray-400 leading-tight">{b.sub}</p>
-                  </div>
+      {/* ── Mission ──────────────────────────────────────────────────────── */}
+      <section className="px-4 py-10 sm:px-6 lg:px-8">
+        <Reveal className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 rounded-[28px] bg-gradient-to-br from-forest-50/80 to-white p-5 ring-1 ring-forest-100 sm:p-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
+          <div className="relative overflow-hidden rounded-3xl shadow-lg shadow-forest-900/10">
+            <MediaSlot name="home-mission" alt="A Nigerian business owner checking orders on his phone" className="aspect-[4/3] w-full object-cover"
+              fallback={<MediaSlot name="home-showcase" alt="The Sellapage dashboard on a laptop" className="aspect-[4/3] w-full bg-white object-contain p-3" fallback={<img src="/midpageshowcase-secondarylaptop.png" alt="The Sellapage dashboard on a laptop" className="aspect-[4/3] w-full bg-white object-contain p-3" />} />} />
+            <Script className="absolute right-3 top-3 rotate-[-6deg] rounded-xl bg-white/85 px-2.5 py-1 text-[19px] leading-[1.05] backdrop-blur">Real people,<br />real businesses</Script>
+          </div>
+          <div>
+            <Eyebrow>Our mission</Eyebrow>
+            <h2 className="mt-3 text-balance font-display text-[1.7rem] font-extrabold leading-tight text-gray-950 sm:text-[2rem]">More than just a platform. <span className="text-forest-600">We&apos;re your growth partner.</span></h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-gray-600">We give Nigerian entrepreneurs simple, powerful tools to sell, manage and grow their businesses, from the first customer onwards.</p>
+            <button type="button" onClick={handleCTA} className="group mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-forest-700 ring-1 ring-forest-200 transition hover:bg-forest-50">Start selling today <ArrowRight size={16} className="transition group-hover:translate-x-0.5" /></button>
+          </div>
+          <ul className="space-y-4 rounded-3xl bg-white/80 p-5 ring-1 ring-forest-100">
+            {MISSION_POINTS.map((m) => (
+              <li key={m.title} className="flex items-start gap-3">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-forest-50 text-forest-600"><m.icon size={17} /></span>
+                <span><span className="block text-[14px] font-bold text-gray-900">{m.title}</span><span className="block text-[12.5px] text-gray-500">{m.sub}</span></span>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+      </section>
+
+      {/* ── Everything you need ──────────────────────────────────────────── */}
+      <section id="features" className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <Eyebrow>Why Sellapage</Eyebrow>
+            <h2 className="mt-4 text-balance font-display text-[1.9rem] font-extrabold text-gray-950 sm:text-[2.4rem]">Everything you need to sell, in one place.</h2>
+            <p className="mt-3 text-[15px] text-gray-600">From storefronts to payments and delivery, Sellapage brings your business tools together so you can focus on growth.</p>
+          </Reveal>
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {CORE.map((c, i) => (
+              <Reveal key={c.title} delay={(i % 4) * 80}>
+                <Link to="/pricing" className="group flex h-full flex-col rounded-3xl border border-gray-100 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition duration-300 hover:-translate-y-1 hover:border-forest-200 hover:shadow-xl hover:shadow-forest-900/5">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-forest-50 text-forest-600 transition duration-300 group-hover:bg-forest-600 group-hover:text-white"><c.icon size={22} /></span>
+                  <span className="mt-4 flex items-center justify-between gap-2"><span className="text-[15px] font-bold text-gray-900">{c.title}</span><ArrowRight size={16} className="text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-forest-600" /></span>
+                  <span className="mt-1.5 text-[13px] leading-snug text-gray-500">{c.sub}</span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <button type="button" onClick={() => setAllFeatures((v) => !v)} aria-expanded={allFeatures} className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[13.5px] font-semibold text-forest-700 ring-1 ring-forest-200 transition hover:bg-forest-50">
+              {allFeatures ? 'Show fewer' : `See every feature (${features.length})`} <ChevronDown size={16} className={`transition ${allFeatures ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+          {allFeatures && (
+            <div className="mt-6 grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-top-2 sm:grid-cols-2 lg:grid-cols-3">
+              {features.map((f) => (
+                <div key={f.title} className="flex items-start gap-3 rounded-2xl bg-gray-50 p-4">
+                  <f.icon size={18} className="mt-0.5 flex-shrink-0 text-forest-600" />
+                  <span><span className="block text-[14px] font-bold text-gray-900">{f.title}</span><span className="block text-[13px] leading-snug text-gray-500">{f.description}</span></span>
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Categories ───────────────────────────────────────────────────── */}
+      <section className="px-4 sm:px-6 lg:px-8">
+        <Reveal className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 overflow-hidden rounded-[28px] bg-gradient-to-br from-forest-50 to-white p-5 ring-1 ring-forest-100 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+          <div>
+            <Eyebrow>Every kind of business</Eyebrow>
+            <h2 className="mt-3 font-display text-[1.8rem] font-extrabold text-gray-950 sm:text-[2.2rem]">Discover what you can do</h2>
+            <p className="mt-2 text-[15px] text-gray-600">From fashion to food to services, Sellapage works for every kind of Nigerian business. See stores already selling.</p>
+            <Link to="/live-stores" className="group mt-5 inline-flex items-center gap-2 rounded-xl bg-forest-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-forest-600/20 transition hover:bg-forest">Explore stores <ArrowRight size={16} className="transition group-hover:translate-x-0.5" /></Link>
+            <div className="mt-7 grid grid-cols-4 gap-3 sm:grid-cols-7 lg:grid-cols-4 xl:grid-cols-7">
+              {CATEGORIES.map((c, i) => (
+                <Reveal key={c.cat} delay={i * 60}>
+                  <Link to={`/live-stores?cat=${encodeURIComponent(c.cat)}`} className="group flex flex-col items-center gap-1.5 text-center">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-forest-600 shadow-sm ring-1 ring-forest-100 transition duration-300 group-hover:-translate-y-1 group-hover:bg-forest-600 group-hover:text-white"><c.icon size={22} /></span>
+                    <span className="text-[12px] font-semibold text-gray-700">{c.label}</span>
+                  </Link>
+                </Reveal>
+              ))}
+            </div>
           </div>
-        </div>
+          <div className="relative">
+            <Script className="absolute -left-2 top-2 z-10 hidden rotate-[-10deg] text-[22px] leading-none lg:block">Trendy and<br />affordable</Script>
+            <MediaSlot name="home-categories" alt="A shopper with her phone and products" className="w-full rounded-3xl object-cover"
+              fallback={(
+                <div className="relative mx-auto flex h-[340px] max-w-[460px] items-center justify-center sm:h-[380px]">
+                  <div className="absolute inset-x-6 inset-y-6 rounded-[32px] bg-gradient-to-br from-forest-100 to-forest-50" />
+                  <MediaSlot name="home-app-1" alt="The Sellapage app" className="relative z-10 h-[300px] w-auto rounded-[1.6rem] object-contain shadow-2xl sm:h-[340px]" fallback={<img src="/mobile-app-screen-1.jpg" alt="The Sellapage app" className="relative z-10 h-[300px] w-auto rounded-[1.6rem] object-contain shadow-2xl sm:h-[340px]" />} />
+                  <span className="absolute bottom-8 left-2 z-20 rounded-2xl bg-white px-4 py-3 shadow-xl shadow-gray-300/40 animate-float sm:left-6"><span className="block text-[13px] font-bold text-gray-900">New arrivals</span><span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-forest-600 px-2.5 py-1 text-[10.5px] font-bold text-white">Shop now <ArrowRight size={11} /></span></span>
+                </div>
+              )} />
+          </div>
+        </Reveal>
       </section>
 
-      {/* ── WHAT SELLAPAGE DOES ──────────────────────────────────────────── */}
-      <section id="features" className="py-14 sm:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-14">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-600 mb-3 block">What Sellapage Does</span>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
-              One Platform For Everything You Sell Or Offer
-            </h2>
-            <p className="text-gray-500 max-w-xl mx-auto text-base">
-              Built for Nigerian sellers, service providers and freelancers who want to look professional and close more sales without the technical headache.
-            </p>
-          </Reveal>
-
-          <Reveal delay={100} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {[
-              { icon: Store, slot: 'feature-store-page', title: 'Create Your Commerce Page', desc: 'Build a beautiful store page in minutes. Add products, services, images, prices and order details.' },
-              { icon: Package, slot: 'feature-products', title: 'Manage Products & Services', desc: 'Add, edit and organise your offers easily. Keep your store fresh and updated.' },
-              { icon: CreditCard, slot: 'feature-payments', title: 'Accept Payments (Pro+)', desc: 'In-app Paystack checkout for card, transfer, and USSD. Orders create automatically in your dashboard.' },
-              { icon: Truck, slot: 'feature-delivery', title: 'Manage Delivery (Pro+)', desc: 'Sendbox & Topship integration for live rates, booking shipments, and tracking. Delivery zones for local areas.' },
-              { icon: Users, slot: 'feature-customers', title: 'Customer CRM (Pro+)', desc: 'Auto-built from confirmed orders. Profiles, WhatsApp links, sort by spend, orders, or recency.' },
-              { icon: Star, slot: 'feature-reviews', title: 'Reviews & Ratings (Pro+)', desc: 'Verified buyer reviews with aggregate stars on product and service cards.' },
-              { icon: Tag, slot: 'feature-discounts', title: 'Discounts & Promos (Pro+)', desc: 'Percentage or flat discounts, usage limits, expiry dates. Applied automatically at checkout.' },
-              { icon: BarChart2, slot: 'feature-analytics', title: 'Analytics & Growth', desc: 'Track store views, clicks, engagement and top performers. Marketing tab with SEO tools, free Google listings and a social post kit.' },
-              { icon: Receipt, slot: 'feature-receipts', title: 'Receipts & Invoices (Pro+)', desc: 'Branded receipts with your logo, stamp and QR code. Six templates, exported as PDF or PNG.' },
-              { icon: Gift, slot: 'feature-loyalty', title: 'Loyalty Points (Premium)', desc: 'Customers earn points as they shop and spend them with a code at checkout. No account needed.' },
-              { icon: ShoppingCart, slot: 'feature-abandoned', title: 'Abandoned Checkout Recovery (Premium)', desc: 'See who started an order and did not pay, then bring them back by email or WhatsApp.' },
-            ].map((item) => (
-              <div key={item.title} className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md hover:border-brand-100 hover:-translate-y-0.5 transition-all duration-200 group">
-                {/* media-src/<item.slot>: a screenshot or clip replaces the icon. */}
-                {FEATURE_CARDS_READY ? (
-                  <MediaSlot
-                    name={item.slot}
-                    alt={item.title}
-                    className="w-full aspect-[16/10] object-cover object-top rounded-xl mb-3 border border-gray-100"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
-                    <item.icon className="w-5 h-5 text-brand-600" />
-                  </div>
-                )}
-                <h3 className="font-display font-bold text-gray-900 text-sm mb-1.5">{item.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </Reveal>
-        </div>
+      {/* ── Live figures ─────────────────────────────────────────────────── */}
+      <section className="px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
+        <Reveal className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-6 rounded-[28px] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] ring-1 ring-gray-100 sm:p-8 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+          <div>
+            <Eyebrow>Trusted by Nigerian businesses</Eyebrow>
+            <h2 className="mt-3 font-display text-[1.6rem] font-extrabold text-gray-950 sm:text-[1.9rem]">Real businesses. Real results.</h2>
+            <p className="mt-2 text-[14px] text-gray-600">Nigerian entrepreneurs are already selling with Sellapage.</p>
+            <Link to="/success-stories" className="group mt-4 inline-flex items-center gap-2 rounded-xl bg-forest-600 px-5 py-2.5 text-[13px] font-bold text-white transition hover:bg-forest">View success stories <ArrowRight size={15} className="transition group-hover:translate-x-0.5" /></Link>
+          </div>
+          <TractionStats tileClass="rounded-2xl bg-forest-50/60 p-3.5 ring-1 ring-forest-100" />
+        </Reveal>
       </section>
 
-      {/* ── MID-PAGE SHOWCASE - why choose sellapage ────────────────────── */}
-      <section className="py-14 sm:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left copy */}
-            <Reveal direction="left">
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Why Nigerian Businesses Choose Sellapage™</span>
-              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 leading-tight mb-5">
-                Less chaos. More orders.<br />
-                <span className="text-brand-600">One dashboard.</span>
-              </h2>
-              <p className="text-gray-500 text-base leading-relaxed mb-8 max-w-md">
-                Most Nigerian businesses are managing sales across chats, screenshots, transfers and scattered customer details. 
-                Sellapage gives you one proper home for everything you sell or offer and the tools to manage it.
-              </p>
-
-              <ul className="space-y-3 mb-8">
-                {[
-                  'Your full catalogue in one shareable link',
-                  'Orders come in structured, not buried in chats',
-                  'Manage products, services, leads and analytics from one dashboard',
-                  'Supports products, services and bookings',
-                  'In-app Paystack checkout and Sendbox &amp; Topship delivery (Pro+)',
-                  'Customer CRM, verified reviews, and discounts (Pro+)',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-white" />
-                    </span>
-                    <span className="text-gray-700 text-sm" dangerouslySetInnerHTML={{ __html: item }} />
-                  </li>
-                ))}
-              </ul>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                {stats.map((s) => (
-                  <div key={s.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm shadow-gray-100/70">
-                    <p className="font-display text-2xl font-extrabold text-brand-600 leading-none mb-1">{s.value}</p>
-                    <p className="text-xs text-gray-500">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handleCTA}
-                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-brand-200/80 hover:shadow-xl hover:shadow-brand-200"
-              >
-                Create Your Free Store <ArrowRight className="w-4 h-4" />
-              </button>
+      {/* ── Real reviews ─────────────────────────────────────────────────── */}
+      {reviews?.length > 0 && (
+        <section className="bg-gradient-to-b from-white to-forest-50/40 px-4 pb-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <Reveal className="mx-auto mb-8 max-w-2xl text-center">
+              <Eyebrow>What our users say</Eyebrow>
+              <h2 className="mt-4 font-display text-[1.9rem] font-extrabold text-gray-950 sm:text-[2.3rem]">Loved by business owners across Nigeria</h2>
+              <p className="mt-2 text-[15px] text-gray-600">Real reviews from businesses selling on Sellapage.</p>
             </Reveal>
-
-            {/* Right image */}
-            <Reveal direction="right" delay={150} className="relative flex justify-center">
-              <MediaSlot
-                name="home-showcase"
-                alt="Sellapage dashboard showing products, orders, analytics, and customers"
-                className="w-full max-w-[520px] object-contain rounded-2xl drop-shadow-xl"
-                fallback={
-                  <img
-                    src="/midpageshowcase-secondarylaptop.png"
-                    alt="Sellapage dashboard showing products, orders, analytics, and customers"
-                    width={560}
-                    height={420}
-                    loading="lazy"
-                    className="w-full max-w-[520px] object-contain rounded-2xl drop-shadow-xl"
-                  />
-                }
-              />
-            </Reveal>
+            <ReviewsCarousel reviews={reviews} />
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* ── THE REAL PROBLEM ────────────────────────────────────────────── */}
-      <section className="py-14 sm:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-red-500 mb-3 block">
-              The Real Problem
-            </span>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
-              This is how most Nigerian sellers are operating right now
-            </h2>
-            <p className="text-gray-500 max-w-xl mx-auto text-base">
-              It works until it doesn't. And for most sellers, it breaks at the worst possible time.
-            </p>
+      {/* ── How it works ─────────────────────────────────────────────────── */}
+      <section id="how-it-works" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <Reveal className="mx-auto mb-12 max-w-2xl text-center">
+            <Eyebrow>How it works</Eyebrow>
+            <h2 className="mt-4 font-display text-[1.9rem] font-extrabold text-gray-950 sm:text-[2.3rem]">From sign-up to first order in one session</h2>
+            <p className="mt-2 text-[15px] text-gray-600">No technical setup. No waiting. Create, add, share, and manage from your dashboard.</p>
           </Reveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 sm:mb-14">
-            {[
-              {
-                problem: 'No permanent catalogue',
-                detail: 'Products live in WhatsApp status for 24 hours, then vanish. Every new customer asks the same question: "What do you have?"',
-              },
-              {
-                problem: 'Orders get buried in chats',
-                detail: 'A customer messages at 11pm. By morning it\'s buried under 40 other conversations. The sale is gone.',
-              },
-              {
-                problem: 'Looks unprofessional to new buyers',
-                detail: 'A customer who doesn\'t know you sees scattered screenshots and no real business page. Trust breaks before the conversation starts.',
-              },
-              {
-                problem: 'Starting from scratch every time',
-                detail: 'Every new customer needs prices, photos, and descriptions sent all over again manually, one message at a time.',
-              },
-              {
-                problem: 'No way to track what\'s working',
-                detail: 'You have no idea how many people saw your status, which product gets the most interest or who almost bought but didn\'t.',
-              },
-              {
-                problem: 'Expensive tools weren\'t built for you',
-                detail: 'Shopify costs ₦47,000 a month and needs a developer. Linktree has no catalogue. WhatsApp Business has no store page.',
-              },
-              {
-                problem: 'No checkout or delivery tools',
-                detail: 'Customers can\'t pay on your page. You can\'t show delivery rates or book shipments. Money and logistics stay manual.',
-              },
-              {
-                problem: 'No customer memory',
-                detail: 'Repeat buyers are strangers every time. No purchase history, no WhatsApp shortcuts, no way to reward loyalty.',
-              },
-              {
-                problem: 'No growth toolkit',
-                detail: 'No analytics, no discounts, no reviews, no export. You\'re flying blind while competitors optimize.',
-              },
-            ].map((item) => (
-              <div
-                key={item.problem}
-                className="bg-red-50/60 border border-red-100 rounded-2xl p-4 sm:p-5 transition-all duration-200"
-              >
-                <div className="flex items-start gap-3 mb-2">
-                  <span className="w-5 h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <X className="w-3 h-3 text-red-600" />
-                  </span>
-                  <p className="font-bold text-gray-900 text-sm">{item.problem}</p>
-                </div>
-                <p className="text-gray-500 text-sm leading-relaxed pl-8">{item.detail}</p>
-              </div>
-            ))}
-          </div>
-
-          <Reveal className="bg-brand-600 rounded-2xl p-6 sm:p-10 text-center max-w-3xl mx-auto">
-            <h3 className="font-display font-extrabold text-white text-2xl sm:text-3xl mb-3">
-              Sellapage fixes all of this for free.
-            </h3>
-            <p className="text-brand-100 max-w-xl mx-auto text-sm sm:text-base mb-6 leading-relaxed">
-              Get a professional store link that never expires, receive organised orders, manage customers, track performance, accept payments, handle delivery, run discounts, collect reviews, and run your entire business from one dashboard.
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="py-14 sm:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">Getting Started</span>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
-              From sign-up to first order in one session
-            </h2>
-            <p className="text-gray-500 max-w-md mx-auto text-base">
-              No technical setup. No waiting. Just create, add, share, and manage from your dashboard.
-            </p>
-          </Reveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 relative">
-            {/* connector line desktop */}
-            <div className="hidden sm:block absolute top-10 left-[calc(16.67%+12px)] right-[calc(16.67%+12px)] h-0.5 bg-brand-100 z-0" />
-            {steps.map((step, i) => (
-              <Reveal key={step.number} delay={i * 120} className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-brand-600 flex flex-col items-center justify-center mb-5 shadow-md shadow-brand-200/60">
-                  <span className="text-brand-100 text-xs font-bold uppercase tracking-wider">Step</span>
-                  <span className="text-white font-display text-xl font-extrabold leading-none">{step.number}</span>
-                </div>
-                <h3 className="font-display font-bold text-gray-900 text-base mb-3">{step.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed max-w-xs">{step.description}</p>
-              </Reveal>
-            ))}
-          </div>
-
-          <p className="text-center text-gray-500 text-sm mt-8 max-w-2xl mx-auto">
-            After going live, your dashboard gives you: order management, delivery booking, customer CRM, analytics, discounts, reviews, payouts, and growth tools - all in one place.
-          </p>
-        </div>
-      </section>
-
-      {/* ── FEATURES GRID ───────────────────────────────────────────────── */}
-      <section className="py-14 sm:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* One section. "Commerce Tools / Built for the full selling
-              workflow" used to follow the testimonials and repeated twelve of
-              these seventeen items, so visitors read the same list twice.
-              Merged on 2026-09-26; the compact four-column cards take about
-              half the height the two sections did together. */}
-          <Reveal className="text-center mb-12">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What You Get</span>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
-              Built to help you sell more
-            </h2>
-            <p className="text-gray-500 max-w-xl mx-auto text-base">
-              Every feature is live today. Starter covers the essentials; Growth, Pro and Premium add checkout, delivery, customers and the rest.
-            </p>
-          </Reveal>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-            {features.map((f) => (
-              <div key={f.title} className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md hover:border-brand-100 transition-all duration-200 group">
-                <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center mb-2.5 group-hover:bg-brand-100 transition-colors">
-                  <f.icon className="w-5 h-5 text-brand-600" />
-                </div>
-                <h3 className="font-display font-bold text-gray-900 text-sm mb-1">{f.title}</h3>
-                <p className="text-gray-500 text-xs leading-relaxed">{f.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
-      <section className="py-14 sm:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">What Our Users Say</span>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3">
-              Loved by Business Owners
-            </h2>
-            <p className="text-gray-500 text-base max-w-xl mx-auto">
-              Real Nigerian merchants, service providers, and freelancers sharing their experience with Sellapage.
-            </p>
-          </Reveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-            {testimonials.map((t, i) => (
-              <Reveal key={t.name} delay={i * 120} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm shadow-gray-100/70 hover:shadow-lg hover:shadow-gray-200/80 transition-all duration-200 flex flex-col">
-                {/* quote mark */}
-                <div className="text-brand-200 text-5xl font-serif leading-none mb-3 select-none">&ldquo;</div>
-                <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">{t.text}</p>
-                <div className="flex items-center gap-3 pt-4 border-t border-gray-50">
-                  {/* media-src/testimonial-1, -2, -3: real vendor photos. */}
-                  <MediaSlot
-                    name={`testimonial-${i + 1}`}
-                    alt={t.name}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-brand-100"
-                    fallback={
-                      <img
-                        src={t.avatar}
-                        alt={t.name}
-                        width={40}
-                        height={40}
-                        loading="lazy"
-                        className="w-10 h-10 rounded-full object-cover border-2 border-brand-100"
-                      />
-                    }
-                  />
-                  <div>
-                    <p className="font-display font-bold text-gray-900 text-sm">- {t.name}</p>
-                    <p className="text-gray-400 text-xs">{t.role}</p>
-                  </div>
-                </div>
+          <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-3">
+            <div className="absolute left-[calc(16.67%+12px)] right-[calc(16.67%+12px)] top-8 hidden h-0.5 bg-gradient-to-r from-forest-100 via-forest-200 to-forest-100 sm:block" />
+            {steps.map((s, i) => (
+              <Reveal key={s.number} delay={i * 120} className="relative flex flex-col items-center text-center">
+                <span className="flex h-16 w-16 flex-col items-center justify-center rounded-2xl bg-forest-600 text-white shadow-lg shadow-forest-600/25"><span className="text-[10px] font-bold uppercase tracking-wider text-forest-100">Step</span><span className="font-display text-xl font-extrabold leading-none">{s.number}</span></span>
+                <h3 className="mt-5 font-display text-[16px] font-bold text-gray-900">{s.title}</h3>
+                <p className="mt-2 max-w-xs text-[13.5px] leading-relaxed text-gray-500">{s.description}</p>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-      <section id="faq" className="py-14 sm:py-20 bg-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-600 mb-3 block">FAQ</span>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900">
-              Frequently Asked Questions
-            </h2>
+      {/* ── The app ──────────────────────────────────────────────────────── */}
+      <section id="mobile-app" className="overflow-hidden px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
+          <Reveal direction="left">
+            <Eyebrow>Sellapage on your phone</Eyebrow>
+            <h2 className="mt-4 font-display text-[1.9rem] font-extrabold text-gray-950 sm:text-[2.3rem]">Run your shop from your pocket</h2>
+            <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-gray-600">The Sellapage app is on Google Play. See today&apos;s sales, confirm orders, record a walk-in sale, send a receipt on WhatsApp and ask Sella for help, all from your phone.</p>
+            <ul className="mt-5 space-y-2.5">
+              {['Today\'s sales and what you are still owed, at a glance', 'Confirm and track orders on the move', 'Record offline sales, send receipts on WhatsApp', 'A push alert the moment an order comes in'].map((line) => (
+                <li key={line} className="flex items-start gap-2.5 text-[14px] text-gray-600"><Check size={16} className="mt-0.5 flex-shrink-0 text-forest-600" />{line}</li>
+              ))}
+            </ul>
+            <div className="mt-6"><PlayStoreBadge /></div>
+          </Reveal>
+          <Reveal direction="right" delay={120} className="relative flex justify-center lg:justify-end">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="h-[300px] w-[300px] rounded-full bg-forest-50 opacity-80 blur-3xl sm:h-[420px] sm:w-[420px]" /></div>
+            <div className="relative flex w-full max-w-[540px] items-end justify-center gap-3 sm:gap-5">
+              <MediaSlot name="home-app-1" alt="The Sellapage app showing today's sales, orders waiting and quick actions" className="relative z-10 w-[45%] max-w-[260px] rounded-[1.75rem] object-contain shadow-2xl shadow-gray-300/60"
+                fallback={<img src="/mobile-app-screen-1.jpg" alt="The Sellapage app showing today's sales, orders waiting and quick actions" width={300} height={620} loading="lazy" className="relative z-10 w-[45%] max-w-[260px] rounded-[1.75rem] object-contain shadow-2xl shadow-gray-300/60" />} />
+              <MediaSlot name="home-app-2" alt="The Sellapage app showing the orders list with their payment status" className="relative z-0 mb-6 w-[45%] max-w-[260px] rounded-[1.75rem] object-contain shadow-xl shadow-gray-300/50 sm:mb-10"
+                fallback={<img src="/mobile-app-screen-2.jpg" alt="The Sellapage app showing the orders list with their payment status" width={300} height={620} loading="lazy" className="relative z-0 mb-6 w-[45%] max-w-[260px] rounded-[1.75rem] object-contain shadow-xl shadow-gray-300/50 sm:mb-10" />} />
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── FAQ ──────────────────────────────────────────────────────────── */}
+      <section id="faq" className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <Reveal className="mb-10 text-center">
+            <Eyebrow>FAQ</Eyebrow>
+            <h2 className="mt-4 font-display text-[1.9rem] font-extrabold text-gray-950 sm:text-[2.3rem]">Frequently asked questions</h2>
           </Reveal>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
-              <Reveal as="details" key={i} delay={i * 60} className="group border border-gray-100 rounded-2xl bg-white shadow-sm shadow-gray-100/60">
-                <summary className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer list-none hover:bg-gray-50 transition-colors">
-                  <span className="font-display font-semibold text-gray-900 text-sm">{faq.q}</span>
-                  <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
+              <Reveal as="details" key={faq.q} delay={i * 60} className="group rounded-2xl border border-gray-100 bg-white shadow-sm shadow-gray-100/60">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50">
+                  <span className="font-display text-[14px] font-semibold text-gray-900">{faq.q}</span>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-200 group-open:rotate-180" />
                 </summary>
-                <div className="px-5 pb-5 pt-0">
-                  <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
-                </div>
+                <div className="px-5 pb-5"><p className="text-[14px] leading-relaxed text-gray-500">{faq.a}</p></div>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── MOBILE APP ──────────────────────────────────────────────────── */}
-      <section id="mobile-app" className="py-14 sm:py-20 bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
-            <Reveal direction="left">
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-600 mb-3 block">
-                Sellapage on your phone
-              </span>
-              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4">
-                Run your shop from your pocket
-              </h2>
-              <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-6 max-w-lg">
-                The Sellapage app is on Google Play. See today's sales, confirm orders, record a walk in
-                sale, send a receipt on WhatsApp and ask Sella for help, all from your phone.
-              </p>
-
-              <ul className="space-y-2.5 mb-7">
-                {[
-                  'Today\'s sales and what you are still owed, at a glance',
-                  'Confirm and track orders while you are on the move',
-                  'Record offline sales, send receipts on WhatsApp',
-                  'Get a push alert the moment an order comes in',
-                ].map((line) => (
-                  <li key={line} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600 text-sm leading-relaxed">{line}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <PlayStoreBadge />
-                <span className="inline-flex items-center rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-400">
-                  iOS coming soon
-                </span>
-              </div>
-            </Reveal>
-
-            <Reveal direction="right" delay={120} className="relative flex justify-center lg:justify-end">
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] rounded-full bg-brand-50 blur-3xl opacity-70" />
-              </div>
-              <div className="relative flex items-end gap-3 sm:gap-5">
-                <MediaSlot
-                  name="home-app-1"
-                  alt="The Sellapage app showing today's sales, orders waiting and quick actions"
-                  className="relative z-10 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-2xl shadow-gray-300/60 object-contain"
-                  fallback={
-                    <img
-                      src="/mobile-app-screen-1.jpg"
-                      alt="The Sellapage app showing today's sales, orders waiting and quick actions"
-                      width={300}
-                      height={620}
-                      loading="lazy"
-                      className="relative z-10 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-2xl shadow-gray-300/60 object-contain"
-                    />
-                  }
-                />
-                <MediaSlot
-                  name="home-app-2"
-                  alt="The Sellapage app showing the orders list with their payment status"
-                  className="relative z-0 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-xl shadow-gray-300/50 object-contain mb-6 sm:mb-10"
-                  fallback={
-                    <img
-                      src="/mobile-app-screen-2.jpg"
-                      alt="The Sellapage app showing the orders list with their payment status"
-                      width={300}
-                      height={620}
-                      loading="lazy"
-                      className="relative z-0 w-[45%] max-w-[260px] rounded-[1.75rem] shadow-xl shadow-gray-300/50 object-contain mb-6 sm:mb-10"
-                    />
-                  }
-                />
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-       {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
-      <section className="py-12 sm:py-20 bg-brand-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Reveal className="flex flex-col lg:flex-row items-center justify-between gap-8">
-            {/* Left */}
-            <div className="flex items-center gap-4 max-w-xl">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-              <img
-                src="/og-image.png"
-                alt="Sellapage logo"
-                className="w-13 h-13 rounded-xl object-cover shadow-sm ring-1 ring-white/10"
-              />
-              </div>
-              <div>
-                <h2 className="font-display font-extrabold text-white text-xl sm:text-3xl leading-tight mb-1">
-                  Run Your Entire Business from One Dashboard.
-                </h2>
-                <p className="text-brand-100 text-sm leading-relaxed">
-                  Create your free store in minutes. Manage products, services, checkout, delivery, customers, analytics, and growth - all in one place.
-                </p>
-              </div>
-            </div>
-
-            {/* Right */}
-            <div className="flex flex-col items-center gap-4 flex-shrink-0">
-              <button
-                onClick={handleCTA}
-                className="inline-flex items-center gap-2 bg-white hover:bg-brand-50 text-brand-700 font-bold text-sm px-6 py-3.5 rounded-xl transition-all w-full sm:w-auto justify-center"
-              >
-                Create Your Free Store <ArrowRight className="w-4 h-4" />
+      {/* ── Call to action ───────────────────────────────────────────────── */}
+      <section className="px-4 pb-16 sm:px-6 lg:px-8">
+        <Reveal className="relative mx-auto max-w-7xl overflow-hidden rounded-[28px] bg-gradient-to-br from-forest via-forest-700 to-forest-600 px-6 pt-10 text-white sm:px-10 lg:pt-0">
+          <Leaf className="absolute -right-8 -top-10 h-44 w-28 -rotate-12" tone="text-white/5" />
+          <div className="relative grid grid-cols-1 items-end gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+            <div className="lg:py-12">
+              <span className="inline-flex rounded-md bg-white/10 px-2 py-1 text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-forest-100 ring-1 ring-white/15">Ready to get started?</span>
+              <h2 className="mt-3 text-balance font-display text-[1.8rem] font-extrabold leading-tight sm:text-[2.2rem]">Your business deserves its own place online.</h2>
+              <p className="mt-3 max-w-lg text-[14.5px] text-white/80">Create your free store today and take the next step for your business.</p>
+              <button type="button" onClick={handleCTA} className="group mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-forest-700 shadow-lg transition hover:bg-forest-50">
+                Create your free store <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
               </button>
-              {!user && (
-                <p className="text-brand-200 text-xs text-center">Free forever on Starter. Upgrade when you need more.</p>
-              )}
-              {/* social proof */}
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3, 4].map((n) => (
-                    <img
-                      key={n}
-                      src={`/avatar-${n}.png`}
-                      alt={`User ${n}`}
-                      width={28}
-                      height={28}
-                      loading="lazy"
-                      className="w-7 h-7 rounded-full border-2 border-brand-600 object-cover"
-                    />
-                  ))}
-                </div>
-                <span className="text-brand-100 text-xs">Nigerian businesses sell with Sellapage every day</span>
-              </div>
             </div>
-          </Reveal>
-        </div>
+            <div className="relative flex justify-center lg:justify-end">
+              <Script className="absolute left-0 top-4 z-10 rotate-[-8deg] text-[24px] leading-none text-white sm:text-[28px]">Small steps,<br />big dreams</Script>
+              <MediaSlot name="home-cta" alt="A smiling business owner with her phone" className="relative max-h-[320px] w-auto object-contain"
+                fallback={<MediaSlot name="home-hero-phone" alt="A Sellapage store on a phone" className="relative mb-8 h-[296px] w-auto rounded-[28px] bg-white object-contain p-2 shadow-2xl" fallback={<span className="relative mb-8 rounded-[28px] bg-white p-2 shadow-2xl"><img src="/Herosection-mobilephone.png" alt="A Sellapage store on a phone" className="h-[280px] w-auto object-contain" /></span>} />} />
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       <Footer />
-
-      {/* ── NOTIFY MODAL ────────────────────────────────────────────────── */}
     </div>
   )
 }

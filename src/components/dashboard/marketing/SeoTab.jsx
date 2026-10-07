@@ -1,7 +1,9 @@
 // src/components/dashboard/marketing/SeoTab.jsx
 //
 // Lets a vendor make their storefront findable by Google and describable by AI
-// assistants, without touching code.
+// assistants, without touching code. Redesigned 2026-10-07 from Nex's mockup:
+// the settings on the left, and on the right a "Discovery health" score, a
+// Google result preview, what an AI assistant would say, and Save.
 //
 // What the vendor writes here is served as real HTML by storefront-render.js:
 // title, meta description, Store/ItemList/FAQPage JSON-LD, and a crawlable text
@@ -10,14 +12,14 @@
 //
 // Two rules this UI is built around:
 //   - Everything saved here appears ON the page as well as in the metadata.
-//     Assistants discount structured data with no visible counterpart, so there
-//     is deliberately no "keywords nobody sees" field.
+//     Assistants discount structured data with no visible counterpart.
 //   - Downgrading never deletes anything. A Starter vendor still sees their
 //     saved work, greyed out, with a clear route back.
+// Nothing saves by itself: changes go live when the vendor presses Save.
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Search, Globe, Plus, X, Loader2, Check, AlertCircle, Lock,
-  Sparkles, Link2, ChevronDown, ChevronUp, Eye,
+  Search, Globe, Plus, X, Loader2, Check, AlertCircle, Lock, Sparkles, Link2, ExternalLink, Store, MapPin, Users,
+  MessageCircleQuestion, Lightbulb, Save, CheckCircle2, Circle, Instagram, Facebook, Twitter, Youtube, Linkedin, Trash2, Bot,
 } from 'lucide-react'
 import { auth } from '../../../firebase/auth'
 
@@ -27,9 +29,44 @@ const EMPTY = {
 }
 
 const LIMITS = { title: 70, tagline: 60, description: 160, about: 1200, faqQ: 150, faqA: 500 }
+const INPUT = 'w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-forest-600 focus:ring-4 focus:ring-forest-50'
 
-/** Small chip editor used for keywords, delivery areas and social links. */
-function ChipInput({ label, hint, values, onChange, placeholder, max, type = 'text' }) {
+function socialIcon(url) {
+  const u = String(url).toLowerCase()
+  if (u.includes('instagram')) return [Instagram, 'text-pink-600']
+  if (u.includes('facebook') || u.includes('fb.com')) return [Facebook, 'text-blue-600']
+  if (u.includes('twitter') || u.includes('x.com')) return [Twitter, 'text-gray-900']
+  if (u.includes('youtube')) return [Youtube, 'text-red-600']
+  if (u.includes('linkedin')) return [Linkedin, 'text-sky-700']
+  return [Link2, 'text-gray-500']
+}
+
+function Card({ icon: Icon, title, sub, required, right, children, className = '' }) {
+  return (
+    <section className={`rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5 ${className}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2.5">
+          {Icon && <Icon size={18} className="mt-0.5 flex-shrink-0 text-gray-500" />}
+          <div className="min-w-0">
+            <p className="text-[14.5px] font-bold text-gray-900">{title}{required && <span className="ml-0.5 text-red-500">*</span>}</p>
+            {sub && <p className="mt-0.5 text-[12.5px] leading-relaxed text-gray-500">{sub}</p>}
+          </div>
+        </div>
+        {right}
+      </div>
+      {children && <div className="mt-4">{children}</div>}
+    </section>
+  )
+}
+
+function Counter({ value, max }) {
+  const over = value.length > max * 0.9
+  return <span className={`flex-shrink-0 text-[11px] font-semibold tabular-nums ${over ? 'text-amber-600' : 'text-gray-400'}`}>{value.length}/{max}</span>
+}
+
+/** Pills with an inline "Add" field, for keywords, delivery areas and links. */
+function Chips({ values, onChange, placeholder, max, addLabel, type = 'text', render }) {
+  const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
   const add = () => {
     const v = draft.trim()
@@ -39,49 +76,71 @@ function ChipInput({ label, hint, values, onChange, placeholder, max, type = 'te
   }
   return (
     <div>
-      <label className="block text-xs font-bold text-gray-700">{label}</label>
-      {hint && <p className="mt-0.5 text-[11px] text-gray-400">{hint}</p>}
-      <div className="mt-1.5 flex gap-2">
-        <input
-          type={type}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
-          placeholder={placeholder}
-          className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
-        />
-        <button
-          type="button"
-          onClick={add}
-          disabled={!draft.trim() || values.length >= max}
-          className="flex-shrink-0 rounded-xl bg-gray-900 px-3 py-2 text-xs font-bold text-white disabled:bg-gray-200 disabled:text-gray-400"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
       {values.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {values.map((v) => (
-            <span key={v} className="inline-flex max-w-full items-center gap-1 rounded-lg bg-green-50 px-2 py-1 text-[11px] font-semibold text-green-700">
-              <span className="truncate">{v}</span>
-              <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} aria-label={`Remove ${v}`}>
-                <X size={11} />
-              </button>
+            <span key={v} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-forest-50 px-3 py-1.5 text-[12.5px] font-semibold text-forest-700 ring-1 ring-forest-100">
+              {render ? render(v) : <span className="truncate">{v}</span>}
+              <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} aria-label={`Remove ${v}`} className="flex-shrink-0 rounded-full text-forest-600 hover:text-red-600"><X size={13} /></button>
             </span>
           ))}
         </div>
       )}
-      <p className="mt-1 text-[10px] text-gray-400">{values.length} of {max}</p>
+      {adding ? (
+        <div className="mt-2.5 flex gap-2">
+          <input autoFocus type={type} value={draft} onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } if (e.key === 'Escape') setAdding(false) }}
+            placeholder={placeholder} className={`${INPUT} min-w-0 flex-1 py-2`} />
+          <button type="button" onClick={add} disabled={!draft.trim() || values.length >= max} className="flex-shrink-0 rounded-xl bg-forest-600 px-3.5 text-[12.5px] font-bold text-white disabled:bg-gray-200 disabled:text-gray-400">Add</button>
+          <button type="button" onClick={() => { setAdding(false); setDraft('') }} className="flex-shrink-0 rounded-xl px-2 text-gray-400 hover:text-gray-700" aria-label="Cancel"><X size={16} /></button>
+        </div>
+      ) : values.length < max && (
+        <button type="button" onClick={() => setAdding(true)} className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-gray-600 transition hover:border-forest-200 hover:text-forest-700">
+          <Plus size={14} /> {addLabel}
+        </button>
+      )}
+      <p className="mt-1.5 text-[11px] text-gray-400">{values.length} of {max}</p>
     </div>
   )
 }
 
-function Counter({ value, max }) {
-  const over = value.length > max * 0.9
+/** The seven things that make a store easy to find, as a ring and a checklist. */
+function Health({ form }) {
+  const items = [
+    ['Summary', form.tagline.trim().length >= 10, `${form.tagline.length}/${LIMITS.tagline} chars`],
+    ['Search description', form.description.trim().length >= 50, `${form.description.length}/${LIMITS.description} chars`],
+    ['About your business', form.about.trim().length >= 100, `${form.about.length}/${LIMITS.about} chars`],
+    ['Keywords', (form.keywords || []).length >= 3, `${(form.keywords || []).length} added`],
+    ['Delivery areas', (form.serviceAreas || []).length >= 1, `${(form.serviceAreas || []).length} added`],
+    ['Social profiles', (form.socialLinks || []).length >= 1, `${(form.socialLinks || []).length} added`],
+    ['Questions answered', (form.faq || []).filter((f) => f.q.trim() && f.a.trim()).length >= 2, `${(form.faq || []).filter((f) => f.q.trim() && f.a.trim()).length} added`],
+  ]
+  const done = items.filter(([, ok]) => ok).length
+  const r = 34
+  const c = 2 * Math.PI * r
   return (
-    <span className={`text-[10px] font-semibold ${over ? 'text-amber-600' : 'text-gray-400'}`}>
-      {value.length}/{max}
-    </span>
+    <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
+      <p className="text-[16px] font-bold text-gray-900">Discovery health</p>
+      <p className="mt-0.5 text-[12.5px] text-gray-500">{done === items.length ? 'Your store is well set up for search and AI.' : `${items.length - done} more to go for full marks.`}</p>
+      <div className="mt-4 flex items-center gap-4">
+        <div className="relative h-24 w-24 flex-shrink-0">
+          <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90" aria-hidden="true">
+            <circle cx="40" cy="40" r={r} fill="none" stroke="#eef2f0" strokeWidth="7" />
+            <circle cx="40" cy="40" r={r} fill="none" stroke="#0b6b35" strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - done / items.length)} className="transition-[stroke-dashoffset] duration-700" />
+          </svg>
+          <span className="absolute inset-0 flex flex-col items-center justify-center"><span className="font-display text-[22px] font-extrabold leading-none text-gray-900">{done}/{items.length}</span><span className="mt-0.5 text-[9.5px] text-gray-500">set up</span></span>
+        </div>
+        <ul className="min-w-0 flex-1 space-y-1.5">
+          {items.map(([label, ok, note]) => (
+            <li key={label} className="flex items-center gap-2 text-[12.5px]">
+              {ok ? <CheckCircle2 size={15} className="flex-shrink-0 text-forest-600" /> : <Circle size={15} className="flex-shrink-0 text-gray-300" />}
+              <span className={`min-w-0 flex-1 truncate ${ok ? 'text-gray-800' : 'text-gray-500'}`}>{label}</span>
+              <span className="flex-shrink-0 text-[11px] tabular-nums text-gray-400">{note}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   )
 }
 
@@ -92,7 +151,7 @@ export default function SeoTab({ store, storeUrl, onStatusChange }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [showPreview, setShowPreview] = useState(false)
+  const [dirty, setDirty] = useState(false)
 
   const authed = useCallback(async (url, options = {}) => {
     const token = await auth.currentUser?.getIdToken()
@@ -123,9 +182,10 @@ export default function SeoTab({ store, storeUrl, onStatusChange }) {
       }
     })()
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed])
 
-  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }))
+  const set = (k, v) => { setForm((p) => ({ ...p, [k]: v })); setDirty(true) }
 
   const save = async (override) => {
     setSaving(true); setError(''); setSuccess('')
@@ -136,6 +196,7 @@ export default function SeoTab({ store, storeUrl, onStatusChange }) {
       if (!r.ok) { setError(d.message || 'Could not save.'); return }
       setForm({ ...EMPTY, ...d.seo })
       setMeta((m) => ({ ...m, active: d.active }))
+      setDirty(false)
       onStatusChange?.({ eligible: true, active: d.active })
       setSuccess(d.active ? 'Saved. Your store is live for search engines and AI.' : 'Saved.')
       setTimeout(() => setSuccess(''), 4000)
@@ -151,15 +212,16 @@ export default function SeoTab({ store, storeUrl, onStatusChange }) {
       ? `https://${meta.customDomain}`
       : storeUrl || `https://sellapage.com.ng/${meta.storeName}`
 
-  const previewTitle = (form.title || `${store?.businessName || meta.storeName}${form.tagline ? ` - ${form.tagline}` : ''} | Sellapage`).slice(0, LIMITS.title)
+  const name = store?.businessName || meta.storeName
+  const previewTitle = (form.title || `${name}${form.tagline ? ` | ${form.tagline}` : ''}`).slice(0, LIMITS.title)
   const previewDesc = form.description || store?.description || 'Add a description so search engines and AI know what you sell.'
+  const searchTerm = form.keywords?.[0] || `${name}`
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-24 animate-pulse rounded-2xl border border-gray-100 bg-gray-100/70" />
-        ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-2xl border border-gray-100 bg-gray-100/70" />)}</div>
+        <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-48 animate-pulse rounded-2xl border border-gray-100 bg-gray-100/70" />)}</div>
       </div>
     )
   }
@@ -168,16 +230,14 @@ export default function SeoTab({ store, storeUrl, onStatusChange }) {
   const hasSavedWork = Boolean(form.title || form.description || form.about || form.keywords?.length)
 
   return (
-    <div className="space-y-4">
-      {/* Plan state. A downgraded vendor is told plainly that nothing was lost. */}
-      {locked && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-start gap-2.5">
+    <div className="grid grid-cols-1 items-start gap-4 pb-24 lg:grid-cols-[minmax(0,1fr)_340px] lg:pb-0 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="min-w-0 space-y-4">
+        {/* Plan state. A downgraded vendor is told plainly that nothing was lost. */}
+        {locked && (
+          <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <Lock size={16} className="mt-0.5 flex-shrink-0 text-amber-600" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-amber-900">
-                {hasSavedWork ? 'Your SEO is paused, not deleted' : 'SEO is a Growth feature'}
-              </p>
+              <p className="text-sm font-bold text-amber-900">{hasSavedWork ? 'Your SEO is paused, not deleted' : 'Get found is a Growth feature'}</p>
               <p className="mt-0.5 text-xs leading-relaxed text-amber-800">
                 {hasSavedWork
                   ? 'Everything you set up is still saved exactly as you left it. Upgrade to Growth and it goes live again immediately, with nothing to redo.'
@@ -185,234 +245,143 @@ export default function SeoTab({ store, storeUrl, onStatusChange }) {
               </p>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* The master switch. */}
-      <div className={`rounded-2xl border p-4 ${meta.active ? 'border-green-200 bg-green-50/60' : 'border-gray-100 bg-white'}`}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Globe size={16} className={meta.active ? 'text-green-600' : 'text-gray-400'} />
-              <p className="text-sm font-bold text-gray-900">Search engine and AI indexing</p>
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-gray-500">
+        {/* The master switch. */}
+        <section className={`flex items-center gap-3 rounded-2xl border p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5 ${meta.active ? 'border-forest-200 bg-forest-50/60' : 'border-gray-100 bg-white'}`}>
+          <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ${meta.active ? 'bg-forest-100 text-forest-700' : 'bg-gray-100 text-gray-400'}`}><Globe size={20} /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px] font-bold text-gray-900">Search engine and AI indexing</p>
+            <p className="mt-0.5 text-[12.5px] leading-relaxed text-gray-500">
               {meta.active
-                ? 'Your store page is being served to Google and AI assistants with everything below. Ask an AI about your store link and it will describe your business.'
+                ? 'Google and AI assistants can find and understand your store, with everything below.'
                 : 'Turn this on to let Google, ChatGPT, Claude, Perplexity and Gemini read your store and describe what you sell.'}
             </p>
           </div>
-          <button
-            type="button"
-            disabled={locked || saving}
-            onClick={() => { const next = !form.enabled; set('enabled', next); save({ enabled: next }) }}
-            aria-label="Toggle indexing"
-            className={`relative inline-flex h-7 w-12 flex-shrink-0 rounded-full border-2 border-transparent transition-colors disabled:opacity-40 ${form.enabled ? 'bg-green-600' : 'bg-gray-200'}`}
-          >
-            <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${form.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-          </button>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2">
-          <Link2 size={13} className="flex-shrink-0 text-gray-400" />
-          <span className="truncate text-[11px] font-mono text-gray-600">{publicUrl}</span>
-        </div>
-        {meta.previousSlugs?.length > 0 && (
-          <p className="mt-2 text-[11px] text-gray-500">
-            Old addresses still redirect here: {meta.previousSlugs.map((s) => `/${s}`).join(', ')}
-          </p>
-        )}
-      </div>
-
-      {/* What a search result and an AI answer will look like. */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-4">
-        <button type="button" onClick={() => setShowPreview((v) => !v)} className="flex w-full items-center justify-between gap-2">
-          <span className="flex items-center gap-2 text-sm font-bold text-gray-900">
-            <Eye size={15} className="text-gray-400" /> Preview
+          <span className="flex flex-shrink-0 items-center gap-2">
+            <span className={`hidden text-[12px] font-bold sm:inline ${form.enabled ? 'text-forest-700' : 'text-gray-400'}`}>{form.enabled ? 'On' : 'Off'}</span>
+            <button type="button" role="switch" aria-checked={form.enabled} disabled={locked || saving}
+              onClick={() => { const next = !form.enabled; set('enabled', next); save({ enabled: next }) }} aria-label="Search engine and AI indexing"
+              className={`relative inline-flex h-7 w-12 rounded-full border-2 border-transparent transition-colors disabled:opacity-40 ${form.enabled ? 'bg-forest-600' : 'bg-gray-200'}`}>
+              <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${form.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
           </span>
-          {showPreview ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
-        </button>
-        {showPreview && (
-          <div className="mt-3 space-y-3">
-            <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">On Google</p>
-              <p className="truncate text-sm font-medium text-blue-700">{previewTitle}</p>
-              <p className="truncate text-[11px] text-green-700">{publicUrl}</p>
-              <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">{previewDesc}</p>
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">What an AI will say</p>
-              <p className="text-xs leading-relaxed text-gray-700">
-                {`${store?.businessName || meta.storeName}. ${previewDesc}`}
-                {form.about ? ` ${form.about}` : ''}
-                {form.serviceAreas?.length ? ` Delivers to ${form.serviceAreas.join(', ')}.` : ''}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+        </section>
 
-      <fieldset disabled={locked} className={locked ? 'opacity-60' : ''}>
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <Search size={15} className="text-gray-400" />
-              <p className="text-sm font-bold text-gray-900">How your store is described</p>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-700">One-line summary</label>
-                <Counter value={form.tagline} max={LIMITS.tagline} />
+        <fieldset disabled={locked} className={`min-w-0 space-y-4 ${locked ? 'opacity-60' : ''}`}>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <Card icon={Link2} title="Store URL" sub="Your public store link. This is what search engines and customers find.">
+              <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5">
+                <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-gray-700">{publicUrl}</span>
+                <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 text-gray-400 hover:text-forest-700" aria-label="Open your store"><ExternalLink size={15} /></a>
               </div>
-              <p className="mt-0.5 text-[11px] text-gray-400">What you sell, in a few words. Appears next to your name in results.</p>
-              <input
-                value={form.tagline}
-                maxLength={LIMITS.tagline}
-                onChange={(e) => set('tagline', e.target.value)}
-                placeholder="Handmade crochet wear in Lagos"
-                className="mt-1.5 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-700">Search description</label>
-                <Counter value={form.description} max={LIMITS.description} />
-              </div>
-              <p className="mt-0.5 text-[11px] text-gray-400">The sentence shown under your link on Google. Say what you sell and where you deliver.</p>
-              <textarea
-                value={form.description}
-                maxLength={LIMITS.description}
-                rows={2}
-                onChange={(e) => set('description', e.target.value)}
-                placeholder="Chichi Store makes handmade crochet dresses, tops and bags in Lagos, with nationwide delivery."
-                className="mt-1.5 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-700">About your business</label>
-                <Counter value={form.about} max={LIMITS.about} />
-              </div>
-              <p className="mt-0.5 text-[11px] text-gray-400">
-                This is the part AI assistants read most. Who you are, what you make, how you work, how long orders take.
-              </p>
-              <textarea
-                value={form.about}
-                maxLength={LIMITS.about}
-                rows={4}
-                onChange={(e) => set('about', e.target.value)}
-                placeholder="Chichi Store is a Lagos crochet studio. Every piece is hand-crocheted to order, usually within 7 to 14 days."
-                className="mt-1.5 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
-              />
-            </div>
+              <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-forest-700"><CheckCircle2 size={14} /> Looks good</p>
+              {meta.previousSlugs?.length > 0 && <p className="mt-1.5 text-[11.5px] text-gray-500">Old addresses still redirect here: {meta.previousSlugs.map((s) => `/${s}`).join(', ')}</p>}
+            </Card>
+            <Card icon={Search} title="What people search for" required sub="The words a customer would type. Use real phrases, not single words.">
+              <Chips values={form.keywords || []} onChange={(v) => set('keywords', v)} placeholder="crochet dresses in lagos" max={30} addLabel="Add keyword" />
+            </Card>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-4">
-            <ChipInput
-              label="What people search for"
-              hint="The words a customer would type. Use real phrases, not single words."
-              values={form.keywords || []}
-              onChange={(v) => set('keywords', v)}
-              placeholder="crochet dresses in lagos"
-              max={30}
-            />
-            <ChipInput
-              label="Where you deliver"
-              hint="Cities or states. Helps you show up for local searches."
-              values={form.serviceAreas || []}
-              onChange={(v) => set('serviceAreas', v)}
-              placeholder="Lagos"
-              max={12}
-            />
-            <ChipInput
-              label="Your social profiles"
-              hint="Links Google and AI use to confirm this is the same business."
-              values={form.socialLinks || []}
-              onChange={(v) => set('socialLinks', v)}
-              placeholder="https://instagram.com/yourstore"
-              max={8}
-              type="url"
-            />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <Card icon={Store} title="Business information" sub="What people see in search results and AI answers.">
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="flex items-center justify-between gap-2"><span className="text-[13px] font-semibold text-gray-800">One-line summary <span className="text-red-500">*</span></span><Counter value={form.tagline} max={LIMITS.tagline} /></span>
+                  <span className="mt-0.5 block text-[11.5px] text-gray-500">What you sell, in a few words. Shown next to your name in results.</span>
+                  <input value={form.tagline} maxLength={LIMITS.tagline} onChange={(e) => set('tagline', e.target.value)} placeholder="Handmade crochet wear in Lagos" className={`${INPUT} mt-1.5`} />
+                </label>
+                <label className="block">
+                  <span className="flex items-center justify-between gap-2"><span className="text-[13px] font-semibold text-gray-800">Search description <span className="text-red-500">*</span></span><Counter value={form.description} max={LIMITS.description} /></span>
+                  <span className="mt-0.5 block text-[11.5px] text-gray-500">The sentence under your link on Google. Say what you sell and where you deliver.</span>
+                  <textarea value={form.description} maxLength={LIMITS.description} rows={3} onChange={(e) => set('description', e.target.value)} placeholder="Chichi Store makes handmade crochet dresses, tops and bags in Lagos, with nationwide delivery." className={`${INPUT} mt-1.5 resize-y`} />
+                </label>
+                <label className="block">
+                  <span className="flex items-center justify-between gap-2"><span className="text-[13px] font-semibold text-gray-800">About your business <span className="text-red-500">*</span></span><Counter value={form.about} max={LIMITS.about} /></span>
+                  <span className="mt-0.5 block text-[11.5px] text-gray-500">The part AI assistants read most: who you are, what you make, how you work, how long orders take.</span>
+                  <textarea value={form.about} maxLength={LIMITS.about} rows={5} onChange={(e) => set('about', e.target.value)} placeholder="Chichi Store is a Lagos crochet studio. Every piece is hand-crocheted to order, usually within 7 to 14 days." className={`${INPUT} mt-1.5 resize-y`} />
+                </label>
+                <p className="flex items-start gap-2 rounded-xl bg-forest-50/70 px-3.5 py-2.5 text-[12px] leading-relaxed text-forest-800"><Lightbulb size={15} className="mt-0.5 flex-shrink-0 text-forest-600" />These details help search engines understand your business and show the right information to people searching for what you sell.</p>
+              </div>
+            </Card>
+            <div className="space-y-4">
+              <Card icon={MapPin} title="Where you deliver" required sub="Cities or states. Helps you show up in local searches.">
+                <Chips values={form.serviceAreas || []} onChange={(v) => set('serviceAreas', v)} placeholder="Lagos" max={12} addLabel="Add location" />
+              </Card>
+              <Card icon={Users} title="Your social profiles" sub="Links Google and AI use to confirm this is the same business.">
+                <Chips values={form.socialLinks || []} onChange={(v) => set('socialLinks', v)} placeholder="https://instagram.com/yourstore" max={8} addLabel="Add profile" type="url"
+                  render={(v) => { const [I, cls] = socialIcon(v); return <><I size={13} className={`flex-shrink-0 ${cls}`} /><span className="truncate">{v.replace(/^https?:\/\/(www\.)?/, '')}</span></> }} />
+              </Card>
+            </div>
           </div>
 
           {/* FAQ. The single highest-value block for being quoted by an AI. */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-4">
-            <div className="flex items-center gap-2">
-              <Sparkles size={15} className="text-gray-400" />
-              <p className="text-sm font-bold text-gray-900">Questions customers ask</p>
-            </div>
-            <p className="mt-0.5 text-[11px] text-gray-400">
-              Answer the questions you get in DMs every day. These are what an AI quotes when someone asks about your store.
-            </p>
-            <div className="mt-3 space-y-2.5">
+          <Card icon={MessageCircleQuestion} title="Questions customers ask" sub="Answer the questions you get in DMs every day. These are what an AI quotes when someone asks about your store.">
+            <div className="space-y-2.5">
               {(form.faq || []).map((f, i) => (
-                <div key={i} className="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <input
-                        value={f.q}
-                        maxLength={LIMITS.faqQ}
-                        onChange={(e) => set('faq', form.faq.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)))}
-                        placeholder="How long does delivery take?"
-                        className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-green-400"
-                      />
-                      <textarea
-                        value={f.a}
-                        maxLength={LIMITS.faqA}
-                        rows={2}
-                        onChange={(e) => set('faq', form.faq.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))}
-                        placeholder="Lagos orders arrive in 1 to 2 days. Other states take 3 to 5 working days."
-                        className="w-full resize-none rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-green-400"
-                      />
-                    </div>
-                    <button type="button" onClick={() => set('faq', form.faq.filter((_, j) => j !== i))} className="mt-1 flex-shrink-0 text-gray-300 hover:text-red-500" aria-label="Remove question">
-                      <X size={14} />
-                    </button>
+                <div key={i} className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/70 p-3">
+                  <Search size={15} className="mt-2.5 flex-shrink-0 text-gray-300" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <input value={f.q} maxLength={LIMITS.faqQ} onChange={(e) => set('faq', form.faq.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)))} placeholder="How long does delivery take?" className={`${INPUT} py-2 text-[13px] font-semibold`} />
+                    <textarea value={f.a} maxLength={LIMITS.faqA} rows={2} onChange={(e) => set('faq', form.faq.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))} placeholder="Lagos orders arrive in 1 to 2 days. Other states take 3 to 5 working days." className={`${INPUT} resize-y py-2 text-[13px]`} />
                   </div>
+                  <button type="button" onClick={() => set('faq', form.faq.filter((_, j) => j !== i))} className="mt-2 flex-shrink-0 rounded-lg p-1 text-gray-300 hover:bg-red-50 hover:text-red-500" aria-label="Remove question"><Trash2 size={15} /></button>
                 </div>
               ))}
             </div>
             {(form.faq?.length || 0) < 10 && (
-              <button
-                type="button"
-                onClick={() => set('faq', [...(form.faq || []), { q: '', a: '' }])}
-                className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-2 text-xs font-bold text-gray-500 hover:border-green-300 hover:text-green-700"
-              >
-                <Plus size={13} /> Add a question
+              <button type="button" onClick={() => set('faq', [...(form.faq || []), { q: '', a: '' }])} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-gray-600 transition hover:border-forest-200 hover:text-forest-700">
+                <Plus size={14} /> Add a question
               </button>
             )}
+          </Card>
+        </fieldset>
+      </div>
+
+      {/* ── Right: health, previews, save ── */}
+      <aside className="min-w-0 space-y-4 lg:sticky lg:top-4">
+        <Health form={form} />
+
+        <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
+          <p className="text-[16px] font-bold text-gray-900">Search preview</p>
+          <p className="mt-0.5 text-[12.5px] text-gray-500">How your store might appear on Google. It is a preview, not live, and Google may show it differently.</p>
+          <div className="mt-3 flex items-center gap-2.5">
+            <span className="font-display text-[22px] font-bold leading-none tracking-tight" aria-hidden="true"><span className="text-[#4285F4]">G</span><span className="text-[#EA4335]">o</span><span className="text-[#FBBC05]">o</span><span className="text-[#4285F4]">g</span><span className="text-[#34A853]">l</span><span className="text-[#EA4335]">e</span></span>
+            <span className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-[12px] text-gray-600"><Search size={13} className="flex-shrink-0 text-gray-400" /><span className="truncate">{searchTerm}</span></span>
           </div>
-        </div>
-      </fieldset>
+          <div className="mt-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5">
+            <p className="flex items-center gap-2 truncate text-[11.5px] text-gray-600"><Globe size={13} className="flex-shrink-0 text-gray-400" />{publicUrl.replace(/^https?:\/\//, '')}</p>
+            <p className="mt-1 line-clamp-2 text-[15px] font-medium leading-snug text-[#1a0dab]">{previewTitle}</p>
+            <p className="mt-1 line-clamp-3 text-[12.5px] leading-relaxed text-gray-600">{previewDesc}</p>
+          </div>
+        </section>
 
-      {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3">
-          <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-red-500" />
-          <p className="text-xs font-semibold text-red-700">{error}</p>
-        </div>
-      )}
-      {success && (
-        <div className="flex items-start gap-2 rounded-xl border border-green-100 bg-green-50 p-3">
-          <Check size={14} className="mt-0.5 flex-shrink-0 text-green-600" />
-          <p className="text-xs font-semibold text-green-700">{success}</p>
-        </div>
-      )}
+        <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
+          <p className="flex items-center gap-2 text-[15px] font-bold text-gray-900"><Bot size={17} className="text-forest-600" /> AI assistant preview</p>
+          <p className="mt-0.5 text-[12.5px] text-gray-500">How assistants such as ChatGPT, Gemini and others could describe your business.</p>
+          <div className="mt-3 flex items-start gap-3 rounded-xl bg-forest-50/60 p-3.5 ring-1 ring-forest-100">
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-forest-600 text-white"><Sparkles size={15} /></span>
+            <p className="text-[12.5px] leading-relaxed text-gray-700">
+              {`${name}. ${previewDesc}`}
+              {form.about ? ` ${form.about.slice(0, 260)}${form.about.length > 260 ? '...' : ''}` : ''}
+              {form.serviceAreas?.length ? ` Delivers to ${form.serviceAreas.join(', ')}.` : ''}
+            </p>
+          </div>
+          <p className="mt-2 text-[11px] text-gray-400">Based on your store information.</p>
+        </section>
 
-      {!locked && (
-        <div className="sticky bottom-3 z-10">
-          <button
-            type="button"
-            onClick={() => save()}
-            disabled={saving}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-green-600/20 transition-all hover:bg-green-700 active:scale-[0.99] disabled:bg-gray-300"
-          >
-            {saving ? <><Loader2 size={15} className="animate-spin" /> Saving...</> : 'Save SEO settings'}
-          </button>
-        </div>
-      )}
+        {error && <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3"><AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-red-500" /><p className="text-xs font-semibold text-red-700">{error}</p></div>}
+        {success && <div className="flex items-start gap-2 rounded-xl border border-forest-100 bg-forest-50 p-3"><Check size={14} className="mt-0.5 flex-shrink-0 text-forest-600" /><p className="text-xs font-semibold text-forest-700">{success}</p></div>}
+
+        {!locked && (
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-lg shadow-gray-200/50 max-lg:fixed max-lg:inset-x-3 max-lg:bottom-3 max-lg:z-30 max-lg:shadow-2xl">
+            <p className={`min-w-0 flex-1 text-[12px] ${dirty ? 'font-semibold text-amber-700' : 'text-gray-500'}`}>{dirty ? 'You have changes that are not saved yet.' : 'Changes go live when you save.'}</p>
+            <button type="button" onClick={() => save()} disabled={saving} className="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-forest px-4 py-3 text-[13px] font-bold text-white shadow-lg shadow-forest/20 transition hover:bg-forest-700 disabled:bg-gray-300">
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {saving ? 'Saving...' : 'Save SEO settings'}
+            </button>
+          </div>
+        )}
+      </aside>
     </div>
   )
 }

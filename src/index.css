@@ -156,3 +156,11 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Handwritten taglines on Sellapage receipts (src/receipts). Bundled, open licence. */
+@font-face {
+  font-family: 'Caveat';
+  src: url('/fonts/receipt/caveat-600.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+}

@@ -181,6 +181,17 @@ const suppliers = [
 ]
 
 export const OPS_MOCKS = {
+  '/api/store-seo': () => ({ success: true, eligible: true, active: true, plan: 'pro', storeName: 'adaskincare', previousSlugs: [], customDomain: null, customDomainStatus: null,
+    seo: { enabled: true, tagline: 'Clean skincare for Nigerian weather', description: 'Ada Skincare makes serums, cleansers and SPF for Nigerian skin and weather, with delivery across Lagos and nationwide in 3 to 5 days.', about: 'Ada Skincare is a Lagos skincare brand. Every product is tested in Nigerian heat and humidity. Orders ship the same day before 2pm, and Lagos deliveries arrive in 1 to 2 days.', keywords: ['skincare lagos', 'spf for dark skin', 'vitamin c serum nigeria', 'affordable skincare'], serviceAreas: ['Lagos', 'Ikorodu', 'Surulere', 'Abuja'], socialLinks: ['https://instagram.com/adaskincare', 'https://facebook.com/adaskincare'], faq: [{ q: 'How long does delivery take?', a: 'Lagos orders arrive in 1 to 2 days. Other states take 3 to 5 working days.' }, { q: 'How can I pay?', a: 'Card, bank transfer and USSD at checkout through Paystack.' }] } }),
+  // Public pages (About, Home): live figures and approved vendor reviews.
+  '/api/partners-content': () => ({ success: true, traction: { asOf: '2026-10-01', stats: [{ value: '158+', label: 'Stores on Sellapage' }, { value: '2,310', label: 'Products listed' }, { value: '36', label: 'States reached' }, { value: '₦18.4M', label: 'Sold through stores' }] } }),
+  '/api/platform-reviews-public': () => ({ reviews: [
+    { id: 'pr1', authorName: 'Funmi Stores', storeName: 'Funmi Stores', rating: 5, reviewText: "Since upgrading to their pro plan I must say that it's been a very seamless process, from the easy AI descriptions to the receipts generation. It's all been easy.", featured: true },
+    { id: 'pr2', authorName: 'Denver Mall', storeName: 'Denver Mall', rating: 5, reviewText: "It's been very useful for my business. I can now do almost everything from my dashboard, from my own receipts to automatic orders and stress-free delivery.", featured: true },
+    { id: 'pr3', authorName: 'Bisola A.', storeName: 'Bisi Bakes', rating: 5, reviewText: 'My customers pay with a link now instead of sending screenshots. Orders come in clean.' },
+    { id: 'pr4', authorName: 'Kunle O.', storeName: 'Fit Fam Gym', rating: 4, reviewText: 'Bookings for classes run themselves. The reminders alone saved me hours every week.' },
+    { id: 'pr5', authorName: 'Ada O.', storeName: 'Ada Skincare', rating: 5, reviewText: 'Setting up took one evening and my store looks premium on every phone.' },
+  ] }),
   // Sign-in: 000000 = the attempt took too long; 111111 = set-up done (recovery codes).
   '/api/ops-auth': (url, body) => {
     const action = url.searchParams.get('action')

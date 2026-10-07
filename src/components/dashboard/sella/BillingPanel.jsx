@@ -61,7 +61,7 @@ const STATUS = {
   rejected: { label: "Under review", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
 };
 
-export function BillingPanel({ storeId, assistantName, returnReference, onReturnHandled, onCredits }) {
+export function BillingPanel({ storeId, store, assistantName, returnReference, onReturnHandled, onCredits }) {
   const [packs, setPacks] = useState([]);
   const [canBuy, setCanBuy] = useState(false);
   const [credits, setCredits] = useState(null);
@@ -130,6 +130,19 @@ export function BillingPanel({ storeId, assistantName, returnReference, onReturn
     catch (e) { setError(e.message); }
     finally { setDownloading(null); }
   };
+
+  // Receipts and the statement use Sellapage's one receipt design
+  // (src/receipts), drawn in the browser from the purchase list.
+  const saveReceipt = async (key, build) => {
+    setDownloading(key);
+    setError("");
+    try {
+      const [model, dl] = await Promise.all([import("../../../receipts/receiptModel"), import("../../../receipts/download")]);
+      await dl.downloadReceipt(build(model));
+    } catch (e) { setError(e?.message || "Could not make the receipt. Try again."); }
+    finally { setDownloading(null); }
+  };
+  const paidPurchases = (purchases || []).filter((p) => p.status === "paid");
 
   const byKind = Object.entries(credits?.byKind || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const kindTotal = byKind.reduce((s, [, v]) => s + v, 0);
@@ -243,7 +256,19 @@ export function BillingPanel({ storeId, assistantName, returnReference, onReturn
                 disabled={!purchases?.length || downloading !== null}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
               >
-                {downloading === "csv" ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />} Download all
+                {downloading === "csv" ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />} CSV
+              </button>
+              <button
+                onClick={() => saveReceipt("statement", (m) => m.statement({
+                  title: "Sella credits history",
+                  party: { name: store?.businessName || "Your store" },
+                  rows: paidPurchases.map((p) => ({ date: m.toMs(p.paidAt) || m.toMs(p.createdAt), description: `${fmt(p.credits)} Sella AI credits (${p.packName} pack)`, ref: p.receiptNumber || p.reference, amount: p.total })),
+                  filename: "sella-credits-statement.pdf",
+                }))}
+                disabled={!paidPurchases.length || downloading !== null}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+              >
+                {downloading === "statement" ? <Loader2 size={13} className="animate-spin" /> : <Receipt size={13} />} Statement (PDF)
               </button>
             </div>
           </div>
@@ -268,7 +293,7 @@ export function BillingPanel({ storeId, assistantName, returnReference, onReturn
                     <span className={`text-[10.5px] font-bold rounded-md px-1.5 py-0.5 ring-1 ${st.cls}`}>{st.label}</span>
                     {p.status === "paid" && (
                       <button
-                        onClick={() => download(p.reference, { storeId, action: "receipt", reference: p.reference }, "sella-receipt.pdf")}
+                        onClick={() => saveReceipt(p.reference, (m) => m.creditsReceipt(p, store))}
                         disabled={downloading !== null}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 text-[12px] font-semibold hover:bg-green-100 disabled:opacity-50"
                       >

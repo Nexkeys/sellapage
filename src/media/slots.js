@@ -18,17 +18,18 @@
 //        image uses that image as the still frame shown before it plays.
 
 export const MEDIA_SLOTS = [
-  // ── Homepage hero ─────────────────────────────────────────────────────
+  // ── Homepage hero (2026-10-07 redesign) ─────────────────────────────
+  // The hero video (home-hero-main) was removed at Nex's request.
   {
-    name: 'home-hero-main',
-    where: 'Homepage, top of the page, the big laptop picture',
+    name: 'home-hero-scene',
+    where: 'Homepage, top of the page, the photo behind the phone',
     shape: 'landscape',
-    accepts: 'both',
-    tip: 'A laptop screen recording of the dashboard, 10 to 15 seconds, or a screenshot.',
+    accepts: 'image',
+    tip: 'A Nigerian shop owner smiling at her phone, with products around her, bright and green. Leave the left side calm for the headline.',
   },
   {
     name: 'home-hero-phone',
-    where: 'Homepage, top of the page, the phone in front of the laptop',
+    where: 'Homepage, top of the page, the phone in front of the photo',
     shape: 'portrait',
     accepts: 'both',
     tip: 'Record your phone screen: add a product, tap share, post to WhatsApp status. 10 to 15 seconds, no sound needed.',
@@ -119,6 +120,16 @@ export const MEDIA_SLOTS = [
   { name: 'auth-hero', where: 'Sign in and Create Store pages, beside the form on desktop, behind it on phones', shape: 'landscape', accepts: 'image', tip: 'A phone showing a store, with Secure Checkout, Fast Delivery, Analytics and Happy Customers cards around it.' },
   { name: 'auth-otp-art', where: 'Code screen (SMS and email codes), left side', shape: 'landscape', accepts: 'image', tip: 'A phone with a Sellapage code notification and a green envelope bubble.' },
   { name: 'auth-script', where: 'Code screen, "Almost there!" handwriting under the list', shape: 'landscape', accepts: 'image', tip: 'Green handwriting with a small heart.' },
+
+  // ── Homepage sections (2026-10-07 redesign) ───────────────────────────
+  { name: 'home-mission', where: 'Homepage, "More than just a platform" card, left photo', shape: 'landscape', accepts: 'image', tip: 'A Nigerian business owner checking orders on a phone, with a laptop and products on the table.' },
+  { name: 'home-categories', where: 'Homepage, "Discover what you can do", right side', shape: 'landscape', accepts: 'image', tip: 'A shopper with a phone and products around her (sneakers, headphones, a handbag), mint green background.' },
+  { name: 'home-cta', where: 'Homepage, the green "Your business deserves its own place online" banner, right side', shape: 'portrait', accepts: 'image', tip: 'A smiling person holding a phone, cut out or on a dark green background.' },
+
+  // ── About page (2026-10-07 redesign) ──────────────────────────────────
+  { name: 'about-hero', where: 'About page, top, the big photo on the right', shape: 'landscape', accepts: 'image', tip: 'A Nigerian businesswoman at a laptop, green blazer, plants, bright room.' },
+  { name: 'about-mission', where: 'About page, "Our mission and vision", middle photo', shape: 'landscape', accepts: 'image', tip: 'A modern green glass building with palm trees and blue sky.' },
+  { name: 'about-cta', where: 'About page, the green "Ready to grow" banner, right side', shape: 'landscape', accepts: 'image', tip: 'A laptop showing the Sellapage dashboard, with a plant and a mug.' },
 ]
 
 export const SLOT_NAMES = new Set(MEDIA_SLOTS.map((s) => s.name))

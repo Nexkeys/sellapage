@@ -307,12 +307,33 @@ function SettingsPreview() {
   )
 }
 
+// ?preview=marketing: Marketing > Get found.
+const MarketingTabLazy = React.lazy(() => import('../../src/components/dashboard/MarketingTab.jsx'))
+function MarketingPreview() {
+  const store = { ...STORE, plan: 'pro', hasProFeatures: true, hasGrowthFeatures: true, email: 'ada@adaskincare.ng', description: 'Clean, effective skincare made for Nigerian weather.' }
+  const [tab, setTab] = React.useState('marketing')
+  const [open, setOpen] = React.useState(false)
+  return (
+    <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen} storeUrl="https://sellapage.com.ng/adaskincare" isGrowthOrPro isPro vendorType="products">
+      <React.Suspense fallback={null}><MarketingTabLazy store={store} storeUrl="https://sellapage.com.ng/adaskincare" navigateTo={setTab} /></React.Suspense>
+    </DashboardLayout>
+  )
+}
+
 // ?preview=explore: the public Explore Stores page.
 const LiveStoresPage = React.lazy(() => import('../../src/pages/LiveStoresPage.jsx'))
 const HelmetProvider = React.lazy(() => import('react-helmet-async').then((m) => ({ default: m.HelmetProvider })))
 const AuthProvider = React.lazy(() => import('../../src/hooks/useAuth.jsx').then((m) => ({ default: m.AuthProvider })))
 function ExplorePreview() {
   return <React.Suspense fallback={null}><HelmetProvider><AuthProvider><LiveStoresPage /></AuthProvider></HelmetProvider></React.Suspense>
+}
+
+// ?preview=about | home: the public About and Home pages.
+const AboutPage = React.lazy(() => import('../../src/pages/about.jsx'))
+const HomePage = React.lazy(() => import('../../src/pages/Home.jsx'))
+function PublicPreview() {
+  const kind = new URLSearchParams(window.location.search).get('preview')
+  return <React.Suspense fallback={null}><HelmetProvider><AuthProvider>{kind === 'about' ? <AboutPage /> : <HomePage />}</AuthProvider></HelmetProvider></React.Suspense>
 }
 
 // ?preview=auth&path=/login|/register: the sign-in / create-store page.
@@ -394,7 +415,7 @@ function OpsPreview() {
 
 const shot = new URLSearchParams(window.location.search).get('shot')
 const previewKind = new URLSearchParams(window.location.search).get('preview')
-const Shot = previewKind === 'ops-welcome' ? OpsWelcomePreview : previewKind === 'ops-console' ? OpsConsolePreview : String(previewKind || '').startsWith('ops-') ? OpsPreview : previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
+const Shot = previewKind === 'marketing' ? MarketingPreview : (previewKind === 'about' || previewKind === 'home') ? PublicPreview : previewKind === 'ops-welcome' ? OpsWelcomePreview : previewKind === 'ops-console' ? OpsConsolePreview : String(previewKind || '').startsWith('ops-') ? OpsPreview : previewKind === 'recovery' ? RecoveryPreview : previewKind === 'reset' ? ResetPreview : previewKind === 'guide' ? GuidePreview : previewKind === 'auth' ? AuthPreview : previewKind === 'otp' ? OtpPreview : previewKind === 'welcome' ? WelcomePreview : previewKind === 'explore' ? ExplorePreview : previewKind === 'settings' ? SettingsPreview : previewKind === 'support' ? SupportPreview : previewKind === 'referral' ? ReferralPreview : previewKind === 'categories' ? CategoriesPreview : previewKind === 'calc' ? CalcPreview : previewKind === 'business' ? BusinessPreview : previewKind === 'loader' ? () => <BrandLoader /> : previewKind === 'billing' ? BillingPreview : previewKind === 'dashboard' ? DashboardPreview : (previewKind === 'products' || previewKind === 'services') ? ListingsPreview : SHOTS[shot]
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <MemoryRouter initialEntries={[new URLSearchParams(window.location.search).get('path') || '/']}>

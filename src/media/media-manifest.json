@@ -153,13 +153,6 @@
     "width": 265,
     "height": 592
   },
-  "home-hero-main": {
-    "type": "video",
-    "src": "/media/home-hero-main/24a9b5051c.mp4",
-    "poster": "/media/home-hero-main/24a9b5051c-poster.webp",
-    "width": 1280,
-    "height": 654
-  },
   "home-hero-phone": {
     "type": "image",
     "src": "/media/home-hero-phone/5aabc382c5-lg.webp",

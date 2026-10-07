@@ -14,12 +14,15 @@ import { useEffect, useRef, useState } from 'react'
 import {
   CalendarClock, Crown, TrendingUp, Flame, Check, ArrowRight, CreditCard, CalendarDays, RefreshCw,
   Receipt, ShieldCheck, Lock, Cloud, MessageCircle, Mail, Timer, Smile, Users, ChevronLeft, ChevronRight,
-  Loader2, X, Printer, AlertTriangle, Sparkles, TrendingDown, LayoutGrid, History, ChevronDown,
+  Loader2, X, Download, AlertTriangle, Sparkles, TrendingDown, LayoutGrid, History, ChevronDown,
 } from 'lucide-react'
 import { collection, getCountFromServer, limit, orderBy, query, startAfter } from 'firebase/firestore'
 import { getDocs } from '../../firebase/metered'
 import { db } from '../../firebase/config'
 import MediaSlot from '../../media/MediaSlot'
+import ReceiptCard from '../../receipts/ReceiptCard'
+import { planReceipt, statement, toMs } from '../../receipts/receiptModel'
+import { downloadReceipt } from '../../receipts/download'
 import { hasMedia } from '../../media/hasMedia'
 import { Skeleton } from '../Skeleton'
 import useCountdown from './billing/useCountdown'
@@ -113,49 +116,29 @@ function CountdownCard({ mode, plan, endsAt, since, onRenew, onSeePlans }) {
 
 // ── Receipt ───────────────────────────────────────────────────────────────
 
+// The one Sellapage receipt design (src/receipts), on screen and as a PDF.
 function ReceiptModal({ row, store, onClose }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  useEffect(() => {
+    if (!row) return undefined
+    const k = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
+  }, [row, onClose])
   if (!row) return null
-  const paid = toDate(row.paidAt)
-  const lines = [
-    ['Business', store?.businessName || ''],
-    ['Email', store?.email || ''],
-    ['Plan', `${cap(row.plan)} (${periodLabel(row.billingPeriod)})`],
-    ['Amount', formatPrice(Math.round((row.amount || 0) / 100))],
-    ['Paid on', fmtDate(paid, true)],
-    ['Covers', `${fmtDate(toDate(row.planStartDate))} to ${fmtDate(toDate(row.planEndDate))}`],
-    ['Paystack reference', row.paystackRef || ''],
-    ['Status', 'Completed'],
-  ]
-  const print = () => {
-    const w = window.open('', '_blank', 'width=520,height=720')
-    if (!w) return
-    const rows = lines.map(([k, v]) => `<tr><td style="color:#7c8a99;padding:8px 0">${k}</td><td style="text-align:right;padding:8px 0;font-weight:600">${String(v).replace(/</g, '&lt;')}</td></tr>`).join('')
-    w.document.write(`<!doctype html><html><head><title>Sellapage receipt</title></head><body style="font-family:DM Sans,Arial,sans-serif;color:#0f172a;padding:32px;max-width:460px;margin:auto">
-      <h2 style="margin:0;color:#034e22">Sellapage</h2><p style="color:#7c8a99;margin:4px 0 24px">Payment receipt</p>
-      <table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
-      <p style="color:#7c8a99;font-size:12px;margin-top:28px">Thank you for growing with Sellapage.</p></body></html>`)
-    w.document.close()
-    w.focus()
-    w.print()
+  const r = planReceipt(row, store)
+  const save = async () => {
+    setBusy(true); setErr('')
+    try { await downloadReceipt(r) } catch { setErr('Could not make the PDF. Check your connection and try again.') } finally { setBusy(false) }
   }
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bt-receipt-title">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="Payment receipt">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-        <button type="button" onClick={onClose} className="absolute right-3 top-3 rounded-full p-2 text-dash-muted hover:bg-gray-100" aria-label="Close"><X size={17} /></button>
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-forest-50 text-forest-600"><Receipt size={22} /></span>
-        <h3 id="bt-receipt-title" className="mt-3 text-lg font-bold text-dash-ink">Payment receipt</h3>
-        <dl className="mt-3 divide-y divide-dash-line text-sm">
-          {lines.map(([k, v]) => (
-            <div key={k} className="flex justify-between gap-4 py-2">
-              <dt className="text-dash-muted">{k}</dt>
-              <dd className="break-all text-right font-medium text-dash-ink">{v}</dd>
-            </div>
-          ))}
-        </dl>
-        <button type="button" onClick={print} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-forest px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-700">
-          <Printer size={15} /> Print or save as PDF
-        </button>
+      <div className="relative max-h-[94dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-t-3xl bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:rounded-3xl">
+        <button type="button" onClick={onClose} className="absolute right-3 top-3 z-10 rounded-full bg-white/90 p-2 text-dash-muted shadow-sm hover:bg-gray-100" aria-label="Close"><X size={17} /></button>
+        <ReceiptCard r={r} onDownload={save} downloading={busy} />
+        {err && <p className="px-5 pb-4 text-center text-xs text-red-600">{err}</p>}
       </div>
     </div>
   )
@@ -254,6 +237,26 @@ export default function BillingTab({
   const rows = pages[page] || []
   const totalPages = total ? Math.max(1, Math.ceil(total / HISTORY_PAGE)) : (rows.length === HISTORY_PAGE ? page + 2 : page + 1)
   const lastPayment = pages[0]?.[0]
+
+  // Every plan payment in one PDF, in the receipt design.
+  const [stmtBusy, setStmtBusy] = useState(false)
+  const [stmtErr, setStmtErr] = useState('')
+  const downloadStatement = async () => {
+    setStmtBusy(true); setStmtErr('')
+    try {
+      const snap = await getDocs(query(collection(db, 'stores', store.id, 'subscriptions'), orderBy('paidAt', 'desc'), limit(500)))
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => !x.status || x.status === 'success')
+      await downloadReceipt(statement({
+        title: 'Billing history',
+        party: { name: store?.businessName || 'Your store' },
+        rows: all.map((x) => ({ date: toMs(x.paidAt), description: `${cap(x.plan)} plan (${periodLabel(x.billingPeriod)})`, ref: x.paystackRef || '', amount: (Number(x.amount) || 0) / 100 })),
+        filename: `sellapage-billing-history-${new Date().toISOString().slice(0, 10)}.pdf`,
+      }))
+    } catch (e) {
+      console.error('[billing] statement', e)
+      setStmtErr('Could not make the statement. Check your connection and try again.')
+    } finally { setStmtBusy(false) }
+  }
 
   // ── Actions ───────────────────────────────────────────────────────────
   const scrollToPlans = () => {
@@ -595,8 +598,16 @@ export default function BillingTab({
               <h2 className="text-lg font-bold text-dash-ink">Billing History</h2>
               <p className="text-xs text-dash-muted">Every plan payment, newest first. Tap one for its receipt.</p>
             </div>
-            {total !== null && <p className="text-xs text-dash-muted">{total} payment{total === 1 ? '' : 's'} in total</p>}
+            <div className="flex items-center gap-3">
+              {total !== null && <p className="text-xs text-dash-muted">{total} payment{total === 1 ? '' : 's'} in total</p>}
+              {rows.length > 0 && (
+                <button type="button" onClick={downloadStatement} disabled={stmtBusy} className="inline-flex items-center gap-1.5 rounded-xl border border-dash-line px-3 py-2 text-xs font-semibold text-dash-ink hover:bg-gray-50 disabled:opacity-50">
+                  {stmtBusy ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} Download statement (PDF)
+                </button>
+              )}
+            </div>
           </div>
+          {stmtErr && <p className="mt-2 text-xs text-red-600">{stmtErr}</p>}
           <div className="mt-4 space-y-2.5">
             {histState === 'loading' ? (
               <div className="space-y-2.5" role="status" aria-label="Loading payments">

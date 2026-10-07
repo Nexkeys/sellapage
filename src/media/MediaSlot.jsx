@@ -111,8 +111,12 @@ export default function MediaSlot({ name, alt = '', className = '', fallback = n
     return <LazyVideo entry={entry} alt={alt} className={className} priority={priority} />
   }
 
+  // display: contents makes <picture> leave no box of its own, so the <img>
+  // is laid out exactly where the caller put it. Without it, inside a flex
+  // row the <picture> became the flex item and an image sized in percent
+  // (w-[45%], w-full) collapsed to a fraction of its intended size.
   return (
-    <picture>
+    <picture style={{ display: 'contents' }}>
       {entry.srcSmall && <source media="(max-width: 640px)" srcSet={entry.srcSmall} type="image/webp" />}
       <img
         src={entry.src}

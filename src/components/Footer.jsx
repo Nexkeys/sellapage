@@ -185,11 +185,9 @@ export default function Footer() {
               ))}
             </div>
 
-            {/* The Android app. iPhone is not out yet, so nothing here
-                promises one beyond "coming soon". */}
+            {/* The Android app. There is no iPhone app, so none is promised. */}
             <div className="mb-5">
               <PlayStoreBadge tone="light" />
-              <p className="text-gray-600 text-[10px] mt-2">iOS app coming soon</p>
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -270,7 +268,7 @@ export default function Footer() {
             <ul className="space-y-2">
               {[
                 { label: 'About Us', to: '/about' },
-                { label: 'Dropshipping (soon)', to: '/dropshipping' },
+                { label: 'Dropshipping', to: '/dropshipping' },
                 { label: 'Investors & Partners', to: '/partners' },
                 { label: 'Privacy Policy', to: '/privacy-policy' },
                 { label: 'Terms of Service', to: '/terms' },

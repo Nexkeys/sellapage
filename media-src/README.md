@@ -20,8 +20,8 @@ GitHub). Only the small compressed copies are.
 
 | Folder | Where it shows | Shape | Suggestion |
 |---|---|---|---|
-| `home-hero-main` | Homepage, top of the page, the big laptop picture | landscape | A laptop screen recording of the dashboard, 10 to 15 seconds, or a screenshot. |
-| `home-hero-phone` | Homepage, top of the page, the phone in front of the laptop | portrait | Record your phone screen: add a product, tap share, post to WhatsApp status. 10 to 15 seconds, no sound needed. |
+| `home-hero-scene` | Homepage, top of the page, the photo behind the phone | landscape | A Nigerian shop owner smiling at her phone, with products around her, bright and green. Leave the left side calm for the headline. |
+| `home-hero-phone` | Homepage, top of the page, the phone in front of the photo | portrait | Record your phone screen: add a product, tap share, post to WhatsApp status. 10 to 15 seconds, no sound needed. |
 | `feature-store-page` | Homepage card: Create Your Commerce Page | landscape | A storefront as a customer sees it. |
 | `feature-products` | Homepage card: Manage Products & Services | landscape | The products list in the dashboard. |
 | `feature-payments` | Homepage card: Accept Payments | landscape | The checkout screen. |
@@ -62,3 +62,9 @@ GitHub). Only the small compressed copies are.
 | `auth-hero` | Sign in and Create Store pages, beside the form on desktop, behind it on phones | landscape | A phone showing a store, with Secure Checkout, Fast Delivery, Analytics and Happy Customers cards around it. |
 | `auth-otp-art` | Code screen (SMS and email codes), left side | landscape | A phone with a Sellapage code notification and a green envelope bubble. |
 | `auth-script` | Code screen, "Almost there!" handwriting under the list | landscape | Green handwriting with a small heart. |
+| `home-mission` | Homepage, "More than just a platform" card, left photo | landscape | A Nigerian business owner checking orders on a phone, with a laptop and products on the table. |
+| `home-categories` | Homepage, "Discover what you can do", right side | landscape | A shopper with a phone and products around her (sneakers, headphones, a handbag), mint green background. |
+| `home-cta` | Homepage, the green "Your business deserves its own place online" banner, right side | portrait | A smiling person holding a phone, cut out or on a dark green background. |
+| `about-hero` | About page, top, the big photo on the right | landscape | A Nigerian businesswoman at a laptop, green blazer, plants, bright room. |
+| `about-mission` | About page, "Our mission and vision", middle photo | landscape | A modern green glass building with palm trees and blue sky. |
+| `about-cta` | About page, the green "Ready to grow" banner, right side | landscape | A laptop showing the Sellapage dashboard, with a plant and a mug. |

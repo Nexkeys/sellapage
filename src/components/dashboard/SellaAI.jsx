@@ -1171,6 +1171,7 @@ export default function SellaAI({ store, open = false, onClose = () => {} }) {
               {view === "billing" && (
                 <BillingPanel
                   storeId={storeId}
+                  store={store}
                   assistantName={assistantName}
                   returnReference={returnRef}
                   onReturnHandled={() => setReturnRef("")}

@@ -10,7 +10,7 @@
 // customer, not help them admire their business. Reporting belongs in Analytics
 // and is deliberately not duplicated here.
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Megaphone, ShoppingBag, Image as ImageIcon, MapPin, ShieldCheck } from 'lucide-react'
+import { Search, Megaphone, ShoppingBag, Image as ImageIcon, MapPin, ShieldCheck, ChevronRight } from 'lucide-react'
 import SeoTab from './marketing/SeoTab'
 import GoogleFeedTab from './marketing/GoogleFeedTab'
 import ContentKitTab from './marketing/ContentKitTab'
@@ -22,12 +22,14 @@ const SECTIONS = [
   {
     id: 'seo',
     label: 'Get found',
+    title: 'Get found when customers search.',
     icon: Search,
-    blurb: 'Make Google and AI assistants describe your store to people searching for what you sell.',
+    blurb: 'Control how your store is described on search engines and AI assistants. The better your information, the easier it is for new customers to find and trust you.',
   },
   {
     id: 'google',
     label: 'Free Google listings',
+    title: 'Your products on Google, free.',
     icon: ShoppingBag,
     blurb: 'Put your products on Google Search and Shopping without paying for ads.',
   },
@@ -35,6 +37,7 @@ const SECTIONS = [
     id: 'maps',
     icon: MapPin,
     label: 'Google Maps',
+    title: 'Be found by customers nearby.',
     // Free on every plan on purpose: it sends traffic to Google, costs us
     // nothing to run, and it is the only section that works for service and
     // booking vendors, who get nothing from the product feed.
@@ -44,6 +47,7 @@ const SECTIONS = [
     id: 'content',
     icon: ImageIcon,
     label: 'Post kit',
+    title: 'Ready-to-post content in seconds.',
     // Available on every plan, deliberately. It costs nothing to run (the card
     // is drawn in the browser), and a Starter vendor who uses it daily is the
     // one most likely to notice the locked sections next to it.
@@ -53,6 +57,7 @@ const SECTIONS = [
     id: 'guarantee',
     icon: ShieldCheck,
     label: 'Your guarantee',
+    title: 'A promise buyers can trust.',
     // The only section that closes a sale rather than starting one. Every other
     // section brings a stranger to the page; this is what convinces them to pay
     // a name they have never bought from before.
@@ -85,16 +90,21 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
   const active = SECTIONS.find((s) => s.id === section) || SECTIONS[0]
 
   return (
-    <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <header className="mb-4">
-        <div className="flex items-center gap-2">
-          <Megaphone size={18} className="text-gray-400" />
-          <h1 className="font-display text-lg font-extrabold text-gray-900">Marketing</h1>
+    <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+      {/* Header (2026-10-07 design): where you are, what this section does. */}
+      <nav className="mb-3 flex items-center gap-1.5 text-[12.5px] text-gray-500" aria-label="Breadcrumb">
+        <Megaphone size={13} className="text-gray-400" /> Marketing <ChevronRight size={13} className="text-gray-300" /> <span className="font-semibold text-gray-800">{active.label}</span>
+      </nav>
+      <header className="relative mb-5 flex items-start gap-3 sm:gap-4">
+        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-forest-50 text-forest-600 sm:h-12 sm:w-12"><active.icon size={22} /></span>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-balance font-display text-[1.6rem] font-extrabold leading-tight tracking-tight text-gray-950 sm:text-[2.1rem]">{active.title}</h1>
+          <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-gray-500">{active.blurb}</p>
         </div>
-        <p className="mt-0.5 text-xs text-gray-500">Tools that bring customers to your store.</p>
+        <p className="hidden -rotate-6 text-[22px] leading-[1.05] text-forest-700 lg:block" style={{ fontFamily: '"Caveat", cursive', fontWeight: 600 }}>More visibility.<br />More customers.</p>
       </header>
 
-      <nav className="mb-4 flex gap-1.5 overflow-x-auto pb-1" aria-label="Marketing sections">
+      <nav className="mb-5 flex gap-1 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] [scrollbar-width:none]" aria-label="Marketing sections">
         {SECTIONS.map((s) => {
           const Icon = s.icon
           const on = s.id === section
@@ -103,32 +113,33 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
               key={s.id}
               type="button"
               onClick={() => setSection(s.id)}
-              className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                on ? 'bg-gray-900 text-white' : 'border border-gray-100 bg-white text-gray-500 hover:text-gray-800'
+              aria-current={on ? 'page' : undefined}
+              className={`inline-flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-colors ${
+                on ? 'bg-forest text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
-              <Icon size={13} /> {s.label}
+              <Icon size={15} /> {s.label}
             </button>
           )
         })}
       </nav>
 
-      <p className="mb-4 text-xs leading-relaxed text-gray-500">{active.blurb}</p>
-
       {section === 'seo' && (
         <SeoTab store={store} storeUrl={storeUrl} navigateTo={navigateTo} onStatusChange={setStatus} />
       )}
-      {section === 'maps' && <GoogleBusinessTab store={store} storeUrl={storeUrl} />}
-      {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
-      {section === 'guarantee' && <GuaranteeTab store={store} storeUrl={storeUrl} />}
-      {section === 'google' && (
-        <GoogleFeedTab
-          store={store}
-          storeUrl={storeUrl}
-          eligible={status.eligible}
-          seoActive={status.active}
-        />
-      )}
+      <div className={section === 'seo' ? '' : 'max-w-3xl'}>
+        {section === 'maps' && <GoogleBusinessTab store={store} storeUrl={storeUrl} />}
+        {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
+        {section === 'guarantee' && <GuaranteeTab store={store} storeUrl={storeUrl} />}
+        {section === 'google' && (
+          <GoogleFeedTab
+            store={store}
+            storeUrl={storeUrl}
+            eligible={status.eligible}
+            seoActive={status.active}
+          />
+        )}
+      </div>
     </div>
   )
 }
