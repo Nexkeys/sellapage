@@ -877,3 +877,16 @@ export const CONSTELLATION = [
   [BarChart3, 'Analytics', 13, 50], [Truck, 'Delivery', 87, 50], [Tag, 'Discounts', 9, 82], [Users, 'Customers', 29, 88], [CalendarDays, 'Bookings', 71, 88],
   [Bot, 'Sella AI', 91, 82], [Target, 'Google Ads', 50, 92], [Boxes, 'Stock counts', 22, 32], [Star, 'Reviews', 78, 32],
 ]
+
+/** The hero's shopper phone on its own, playing its purchase loop. */
+export function ShopPhoneLive() {
+  const ref = useRef(null)
+  const t = useClock(useOnScreen(ref), { stillAt: SALE_AT + 900 })
+  return (
+    <div ref={ref}>
+      <ScaledStage width={292} height={600}>
+        <div className="h-[600px] w-[292px]"><PhoneShop t={t} /></div>
+      </ScaledStage>
+    </div>
+  )
+}

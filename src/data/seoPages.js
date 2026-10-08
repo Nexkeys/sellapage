@@ -442,7 +442,7 @@ export const PAGE_SEO = {
     jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'Sellapage vs Shopify', path: '/compare/vs-shopify' }])],
     prose: [
       'A comparison of Sellapage and Shopify for a Nigerian business.',
-      'Shopify is built for larger businesses with a technical team and a monthly budget in dollars, plus paid apps and additional transaction fees. Sellapage is priced in naira, includes Paystack checkout and Nigerian delivery partners, and needs no developer.',
+      'Shopify is built for businesses selling globally, with plans billed in US dollars, a short trial rather than a free plan, and a fee on each sale taken through a third-party provider such as Paystack (2% on the Basic plan). Sellapage is priced in naira, has a free plan, takes no cut of sales, and includes Paystack checkout, Sendbox and Topship delivery and bookings without extra apps.',
       'The comparison covers cost, setup time, payments, delivery, and which platform suits which kind of business.',
     ],
   },
@@ -456,20 +456,20 @@ export const PAGE_SEO = {
     jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'Sellapage vs Linktree', path: '/compare/vs-linktree' }])],
     prose: [
       'A comparison of Sellapage and Linktree for a Nigerian business selling online.',
-      'Linktree hosts a list of links. Sellapage replaces it with an actual store page where customers browse listings, pay by card, transfer or USSD, and create an order, and where the vendor sees customers, orders and analytics.',
+      'Linktree is built to host a page of links. Sellapage puts a store behind one link, where customers browse products with prices, pay by card, transfer or USSD and get a receipt, and runs orders, delivery, customer records and analytics from one dashboard.',
     ],
   },
 
   '/compare/vs-whatsapp-business': {
     title: 'Sellapage vs WhatsApp Business',
     description:
-      'Sellapage compared with WhatsApp Business: a public store page with checkout, delivery and analytics that works alongside WhatsApp instead of replacing it.',
+      'Sellapage compared with WhatsApp Business: keep WhatsApp for chatting, and let Sellapage take payment, record orders and customers, book delivery and get you found on Google.',
     keywords:
       'sellapage vs whatsapp business, whatsapp business catalogue alternative, sell on whatsapp nigeria, whatsapp store nigeria, whatsapp catalog limits, online store for whatsapp sellers',
     jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'Sellapage vs WhatsApp Business', path: '/compare/vs-whatsapp-business' }])],
     prose: [
       'A comparison of Sellapage and WhatsApp Business for a Nigerian business.',
-      'WhatsApp Business is a messaging app with a simple catalogue and no checkout, no public storefront and no analytics. Sellapage adds a shareable store page with Paystack checkout, delivery, customer records and reporting, and is designed to run alongside WhatsApp rather than replace it.',
+      'WhatsApp Business is a messaging app with a product catalogue, but it does not take payment, record orders and customers, book delivery or appear on Google. Sellapage adds a store that opens in any browser with Paystack checkout, automatic orders, receipts, delivery, customer records and analytics, and is designed to run alongside WhatsApp rather than replace it.',
     ],
   },
 

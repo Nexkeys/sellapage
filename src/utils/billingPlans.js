@@ -27,78 +27,78 @@ export const PLAN_PRICES = {
   },
 }
 
-// The free plan, as the Pricing page (pages/Pricing.jsx) lists it. Keep the
-// two in step.
+// What each plan includes, as the Pricing page (pages/Pricing.jsx) and the
+// Billing tab both show it. One list, so the two can never disagree again.
+// Checked against the code that enforces each line (2026-10-08):
+//   listings and photos   firebase/products.js (15/3, 50/10, unlimited/50)
+//   AI descriptions/day   api-handlers/ai-describe.js DAILY_LIMITS (30, 65, 65)
+//   job listings          api-handlers/job-listings.js (5, 25, 50, unlimited)
+//   Get found, Google feed  store-seo.js PAID_PLANS (Growth and up)
+//   Pro tabs              DashboardLayout: orders, bookings, delivery, payouts,
+//                         customers, reviews, discounts; custom domain and CAC
+//   Premium tabs          team, loyalty, abandoned, Meta and TikTok pixels,
+//                         Google Ads, Store Design; Sella; white-label receipts
 export const STARTER_FEATURES = [
-  '15 total listings (products + services combined)',
-  '3 images per listing',
-  'Basic store page with hero, categories, search',
-  'Your business logo on your store page',
-  'Lead capture enquiry form',
-  'Manual Ledger to log and track orders offline',
-  'Marketing tab: SEO tools and social post kit',
-  'Post up to 5 job listings',
-  'Referral Program: earn cash when referred businesses upgrade',
+  '15 listings, 3 photos each',
+  'Online store with your logo, categories and search',
+  'Enquiry form and leads inbox',
+  'Sales ledger for walk-in sales (CSV and PDF)',
+  'Google Maps profile kit, post kit and your guarantee',
+  'Up to 5 job listings',
+  'Referral programme',
+  'Free business name and store policy generators',
 ]
 
 // One line under each plan's name on the Billing tab.
 export const PLAN_TAGLINES = {
   starter: 'Everything you need to open your doors, free forever.',
-  growth: 'Scale your store with advanced features and powerful insights.',
-  pro: 'Take payments, run deliveries and manage customers in one place.',
-  premium: 'The full workspace, with an AI business partner by your side.',
+  growth: 'Get found, see what sells, and look like your brand.',
+  pro: 'Take payments, run deliveries and bookings, and manage customers in one place.',
+  premium: 'The whole business, with your team and an AI partner by your side.',
 }
 
 export const PLAN_FEATURES = {
   growth: [
     'Everything in Starter',
-    '50 total listings (products + services combined)',
-    '10 images per listing',
-    'Custom visual palette (colours and fonts)',
-    'Analytics & click tracking (store views, top clicks)',
-    'AI description generation - 20 per day',
-    'Stock count management & out-of-stock sorting',
-    'Categories for products and services',
-    'Marketing tab: SEO tools, free Google listings, social post kit',
-    'Ledger for offline and WhatsApp sales',
-    'Leads inbox from your store enquiry form',
-    'Receipt generator (6 templates, logo, stamp, QR code)',
+    '50 listings, 10 photos each',
+    'Your own colours and fonts',
+    'Analytics: store views and top clicks',
+    'AI descriptions, 30 a day',
+    'Stock counts and categories',
+    'Get found: Google and AI search listing',
+    'Free Google Shopping listings feed',
+    'WhatsApp cart for multi-item orders',
+    'Branded receipts (templates, logo, stamp, QR code)',
+    'Up to 25 job listings, with AI help',
     'Priority support',
   ],
   pro: [
     'Everything in Growth',
-    'Unlimited listings',
-    '50 images per listing',
+    'Unlimited listings, 50 photos each',
     '20 premium store themes',
-    'In-app Paystack checkout (card, transfer, USSD)',
-    'Automatic order creation from payments',
-    'Payouts tab with bank settlement via Paystack subaccount',
-    'Customer CRM tab (profiles, WhatsApp links, spend sorting)',
-    'Verified reviews tab (aggregate stars, expandable cards)',
-    'Discounts & promo codes (percentage, flat, limits, expiry)',
-    'Sendbox delivery integration (live rates, booking, tracking)',
-    'Delivery zones setup for local areas',
-    'Top-performing analytics (engagement rate, best sellers)',
-    'AI description generation - 50 per day',
+    'Paystack checkout: card, transfer and USSD',
+    'Orders create themselves when customers pay',
+    'Payouts settled to your bank',
+    'Bookings calendar for appointments',
+    'Sendbox and Topship delivery, plus delivery zones',
+    'Customer records, verified reviews and discount codes',
+    'Top-performing analytics',
+    'AI descriptions, 65 a day',
     'Product export (PDF, CSV, Excel)',
-    'Free Google Shopping product feed',
-    'Bookings tab for service appointments',
-    'Job Listings board',
-    'Custom domain (yourbrand.com)',
-    'CAC Trust Verification badge',
-    'Priority same-day support',
+    'Custom domain and CAC verification badge',
+    'Up to 50 job listings',
+    'Same-day support',
   ],
   premium: [
     'Everything in Pro',
-    'White-label customer experience (no Sellapage branding)',
-    'AI Business Partner (context-aware dashboard assistant)',
-    'Loyalty Points System for repeat customers',
-    'Abandoned Cart Recovery',
-    'Multi-staff account access with role controls',
-    'Meta Pixel for Facebook and Instagram ad tracking',
-    'Google Ads integration (self-managed)',
-    'Custom Domain Engine with SSL',
-    'Advanced integrations & premium positioning',
+    'Sella, the AI assistant that knows your business',
+    'Team accounts with roles',
+    'Store Design: build your own storefront page',
+    'Loyalty points for repeat customers',
+    'Abandoned checkout reminders',
+    'Google Ads, Meta Pixel and TikTok Pixel',
+    'White-label receipts (no Sellapage branding)',
+    'Unlimited job listings',
   ],
 }
 
