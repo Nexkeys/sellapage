@@ -1,9 +1,8 @@
-import { Link } from 'react-router-dom'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
-import Reveal from '../components/Reveal'
-import SEO from '../components/SEO'
-import { pageSeo } from '../data/seoPages'
+// src/pages/PrivacyPolicy.jsx
+// The privacy policy text. Laid out by components/legal/LegalPage.jsx
+// (2026-10-08: contents that follow you, reading progress, print). Edit the
+// wording here; section ids come from the titles, so keep titles stable.
+import LegalPage from '../components/legal/LegalPage'
 
 
 const LAST_UPDATED = 'September 2026'
@@ -124,67 +123,18 @@ const sections = [
 ]
 
 
+const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-white">
-      <SEO {...pageSeo("/privacy-policy")} url="/privacy-policy" />
-      <Navbar />
-
-      {/* Header */}
-      <section className="bg-gray-50 pt-28 pb-12 px-4 border-b border-gray-100">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="font-display text-4xl font-extrabold text-gray-900 mb-3">
-            Privacy Policy
-          </h1>
-          <p className="text-gray-400 text-sm">Last updated: {LAST_UPDATED}</p>
-          <p className="text-gray-500 text-base mt-4 leading-relaxed max-w-xl">
-            We know legal pages can be confusing. 
-            <br></br>
-            This one is written in plain English so you
-            understand exactly what we do with your data and what we don't.
-          </p>
-        </div>
-      </section>
-
-      {/* Content */}
-      <section className="py-16 px-4">
-        <div className="max-w-3xl mx-auto space-y-10">
-          {sections.map((section, i) => (
-            <Reveal key={i} delay={Math.min(i, 4) * 60}>
-              <h2 className="font-display font-bold text-gray-900 text-xl mb-4">
-                {section.title}
-              </h2>
-              <ul className="space-y-3">
-                {section.content.map((point, j) => (
-                  <li key={j} className="flex items-start gap-3 text-gray-600 text-sm leading-relaxed">
-                    <span className="w-1.5 h-1.5 bg-brand-400 rounded-full flex-shrink-0 mt-2" />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          ))}
-
-          {/* Contact */}
-          <Reveal className="bg-gray-50 rounded-2xl border border-gray-100 p-6">
-            <h2 className="font-display font-bold text-gray-900 text-xl mb-2">
-              Questions?
-            </h2>
-            <p className="text-gray-500 text-sm leading-relaxed mb-3">
-              If you have any questions about this privacy policy or how we handle your data,
-              please reach out:
-            </p>
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 text-brand-600 font-semibold text-sm hover:underline"
-            >
-              Contact Us →
-            </Link>
-          </Reveal>
-        </div>
-      </section>
-
-      <Footer />
-    </div>
+    <LegalPage
+      path="/privacy-policy"
+      kind="privacy"
+      title="Privacy Policy"
+      lastUpdated={LAST_UPDATED}
+      intro="We know legal pages can be confusing. This one is written in plain English so you understand exactly what we do with your data and what we don't."
+      items={sections.map((s) => ({ id: slug(s.title), title: s.title, content: s.content }))}
+      sibling={{ to: '/terms', label: 'Terms of Service' }}
+    />
   )
 }

@@ -1,9 +1,8 @@
-import { Link } from 'react-router-dom'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
-import Reveal from '../components/Reveal'
-import SEO from '../components/SEO'
-import { pageSeo } from '../data/seoPages'
+// src/pages/TermsOfService.jsx
+// The terms text. Laid out by components/legal/LegalPage.jsx (2026-10-08).
+// Edit the wording here. The two marketplace agreements keep their anchors
+// (agreement.anchor), which the accept box and emails link to.
+import LegalPage from '../components/legal/LegalPage'
 import AgreementText from '../components/legal/AgreementText'
 import { SUPPLIER_AGREEMENT, DROPSHIPPER_AGREEMENT } from '../utils/marketplaceAgreements'
 
@@ -105,86 +104,33 @@ const sections = [
 ]
 
 
+const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
 export default function TermsOfService() {
+  const items = [
+    ...sections.map((s) => ({ id: slug(s.title), title: s.title, content: s.content })),
+    // Dropshipping Marketplace agreements (utils/marketplaceAgreements.js).
+    ...[SUPPLIER_AGREEMENT, DROPSHIPPER_AGREEMENT].map((agreement) => ({
+      id: agreement.anchor,
+      title: agreement.title,
+      node: <AgreementText agreement={agreement} />,
+    })),
+    {
+      id: 'governing-law',
+      title: 'Governing Law',
+      tone: 'green',
+      node: <p className="text-[14.5px] leading-relaxed text-gray-700">These terms are governed by the laws of the Federal Republic of Nigeria. Any disputes will be resolved under Nigerian jurisdiction.</p>,
+    },
+  ]
   return (
-    <div className="min-h-screen bg-white">
-      <SEO {...pageSeo("/terms")} url="/terms" />
-      <Navbar />
-
-      {/* Header */}
-      <section className="bg-gray-50 pt-28 pb-12 px-4 border-b border-gray-100">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="font-display text-4xl font-extrabold text-gray-900 mb-3">
-            Terms of Service
-          </h1>
-          <p className="text-gray-400 text-sm">Last updated: {LAST_UPDATED}</p>
-          <p className="text-gray-500 text-base mt-4 leading-relaxed max-w-xl">
-            These are the rules for using Sellapage. They are written in plain English
-            so there is no confusion. Please read them - they are short.
-          </p>
-        </div>
-      </section>
-
-      {/* Content */}
-      <section className="py-16 px-4">
-        <div className="max-w-3xl mx-auto space-y-10">
-          {sections.map((section, i) => (
-            <Reveal key={i} delay={Math.min(i, 4) * 60}>
-              <h2 className="font-display font-bold text-gray-900 text-xl mb-4">
-                {section.title}
-              </h2>
-              <ul className="space-y-3">
-                {section.content.map((point, j) => (
-                  <li key={j} className="flex items-start gap-3 text-gray-600 text-sm leading-relaxed">
-                    <span className="w-1.5 h-1.5 bg-brand-400 rounded-full flex-shrink-0 mt-2" />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          ))}
-
-          {/* Dropshipping Marketplace agreements (utils/marketplaceAgreements.js).
-              Anchored so the accept box and emails can link straight to them. */}
-          {[SUPPLIER_AGREEMENT, DROPSHIPPER_AGREEMENT].map((agreement) => (
-            <Reveal key={agreement.anchor}>
-              <section id={agreement.anchor} className="scroll-mt-24 rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-display font-bold text-gray-900 text-xl mb-1">{agreement.title}</h2>
-                <AgreementText agreement={agreement} />
-              </section>
-            </Reveal>
-          ))}
-
-          {/* Governing law */}
-          <Reveal className="bg-gray-50 rounded-2xl border border-gray-100 p-6">
-            <h2 className="font-display font-bold text-gray-900 text-xl mb-2">
-              Governing Law
-            </h2>
-            <p className="text-gray-500 text-sm leading-relaxed">
-              These terms are governed by the laws of the Federal Republic of Nigeria.
-              Any disputes will be resolved under Nigerian jurisdiction.
-            </p>
-          </Reveal>
-
-          {/* Questions */}
-          <Reveal className="bg-brand-50 rounded-2xl border border-brand-100 p-6">
-            <h2 className="font-display font-bold text-gray-900 text-xl mb-2">
-              Questions about these terms?
-            </h2>
-            <p className="text-gray-500 text-sm leading-relaxed mb-3">
-              If anything here is unclear or you want to raise a concern, we're happy to help.
-            </p>
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 text-brand-600 font-semibold text-sm hover:underline"
-            >
-              Contact Us →
-            </Link>
-          </Reveal>
-        </div>
-      </section>
-
-      <Footer />
-    </div>
+    <LegalPage
+      path="/terms"
+      kind="terms"
+      title="Terms of Service"
+      lastUpdated={LAST_UPDATED}
+      intro="These are the rules for using Sellapage. They are written in plain English so there is no confusion. Please read them, they are short."
+      items={items}
+      sibling={{ to: '/privacy-policy', label: 'Privacy Policy' }}
+    />
   )
 }

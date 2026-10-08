@@ -11,12 +11,18 @@
 // A signed-in store OWNER joins in one tap: /api/marketplace-waitlist records
 // it on their store (the same flag as the Settings checkboxes). Everyone else,
 // including staff, fills the short form.
+//
+// Rebuilt 2026-10-08 in the style of the new public pages: an animated hero
+// (a paid order splitting three ways, the parcel travelling; no amounts, as
+// the rate is not decided), the two sides, how an order works, the supplier
+// checks, the waitlist and FAQ. The badge reads "Waitlist open", which is
+// true today, instead of "Coming soon".
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight, Check, Loader2, AlertCircle, Warehouse, PackageSearch, Truck, Wallet,
-  ShieldCheck, Store, ChevronDown, BellRing,
+  ShieldCheck, Store, ChevronDown, BellRing, BadgeCheck, Smartphone, Landmark, MapPin, Video, UserCheck,
 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -26,6 +32,8 @@ import { pageSeo } from '../data/seoPages'
 import { useAuth } from '../hooks/useAuth'
 import { readInterest, roleFromInterest, interestFromRole } from '../utils/marketplace'
 import { normaliseNgMobile } from '../utils/phone'
+import { Eyebrow } from '../components/marketing/kit'
+import { useClock, useOnScreen } from '../components/marketing/motion'
 
 const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
@@ -75,7 +83,7 @@ const FAQS = [
 ]
 
 const INPUT =
-  'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100'
+  'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-forest-600 focus:ring-2 focus:ring-forest-100'
 
 const ROLE_OPTIONS = [
   { id: 'supply', label: 'Supply products' },
@@ -95,8 +103,8 @@ function RolePicker({ value, onChange }) {
           onClick={() => onChange(o.id)}
           className={`rounded-xl border px-2 py-2.5 text-xs font-bold transition-all sm:text-sm ${
             value === o.id
-              ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-100'
-              : 'border-gray-200 bg-white text-gray-600 hover:border-brand-300'
+              ? 'border-forest-600 bg-forest-50 text-forest-700 ring-2 ring-forest-100'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-forest-200'
           }`}
         >
           {o.label}
@@ -180,9 +188,9 @@ function WaitlistForm({ role, setRole }) {
 
   if (status === 'done') {
     return (
-      <div className="rounded-2xl border border-brand-100 bg-white p-6 text-center shadow-sm sm:p-10" role="status">
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-brand-50">
-          <Check size={26} className="text-brand-600" />
+      <div className="rounded-2xl border border-forest-100 bg-white p-6 text-center shadow-sm sm:p-10" role="status">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-forest-50">
+          <Check size={26} className="text-forest-600" />
         </div>
         <h3 className="font-display text-2xl font-extrabold text-gray-900">You&apos;re on the list</h3>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-gray-500">
@@ -193,7 +201,7 @@ function WaitlistForm({ role, setRole }) {
         {!isOwner && (
           <Link
             to="/register"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white hover:bg-brand-700"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-forest-600 px-5 py-3 text-sm font-bold text-white hover:bg-forest-700"
           >
             Create your free store while you wait <ArrowRight size={15} />
           </Link>
@@ -218,7 +226,7 @@ function WaitlistForm({ role, setRole }) {
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Joining as</p>
           <p className="mt-1 font-display text-lg font-bold text-gray-900">{store.businessName || 'your store'}</p>
           {current && (
-            <p className="mt-1 text-xs text-brand-700">
+            <p className="mt-1 text-xs text-forest-700">
               Already on the list to {current === 'both' ? 'supply and dropship' : current === 'supply' ? 'supply' : 'dropship'}.
               Add the other side below if you like.
             </p>
@@ -237,7 +245,7 @@ function WaitlistForm({ role, setRole }) {
           type="button"
           onClick={submitOwner}
           disabled={status === 'sending'}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3.5 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest-600 py-3.5 text-sm font-bold text-white hover:bg-forest-700 disabled:opacity-60"
         >
           {status === 'sending' ? <Loader2 size={16} className="animate-spin" /> : <BellRing size={16} />}
           Join the waitlist
@@ -294,18 +302,81 @@ function WaitlistForm({ role, setRole }) {
       <button
         type="submit"
         disabled={status === 'sending'}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3.5 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest-600 py-3.5 text-sm font-bold text-white hover:bg-forest-700 disabled:opacity-60"
       >
         {status === 'sending' ? <Loader2 size={16} className="animate-spin" /> : <BellRing size={16} />}
         Join the waitlist
       </button>
       <p className="text-center text-xs text-gray-400">
         Already selling on Sellapage?{' '}
-        <Link to="/login" className="font-semibold text-brand-600 hover:underline">Sign in</Link> to join with your store.
+        <Link to="/login" className="font-semibold text-forest-600 hover:underline">Sign in</Link> to join with your store.
       </p>
     </form>
   )
 }
+
+/**
+ * The marketplace in one picture: a paid order splits between supplier,
+ * dropshipper and Sellapage (no amounts or percentages, the rate is not
+ * decided), and the parcel travels from the supplier to the customer.
+ */
+function SplitScene() {
+  const ref = useRef(null)
+  const t = useClock(useOnScreen(ref), { stillAt: 3200 }) % 6000
+  const paid = t > 700
+  const split = t > 1600
+  const ship = Math.min(1, Math.max(0, (t - 2600) / 2400))
+  const parties = [
+    { Icon: Warehouse, label: 'Supplier', sub: 'Wholesale price' },
+    { Icon: PackageSearch, label: 'Dropshipper', sub: 'Their margin' },
+    { Icon: ShieldCheck, label: 'Sellapage', sub: 'Marketplace fee' },
+  ]
+  return (
+    <div ref={ref} className="relative mx-auto w-full max-w-[460px]" aria-hidden="true">
+      <div className={`mx-auto flex w-fit items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-xl shadow-forest-900/10 ring-1 ring-gray-100 transition-all duration-500 ${paid ? 'scale-100' : 'scale-95'}`}>
+        <span className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-500 ${paid ? 'bg-forest-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{paid ? <Check size={18} strokeWidth={3} /> : <Wallet size={18} />}</span>
+        <span><span className="block text-[13.5px] font-bold text-gray-900">{paid ? 'Order paid' : 'Customer pays'}</span><span className="block text-[11.5px] text-gray-500">Card, transfer or USSD by Paystack</span></span>
+      </div>
+      <svg viewBox="0 0 460 90" className="h-[90px] w-full">
+        {[80, 230, 380].map((x, i) => {
+          const d = `M230 4 C230 50 ${x} 40 ${x} 86`
+          return (
+            <g key={x}>
+              <path d={d} fill="none" stroke={split ? '#0b6b35' : '#e5e7eb'} strokeOpacity={split ? 0.45 : 1} strokeWidth="2" strokeDasharray="5 7" className={split ? 'animate-dash-flow' : ''} style={{ transition: 'stroke 0.5s' }} />
+              {split && <circle r="5" fill="#0b6b35"><animateMotion dur="1.4s" begin={`${i * 0.15}s`} repeatCount="indefinite" path={d} /></circle>}
+            </g>
+          )
+        })}
+      </svg>
+      <div className="grid grid-cols-3 gap-2.5">
+        {parties.map((p, i) => (
+          <div key={p.label} className={`rounded-2xl p-3 text-center transition-all duration-500 ${split ? 'bg-white shadow-lg shadow-forest-900/10 ring-1 ring-forest-100' : 'bg-white/60 ring-1 ring-gray-100'}`} style={{ transitionDelay: `${i * 120}ms` }}>
+            <span className={`mx-auto flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-500 ${split ? 'bg-forest text-white' : 'bg-gray-100 text-gray-400'}`}><p.Icon size={18} /></span>
+            <p className="mt-2 text-[12.5px] font-bold text-gray-900">{p.label}</p>
+            <p className="text-[10.5px] text-gray-500">{p.sub}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 rounded-2xl bg-white p-4 shadow-lg shadow-forest-900/5 ring-1 ring-gray-100">
+        <div className="flex items-center justify-between text-[11.5px] font-semibold text-gray-500"><span>Supplier ships</span><span>{ship >= 1 ? 'Delivered' : ship > 0 ? 'On the way' : 'Packing'}</span></div>
+        <div className="relative mt-3 h-2 rounded-full bg-gray-100">
+          <div className="absolute inset-y-0 left-0 rounded-full bg-forest-600" style={{ width: `${ship * 100}%` }} />
+          <span className="absolute top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-forest text-white shadow-lg" style={{ left: `${ship * 100}%` }}><Truck size={15} /></span>
+        </div>
+        <div className="mt-3 flex justify-between text-[11px] text-gray-400"><span>Supplier&apos;s pickup</span><span>Customer&apos;s door</span></div>
+      </div>
+    </div>
+  )
+}
+
+const CHECKS = [
+  [BadgeCheck, 'Verified CAC registration'],
+  [Smartphone, 'Verified phone number'],
+  [Landmark, 'Payout bank account'],
+  [MapPin, 'Pickup address'],
+  [Video, 'Short video of the stock'],
+  [UserCheck, 'Reviewed by the Sellapage team'],
+]
 
 export default function DropshippingPage() {
   const [role, setRole] = useState('supply')
@@ -317,127 +388,121 @@ export default function DropshippingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white font-body">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
       <SEO {...pageSeo('/dropshipping')} url="/dropshipping" />
       <Navbar />
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-brand-50 via-white to-emerald-50 px-4 pb-16 pt-28 sm:pb-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-700">
-            Coming soon
-          </span>
-          <h1 className="font-display text-4xl font-extrabold leading-tight text-gray-900 sm:text-5xl">
-            The Sellapage Dropshipping Marketplace
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-gray-500 sm:text-lg">
-            Suppliers list their products once. Sellers across Nigeria add them to their stores and sell them.
-            When a customer pays, everyone is paid automatically, and the supplier ships.
-          </p>
-          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={() => scrollToId('waitlist')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-brand-700"
-            >
-              Join the waitlist <ArrowRight size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToId('how-it-works')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50"
-            >
-              How it works
-            </button>
-          </div>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden pb-14 pt-10 sm:pt-16">
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[680px] bg-[radial-gradient(60%_55%_at_70%_10%,#d5f1e1_0%,rgba(236,249,242,0.6)_45%,#fff_100%)]" />
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:px-8">
+          <Reveal>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-forest-700 shadow-sm ring-1 ring-forest-100"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-forest-600 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-forest-600" /></span>Waitlist open</span>
+            <h1 className="mt-5 text-balance font-display text-[2.4rem] font-extrabold leading-[1.05] tracking-tight text-gray-950 sm:text-[3.3rem] lg:text-[3.7rem]">
+              The Sellapage <span className="text-forest-600">Dropshipping Marketplace.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-[15.5px] leading-relaxed text-gray-600 sm:text-[17px]">
+              Suppliers list their products once. Sellers across Nigeria add them to their stores and sell them. When a customer pays, everyone is paid automatically, and the supplier ships.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={() => scrollToId('waitlist')} className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-4 text-[15px] font-bold text-white shadow-xl shadow-forest/25 transition hover:bg-forest-700">Join the waitlist <ArrowRight size={17} className="transition group-hover:translate-x-1" /></button>
+              <button type="button" onClick={() => scrollToId('how-it-works')} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-[15px] font-bold text-gray-800 ring-1 ring-gray-200 transition hover:bg-gray-50">How it works</button>
+            </div>
+          </Reveal>
+          <Reveal direction="left" delay={150}><SplitScene /></Reveal>
         </div>
       </section>
 
-      {/* ── TWO SIDES ────────────────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:py-20">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+      {/* ── Two sides ────────────────────────────────────────────────────── */}
+      <section className="px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 md:grid-cols-2">
           {SIDES.map(({ role: r, Icon, eyebrow, title, points, cta }, i) => (
-            <Reveal key={r} delay={i * 120} className="flex flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50">
-                <Icon size={20} className="text-brand-600" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">{eyebrow}</span>
-              <h2 className="mt-2 font-display text-xl font-bold text-gray-900 sm:text-2xl">{title}</h2>
-              <ul className="mt-4 flex-1 space-y-2.5">
+            <Reveal key={r} delay={i * 100} className={`flex flex-col rounded-[28px] p-6 sm:p-8 ${i === 0 ? 'bg-forest text-white' : 'bg-white ring-1 ring-gray-100 shadow-[0_1px_2px_rgba(16,24,40,0.04)]'}`}>
+              <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${i === 0 ? 'bg-white/10' : 'bg-forest-50 text-forest-600'}`}><Icon size={22} /></span>
+              <p className={`mt-5 text-[11px] font-extrabold uppercase tracking-[0.14em] ${i === 0 ? 'text-forest-100' : 'text-forest-700'}`}>{eyebrow}</p>
+              <h2 className="mt-2 font-display text-[1.4rem] font-extrabold leading-tight sm:text-[1.6rem]">{title}</h2>
+              <ul className="mt-5 flex-1 space-y-3">
                 {points.map((p) => (
-                  <li key={p} className="flex items-start gap-2.5 text-sm leading-relaxed text-gray-600">
-                    <Check size={16} className="mt-0.5 flex-shrink-0 text-brand-600" /> {p}
+                  <li key={p} className={`flex items-start gap-2.5 text-[14.5px] leading-relaxed ${i === 0 ? 'text-white/85' : 'text-gray-600'}`}>
+                    <span className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${i === 0 ? 'bg-white/15' : 'bg-forest-50 text-forest-600'}`}><Check size={12} strokeWidth={3} /></span>{p}
                   </li>
                 ))}
               </ul>
-              <button
-                type="button"
-                onClick={() => choose(r)}
-                className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-5 py-3 text-sm font-bold text-brand-700 transition-colors hover:bg-brand-100"
-              >
-                {cta} <ArrowRight size={15} />
-              </button>
+              <button type="button" onClick={() => choose(r)} className={`group mt-6 inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[14px] font-bold transition sm:self-start ${i === 0 ? 'bg-white text-forest hover:bg-forest-50' : 'bg-forest text-white hover:bg-forest-700'}`}>{cta} <ArrowRight size={16} className="transition group-hover:translate-x-1" /></button>
             </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ── HOW AN ORDER WORKS ───────────────────────────────────────────── */}
-      <section id="how-it-works" className="scroll-mt-20 bg-gray-50 px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-center font-display text-2xl font-extrabold text-gray-900 sm:text-3xl">How an order works</h2>
-          <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+      {/* ── How an order works ───────────────────────────────────────────── */}
+      <section id="how-it-works" className="scroll-mt-20 bg-gradient-to-b from-white via-forest-50/60 to-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <Reveal className="mx-auto mb-10 max-w-2xl text-center">
+            <Eyebrow>How it works</Eyebrow>
+            <h2 className="mt-4 font-display text-[2rem] font-extrabold text-gray-950 sm:text-[2.5rem]">How an order works.</h2>
+          </Reveal>
+          <div className="relative grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div className="pointer-events-none absolute left-[16%] right-[16%] top-9 hidden h-[2px] bg-[repeating-linear-gradient(90deg,#0b6b35_0_8px,transparent_8px_16px)] opacity-40 md:block" />
             {FLOW.map(({ Icon, title, text }, i) => (
-              <Reveal key={title} delay={i * 100} className="rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="mb-3 flex items-center gap-3">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">{i + 1}</span>
-                  <Icon size={18} className="text-brand-600" />
-                </div>
-                <h3 className="font-display text-lg font-bold text-gray-900">{title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-gray-500">{text}</p>
+              <Reveal key={title} delay={i * 120} className="relative rounded-[24px] bg-white p-6 text-center ring-1 ring-gray-100 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                <span className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-forest text-white shadow-lg shadow-forest/20"><Icon size={21} /><span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[11px] font-extrabold text-amber-950 ring-2 ring-white">{i + 1}</span></span>
+                <h3 className="mt-4 font-display text-[17px] font-extrabold text-gray-900">{title}</h3>
+                <p className="mt-2 text-[14px] leading-relaxed text-gray-600">{text}</p>
               </Reveal>
             ))}
           </div>
-          <Reveal className="mx-auto mt-8 flex max-w-3xl items-start gap-3 rounded-2xl border border-brand-100 bg-white p-5">
-            <ShieldCheck size={20} className="mt-0.5 flex-shrink-0 text-brand-600" />
-            <p className="text-sm leading-relaxed text-gray-600">
-              <span className="font-semibold text-gray-900">Built on trust.</span> Every supplier is CAC verified, phone verified
-              and reviewed by our team before they can list, and marketplace products are sold with paid checkout only.
-            </p>
-          </Reveal>
         </div>
       </section>
 
-      {/* ── WAITLIST ─────────────────────────────────────────────────────── */}
-      <section id="waitlist" className="scroll-mt-20 px-4 py-16 sm:py-20">
-        <div className="mx-auto max-w-xl">
-          <h2 className="text-center font-display text-2xl font-extrabold text-gray-900 sm:text-3xl">Join the waitlist</h2>
-          <p className="mx-auto mb-8 mt-3 max-w-md text-center text-sm leading-relaxed text-gray-500">
-            Be first in line when the marketplace opens. Suppliers on the list are invited to apply before launch.
-          </p>
+      {/* ── Every supplier is checked ────────────────────────────────────── */}
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <Reveal className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 rounded-[32px] bg-gray-950 p-6 text-white sm:p-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div>
+            <span className="inline-flex rounded-md bg-white/10 px-2 py-1 text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-forest-100 ring-1 ring-white/15">Trust built in</span>
+            <h2 className="mt-4 text-balance font-display text-[1.8rem] font-extrabold leading-tight sm:text-[2.2rem]">Every supplier is checked before they can list.</h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-white/70">Dropshippers put their name on every order, so they only sell from suppliers who have proved who they are and what they stock. Marketplace products are sold with paid checkout only.</p>
+          </div>
+          <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {CHECKS.map(([I, t], i) => (
+              <Reveal as="li" key={t} delay={i * 70} className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3.5 ring-1 ring-white/10">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-forest-600"><I size={17} /></span>
+                <span className="text-[13.5px] font-semibold">{t}</span>
+                <Check size={16} strokeWidth={3} className="ml-auto flex-shrink-0 text-forest-200" />
+              </Reveal>
+            ))}
+          </ul>
+        </Reveal>
+      </section>
+
+      {/* ── Waitlist ─────────────────────────────────────────────────────── */}
+      <section id="waitlist" className="scroll-mt-20 px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+          <Reveal className="mb-8 text-center">
+            <Eyebrow>Join the waitlist</Eyebrow>
+            <h2 className="mt-4 font-display text-[2rem] font-extrabold text-gray-950 sm:text-[2.5rem]">Be first in line.</h2>
+            <p className="mx-auto mt-3 max-w-md text-[15px] text-gray-600">Everyone on the waitlist hears first, and suppliers on the list are invited to apply before launch.</p>
+          </Reveal>
           <WaitlistForm role={role} setRole={setRole} />
         </div>
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-      <section className="bg-gray-50 px-4 py-16 sm:py-20">
+      <section className="px-4 pb-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
-          <h2 className="mb-8 text-center font-display text-2xl font-extrabold text-gray-900 sm:text-3xl">Questions</h2>
-          <div className="space-y-2">
-            {FAQS.map(([q, a], i) => (
-              <div key={q} className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-                <button
-                  type="button"
-                  onClick={() => setOpenFaq(openFaq === i ? -1 : i)}
-                  aria-expanded={openFaq === i}
-                  className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-sm font-semibold text-gray-900"
-                >
-                  {q}
-                  <ChevronDown size={16} className={`flex-shrink-0 text-gray-400 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
-                </button>
-                {openFaq === i && <p className="px-5 pb-4 text-sm leading-relaxed text-gray-500">{a}</p>}
-              </div>
-            ))}
+          <Reveal className="mb-8 text-center"><h2 className="font-display text-[2rem] font-extrabold text-gray-950">Questions.</h2></Reveal>
+          <div className="space-y-3">
+            {FAQS.map(([q, a], i) => {
+              const open = openFaq === i
+              return (
+                <div key={q} className={`overflow-hidden rounded-2xl bg-white transition ${open ? 'ring-1 ring-forest-100 shadow-sm' : 'ring-1 ring-gray-100'}`}>
+                  <button type="button" onClick={() => setOpenFaq(open ? -1 : i)} aria-expanded={open} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
+                    <span className="font-display text-[15px] font-semibold text-gray-900">{q}</span>
+                    <ChevronDown size={17} className={`flex-shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+                  </button>
+                  {open && <p className="px-5 pb-5 text-[14px] leading-relaxed text-gray-600 animate-in fade-in duration-200">{a}</p>}
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
