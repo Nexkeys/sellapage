@@ -141,7 +141,7 @@ export default function About() {
   }, [hash])
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
       <SEO {...pageSeo('/about')} url="/about" />
       <Navbar />
 

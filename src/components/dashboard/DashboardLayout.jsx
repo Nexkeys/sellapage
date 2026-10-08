@@ -53,6 +53,8 @@ import { logoutSeller, auth } from "../../firebase/auth";
 import AnnouncementBanner from "./AnnouncementBanner";
 import SellaAI from "./SellaAI";
 import CalculatorFAB from "./CalculatorFAB";
+import DashboardGuide from "./guide/DashboardGuide";
+import SellaBot from "../../ops/SellaBot";
 import SellaLogo from "../SellaLogo";
 import ReviewPromptModal from "./ReviewPromptModal";
 import { sendHeartbeat } from "../../utils/sessionTracking";
@@ -315,6 +317,13 @@ export default function DashboardLayout({
   // if search can find it. The sidebar used to repeat every rule inline, and
   // the two copies are exactly the kind of thing that drifts.
   const visibleIds = useMemo(() => new Set(searchableTabs.map((t) => t.id)), [searchableTabs]);
+  // Sella the guide (guide/DashboardGuide.jsx): on by default, hidden with her
+  // X, brought back from the robot button in the top bar. Remembered per store.
+  const guideKey = `sp_guide_on_${store?.id || "x"}`;
+  const [guideOn, setGuideOn] = useState(() => readJson(guideKey, true) !== false);
+  const setGuide = (on) => { setGuideOn(on); writeJson(guideKey, on); };
+  const guidePlan = isPremiumPlan ? "premium" : effectiveIsPro ? "pro" : isGrowthOrAbove ? "growth" : "starter";
+  const guideLabels = useMemo(() => Object.fromEntries(ALL_TABS.map((t) => [t.id, t.label])), []);
 
   // Group dropdowns. A group the vendor never touched follows the page: it is
   // open when the current tab lives in it. Once they open or close a group,
@@ -787,6 +796,17 @@ export default function DashboardLayout({
               <Search size={19} />
             </button>
 
+            <button
+              type="button"
+              onClick={() => setGuide(!guideOn)}
+              aria-pressed={guideOn}
+              aria-label={guideOn ? "Hide Sella, your guide" : "Show Sella, your guide"}
+              title={guideOn ? "Hide Sella, your guide" : "Show Sella, your guide"}
+              className={`relative rounded-xl p-1 transition-colors ${guideOn ? "bg-forest-50" : "hover:bg-gray-100"}`}
+            >
+              <SellaBot size={26} wave={false} />
+            </button>
+
             <div className="relative">
               <button
                 type="button"
@@ -891,6 +911,18 @@ export default function DashboardLayout({
       {/* Sella AI - movable Business Partner, persistent across every tab (Premium only) */}
       <SellaAI store={store} open={sellaOpen} onClose={() => setSellaOpen(false)} />
       <CalculatorFAB open={calcOpen} onClose={() => setCalcOpen(false)} besideNav={desktopNavOpen} />
+      <DashboardGuide
+        store={store}
+        plan={guidePlan}
+        vendorType={vendorType}
+        labels={guideLabels}
+        visibleIds={visibleIds}
+        isStaff={isStaffIdentity}
+        activeTab={activeTab}
+        onOpenTab={(id) => handleTabChange(id)}
+        visible={guideOn && !sellaOpen && !calcOpen}
+        onHide={() => setGuide(false)}
+      />
       <ReviewPromptModal store={store} navigateTo={setActiveTab} />
     </div>
   );

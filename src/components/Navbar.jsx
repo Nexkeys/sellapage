@@ -7,6 +7,7 @@
 // Explore Stores filtered by a real category, and the existing pages. On a
 // phone the same groups become an accordion in a full-height sheet.
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Menu, X, LayoutDashboard, LogOut, ChevronDown, ArrowRight, Store, CreditCard, CalendarDays, Truck, ShoppingBag, Users, Receipt,
@@ -212,12 +213,15 @@ export default function Navbar() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [menu])
 
-  // The page behind the phone sheet should not scroll.
+  // The page behind the phone sheet should not scroll. Locked on <html>, not
+  // <body>: overflow:hidden on body turns it into a scroll container, which
+  // un-sticks this header (it scrolled out of view with the menu open).
   useEffect(() => {
     if (!mobile) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    const root = document.documentElement
+    const prev = root.style.overflow
+    root.style.overflow = 'hidden'
+    return () => { root.style.overflow = prev }
   }, [mobile])
 
   const handleLogout = async () => {
@@ -275,8 +279,12 @@ export default function Navbar() {
         </div>
       </div>
 
-      {mobile && (
-        <div className="fixed inset-x-0 bottom-0 top-16 z-50 overflow-y-auto bg-white px-4 pb-8 animate-in fade-in slide-in-from-top-2 duration-200 lg:hidden">
+      {/* The phone menu is rendered into <body>, not inside the header: the
+          header's backdrop blur makes it the containing block for anything
+          "fixed" inside it, which squeezed this sheet into the 64px header
+          and left it showing behind the page. */}
+      {mobile && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-x-0 bottom-0 top-16 z-[60] overflow-y-auto overscroll-contain bg-white px-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] shadow-[0_-1px_0_#f3f4f6] animate-in fade-in slide-in-from-top-2 duration-200 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
           <MobileGroup title="Product" open={group === 'product'} onToggle={() => setGroup(group === 'product' ? null : 'product')}>
             {PRODUCT.map((g) => (
               <div key={g.title} className="mb-2">
@@ -317,7 +325,8 @@ export default function Navbar() {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </header>
   )

@@ -350,7 +350,10 @@ const STRIP_B = [
 function StripRow({ items, reverse }) {
   const list = [...items, ...items]
   return (
-    <div className="flex w-max gap-3 hover:[animation-play-state:paused] motion-reduce:animate-none" style={{ animation: `marquee 52s linear infinite${reverse ? ' reverse' : ''}` }}>
+    // The class (not an inline animation) is what makes Tailwind emit the
+    // marquee keyframes; with only an inline style they were never generated
+    // and the strip sat still.
+    <div className={`flex w-max gap-3 hover:[animation-play-state:paused] motion-reduce:animate-none ${reverse ? 'animate-marquee-reverse' : 'animate-marquee'}`} style={{ animationDuration: '52s' }}>
       {list.map(([I, label], i) => (
         <span key={i} aria-hidden={i >= items.length} className="inline-flex items-center gap-2.5 whitespace-nowrap rounded-2xl border border-gray-100 bg-white px-4 py-3 text-[13.5px] font-semibold text-gray-800 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-forest-50 text-forest-600"><I size={15} /></span>{label}

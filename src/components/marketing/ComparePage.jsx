@@ -148,7 +148,7 @@ export default function ComparePage({ page }) {
   const navigate = useNavigate()
   const start = () => navigate(user ? '/dashboard' : '/login?mode=register')
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
       <SEO {...pageSeo(page.path)} url={page.path} />
       <Navbar />
 

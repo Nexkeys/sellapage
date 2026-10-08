@@ -188,7 +188,7 @@ export default function Home() {
   }, [hash])
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900 antialiased">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900 antialiased">
       <SEO {...pageSeo('/')} url="/" />
       <Navbar />
 

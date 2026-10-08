@@ -174,7 +174,7 @@ _Paying for your order means you agree to these terms._`
   })
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
       <SEO {...pageSeo('/tools/policy-generator')} url="/tools/policy-generator" />
       <Navbar />
 

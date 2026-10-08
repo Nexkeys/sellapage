@@ -101,7 +101,7 @@ export default function OfferNameLab() {
   const field = 'mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-[14px] text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-forest-600 focus:ring-4 focus:ring-forest-50'
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
       <SEO {...pageSeo('/tools/offer-name-lab')} url="/tools/offer-name-lab" />
       <Navbar />
 

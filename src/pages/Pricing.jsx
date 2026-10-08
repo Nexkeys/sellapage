@@ -222,7 +222,7 @@ function KeepEveryNaira() {
         </label>
         <input id="sales" type="range" min={100000} max={10000000} step={50000} value={sales} onChange={(e) => setSales(Number(e.target.value))}
           className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full accent-forest" style={{ background: `linear-gradient(90deg,#0b6b35 ${pct}%,#e5efe9 ${pct}%)` }} />
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
           <div className="rounded-2xl bg-red-50 p-4">
             <p className="text-[12px] font-semibold text-red-700">A 5% commission takes</p>
             <p className="mt-1 font-display text-[22px] font-extrabold tabular-nums text-red-700">{formatPrice(Math.round(shownCut))}</p>
@@ -248,6 +248,59 @@ function Cell({ v, col, best }) {
   )
 }
 
+/**
+ * The comparison on phones. A four-column table cannot fit 390px, so one
+ * plan is shown at a time: a pinned switcher on top, every feature below
+ * with that plan's value, and a note of the cheapest plan that has it.
+ */
+function MobileCompare({ period, best }) {
+  const [plan, setPlan] = useState(best || 'pro')
+  const [seenBest, setSeenBest] = useState(best)
+  if (best !== seenBest) { setSeenBest(best); if (best) setPlan(best) }
+  const col = ORDER.indexOf(plan)
+  const periodObj = PLAN_PERIODS.find((x) => x.id === period)
+  const firstWith = (vals) => vals.findIndex((v) => v !== false)
+  return (
+    <div className="md:hidden">
+      <div className="sticky top-16 z-20 -mx-4 bg-white/95 px-4 pb-3 pt-2 backdrop-blur">
+        <div className="grid grid-cols-4 gap-1 rounded-2xl bg-gray-100 p-1" role="tablist" aria-label="Plan to compare">
+          {PLANS.map((p) => (
+            <button key={p.id} type="button" role="tab" aria-selected={plan === p.id} onClick={() => setPlan(p.id)}
+              className={`rounded-xl px-1 py-2 text-center transition ${plan === p.id ? 'bg-forest text-white shadow-sm' : 'text-gray-600'}`}>
+              <span className="block text-[12.5px] font-extrabold">{p.name}</span>
+              <span className={`block text-[10px] ${plan === p.id ? 'text-white/75' : 'text-gray-400'}`}>{p.id === 'starter' ? 'Free' : `${formatPrice(PLAN_PRICES[p.id][period])}/${periodObj.shortLabel}`}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-4">
+        {COMPARISON.map((g) => (
+          <div key={g.group} className="overflow-hidden rounded-[20px] bg-white ring-1 ring-gray-100">
+            <p className="bg-gray-50 px-4 py-2.5 text-[13px] font-extrabold text-gray-900">{g.group}</p>
+            <ul>
+              {g.rows.map(([label, ...vals]) => {
+                const v = vals[col]
+                const from = firstWith(vals)
+                return (
+                  <li key={label} className="flex items-center gap-3 border-t border-gray-50 px-4 py-3">
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-[13.5px] leading-snug ${v === false ? 'text-gray-400' : 'text-gray-800'}`}>{label}</span>
+                      {v === false && from > -1 && <span className="mt-0.5 block text-[11.5px] font-semibold text-forest-700">On {PLANS[from].name} and up</span>}
+                    </span>
+                    <span className="flex-shrink-0 text-right">
+                      {v === true ? <Check size={18} strokeWidth={2.6} className="text-forest-600" /> : v === false ? <Minus size={17} className="text-gray-300" /> : <span className="text-[13px] font-bold text-gray-800">{v}</span>}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Pricing() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -255,6 +308,26 @@ export default function Pricing() {
   const [needs, setNeeds] = useState([])
   const [closed, setClosed] = useState({})
   const cardsRef = useRef(null)
+  const sliderRef = useRef(null)
+  const [slide, setSlide] = useState(0)
+  const slideTo = (i) => {
+    const el = sliderRef.current
+    const card = el?.children[i]
+    if (!el || !card) return
+    el.scrollTo({ left: card.offsetLeft - (el.clientWidth - card.clientWidth) / 2, behavior: 'smooth' })
+  }
+  const onSlide = () => {
+    const el = sliderRef.current
+    if (!el || !el.children.length) return
+    const mid = el.scrollLeft + el.clientWidth / 2
+    let nearest = 0
+    let gap = Infinity
+    Array.from(el.children).forEach((c, i) => {
+      const d = Math.abs(c.offsetLeft + c.clientWidth / 2 - mid)
+      if (d < gap) { gap = d; nearest = i }
+    })
+    setSlide(nearest)
+  }
 
   const best = useMemo(() => {
     if (!needs.length) return null
@@ -270,7 +343,7 @@ export default function Pricing() {
   const periodIndex = PLAN_PERIODS.findIndex((p) => p.id === period)
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
       <SEO {...pageSeo('/pricing')} url="/pricing" />
       <Navbar />
 
@@ -313,7 +386,7 @@ export default function Pricing() {
                   <div className="flex flex-col gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200 sm:flex-row sm:items-center">
                     <Sparkles size={20} className="flex-shrink-0 text-amber-600" />
                     <p className="flex-1 text-[14px] text-amber-950"><span className="font-extrabold">{PLANS.find((p) => p.id === best).name}</span> covers everything you picked{best === 'starter' ? ', for free.' : `, from ${formatPrice(PLAN_PRICES[best].monthly)} a month.`}</p>
-                    <button type="button" onClick={() => cardsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="inline-flex items-center gap-1.5 self-start rounded-xl bg-amber-950 px-4 py-2 text-[13px] font-bold text-white sm:self-auto">See the plan <ArrowRight size={14} /></button>
+                    <button type="button" onClick={() => { cardsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => slideTo(ORDER.indexOf(best)), 450) }} className="inline-flex items-center gap-1.5 self-start rounded-xl bg-amber-950 px-4 py-2 text-[13px] font-bold text-white sm:self-auto">See the plan <ArrowRight size={14} /></button>
                   </div>
                 )}
               </div>
@@ -341,9 +414,15 @@ export default function Pricing() {
             </div>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div ref={sliderRef} onScroll={onSlide} className="-mx-4 mt-12 flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto px-4 pb-2 pt-3 [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pt-0 lg:grid-cols-4">
             {PLANS.map((p, i) => (
-              <Reveal key={p.id} delay={i * 80} className="h-full"><PlanCard plan={p} period={period} best={best === p.id} onPick={pick} /></Reveal>
+              <Reveal key={p.id} delay={i * 80} className="h-full w-[86%] flex-shrink-0 snap-center sm:w-auto"><PlanCard plan={p} period={period} best={best === p.id} onPick={pick} /></Reveal>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-2 sm:hidden" aria-label="Plans">
+            {PLANS.map((p, i) => (
+              <button key={p.id} type="button" onClick={() => slideTo(i)} aria-label={`Show ${p.name}`}
+                className={`h-2 rounded-full transition-all duration-300 ${slide === i ? 'w-7 bg-forest' : 'w-2 bg-gray-300'}`} />
             ))}
           </div>
 
@@ -367,7 +446,8 @@ export default function Pricing() {
             <Eyebrow>Compare plans</Eyebrow>
             <h2 className="mt-4 text-balance font-display text-[1.9rem] font-extrabold leading-tight text-gray-950 sm:text-[2.5rem]">Every feature, side by side.</h2>
           </Reveal>
-          <Reveal className="overflow-hidden rounded-[24px] bg-white ring-1 ring-gray-100">
+          <MobileCompare period={period} best={best} />
+          <Reveal className="hidden overflow-hidden rounded-[24px] bg-white ring-1 ring-gray-100 md:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse">
                 <thead>
@@ -402,7 +482,6 @@ export default function Pricing() {
               </table>
             </div>
           </Reveal>
-          <p className="mt-3 text-center text-[12px] text-gray-400 sm:hidden">Swipe the table sideways to see every plan.</p>
         </div>
       </section>
 

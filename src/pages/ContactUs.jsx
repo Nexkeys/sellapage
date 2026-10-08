@@ -157,7 +157,7 @@ export default function ContactUs() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white font-body text-gray-900">
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
       <SEO {...pageSeo('/contact')} url="/contact" />
       <Navbar />
 

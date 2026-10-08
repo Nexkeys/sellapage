@@ -192,6 +192,21 @@ export const OPS_MOCKS = {
     { id: 'pr4', authorName: 'Kunle O.', storeName: 'Fit Fam Gym', rating: 4, reviewText: 'Bookings for classes run themselves. The reminders alone saved me hours every week.' },
     { id: 'pr5', authorName: 'Ada O.', storeName: 'Ada Skincare', rating: 5, reviewText: 'Setting up took one evening and my store looks premium on every phone.' },
   ] }),
+  // Public Jobs and Blog listings (screenshots only).
+  '/api/jobs-public': () => ({ total: 4, jobs: [
+    { id: 'j1', title: 'Sales and social media assistant', businessName: 'Ada Skincare', location: 'Lekki, Lagos', jobType: 'full_time', category: 'sales', imageUrl: '/store-themes/Ankara%20Print%20ecommerce%20store%20theme%20design.jpg' },
+    { id: 'j2', title: 'Dispatch rider (own bike)', businessName: 'Bisi Bakes', location: 'Ikeja, Lagos', jobType: 'part_time', category: 'delivery_logistics', imageUrl: '/store-themes/Bold%20Market%20ecommerce%20store%20theme%20design.jpg' },
+    { id: 'j3', title: 'Product photographer', businessName: 'Denver Mall', location: 'Remote', jobType: 'freelance', category: 'media', imageUrl: '/store-themes/Artisan%20Craft%20ecommerce%20store%20theme%20design.jpg' },
+    { id: 'j4', title: 'Front desk and bookings', businessName: 'Fit Fam Gym', location: 'Wuse, Abuja', jobType: 'contract', category: 'customer_support', imageUrl: '/store-themes/Corporate%20Sharp%20ecommerce%20store%20theme%20design.jpg' },
+  ] }),
+  '/api/blog-public': (url) => (String(url).includes('list-categories')
+    ? { categories: [{ id: 'c1', slug: 'selling', name: 'Selling online' }, { id: 'c2', slug: 'delivery', name: 'Delivery' }, { id: 'c3', slug: 'growth', name: 'Growth' }] }
+    : { total: 4, posts: [
+      { id: 'b1', slug: 'price-for-profit', title: 'How to price your products so every sale makes money', category: 'selling', readTimeMinutes: 6, publishedAt: '2026-10-02T09:00:00Z', excerpt: 'A simple way to cover your costs, delivery and payment fees, and still look fair to customers.', featuredImageUrl: '/media/home-mission/1b1bf1fd53-lg.webp' },
+      { id: 'b2', slug: 'lagos-delivery', title: 'Island or Mainland: setting delivery prices that customers accept', category: 'delivery', readTimeMinutes: 4, publishedAt: '2026-09-28T09:00:00Z', excerpt: 'Zones, pickup points and when to let the courier quote.', featuredImageUrl: '/media/home-delivery/af02d10d21-lg.webp' },
+      { id: 'b3', slug: 'first-100-customers', title: 'Your first 100 customers, without paid ads', category: 'growth', readTimeMinutes: 7, publishedAt: '2026-09-20T09:00:00Z', excerpt: 'Google listings, WhatsApp status and a guarantee people believe.', featuredImageUrl: '/media/home-hero-scene/0dea16d66c-lg.webp' },
+      { id: 'b4', slug: 'receipts', title: 'Why every sale needs a receipt', category: 'selling', readTimeMinutes: 3, publishedAt: '2026-09-12T09:00:00Z', excerpt: 'Trust, records and fewer arguments.', featuredImageUrl: '' },
+    ] }),
   // Sign-in: 000000 = the attempt took too long; 111111 = set-up done (recovery codes).
   '/api/ops-auth': (url, body) => {
     const action = url.searchParams.get('action')

@@ -1,6 +1,8 @@
-//src/pages/BlogPage.jsx/
-// Public blog listing - /blog. Structural clone of JobsPage.jsx, adapted for
-// editorial cards (thumbnail, category, title, excerpt, author/date/read-time).
+// src/pages/BlogPage.jsx
+// Public blog listing - /blog (/api/blog-public, paginated, infinite scroll).
+// Rebuilt 2026-10-08 in the style of the new public pages: search in the hero,
+// categories as chips, the newest article as a large lead card when nothing is
+// filtered, then the grid.
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Search, BookOpen, ArrowRight, Loader2, Clock, AlertCircle, RefreshCw } from 'lucide-react'
@@ -11,6 +13,7 @@ import SEO from '../components/SEO'
 import { pageSeo } from '../data/seoPages'
 import { useDocumentHead } from '../hooks/useDocumentHead'
 import { getExcerpt, formatBlogDate, getCategoryBadgeClass } from '../utils/blogHelpers'
+import { Eyebrow } from '../components/marketing/kit'
 import { SkeletonCardGrid } from '../components/Skeleton'
 
 const PAGE_SIZE = 20
@@ -89,97 +92,102 @@ export default function BlogPage() {
 
   const clearFilters = () => { setSearch(''); setSearchParams({}) }
 
+  const filtered = search.trim() || category !== 'all' || tag !== 'all'
+  const catName = (slug) => categories.find((c) => c.slug === slug)?.name || slug
+  const lead = !filtered && posts.length > 2 ? posts[0] : null
+  const grid = lead ? posts.slice(1) : posts
+  const chip = (on) => `flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-semibold transition ${on ? 'bg-forest text-white shadow-md shadow-forest/20' : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:ring-forest-200'}`
+
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <SEO {...pageSeo("/blog")} url="/blog" />
+    <div className="min-h-screen overflow-x-clip bg-white font-body text-gray-900">
+      <SEO {...pageSeo('/blog')} url="/blog" />
       <Navbar />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-green-400">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTR2MkgyNHYyaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-5">
-            <BookOpen size={14} className="text-white" />
-            <span className="text-[11px] font-bold text-white uppercase tracking-wider">Sellapage Blog</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3 font-display">
-            Tips to Sell Smarter
-          </h1>
-          <p className="text-sm sm:text-base text-white/80 max-w-lg mx-auto leading-relaxed">
-            Guides, strategies, and stories to help Nigerian entrepreneurs grow their business.
-          </p>
+      <section className="relative overflow-hidden pb-10 pt-10 sm:pt-16">
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] bg-[radial-gradient(60%_55%_at_50%_0%,#d5f1e1_0%,rgba(236,249,242,0.6)_45%,#fff_100%)]" />
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+          <Reveal><Eyebrow>Sellapage blog</Eyebrow></Reveal>
+          <Reveal delay={80}>
+            <h1 className="mt-5 text-balance font-display text-[2.4rem] font-extrabold leading-[1.05] tracking-tight text-gray-950 sm:text-[3.3rem]">
+              Ideas to run and <span className="text-forest-600">grow your business.</span>
+            </h1>
+          </Reveal>
+          <Reveal delay={160}><p className="mx-auto mt-4 max-w-xl text-[15.5px] leading-relaxed text-gray-600 sm:text-[17px]">Practical guides for Nigerian business owners: selling online, pricing, delivery, customers and growth.</p></Reveal>
+          <Reveal delay={220} className="relative mx-auto mt-7 max-w-xl">
+            <Search size={19} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search articles" aria-label="Search articles"
+              className="w-full rounded-2xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-[15px] text-gray-900 shadow-xl shadow-forest-900/5 outline-none transition placeholder:text-gray-400 focus:border-forest-600 focus:ring-4 focus:ring-forest-50" />
+          </Reveal>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-6 relative z-10 pb-16">
-        <div className="max-w-3xl mx-auto mb-8 bg-white rounded-2xl border border-gray-100 shadow-lg shadow-gray-200/50 p-3 sm:p-4 space-y-3">
-          <div className="relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search articles..."
-              className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
-            />
+      <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        {categories.length > 0 && (
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0">
+            <button type="button" onClick={() => setCategory('all')} className={chip(category === 'all')}>All articles</button>
+            {categories.map((c) => <button key={c.id} type="button" onClick={() => setCategory(c.slug)} className={chip(category === c.slug)}>{c.name}</button>)}
           </div>
-          <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20">
-            <option value="all">All Categories</option>
-            {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
-          </select>
-          {(search.trim() || category !== 'all' || tag !== 'all') && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-400">{total} {total === 1 ? 'article' : 'articles'} found{tag !== 'all' ? ` tagged "${tag}"` : ''}</p>
-              <button onClick={clearFilters} className="text-xs font-bold text-brand-600 hover:text-brand-700">Clear</button>
+        )}
+        {filtered && (
+          <p className="mt-4 text-center text-[13px] text-gray-500">{loading ? 'Searching' : `${total} ${total === 1 ? 'article' : 'articles'} found${tag !== 'all' ? ` tagged "${tag}"` : ''}`}<button type="button" onClick={clearFilters} className="ml-2 font-bold text-forest-700 hover:underline">Clear</button></p>
+        )}
+
+        <div className="mt-8">
+          {loading && <SkeletonCardGrid count={6} className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" />}
+
+          {!loading && loadError && (
+            <div className="flex flex-col items-center justify-center gap-3 px-4 py-20 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50"><AlertCircle size={24} className="text-red-400" /></span>
+              <p className="text-[15px] font-bold text-gray-800">We could not load the articles</p>
+              <p className="max-w-xs text-[13px] text-gray-500">Check your connection and try again.</p>
+              <button type="button" onClick={() => fetchPosts(1, true)} className="mt-1 inline-flex items-center gap-2 rounded-xl bg-forest px-4 py-2.5 text-[13px] font-bold text-white hover:bg-forest-700"><RefreshCw size={14} /> Try again</button>
             </div>
           )}
+
+          {!loading && !loadError && posts.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-[28px] bg-gray-50 py-16 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white"><BookOpen size={24} className="text-gray-300" /></span>
+              <p className="text-[15px] font-bold text-gray-700">{filtered ? 'No articles match your search' : 'New articles are on their way'}</p>
+              {filtered && <button type="button" onClick={clearFilters} className="text-[13px] font-bold text-forest-700 hover:underline">Clear</button>}
+            </div>
+          )}
+
+          {!loading && !loadError && lead && (
+            <Reveal as={Link} to={`/blog/${lead.slug}`} className="group mb-6 grid grid-cols-1 overflow-hidden rounded-[28px] bg-white ring-1 ring-gray-100 transition duration-300 hover:shadow-2xl hover:shadow-forest-900/5 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              <div className="relative h-56 overflow-hidden bg-forest-50 sm:h-72 md:h-full md:min-h-[320px]">
+                {lead.featuredImageUrl
+                  ? <img src={lead.featuredImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+                  : <div className="absolute inset-0"><NoPhoto label={catName(lead.category)} big /></div>}
+                <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-[11.5px] font-extrabold text-forest-700 shadow-sm">Latest</span>
+              </div>
+              <div className="flex flex-col justify-center p-6 sm:p-8">
+                <span className={`w-fit rounded-full border px-2.5 py-0.5 text-[11.5px] font-bold ${getCategoryBadgeClass(lead.category)}`}>{catName(lead.category)}</span>
+                <h2 className="mt-3 text-balance font-display text-[1.6rem] font-extrabold leading-tight text-gray-950 transition group-hover:text-forest-700 sm:text-[2rem]">{lead.title}</h2>
+                <p className="mt-3 line-clamp-3 text-[15px] leading-relaxed text-gray-600">{getExcerpt(lead)}</p>
+                <p className="mt-5 flex items-center gap-3 text-[12.5px] text-gray-500"><span className="flex items-center gap-1"><Clock size={13} />{lead.readTimeMinutes} min read</span>{formatBlogDate(lead.publishedAt) && <span>{formatBlogDate(lead.publishedAt)}</span>}</p>
+                <span className="mt-5 inline-flex items-center gap-1.5 text-[14px] font-bold text-forest-700">Read the article <ArrowRight size={16} className="transition group-hover:translate-x-1" /></span>
+              </div>
+            </Reveal>
+          )}
+
+          {!loading && !loadError && grid.length > 0 && (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {grid.map((post) => <PostCard key={post.id} post={post} categoryLabel={catName(post.category)} />)}
+            </div>
+          )}
+
+          {hasMore && !loading && (
+            <div ref={sentinelRef} className="flex justify-center py-8">
+              {loadingMore && <div className="flex items-center gap-2 text-gray-400"><Loader2 size={16} className="animate-spin" /><span className="text-[13px] font-medium">Loading more...</span></div>}
+            </div>
+          )}
+          {!hasMore && !loading && posts.length > 0 && <p className="py-8 text-center text-[13px] text-gray-400">You have read to the end.</p>}
         </div>
 
-        {loading && (
-          <SkeletonCardGrid count={8} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" />
-        )}
-
-        {!loading && loadError && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 px-4 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
-              <AlertCircle size={24} className="text-red-300" />
-            </div>
-            <p className="text-sm font-semibold text-gray-700">We could not load the articles</p>
-            <p className="text-xs text-gray-400 max-w-xs">Check your connection and try again.</p>
-            <button
-              onClick={() => fetchPosts(1, true)}
-              className="mt-1 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-700"
-            >
-              <RefreshCw size={13} /> Try again
-            </button>
-          </div>
-        )}
-
-        {!loading && !loadError && posts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center"><BookOpen size={24} className="text-gray-300" /></div>
-            <p className="text-sm font-semibold text-gray-500">{search.trim() || category !== 'all' || tag !== 'all' ? 'No articles match your filters' : 'No articles yet - check back soon'}</p>
-          </div>
-        )}
-
-        {!loading && !loadError && posts.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {posts.map(post => (
-              <PostCard
-                key={post.id}
-                post={post}
-                categoryLabel={categories.find(c => c.slug === post.category)?.name || post.category}
-              />
-            ))}
-          </div>
-        )}
-
-        {hasMore && !loading && (
-          <div ref={sentinelRef} className="flex justify-center py-8">
-            {loadingMore && <div className="flex items-center gap-2 text-gray-400"><Loader2 size={16} className="animate-spin" /><span className="text-xs font-medium">Loading more...</span></div>}
-          </div>
-        )}
-
-        {!hasMore && !loading && posts.length > 0 && <p className="text-center text-xs text-gray-400 py-8">You've seen all articles</p>}
+        <Reveal className="mt-6 flex flex-col items-center gap-4 rounded-[28px] bg-forest p-6 text-center text-white sm:flex-row sm:p-8 sm:text-left">
+          <div className="flex-1"><p className="font-display text-[19px] font-extrabold">Put the ideas to work.</p><p className="mt-1 text-[14px] text-white/75">Run and grow your business from one dashboard. The Starter plan is free.</p></div>
+          <Link to="/login?mode=register" className="group inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-[14px] font-bold text-forest">Start free <ArrowRight size={16} className="transition group-hover:translate-x-1" /></Link>
+        </Reveal>
       </div>
 
       <Footer />
@@ -187,19 +195,35 @@ export default function BlogPage() {
   )
 }
 
+/** For a post with no photo: a green panel with the category, not a blown-up logo. */
+function NoPhoto({ label, big = false }) {
+  return (
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-forest via-forest-700 to-forest-600">
+      <span className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5" />
+      <span className="absolute -bottom-10 -left-6 h-28 w-28 rounded-full bg-white/5" />
+      <span className="relative flex flex-col items-center gap-2 text-white">
+        <BookOpen size={big ? 40 : 28} className="text-forest-100" />
+        {label && <span className={`font-display font-extrabold ${big ? 'text-[20px]' : 'text-[14px]'}`}>{label}</span>}
+      </span>
+    </div>
+  )
+}
+
 function PostCard({ post, categoryLabel }) {
   return (
-    <Reveal as={Link} to={`/blog/${post.slug}`} className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-200/60 hover:-translate-y-0.5 transition-all duration-300">
-      <div className="relative h-32 bg-gradient-to-br from-brand-50 to-green-50 overflow-hidden">
-        <img src={post.featuredImageUrl || '/og-image.png'} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+    <Reveal as={Link} to={`/blog/${post.slug}`} className="group flex flex-col overflow-hidden rounded-[22px] bg-white ring-1 ring-gray-100 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-forest-900/5 hover:ring-forest-200">
+      <div className="relative h-44 overflow-hidden bg-forest-50">
+        {post.featuredImageUrl
+          ? <img src={post.featuredImageUrl} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+          : <NoPhoto label={categoryLabel} />}
       </div>
-      <div className="p-4 space-y-2">
-        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getCategoryBadgeClass(post.category)}`}>{categoryLabel}</span>
-        <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 group-hover:text-brand-600 transition-colors">{post.title}</h3>
-        <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{getExcerpt(post)}</p>
-        <div className="flex items-center justify-between pt-1 text-[10px] text-gray-400">
-          <span className="flex items-center gap-1"><Clock size={10} /> {post.readTimeMinutes} min read</span>
-          <ArrowRight size={13} className="text-gray-300 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all" />
+      <div className="flex flex-1 flex-col p-5">
+        <span className={`w-fit rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getCategoryBadgeClass(post.category)}`}>{categoryLabel}</span>
+        <h3 className="mt-2.5 line-clamp-2 font-display text-[17px] font-extrabold leading-snug text-gray-900 transition group-hover:text-forest-700">{post.title}</h3>
+        <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-gray-500">{getExcerpt(post)}</p>
+        <div className="mt-auto flex items-center justify-between pt-4 text-[12px] text-gray-400">
+          <span className="flex items-center gap-1"><Clock size={12} />{post.readTimeMinutes} min read</span>
+          <ArrowRight size={15} className="text-gray-300 transition group-hover:translate-x-1 group-hover:text-forest-600" />
         </div>
       </div>
     </Reveal>
