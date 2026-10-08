@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async'
 const SITE_NAME = 'Sellapage'
 const SITE_URL = 'https://www.sellapage.com.ng'
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`
-const DEFAULT_DESCRIPTION = 'Sellapage is the all-in-one commerce platform for Nigerian businesses. Run products, services, checkout, delivery, customers, analytics, and growth from one dashboard. Free to start.'
+const DEFAULT_DESCRIPTION = 'Sellapage is the business management and growth platform for Nigerian businesses. Sell online, take payments, run orders and bookings, book delivery, keep customer records and receipts, and get found on Google, from one dashboard. Free to start.'
 
 export default function SEO({
   title,
@@ -15,7 +15,7 @@ export default function SEO({
   jsonLd,
   noIndex = false,
 }) {
-  const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - Run Your Entire Business from One Dashboard`
+  const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - Business Management and Growth Platform for Nigerian Businesses`
   const desc = description || DEFAULT_DESCRIPTION
   const img = image || DEFAULT_IMAGE
   const pageUrl = url ? `${SITE_URL}${url}` : SITE_URL

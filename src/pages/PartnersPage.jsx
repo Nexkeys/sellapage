@@ -638,8 +638,8 @@ export default function PartnersPage() {
             Help us build how Nigerian businesses sell online
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-gray-500 sm:text-lg">
-            Sellapage is a live commerce platform for Nigerian small businesses: one store link with checkout,
-            delivery and bookings, and one dashboard to run it all. We are looking for investors, strategic
+            Sellapage is a live business management and growth platform for Nigerian small businesses: one
+            dashboard to sell online, take payments, run orders and bookings, deliver and grow. We are looking for investors, strategic
             partners and a co-founder to grow it.
           </p>
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">

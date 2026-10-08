@@ -209,7 +209,7 @@ export default async function handler(req, res) {
                   <p style="color: #111827; font-size: 16px; margin: 0 0 16px 0;">Hi ${storeData.businessName || 'Merchant'},</p>
                   <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 24px 0;">
                     <p style="color: #92400e; font-size: 14px; margin: 0;">
-                      A new sign-in was detected on your Sellapage commerce workspace.
+                      A new sign-in was detected on your Sellapage account.
                     </p>
                   </div>
                   <p style="color: #6b7280; font-size: 14px; margin: 24px 0 0 0;">
@@ -229,7 +229,7 @@ export default async function handler(req, res) {
           sendPush(
             storeData.fcmToken,
             'New Login Detected 🔐',
-            'Your Sellapage commerce workspace was just accessed.',
+            'Your Sellapage account was just accessed.',
             { type: 'security_alert' }
           )
         )

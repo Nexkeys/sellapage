@@ -1,4 +1,25 @@
 {
+  "about-cta": {
+    "type": "image",
+    "src": "/media/about-cta/24edb4aa78-lg.webp",
+    "srcSmall": "/media/about-cta/24edb4aa78-sm.webp",
+    "width": 1280,
+    "height": 956
+  },
+  "about-hero": {
+    "type": "image",
+    "src": "/media/about-hero/5124131858-lg.webp",
+    "srcSmall": "/media/about-hero/5124131858-sm.webp",
+    "width": 1280,
+    "height": 956
+  },
+  "about-mission": {
+    "type": "image",
+    "src": "/media/about-mission/4358194a3a-lg.webp",
+    "srcSmall": "/media/about-mission/4358194a3a-sm.webp",
+    "width": 1280,
+    "height": 853
+  },
   "auth-hero": {
     "type": "image",
     "src": "/media/auth-hero/3268094f93-lg.webp",
@@ -83,62 +104,6 @@
     "width": 980,
     "height": 730
   },
-  "feature-abandoned": {
-    "type": "image",
-    "src": "/media/feature-abandoned/05af718540-lg.webp",
-    "srcSmall": "/media/feature-abandoned/05af718540-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
-  "feature-analytics": {
-    "type": "image",
-    "src": "/media/feature-analytics/ca57afa99c-lg.webp",
-    "srcSmall": "/media/feature-analytics/ca57afa99c-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
-  "feature-customers": {
-    "type": "image",
-    "src": "/media/feature-customers/aab28790da-lg.webp",
-    "srcSmall": "/media/feature-customers/aab28790da-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
-  "feature-delivery": {
-    "type": "image",
-    "src": "/media/feature-delivery/83aa3784bf-lg.webp",
-    "srcSmall": "/media/feature-delivery/83aa3784bf-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
-  "feature-discounts": {
-    "type": "image",
-    "src": "/media/feature-discounts/f33d2c51fb-lg.webp",
-    "srcSmall": "/media/feature-discounts/f33d2c51fb-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
-  "feature-loyalty": {
-    "type": "image",
-    "src": "/media/feature-loyalty/aeab67596b-lg.webp",
-    "srcSmall": "/media/feature-loyalty/aeab67596b-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
-  "feature-receipts": {
-    "type": "image",
-    "src": "/media/feature-receipts/8dc1963700-lg.webp",
-    "srcSmall": "/media/feature-receipts/8dc1963700-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
-  "feature-reviews": {
-    "type": "image",
-    "src": "/media/feature-reviews/c4860851f6-lg.webp",
-    "srcSmall": "/media/feature-reviews/c4860851f6-sm.webp",
-    "width": 1120,
-    "height": 700
-  },
   "home-app-1": {
     "type": "image",
     "src": "/media/home-app-1/ff59fb211d-lg.webp",
@@ -153,19 +118,33 @@
     "width": 265,
     "height": 592
   },
-  "home-hero-phone": {
+  "home-bookings": {
     "type": "image",
-    "src": "/media/home-hero-phone/5aabc382c5-lg.webp",
-    "srcSmall": "/media/home-hero-phone/5aabc382c5-sm.webp",
-    "width": 720,
-    "height": 1080
-  },
-  "home-showcase": {
-    "type": "image",
-    "src": "/media/home-showcase/2783c72c15-lg.webp",
-    "srcSmall": "/media/home-showcase/2783c72c15-sm.webp",
+    "src": "/media/home-bookings/2dadd694b0-lg.webp",
+    "srcSmall": "/media/home-bookings/2dadd694b0-sm.webp",
     "width": 1280,
-    "height": 853
+    "height": 719
+  },
+  "home-delivery": {
+    "type": "image",
+    "src": "/media/home-delivery/af02d10d21-lg.webp",
+    "srcSmall": "/media/home-delivery/af02d10d21-sm.webp",
+    "width": 1280,
+    "height": 719
+  },
+  "home-hero-scene": {
+    "type": "image",
+    "src": "/media/home-hero-scene/0dea16d66c-lg.webp",
+    "srcSmall": "/media/home-hero-scene/0dea16d66c-sm.webp",
+    "width": 1280,
+    "height": 719
+  },
+  "home-mission": {
+    "type": "image",
+    "src": "/media/home-mission/1b1bf1fd53-lg.webp",
+    "srcSmall": "/media/home-mission/1b1bf1fd53-sm.webp",
+    "width": 1280,
+    "height": 956
   },
   "products-empty-art": {
     "type": "image",

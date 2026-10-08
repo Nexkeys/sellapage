@@ -307,7 +307,15 @@ function SettingsPreview() {
   )
 }
 
-// ?preview=marketing: Marketing > Get found.
+// ?preview=marketing: Marketing > Get found (act clicks the other sections).
+// Store theme pictures stand in for product photos; one has no photo and one
+// is hidden, so the "left out of the feed" list has something to show.
+const THEME_PICS = ['Ankara Print', 'Artisan Craft', 'Bold Market', 'Corporate Sharp', 'Dark Premium']
+const MARKETING_PRODUCTS = DATA['stores/demo/products'].map((p, i) => ({
+  ...p,
+  imageUrl: i < THEME_PICS.length ? `/store-themes/${encodeURIComponent(THEME_PICS[i])} ecommerce store theme design.jpg` : '',
+  isActive: i !== 4,
+}))
 const MarketingTabLazy = React.lazy(() => import('../../src/components/dashboard/MarketingTab.jsx'))
 function MarketingPreview() {
   const store = { ...STORE, plan: 'pro', hasProFeatures: true, hasGrowthFeatures: true, email: 'ada@adaskincare.ng', description: 'Clean, effective skincare made for Nigerian weather.' }
@@ -315,7 +323,7 @@ function MarketingPreview() {
   const [open, setOpen] = React.useState(false)
   return (
     <DashboardLayout store={store} activeTab={tab} setActiveTab={setTab} sidebarOpen={open} setSidebarOpen={setOpen} storeUrl="https://sellapage.com.ng/adaskincare" isGrowthOrPro isPro vendorType="products">
-      <React.Suspense fallback={null}><MarketingTabLazy store={store} storeUrl="https://sellapage.com.ng/adaskincare" navigateTo={setTab} /></React.Suspense>
+      <React.Suspense fallback={null}><MarketingTabLazy store={store} storeUrl="https://sellapage.com.ng/adaskincare" products={MARKETING_PRODUCTS} navigateTo={setTab} /></React.Suspense>
     </DashboardLayout>
   )
 }

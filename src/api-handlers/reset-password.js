@@ -78,7 +78,7 @@ export default async function handler(req, res) {
       <span style="font-weight: 800; font-size: 20px; color: #111827; tracking-tight: -0.025em;">Sellapage</span>
     </div>
     <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 12px 0;">Reset your password</h2>
-    <p style="font-size: 14px; line-height: 24px; color: #4b5563; margin: 0 0 32px 0;">We received a request to change the password for your Sellapage commerce workspace. Click the button below to configure your new secure credentials:</p>
+    <p style="font-size: 14px; line-height: 24px; color: #4b5563; margin: 0 0 32px 0;">We received a request to change the password for your Sellapage account. Click the button below to configure your new secure credentials:</p>
     <div style="text-align: center; margin-bottom: 32px;">
       <a href="${customResetLink}" style="display: inline-block; background-color: #10b981; color: #ffffff; font-weight: 600; font-size: 14px; padding: 14px 28px; text-decoration: none; border-radius: 12px; transition: background-color 0.2s ease;">Reset My Password</a>
     </div>

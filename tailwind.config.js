@@ -50,12 +50,40 @@ export default {
       animation: {
         'float': 'float 3s ease-in-out infinite',
         'float-delayed': 'float 3s ease-in-out 1.5s infinite',
+        // Public pages (2026-10-08 redesign): feature strip, orbits, flowing lines.
+        'marquee': 'marquee 48s linear infinite',
+        'marquee-reverse': 'marquee 48s linear infinite reverse',
+        'orbit': 'spin 60s linear infinite',
+        'orbit-reverse': 'spin 60s linear infinite reverse',
+        'dash-flow': 'dash-flow 1.6s linear infinite',
+        'rise': 'rise 0.5s cubic-bezier(.2,.8,.2,1) both',
+        'pop': 'pop 0.45s cubic-bezier(.2,1.4,.4,1) both',
+        'tap': 'tap 0.9s ease-out both',
       },
       keyframes: {
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-8px)' },
-        }
+        },
+        marquee: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
+        'dash-flow': {
+          to: { strokeDashoffset: '-20' },
+        },
+        rise: {
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        pop: {
+          from: { opacity: '0', transform: 'scale(.6)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+        tap: {
+          '0%': { opacity: '.55', transform: 'scale(.4)' },
+          '100%': { opacity: '0', transform: 'scale(2.2)' },
+        },
       }
     },
   },

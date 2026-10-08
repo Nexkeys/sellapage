@@ -1,7 +1,12 @@
-//src/components/Footer.jsx/
+// src/components/Footer.jsx
+//
+// The public site footer, rebuilt 2026-10-08 with the new navbar. Same groups
+// as the menus (product, business types, resources, company), the app badges
+// (Android live, iPhone coming soon), the newsletter, and the legal line.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import PlayStoreBadge from './PlayStoreBadge'
+import { ArrowRight, BadgeCheck, ShieldCheck, Lock } from 'lucide-react'
+import PlayStoreBadge, { AppStoreSoon } from './PlayStoreBadge'
 
 const SOCIAL_LINKS = [
   {
@@ -92,15 +97,15 @@ function NewsletterSignup() {
 
   if (status === 'done') {
     return (
-      <div className="bg-gray-900 rounded-2xl p-5 sm:p-7 mb-10 sm:mb-14 border border-green-500/30" role="status">
-        <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-1">You are on the list</p>
+      <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 sm:p-6" role="status">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wider text-forest-200">You are on the list</p>
         <p className="font-display font-bold text-lg text-white leading-snug">
           Thank you. Selling tips are on the way to your inbox.
         </p>
         <button
           type="button"
           onClick={() => { setStatus('idle'); setStartedAt(Date.now()) }}
-          className="mt-3 text-gray-400 text-xs font-semibold hover:text-gray-200 transition-colors"
+          className="mt-3 text-xs font-semibold text-white/60 transition-colors hover:text-white"
         >
           Add another email
         </button>
@@ -112,14 +117,14 @@ function NewsletterSignup() {
     <form
       onSubmit={submit}
       noValidate
-      className="bg-gray-900 rounded-2xl p-5 sm:p-7 mb-10 sm:mb-14 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border border-white/8"
+      className="relative rounded-3xl border border-white/10 bg-white/[0.06] p-5 sm:p-6"
     >
       <div>
-        <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-1">Grow your business</p>
-        <p className="font-display font-bold text-lg text-white leading-snug">
-          Get free tips on selling, marketing, and running your store
+        <p className="mb-1 text-xs font-bold uppercase tracking-wider text-forest-200">Grow your business</p>
+        <p className="font-display text-lg font-bold leading-snug text-white">
+          Free tips on selling, marketing and running your business
         </p>
-        <p className="text-gray-500 text-[11px] mt-1.5">
+        <p className="mt-1.5 text-[11px] text-white/50">
           No spam. Leave the list whenever you want.
         </p>
       </div>
@@ -132,7 +137,7 @@ function NewsletterSignup() {
         </label>
       </div>
 
-      <div className="w-full sm:w-auto">
+      <div className="mt-4 w-full">
         <div className="flex w-full gap-2">
           <label htmlFor="footer-newsletter-email" className="sr-only">Your email address</label>
           <input
@@ -142,165 +147,126 @@ function NewsletterSignup() {
             onChange={(e) => { setEmail(e.target.value); if (error) setError('') }}
             placeholder="Enter your email"
             aria-invalid={!!error}
-            className={`bg-gray-800 text-white placeholder-gray-600 px-4 py-2.5 rounded-xl text-sm flex-1 sm:w-52 outline-none focus:ring-2 focus:ring-green-500/40 border ${error ? 'border-red-500/60' : 'border-gray-700/60'}`}
+            className={`min-w-0 flex-1 rounded-xl border bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-forest-200/40 ${error ? 'border-red-400/60' : 'border-white/15'}`}
           />
           <button
             type="submit"
             disabled={status === 'sending'}
-            className="bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap"
+            className="whitespace-nowrap rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-forest transition-all hover:bg-forest-50 disabled:opacity-60"
           >
             {status === 'sending' ? 'Sending...' : 'Subscribe'}
           </button>
         </div>
-        {error && <p className="text-red-400 text-[11px] mt-1.5">{error}</p>}
+        {error && <p className="mt-1.5 text-[11px] text-red-300">{error}</p>}
       </div>
     </form>
   )
 }
 
+const COLUMNS = [
+  {
+    title: 'Product',
+    links: [
+      ['Online store', '/#store'], ['Bookings', '/#bookings'], ['Payments', '/#orders'], ['Delivery', '/#delivery'],
+      ['Get found on Google', '/#marketing'], ['Sella AI', '/#sella'], ['Mobile app', '/#mobile-app'], ['Pricing', '/pricing'],
+    ],
+  },
+  {
+    title: 'Business types',
+    links: [
+      ['Fashion', '/live-stores?cat=Fashion%20%26%20Clothing'], ['Beauty', '/live-stores?cat=Beauty%20%26%20Skincare'],
+      ['Phones and gadgets', '/live-stores?cat=Gadgets%20%26%20Phones'], ['Food', '/live-stores?cat=Food%20%26%20Groceries'],
+      ['Salons and services', '/live-stores?cat=Services'], ['Explore all stores', '/live-stores'],
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      ['How it works', '/#how-it-works'], ['Blog', '/blog'], ['Success stories', '/success-stories'], ['Jobs board', '/jobs'],
+      ['Business name generator', '/tools/offer-name-lab'], ['Store policy generator', '/tools/policy-generator'],
+    ],
+  },
+  {
+    title: 'Compare',
+    links: [
+      ['vs Shopify', '/compare/vs-shopify'], ['vs WhatsApp Business', '/compare/vs-whatsapp-business'],
+      ['vs Linktree', '/compare/vs-linktree'], ['vs Instagram bio', '/compare/vs-instagram-bio'],
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      ['About us', '/about'], ['Investors and partners', '/partners'], ['Dropshipping', '/dropshipping'],
+      ['Contact us', '/contact'], ['Report a store', '/report-store'],
+    ],
+  },
+]
+
 export default function Footer() {
   return (
-    <footer className="bg-gray-950 text-white font-body">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-        <NewsletterSignup />
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 mb-10 sm:mb-12">
-          <div className="col-span-2 sm:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <img
-                src="/og-image.png"
-                alt="Sellapage logo"
-                className="w-8 h-8 rounded-lg object-cover ring-1 ring-white/10"
-              />
-              <span className="font-display font-bold text-white text-base tracking-tight">Sellapage</span>
+    <footer className="relative overflow-hidden bg-forest-900 font-body text-white">
+      <div className="pointer-events-none absolute -right-40 -top-40 h-[420px] w-[420px] rounded-full bg-forest-600/25 blur-3xl" />
+      <div className="relative mx-auto max-w-7xl px-4 pt-14 sm:px-6 sm:pt-16">
+        <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end">
+          <div>
+            <Link to="/" className="inline-flex items-center gap-2.5">
+              <img src="/og-image.png" alt="" className="h-10 w-10 rounded-xl object-cover ring-1 ring-white/15" />
+              <span className="font-display text-[22px] font-extrabold tracking-tight">Sellapage</span>
             </Link>
-            <p className="text-gray-500 text-xs leading-relaxed mb-4">
-              The all-in-one commerce workspace for Nigerian businesses. Products, services, checkout, delivery, customers, analytics, and growth from one dashboard.
+            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/70">
+              The business management and growth platform for Nigerian businesses. Sell, get paid, deliver, keep your records and grow, from one dashboard.
             </p>
-            <div className="flex flex-wrap gap-2 mb-5">
-              {['CAC Registered', 'Paystack Secured', 'Firebase Encrypted'].map((badge) => (
-                <span key={badge} className="inline-flex items-center gap-1 bg-white/5 border border-white/8 rounded-full px-2.5 py-1 text-[9px] font-bold text-gray-500 uppercase tracking-wider">
-                  {badge}
-                </span>
-              ))}
-            </div>
-
-            {/* The Android app. There is no iPhone app, so none is promised. */}
-            <div className="mb-5">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               <PlayStoreBadge tone="light" />
+              <AppStoreSoon tone="dark" />
             </div>
+            <Link to="/login?mode=register" className="group mt-6 inline-flex items-center gap-2 text-[14px] font-bold text-forest-100">
+              Start free <ArrowRight size={15} className="transition group-hover:translate-x-1" />
+            </Link>
+          </div>
+          <NewsletterSignup />
+        </div>
 
-            <div className="flex items-center gap-2.5">
-              {SOCIAL_LINKS.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Sellapage on ${social.label}`}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/8 text-gray-400 hover:bg-green-500 hover:border-green-500 hover:text-white transition-all"
-                >
-                  {social.icon}
-                </a>
-              ))}
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-10 py-12 sm:grid-cols-3 lg:grid-cols-5">
+          {COLUMNS.map((col) => (
+            <div key={col.title}>
+              <p className="font-display text-[14px] font-bold text-white">{col.title}</p>
+              <ul className="mt-4 space-y-2.5">
+                {col.links.map(([label, to]) => (
+                  <li key={label}><Link to={to} className="text-[13.5px] text-white/60 transition-colors hover:text-white">{label}</Link></li>
+                ))}
+              </ul>
             </div>
-          </div>
+          ))}
+        </nav>
 
-          <div>
-            <p className="font-display font-semibold text-white text-sm mb-3">Quick Links</p>
-            <ul className="space-y-2">
-              {[
-                { label: 'How It Works', href: '/#how-it-works' },
-                { label: 'Features', href: '/#features' },
-                { label: 'Pricing', href: '/pricing' },
-                { label: 'Offer & Name Lab', href: '/tools/offer-name-lab' },
-                { label: 'Policy Generator', href: '/tools/policy-generator' },
-              ].map(l => (
-                <li key={l.label}>
-                  <a href={l.href} className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
-                    {l.label}
-                  </a>
-                </li>
-              ))}
-              <li>
-                <Link to="/jobs" className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
-                  Jobs
-                </Link>
-              </li>
-              <li>
-                <Link to="/blog" className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link to="/success-stories" className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
-                  Success Stories
-                </Link>
-              </li>
-              <li>
-                <Link to="/login" className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
-                  Sign In
-                </Link>
-              </li>
-            </ul>
+        <div className="flex flex-col gap-6 border-t border-white/10 py-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            {[[BadgeCheck, 'CAC registered'], [ShieldCheck, 'Payments by Paystack'], [Lock, 'Data encrypted']].map(([I, label]) => (
+              <Link key={label} to="/about#trust" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11.5px] font-semibold text-white/70 transition hover:text-white"><I size={13} className="text-forest-200" />{label}</Link>
+            ))}
           </div>
-
-          <div>
-            <p className="font-display font-semibold text-white text-sm mb-3">Compare</p>
-            <ul className="space-y-2">
-              {[
-                { label: 'vs. Linktree', to: '/compare/vs-linktree' },
-                { label: 'vs. Shopify', to: '/compare/vs-shopify' },
-                { label: 'vs. WhatsApp Business', to: '/compare/vs-whatsapp-business' },
-                { label: 'vs. Instagram Bio', to: '/compare/vs-instagram-bio' },
-              ].map(item => (
-                <li key={item.label}>
-                  <Link to={item.to} className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="font-display font-semibold text-white text-sm mb-3">Company</p>
-            <ul className="space-y-2">
-              {[
-                { label: 'About Us', to: '/about' },
-                { label: 'Dropshipping', to: '/dropshipping' },
-                { label: 'Investors & Partners', to: '/partners' },
-                { label: 'Privacy Policy', to: '/privacy-policy' },
-                { label: 'Terms of Service', to: '/terms' },
-                { label: 'Contact Us', to: '/contact' },
-                { label: 'Report Store', to: '/report-store' },
-              ].map(item => (
-                <li key={item.label}>
-                  <Link to={item.to} className="text-gray-500 hover:text-gray-200 text-xs transition-colors">
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <div className="flex items-center gap-2.5">
+            {SOCIAL_LINKS.map((social) => (
+              <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer" aria-label={`Sellapage on ${social.label}`}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all hover:border-white hover:bg-white hover:text-forest">
+                {social.icon}
+              </a>
+            ))}
           </div>
         </div>
 
-        <div className="border-t border-gray-800/60 pt-5 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-gray-600 text-xs">© {new Date().getFullYear()} Sellapage. All rights reserved.</p>
-          <p className="text-gray-600 text-xs">
-            Product Of{' '}
-            <a
-              href="https://nexkeysagency.com.ng"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-gray-200 text-xs transition-colors"
-            >
-              NexKeys Agency
-            </a>{' '}
-            - Made for Nigerians
+        <div className="flex flex-col gap-2 pb-4 text-[12.5px] text-white/50 sm:flex-row sm:items-center sm:justify-between">
+          <p>&copy; {new Date().getFullYear()} Sellapage. All rights reserved.</p>
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link to="/privacy-policy" className="transition-colors hover:text-white">Privacy policy</Link>
+            <Link to="/terms" className="transition-colors hover:text-white">Terms of service</Link>
+            <span>A product of <a href="https://nexkeysagency.com.ng" target="_blank" rel="noopener noreferrer" className="text-white/70 transition-colors hover:text-white">NexKeys Agency</a>, made in Lagos</span>
           </p>
         </div>
       </div>
+      {/* The name, large and quiet, along the bottom edge. */}
+      <p aria-hidden="true" className="pointer-events-none relative -mb-[0.22em] select-none text-center font-display text-[22vw] font-extrabold leading-none tracking-tighter text-white/[0.05] lg:text-[17rem]">Sellapage</p>
     </footer>
   )
 }

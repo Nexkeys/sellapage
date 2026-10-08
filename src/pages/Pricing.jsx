@@ -22,7 +22,7 @@ const PLANS = [
     name: 'Starter',
     price: 'Free',
     period: 'forever',
-    description: 'Free forever. Launch a clean commerce page for products, services, enquiries, and direct customer orders.',
+    description: 'Free forever. Get your business online with a store for products and services, enquiries and direct customer orders.',
     features: [
       '15 total listings (products + services combined)',
       '3 images per listing',
@@ -459,7 +459,7 @@ export default function Pricing() {
               See every feature side by side
             </h2>
             <p className="text-gray-500 text-xs sm:text-base max-w-2xl mx-auto">
-              Compare all capabilities across plans. Starter is free forever. Growth, Pro, and Premium unlock the full commerce workspace progressively.
+              Compare all capabilities across plans. Starter is free forever. Growth, Pro and Premium unlock more of the platform as your business grows.
             </p>
           </Reveal>
 

@@ -29,7 +29,7 @@ const SECTIONS = [
   {
     id: 'google',
     label: 'Free Google listings',
-    title: 'Your products on Google, free.',
+    title: 'Your products on Google, without paying for ads.',
     icon: ShoppingBag,
     blurb: 'Put your products on Google Search and Shopping without paying for ads.',
   },
@@ -65,7 +65,7 @@ const SECTIONS = [
   },
 ]
 
-export default function MarketingTab({ store, storeUrl, navigateTo }) {
+export default function MarketingTab({ store, storeUrl, products = [], navigateTo }) {
   const [section, setSection] = useState('seo')
   // Status is held here so the Google feed section knows whether the store is
   // eligible and switched on without the vendor having to visit Get Found first.
@@ -127,19 +127,20 @@ export default function MarketingTab({ store, storeUrl, navigateTo }) {
       {section === 'seo' && (
         <SeoTab store={store} storeUrl={storeUrl} navigateTo={navigateTo} onStatusChange={setStatus} />
       )}
-      <div className={section === 'seo' ? '' : 'max-w-3xl'}>
-        {section === 'maps' && <GoogleBusinessTab store={store} storeUrl={storeUrl} />}
-        {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
-        {section === 'guarantee' && <GuaranteeTab store={store} storeUrl={storeUrl} />}
-        {section === 'google' && (
-          <GoogleFeedTab
-            store={store}
-            storeUrl={storeUrl}
-            eligible={status.eligible}
-            seoActive={status.active}
-          />
-        )}
-      </div>
+      {/* Every section shares Get found's layout: settings left, preview right. */}
+      {section === 'maps' && <GoogleBusinessTab store={store} storeUrl={storeUrl} />}
+      {section === 'content' && <ContentKitTab store={store} storeUrl={storeUrl} />}
+      {section === 'guarantee' && <GuaranteeTab store={store} />}
+      {section === 'google' && (
+        <GoogleFeedTab
+          store={store}
+          storeUrl={storeUrl}
+          products={products}
+          navigateTo={navigateTo}
+          eligible={status.eligible}
+          seoActive={status.active}
+        />
+      )}
     </div>
   )
 }

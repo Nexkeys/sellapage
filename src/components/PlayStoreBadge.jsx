@@ -52,3 +52,28 @@ export default function PlayStoreBadge({ tone = 'dark', className = '', label = 
     </a>
   )
 }
+
+/**
+ * The iPhone app is not out yet. This says so plainly, sits beside the Play
+ * badge in the same shape, and is deliberately not a link (and not Apple's
+ * official badge, which may only be used once the app is live).
+ */
+export function AppStoreSoon({ tone = 'dark', className = '' }) {
+  const isLight = tone === 'light'
+  return (
+    <span
+      aria-label="iPhone app coming soon"
+      className={`inline-flex cursor-default items-center gap-3 rounded-xl border px-4 py-2.5 ${
+        isLight ? 'border-gray-200 bg-white/70 text-gray-500' : 'border-white/15 bg-white/5 text-white/70'
+      } ${className}`}
+    >
+      <svg viewBox="0 0 24 24" className="h-6 w-6 flex-shrink-0" fill="currentColor" aria-hidden="true">
+        <path d="M16.37 1.43c0 1.14-.42 2.2-1.24 3.03-.86.88-1.9 1.39-3.02 1.3-.13-1.09.4-2.24 1.2-3.05.88-.9 2.06-1.4 3.06-1.28zM20.5 17.07c-.56 1.29-.83 1.87-1.55 3.01-1 1.6-2.42 3.6-4.17 3.61-1.56.02-1.96-1.02-4.08-1-2.12.01-2.56 1.02-4.12 1-1.75-.02-3.09-1.82-4.09-3.42C-.3 15.82-.6 10.6 1.29 7.84c1.34-1.96 3.46-3.1 5.45-3.1 2.03 0 3.3 1.11 4.98 1.11 1.62 0 2.61-1.12 4.95-1.12 1.77 0 3.65.97 4.99 2.64-4.38 2.4-3.67 8.66.84 9.7z" />
+      </svg>
+      <span className="text-left leading-none">
+        <span className="block text-[9px] font-medium uppercase tracking-wide opacity-80">Coming soon</span>
+        <span className="block font-display text-base font-bold leading-tight">iPhone app</span>
+      </span>
+    </span>
+  )
+}

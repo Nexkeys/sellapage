@@ -37,7 +37,7 @@ export const SITE = {
     'https://ng.linkedin.com/company/sellapage',
   ],
   description:
-    'Sellapage is an all-in-one commerce platform built for Nigerian businesses. Vendors create an online store page for products, services or bookings, take payments through Paystack, arrange delivery with Sendbox and Topship, and manage orders, customers, reviews, discounts and analytics from a single dashboard. The Starter plan is free forever.',
+    'Sellapage is a business management and growth platform for Nigerian businesses. Owners sell online through their own store for products, services and bookings, take payments through Paystack, book delivery with Sendbox and Topship, keep customer records, receipts and a sales ledger, manage their team, and get found on Google Search, Shopping and Maps, all from one dashboard and the Android app. The Starter plan is free forever.',
 }
 
 /** Organization + WebSite. Emitted on the home page; the entity every other page hangs off. */
@@ -56,13 +56,16 @@ export const ORGANIZATION_JSONLD = {
       sameAs: SITE.sameAs,
       areaServed: { '@type': 'Country', name: 'Nigeria' },
       knowsAbout: [
+        'small business management software',
+        'business growth tools',
         'ecommerce in Nigeria',
         'online store builder',
-        'WhatsApp commerce',
+        'order and inventory management',
+        'appointment booking',
         'Paystack payments',
-        'small business software',
-        'service booking',
-        'order management',
+        'delivery and logistics in Nigeria',
+        'customer relationship management',
+        'local SEO and Google listings',
       ],
       contactPoint: [
         {
@@ -117,15 +120,15 @@ export function faq(questions) {
 const HOME_FAQ = [
   {
     q: 'What is Sellapage?',
-    a: 'Sellapage is an all-in-one commerce platform for Nigerian businesses. It gives a vendor a shareable online store page for products, services or bookings, with Paystack checkout, Sendbox and Topship delivery, customer records, verified reviews, discount codes, receipts and analytics in one dashboard.',
+    a: 'Sellapage is a business management and growth platform for Nigerian businesses. It brings selling, payments, orders, bookings, delivery, customer records, receipts, a sales ledger, team accounts, marketing on Google and an AI assistant into one dashboard, so an owner can run and grow the whole business from one place.',
   },
   {
     q: 'How much does Sellapage cost?',
-    a: 'The Starter plan is free forever. Paid Growth, Pro and Premium plans add higher listing limits, analytics, AI product descriptions, custom domains, premium themes, team accounts and payout tools.',
+    a: 'The Starter plan is free forever. Growth is ₦5,000 a month, Pro ₦12,000 a month and Premium ₦25,000 a month, adding higher listing limits, analytics, Paystack checkout, delivery, customer records, custom domains, premium themes, team accounts and growth tools.',
   },
   {
     q: 'Who is Sellapage for?',
-    a: 'Nigerian small and medium businesses, service providers, freelancers and creators who sell on Instagram, WhatsApp or TikTok and need a proper store page with checkout instead of a link list or a DM thread.',
+    a: 'Nigerian small and medium businesses, shops, service providers, salons, freelancers and creators who want to run their sales, payments, orders, bookings, delivery and customers from one place and grow, rather than across chats, notebooks and spreadsheets.',
   },
   {
     q: 'How do customers pay on Sellapage?',
@@ -133,7 +136,7 @@ const HOME_FAQ = [
   },
   {
     q: 'Do I need a developer to use Sellapage?',
-    a: 'No. A store is set up from a form in the dashboard, with no code, no hosting and no installation. Most vendors have a live store page in under two minutes.',
+    a: 'No. Everything is set up from simple forms in the dashboard, with no code, no hosting and no installation. A business can be live and taking orders the same day.',
   },
   {
     q: 'Does Sellapage handle delivery?',
@@ -145,7 +148,15 @@ const HOME_FAQ = [
   },
   {
     q: 'Is Sellapage a marketplace?',
-    a: 'No. Each vendor gets their own independent store page and their own customers. Sellapage is the software behind the store, not a marketplace that owns the buyer relationship.',
+    a: 'No. Each business gets its own independent store and keeps its own customers. Sellapage is the software the business runs on, not a marketplace that owns the buyer relationship.',
+  },
+  {
+    q: 'Can I record walk-in sales and manage stock?',
+    a: 'Yes. Walk-in and offline sales go in the sales ledger with a receipt, stock counts drop as paid orders come in (with a low-stock alert), and team members can be given access to the parts of the dashboard they need.',
+  },
+  {
+    q: 'Is there a mobile app?',
+    a: 'Yes. The Sellapage app is on Google Play for Android. An iPhone app is coming soon; until then iPhone users can add Sellapage to their home screen from the browser.',
   },
 ]
 
@@ -161,15 +172,16 @@ export const PAGE_SEO = {
     title: null, // uses the site-level title
     description: SITE.description,
     keywords:
-      'sellapage, nigerian ecommerce platform, online store nigeria, sell products online nigeria, whatsapp store nigeria, instagram shop nigeria, paystack checkout, online shop builder nigeria, business page nigeria, free online store nigeria, ecommerce for small business nigeria, service booking nigeria, sell on instagram nigeria, link in bio store, storefront builder africa',
+      'sellapage, business management software nigeria, small business management app nigeria, business growth platform, nigerian ecommerce platform, online store nigeria, sell products online nigeria, inventory management nigeria, booking software nigeria, paystack checkout, delivery booking nigeria, customer management software nigeria, receipt and sales records app, free online store nigeria',
     jsonLd: [ORGANIZATION_JSONLD],
     prose: [
-      'Sellapage is an all-in-one commerce platform built for Nigerian businesses.',
-      'A vendor signs up, creates a store page for products, services or bookings, and shares one link on Instagram, WhatsApp, TikTok or anywhere else. Customers browse the page and pay on it directly.',
-      'Payments run through Paystack, supporting card, bank transfer and USSD. Orders are created automatically when payment succeeds. Delivery integrates with Sendbox and Topship, and vendors can set their own delivery zones and rates.',
-      'The dashboard covers products and services, orders, bookings, customer records, verified reviews, discount codes, receipts, a ledger, payouts, analytics and AI-written product descriptions.',
-      'The Starter plan is free forever. Growth, Pro and Premium add higher limits, custom domains, premium themes, team accounts and advanced payout and marketing tools.',
-      'Sellapage is not a marketplace. Each vendor keeps their own store page and their own customers.',
+      'Sellapage is a business management and growth platform built for Nigerian businesses.',
+      'It brings the whole business into one dashboard: an online store for products, services and bookings, payments, orders, delivery, customer records, receipts, a sales ledger for walk-in sales, stock counts, team accounts, analytics and marketing.',
+      'Payments run through Paystack, supporting card, bank transfer and USSD. Orders are created automatically when payment succeeds and the money settles to the business bank account; Sellapage takes no cut of sales. Delivery integrates with Sendbox and Topship, and businesses can set their own delivery zones and rates.',
+      'For growth, Sellapage lists businesses on Google Search, Google Shopping and Google Maps, connects Google Ads, the Meta Pixel and the TikTok Pixel, and includes Sella, an AI assistant that reads the dashboard and answers questions about sales, stock and customers.',
+      'The Sellapage app for Android lets owners see sales, confirm orders, record walk-in sales and send receipts from their phone. An iPhone app is coming soon.',
+      'The Starter plan is free forever. Growth, Pro and Premium add higher limits, checkout, delivery, custom domains, premium themes, team accounts and growth tools.',
+      'Sellapage is not a marketplace. Each business keeps its own store and its own customers.',
       // The FAQ answers are folded into the prose rather than emitted as a
       // second FAQPage block, because index.html already ships one and two
       // FAQPage entries on a single URL is invalid. Crawlers still read every
@@ -181,13 +193,14 @@ export const PAGE_SEO = {
   '/about': {
     title: 'About',
     description:
-      'Sellapage is an all-in-one commerce platform for Nigerian merchants, service providers and freelancers. Learn what it does, who builds it, and why it exists.',
+      'Sellapage is a business management and growth platform for Nigerian businesses, built in Lagos. Who builds it, why it exists, and the facts behind it: CAC registration, Paystack payments and encrypted data.',
     keywords:
-      'about sellapage, sellapage company, nigerian ecommerce platform, who owns sellapage, sellapage story, nigerian startup ecommerce, online business nigeria, sellapage mission',
+      'about sellapage, sellapage company, is sellapage legit, sellapage cac registration, business management platform nigeria, who owns sellapage, sellapage story, nigerian startup, sellapage mission',
     jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'About', path: '/about' }])],
     prose: [
-      'Sellapage exists because selling online in Nigeria usually means stitching together an Instagram page, a WhatsApp thread, a bank transfer and a dispatch rider, with nothing joined up.',
-      'Sellapage replaces that with one store page and one dashboard: listings, checkout, delivery, customers, reviews, discounts, receipts and analytics in a single place.',
+      'Sellapage exists because running a business in Nigeria usually means juggling an Instagram page, WhatsApp chats, bank alerts, a sales notebook, a stock spreadsheet and a dispatch rider, with nothing joined up.',
+      'Sellapage brings that into one dashboard: selling online, payments, orders, bookings, delivery, customer records, receipts, a sales ledger, team accounts, analytics and marketing in a single place.',
+      'Sellapage is registered with the Corporate Affairs Commission (business name number BN 9689086). Payments are processed by Paystack, a CBN-licensed payment processor, and data is stored encrypted on Google Firebase.',
       'It is built specifically for Nigerian conditions, including Paystack payments in naira, Sendbox and Topship delivery, Lagos Island and Mainland delivery zones, and pricing that suits a small business rather than an enterprise.',
       'The Starter plan is free forever, so a vendor can have a working store without paying anything.',
     ],
@@ -196,7 +209,7 @@ export const PAGE_SEO = {
   '/partners': {
     title: 'Investors & Partners',
     description:
-      'Sellapage is a Nigerian commerce platform for small businesses, live since May 2026. Investors, strategic partners and prospective co-founders can start a conversation with the founder here.',
+      'Sellapage is a Nigerian business management and growth platform for small businesses, live since May 2026. Investors, strategic partners and prospective co-founders can start a conversation with the founder here.',
     keywords:
       'sellapage investors, nigerian ecommerce startup, nigerian startup investment, sellapage partners, strategic partnership nigeria sme, co-founder nigeria startup, ernest uwaoma, nexkeys agency',
     jsonLd: [
@@ -212,7 +225,7 @@ export const PAGE_SEO = {
       },
     ],
     prose: [
-      'Sellapage is a live commerce platform for Nigerian small businesses, offering one store link with checkout, delivery and bookings, and one dashboard to run orders, customers and payments.',
+      'Sellapage is a live business management and growth platform for Nigerian small businesses: one dashboard to sell online, take payments, run orders and bookings, deliver, keep customer records and grow.',
       // No live figures here on purpose. This text is baked in at build time,
       // while the figures on the page are edited from the admin panel, so a
       // number here would drift out of date the first time one changes.

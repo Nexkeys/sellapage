@@ -78,7 +78,7 @@ function stripHeadTags(html, dropJsonLd) {
 }
 
 function buildHead(route, seo) {
-  const fullTitle = seo.title ? `${seo.title} | ${SITE.name}` : `${SITE.name} - Run Your Entire Business from One Dashboard`
+  const fullTitle = seo.title ? `${seo.title} | ${SITE.name}` : `${SITE.name} - Business Management and Growth Platform for Nigerian Businesses`
   const canonical = `${SITE.url}${route === '/' ? '' : route}`
   const blocks = Array.isArray(seo.jsonLd) ? seo.jsonLd : seo.jsonLd ? [seo.jsonLd] : []
 

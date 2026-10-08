@@ -18,55 +18,15 @@
 //        image uses that image as the still frame shown before it plays.
 
 export const MEDIA_SLOTS = [
-  // ── Homepage hero (2026-10-07 redesign) ─────────────────────────────
-  // The hero video (home-hero-main) was removed at Nex's request.
-  {
-    name: 'home-hero-scene',
-    where: 'Homepage, top of the page, the photo behind the phone',
-    shape: 'landscape',
-    accepts: 'image',
-    tip: 'A Nigerian shop owner smiling at her phone, with products around her, bright and green. Leave the left side calm for the headline.',
-  },
-  {
-    name: 'home-hero-phone',
-    where: 'Homepage, top of the page, the phone in front of the photo',
-    shape: 'portrait',
-    accepts: 'both',
-    tip: 'Record your phone screen: add a product, tap share, post to WhatsApp status. 10 to 15 seconds, no sound needed.',
-  },
-
-  // ── Homepage "What Sellapage does" cards ──────────────────────────────
-  // One per card, in the order they appear. Each shows above the card title
-  // in place of the small icon.
-  { name: 'feature-store-page', where: 'Homepage card: Create Your Commerce Page', shape: 'landscape', accepts: 'both', tip: 'A storefront as a customer sees it.' },
-  { name: 'feature-products', where: 'Homepage card: Manage Products & Services', shape: 'landscape', accepts: 'both', tip: 'The products list in the dashboard.' },
-  { name: 'feature-payments', where: 'Homepage card: Accept Payments', shape: 'landscape', accepts: 'both', tip: 'The checkout screen.' },
-  { name: 'feature-delivery', where: 'Homepage card: Manage Delivery', shape: 'landscape', accepts: 'both', tip: 'Delivery rates or a shipment being booked.' },
-  { name: 'feature-customers', where: 'Homepage card: Customer CRM', shape: 'landscape', accepts: 'both', tip: 'The customers list.' },
-  { name: 'feature-reviews', where: 'Homepage card: Reviews & Ratings', shape: 'landscape', accepts: 'both', tip: 'Stars on a product card.' },
-  { name: 'feature-discounts', where: 'Homepage card: Discounts & Promos', shape: 'landscape', accepts: 'both', tip: 'A discount code being created.' },
-  { name: 'feature-analytics', where: 'Homepage card: Analytics & Growth', shape: 'landscape', accepts: 'both', tip: 'The analytics charts.' },
-  { name: 'feature-receipts', where: 'Homepage card: Receipts & Invoices', shape: 'landscape', accepts: 'both', tip: 'A generated receipt.' },
-  { name: 'feature-loyalty', where: 'Homepage card: Loyalty Points', shape: 'landscape', accepts: 'both', tip: 'A points card.' },
-  { name: 'feature-abandoned', where: 'Homepage card: Abandoned Checkout Recovery', shape: 'landscape', accepts: 'both', tip: 'The abandoned checkouts list.' },
-
-  // ── Homepage mid-page and app section ─────────────────────────────────
-  {
-    name: 'home-showcase',
-    where: 'Homepage, "Less chaos. More orders." section',
-    shape: 'landscape',
-    accepts: 'both',
-    tip: 'The dashboard on a laptop.',
-  },
+  // ── Homepage (2026-10-08 rebuild) ───────────────────────────────────
+  // The hero itself is drawn in code (a live dashboard and phone), so it
+  // needs no photo. These are the photos inside the feature cards.
+  { name: 'home-hero-scene', where: 'Homepage, "A store that sells for you" card, the wide photo on the right', shape: 'landscape', accepts: 'image', tip: 'A Nigerian shop owner smiling at her phone, with products around her, bright and green. Keep the left side calm.' },
+  { name: 'home-bookings', where: 'Homepage, "Bookings that fill your week" card, above the calendar', shape: 'landscape', accepts: 'image', tip: 'A salon owner checking her appointments on a tablet, mint green salon.' },
+  { name: 'home-delivery', where: 'Homepage, "Book delivery without leaving your dashboard" card, left photo', shape: 'landscape', accepts: 'image', tip: 'A delivery rider handing a parcel to a smiling customer at her door.' },
+  { name: 'home-mission', where: 'Homepage, "See everything happening in your business" card, the photo with features circling it', shape: 'landscape', accepts: 'image', tip: 'A Nigerian business owner checking orders on a phone, with a laptop and products on the table.' },
   { name: 'home-app-1', where: 'Homepage, "Run your shop from your pocket", first phone', shape: 'portrait', accepts: 'both', tip: 'An app screen.' },
   { name: 'home-app-2', where: 'Homepage, "Run your shop from your pocket", second phone', shape: 'portrait', accepts: 'both', tip: 'Another app screen.' },
-
-  // ── Homepage testimonials ─────────────────────────────────────────────
-  // Real vendors, with their permission. Shown as a round photo beside their
-  // words, so a face centred in the picture works best.
-  { name: 'testimonial-1', where: 'Homepage, "Loved by Business Owners", first person', shape: 'square', accepts: 'image', tip: 'A real vendor, face centred, ideally with their product.' },
-  { name: 'testimonial-2', where: 'Homepage, "Loved by Business Owners", second person', shape: 'square', accepts: 'image', tip: 'A real vendor, face centred.' },
-  { name: 'testimonial-3', where: 'Homepage, "Loved by Business Owners", third person', shape: 'square', accepts: 'image', tip: 'A real vendor, face centred.' },
 
   // ── Vendor dashboard home ─────────────────────────────────────────────
   {
@@ -121,15 +81,10 @@ export const MEDIA_SLOTS = [
   { name: 'auth-otp-art', where: 'Code screen (SMS and email codes), left side', shape: 'landscape', accepts: 'image', tip: 'A phone with a Sellapage code notification and a green envelope bubble.' },
   { name: 'auth-script', where: 'Code screen, "Almost there!" handwriting under the list', shape: 'landscape', accepts: 'image', tip: 'Green handwriting with a small heart.' },
 
-  // ── Homepage sections (2026-10-07 redesign) ───────────────────────────
-  { name: 'home-mission', where: 'Homepage, "More than just a platform" card, left photo', shape: 'landscape', accepts: 'image', tip: 'A Nigerian business owner checking orders on a phone, with a laptop and products on the table.' },
-  { name: 'home-categories', where: 'Homepage, "Discover what you can do", right side', shape: 'landscape', accepts: 'image', tip: 'A shopper with a phone and products around her (sneakers, headphones, a handbag), mint green background.' },
-  { name: 'home-cta', where: 'Homepage, the green "Your business deserves its own place online" banner, right side', shape: 'portrait', accepts: 'image', tip: 'A smiling person holding a phone, cut out or on a dark green background.' },
-
   // ── About page (2026-10-07 redesign) ──────────────────────────────────
   { name: 'about-hero', where: 'About page, top, the big photo on the right', shape: 'landscape', accepts: 'image', tip: 'A Nigerian businesswoman at a laptop, green blazer, plants, bright room.' },
   { name: 'about-mission', where: 'About page, "Our mission and vision", middle photo', shape: 'landscape', accepts: 'image', tip: 'A modern green glass building with palm trees and blue sky.' },
-  { name: 'about-cta', where: 'About page, the green "Ready to grow" banner, right side', shape: 'landscape', accepts: 'image', tip: 'A laptop showing the Sellapage dashboard, with a plant and a mug.' },
+  { name: 'about-cta', where: 'About page, the green closing banner, right side', shape: 'landscape', accepts: 'image', tip: 'A proud boutique owner at her shop door holding her phone.' },
 ]
 
 export const SLOT_NAMES = new Set(MEDIA_SLOTS.map((s) => s.name))

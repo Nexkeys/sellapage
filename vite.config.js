@@ -4,8 +4,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   // esbuild's default minifier was mangling an identifier collision in the
-  // production bundle (a genuine top-level component reference — e.g. `SEO`
-  // used across many pages — got renamed at its declaration but left
+  // production bundle (a genuine top-level component reference, e.g. `SEO`
+  // used across many pages, got renamed at its declaration but left
   // unrenamed at some call sites, throwing "ReferenceError: X is not
   // defined" only in the minified build, never in dev or an unminified
   // build). Terser is the more battle-tested minifier and doesn't reproduce
@@ -25,7 +25,7 @@ export default defineConfig({
       manifest: {
         name: "Sellapage",
         short_name: "Sellapage",
-        description: "Create your store. Take orders. Grow faster.",
+        description: "Run and grow your business from one place: sell, get paid, deliver and keep your records.",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",

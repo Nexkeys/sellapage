@@ -2240,6 +2240,7 @@ export default function Dashboard() {
         <MarketingTab
           store={store}
           storeUrl={storeUrl}
+          products={products}
           navigateTo={setActiveTab}
         />
       )}

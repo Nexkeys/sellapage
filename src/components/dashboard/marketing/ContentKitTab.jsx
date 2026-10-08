@@ -15,11 +15,15 @@
 // crossOrigin='anonymous' BEFORE its src is set (order matters), and if that
 // still fails the card renders without the photo rather than breaking. A vendor
 // always gets something they can post.
+//
+// Redesigned 2026-10-08 to match Get found: products as photos to tap, size
+// and style as visual choices, and the card shown inside a phone, the way it
+// will look when posted. Phones that can share files get a Share button that
+// hands the image and caption straight to WhatsApp, Instagram or TikTok.
 import { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  Image as ImageIcon, Download, Copy, Check, Loader2, RefreshCw, AlertCircle,
-} from 'lucide-react'
+import { Image as ImageIcon, Download, Loader2, RefreshCw, Share2 } from 'lucide-react'
 import { getProducts } from '../../../firebase/products'
+import { Panel, CopyButton, Notice, PhoneFrame, SideLabel, INPUT, useCopy } from './ui'
 
 const FORMATS = [
   { id: 'square', label: 'Instagram post', w: 1080, h: 1080 },
@@ -115,7 +119,12 @@ export default function ContentKitTab({ store, storeUrl }) {
   const [loading, setLoading] = useState(true)
   const [drawing, setDrawing] = useState(false)
   const [photoBlocked, setPhotoBlocked] = useState(false)
-  const [copied, setCopied] = useState('')
+  const [copied, copy] = useCopy()
+  // File sharing is a phone feature (Android Chrome, iOS Safari); laptops
+  // mostly cannot, so the button only appears where it will work.
+  const [canShare] = useState(() => {
+    try { return !!navigator.canShare?.({ files: [new File([''], 'post.jpg', { type: 'image/jpeg' })] }) } catch { return false }
+  })
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -293,6 +302,23 @@ export default function ContentKitTab({ store, storeUrl }) {
 
   useEffect(() => { draw() }, [draw])
 
+  const fileName = () => `${(selected?.name || 'post').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${format.id}.jpg`
+
+  const share = async () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    try {
+      const blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('no blob'))), 'image/jpeg', 0.92),
+      )
+      const file = new File([blob], fileName(), { type: 'image/jpeg' })
+      await navigator.share({ files: [file], text: selected ? buildCaption(selected, store, storeUrl) : '' })
+    } catch (e) {
+      // Closing the share sheet is not an error worth showing.
+      if (e?.name !== 'AbortError') setError('Could not open sharing. Save the image instead and post it from your gallery.')
+    }
+  }
+
   const download = async () => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -310,7 +336,7 @@ export default function ContentKitTab({ store, storeUrl }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${(selected?.name || 'post').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${format.id}.jpg`
+      a.download = fileName()
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -320,12 +346,6 @@ export default function ContentKitTab({ store, storeUrl }) {
       // is designed to prevent. Say what to do instead of failing silently.
       setError('Could not save the image. Try a different product photo, or take a screenshot of the preview.')
     }
-  }
-
-  const copy = (text, key) => {
-    navigator.clipboard?.writeText(text)
-    setCopied(key)
-    setTimeout(() => setCopied(''), 2000)
   }
 
   if (loading) {
@@ -338,140 +358,116 @@ export default function ContentKitTab({ store, storeUrl }) {
 
   if (!products.length) {
     return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center">
-        <ImageIcon size={26} className="mx-auto text-gray-300" />
-        <p className="mt-3 text-sm font-bold text-gray-700">Add a product first</p>
-        <p className="mt-1 text-xs text-gray-500">
-          Once you have a product with a photo, you can turn it into a post here.
-        </p>
-      </div>
+      <Panel>
+        <div className="py-6 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-forest-50 text-forest-600"><ImageIcon size={26} /></span>
+          <p className="mt-3 text-[15px] font-bold text-gray-800">Add a product first</p>
+          <p className="mt-1 text-[13px] text-gray-500">Once you have a product with a photo, you can turn it into a post here.</p>
+        </div>
+      </Panel>
     )
   }
 
   const caption = selected ? buildCaption(selected, store, storeUrl) : ''
   const hashtags = selected ? buildHashtags(selected, store) : ''
+  const handle = store?.businessName || store?.storeName || 'Your store'
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-gray-100 bg-white p-4">
-        <label className="text-xs font-bold text-gray-700">Product</label>
-        <select
-          value={selected?.id || ''}
-          onChange={(e) => setSelected(products.find((p) => p.id === e.target.value))}
-          className="mt-1.5 w-full min-w-0 truncate rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-green-400"
-        >
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="min-w-0 space-y-4">
+        <Panel icon={ImageIcon} title="Pick a product" sub={`${products.length} product${products.length === 1 ? '' : 's'}. Tap one to turn it into a post.`}>
+          <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:thin] sm:grid sm:grid-cols-4 sm:overflow-visible xl:grid-cols-5">
+            {products.slice(0, 30).map((p) => {
+              const on = selected?.id === p.id
+              const src = p.imageUrl || p.imageUrls?.[0]
+              return (
+                <button key={p.id} type="button" onClick={() => setSelected(p)} aria-pressed={on}
+                  className={`w-28 flex-shrink-0 overflow-hidden rounded-xl border-2 text-left transition sm:w-auto ${on ? 'border-forest-600 shadow-lg shadow-forest/10' : 'border-transparent ring-1 ring-gray-100 hover:ring-forest-200'}`}>
+                  {src ? <img src={src} alt="" loading="lazy" className="aspect-square w-full bg-gray-50 object-cover" /> : <span className="flex aspect-square w-full items-center justify-center bg-gray-50 text-gray-300"><ImageIcon size={22} /></span>}
+                  <span className="block truncate px-2 py-1.5 text-[11.5px] font-semibold text-gray-700">{p.name}</span>
+                </button>
+              )
+            })}
+          </div>
+          {products.length > 30 && (
+            <select value={selected?.id || ''} onChange={(e) => setSelected(products.find((p) => p.id === e.target.value))} className={`${INPUT} mt-3`} aria-label="All products">
+              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+        </Panel>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-bold text-gray-700">Size</label>
-            <div className="mt-1.5 flex flex-col gap-1.5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Panel title="Size">
+            <div className="grid grid-cols-2 gap-2">
               {FORMATS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFormat(f)}
-                  className={`rounded-xl px-3 py-2 text-[11px] font-bold transition-colors ${
-                    format.id === f.id ? 'bg-gray-900 text-white' : 'border border-gray-200 bg-white text-gray-600'
-                  }`}
-                >
-                  {f.label}
+                <button key={f.id} type="button" onClick={() => setFormat(f)} aria-pressed={format.id === f.id}
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-2 py-3 text-center transition ${format.id === f.id ? 'border-forest-600 bg-forest-50 text-forest-800' : 'border-gray-200 text-gray-600 hover:border-forest-200'}`}>
+                  <span className={`rounded-md border-2 ${format.id === f.id ? 'border-forest-600' : 'border-gray-300'} ${f.id === 'square' ? 'h-9 w-9' : 'h-11 w-[25px]'}`} />
+                  <span className="text-[11.5px] font-bold leading-tight">{f.label}</span>
                 </button>
               ))}
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700">Style</label>
-            <div className="mt-1.5 flex flex-col gap-1.5">
+          </Panel>
+          <Panel title="Style">
+            <div className="grid grid-cols-3 gap-2">
               {THEMES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTheme(t)}
-                  className={`rounded-xl px-3 py-2 text-[11px] font-bold transition-colors ${
-                    theme.id === t.id ? 'bg-gray-900 text-white' : 'border border-gray-200 bg-white text-gray-600'
-                  }`}
-                >
-                  {t.label}
+                <button key={t.id} type="button" onClick={() => setTheme(t)} aria-pressed={theme.id === t.id}
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-2 py-3 transition ${theme.id === t.id ? 'border-forest-600 bg-forest-50' : 'border-gray-200 hover:border-forest-200'}`}>
+                  <span className="relative h-9 w-9 overflow-hidden rounded-full ring-1 ring-black/10" style={{ background: t.bg }}><span className="absolute bottom-1.5 left-1.5 h-2.5 w-2.5 rounded-full" style={{ background: t.accent }} /></span>
+                  <span className="text-[11.5px] font-bold text-gray-700">{t.label}</span>
                 </button>
               ))}
             </div>
-          </div>
+          </Panel>
         </div>
+
+        <Panel title="Caption" right={<CopyButton done={copied === 'caption'} onClick={() => copy(caption, 'caption')} />}>
+          <pre className="whitespace-pre-wrap break-words rounded-xl bg-gray-50 p-3.5 font-sans text-[13px] leading-relaxed text-gray-700">{caption}</pre>
+        </Panel>
+        <Panel title="Hashtags" right={<CopyButton done={copied === 'tags'} onClick={() => copy(hashtags, 'tags')} />}>
+          <p className="break-words rounded-xl bg-gray-50 p-3.5 text-[13px] leading-relaxed text-forest-700">{hashtags}</p>
+        </Panel>
+
+        {error && <Notice tone="error">{error}</Notice>}
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-gray-900">Preview</p>
-          <button type="button" onClick={draw} className="text-gray-400 hover:text-gray-700" aria-label="Redraw">
-            {drawing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+      <aside className="min-w-0 space-y-3 lg:sticky lg:top-4">
+        <SideLabel>{format.id === 'story' ? 'As a story or status' : 'As an Instagram post'}</SideLabel>
+        <div className="rounded-2xl bg-gradient-to-br from-forest-50 to-white p-5 ring-1 ring-forest-100">
+          <PhoneFrame>
+            {format.id === 'square' && (
+              <div className="flex items-center gap-2 px-3 py-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 p-[2px]"><span className="flex h-full w-full items-center justify-center rounded-full bg-white text-[9px] font-extrabold text-gray-800">{handle.slice(0, 2).toUpperCase()}</span></span>
+                <span className="truncate text-[11.5px] font-bold text-gray-900">{handle}</span>
+              </div>
+            )}
+            <div className={`relative bg-gray-50 ${format.id === 'story' ? 'px-0' : ''}`}>
+              <canvas ref={canvasRef} className="block h-auto w-full" style={{ aspectRatio: `${format.w} / ${format.h}` }} />
+              {drawing && <span className="absolute inset-0 flex items-center justify-center bg-white/40"><Loader2 size={20} className="animate-spin text-forest-600" /></span>}
+            </div>
+            {format.id === 'square' && (
+              <div className="px-3 pb-3 pt-2">
+                <p className="text-[11px] font-bold text-gray-900">{handle}</p>
+                <p className="line-clamp-2 text-[11px] leading-snug text-gray-600">{caption}</p>
+              </div>
+            )}
+          </PhoneFrame>
+        </div>
+
+        {photoBlocked && <Notice tone="warn">This product photo could not be loaded into the card, so it was left out. The rest of the post still works. Re-uploading the photo usually fixes it.</Notice>}
+
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={download} className={`flex items-center justify-center gap-2 rounded-xl bg-forest px-4 py-3 text-[13px] font-bold text-white shadow-lg shadow-forest/20 transition hover:bg-forest-700 active:scale-[0.99] ${canShare ? '' : 'col-span-2'}`}>
+            <Download size={15} /> Save image
           </button>
+          {canShare && (
+            <button type="button" onClick={share} className="flex items-center justify-center gap-2 rounded-xl border border-forest-200 bg-white px-4 py-3 text-[13px] font-bold text-forest-700 transition hover:bg-forest-50">
+              <Share2 size={15} /> Share
+            </button>
+          )}
         </div>
-
-        {photoBlocked && (
-          <div className="mt-2 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-2.5">
-            <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-amber-600" />
-            <p className="text-[11px] text-amber-800">
-              This product photo could not be loaded into the card, so it was left out. The rest of the
-              post still works. Re-uploading the photo usually fixes it.
-            </p>
-          </div>
-        )}
-
-        <div className="mt-3 flex justify-center rounded-xl bg-gray-50 p-3">
-          <canvas
-            ref={canvasRef}
-            className="h-auto w-full max-w-[260px] rounded-lg shadow-sm"
-            style={{ aspectRatio: `${format.w} / ${format.h}` }}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={download}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-green-700 active:scale-[0.99]"
-        >
-          <Download size={15} /> Save image
-        </button>
-      </div>
-
-      <div className="rounded-2xl border border-gray-100 bg-white p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-gray-900">Caption</p>
-          <button
-            type="button"
-            onClick={() => copy(caption, 'caption')}
-            className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-2.5 py-1.5 text-[11px] font-bold text-white"
-          >
-            {copied === 'caption' ? <Check size={12} /> : <Copy size={12} />} Copy
-          </button>
-        </div>
-        <pre className="mt-2 whitespace-pre-wrap break-words rounded-xl bg-gray-50 p-3 font-sans text-xs leading-relaxed text-gray-700">
-          {caption}
-        </pre>
-
-        <div className="mt-3 flex items-center justify-between">
-          <p className="text-sm font-bold text-gray-900">Hashtags</p>
-          <button
-            type="button"
-            onClick={() => copy(hashtags, 'tags')}
-            className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-2.5 py-1.5 text-[11px] font-bold text-white"
-          >
-            {copied === 'tags' ? <Check size={12} /> : <Copy size={12} />} Copy
-          </button>
-        </div>
-        <p className="mt-2 break-words rounded-xl bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">{hashtags}</p>
-      </div>
-
-      {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3">
-          <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-red-500" />
-          <p className="text-xs font-semibold text-red-700">{error}</p>
-        </div>
-      )}
+        <button type="button" onClick={draw} className="mx-auto flex items-center gap-1.5 text-[12px] font-semibold text-gray-500 hover:text-gray-800"><RefreshCw size={13} />Redraw</button>
+      </aside>
     </div>
   )
 }

@@ -43,7 +43,7 @@ function StoryAside({ mode }) {
       <p className="mt-4 max-w-md text-[15px] leading-relaxed text-slate-600">
         {signingIn
           ? 'Sign in to see your orders, reply to customers and keep your business moving.'
-          : 'Create your store in minutes, reach more customers, and grow with Sellapage, the all-in-one commerce workspace for Nigerian businesses.'}
+          : 'Set up in minutes, reach more customers, and run and grow your business with Sellapage, the business management and growth platform for Nigerian businesses.'}
       </p>
       <ul className="mt-5 space-y-2.5">
         {FEATURES.map((f) => (

@@ -181,7 +181,7 @@ const sum = (arr, k) => arr.reduce((n, x) => n + x[k], 0)
 
 // Explore Stores cards. Covers and logos are local design crops so the sandbox
 // never calls out; a few stores have no cover or no logo on purpose.
-const COVERS = ['home-showcase/2783c72c15', 'feature-reviews/c4860851f6', 'feature-delivery/83aa3784bf', 'products-hero/161fbd6385', 'business-hero/083e343c94', 'home-app-1/ff59fb211d', 'feature-customers/aab28790da']
+const COVERS = ['home-hero-scene/0dea16d66c', 'home-mission/1b1bf1fd53', 'explore-hero/89524f47fe', 'products-hero/161fbd6385', 'business-hero/083e343c94', 'home-app-1/ff59fb211d', 'support-hero/5b8869025d']
 const exploreStores = [
   ['Luxe Collections', 'Fashion & Clothing', 4.8, 128, 86, true],
   ['Glow Beauty Hub', 'Beauty & Skincare', 4.9, 256, 120, true],
